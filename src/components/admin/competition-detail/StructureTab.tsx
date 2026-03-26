@@ -96,7 +96,7 @@ function AddSessionForm({ lang, panel, ageGroups, agLabels, sectionId, nextOrder
       panel_id: panel.id,
       section_id: sectionId,
       name: t.sessionName(agLabels[ageGroup] ?? ageGroup, category, routineType),
-      age_group: ageGroup,
+      age_group: agLabels[ageGroup] ?? ageGroup,
       category,
       routine_type: routineType,
       status: 'waiting',

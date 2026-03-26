@@ -62,7 +62,7 @@ function LockIcon({ locked }: { locked: boolean }) {
 
 // ─── session order card ───────────────────────────────────────────────────────
 
-function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders, isLocked, lang, onReorder, onToggleLock }: {
+function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders, isLocked, lang, agLabels, onReorder, onToggleLock }: {
   session: Session
   globalTeams: Team[]
   clubs: Club[]
@@ -70,6 +70,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
   sessionOrders: SessionOrder[]
   isLocked: boolean
   lang: Lang
+  agLabels: Record<string, string>
   onReorder: (sessionId: string, teamIds: string[]) => void
   onToggleLock: (sessionId: string) => void
 }) {
@@ -145,7 +146,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
       <div className={['px-3 py-2 border-b flex items-start justify-between gap-2', isLocked ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200'].join(' ')}>
         <div>
           <p className="text-xs font-semibold text-slate-700">{session.category}</p>
-          <p className="text-xs text-slate-400">{session.age_group} · {session.routine_type}</p>
+          <p className="text-xs text-slate-400">{agLabels[session.age_group] ?? session.age_group} · {session.routine_type}</p>
         </div>
         {hasTeams && (
           <div className="flex items-center gap-1.5 shrink-0">
@@ -324,6 +325,7 @@ function PanelColumn({ lang, panel, sessions, globalTeams, clubs, entries, sessi
               sessionOrders={sessionOrders}
               isLocked={lockedSessions.includes(session.id)}
               lang={lang}
+              agLabels={agLabels}
               onReorder={onReorder}
               onToggleLock={onToggleLock}
             />
@@ -346,13 +348,14 @@ export type StartingOrderTabProps = {
   sessions: Session[]
   sessionOrders: SessionOrder[]
   lockedSessions: string[]
+  agLabels: Record<string, string>
   onReorder: (sessionId: string, teamIds: string[]) => void
   onToggleLock: (sessionId: string) => void
 }
 
 export default function StartingOrderTab({
   lang, globalTeams, clubs, entries, sections, panels, sessions,
-  sessionOrders, lockedSessions, onReorder, onToggleLock,
+  sessionOrders, lockedSessions, agLabels, onReorder, onToggleLock,
 }: StartingOrderTabProps) {
   const t = T[lang]
   const sortedSections = [...sections].sort((a, b) => a.section_number - b.section_number)

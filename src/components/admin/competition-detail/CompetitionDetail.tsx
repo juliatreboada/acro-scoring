@@ -520,6 +520,7 @@ export default function CompetitionDetail({
           sessions={sessions}
           sessionOrders={sessionOrders}
           lockedSessions={lockedSessions}
+          agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group} (${r.ruleset})`]))}
           onReorder={onReorder}
           onToggleLock={onToggleLock}
         />
