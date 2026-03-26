@@ -89,6 +89,14 @@ export default function Page() {
         adminsWithEmail = res.ok ? await res.json() : adminProfiles.map(p => ({ ...p, email: '' }))
       }
 
+      // fetch judge emails from profiles
+      const rawJudges = judgesRes.data ?? []
+      const judgeIds = rawJudges.map(j => j.id)
+      const { data: judgeProfiles } = judgeIds.length > 0
+        ? await supabase.from('profiles').select('id,email').in('id', judgeIds)
+        : { data: [] }
+      const judgeEmailMap = Object.fromEntries((judgeProfiles ?? []).map(p => [p.id, p.email ?? null]))
+
       const adminMap = Object.fromEntries(adminsWithEmail.map(a => [a.id, a]))
       const { admin_id, ...compRest } = compRes.data
       const rawNoms = nominationsRes.data ?? []
@@ -97,7 +105,7 @@ export default function Page() {
       setPanels((panelsRes.data ?? []) as Panel[])
       setSections(sectionsRes.data ?? [])
       setSessions(rawSessions.map(({ order_locked: _, ...s }) => s) as Session[])
-      setGlobalJudges(judgesRes.data ?? [])
+      setGlobalJudges(rawJudges.map(j => ({ ...j, email: judgeEmailMap[j.id] ?? null })))
       setNominations(rawNoms)
       setJudgePool(rawNoms.map(n => n.judge_id))
       setAssignments(assignmentsRes.data ?? [])

@@ -51,7 +51,7 @@ export default function Page() {
         supabase.from('panels').select('id,competition_id,panel_number').eq('competition_id', id).order('panel_number'),
         supabase.from('sections').select('id,competition_id,section_number,label').eq('competition_id', id).order('section_number'),
         supabase.from('sessions').select('id,competition_id,panel_id,section_id,name,age_group,category,routine_type,status,order_index,order_locked').eq('competition_id', id).order('order_index'),
-        supabase.from('judges').select('id,name,email,phone,licence,avatar_url'),
+        supabase.from('judges').select('id,full_name,phone,licence,avatar_url'),
         supabase.from('competition_judge_nominations').select('id,competition_id,judge_id,club_id').eq('competition_id', id),
         sectionIds.length > 0
           ? supabase.from('section_panel_judges').select('id,section_id,panel_id,judge_id,role,role_number').in('section_id', sectionIds)
@@ -89,6 +89,14 @@ export default function Page() {
         if (res.ok) adminsWithEmail = await res.json()
       }
 
+      // fetch judge emails from profiles
+      const rawJudges = judgesRes.data ?? []
+      const judgeIds = rawJudges.map(j => j.id)
+      const { data: judgeProfiles } = judgeIds.length > 0
+        ? await supabase.from('profiles').select('id,email').in('id', judgeIds)
+        : { data: [] }
+      const judgeEmailMap = Object.fromEntries((judgeProfiles ?? []).map(p => [p.id, p.email ?? null]))
+
       const adminMap = Object.fromEntries(adminsWithEmail.map(a => [a.id, a]))
       const { admin_id, ...compRest } = compRes.data
       const rawNoms = nominationsRes.data ?? []
@@ -97,7 +105,7 @@ export default function Page() {
       setPanels(panelsRes.data ?? [])
       setSections(sectionsRes.data ?? [])
       setSessions(rawSessions.map(({ order_locked: _, ...s }) => s) as Session[])
-      setGlobalJudges(judgesRes.data ?? [])
+      setGlobalJudges(rawJudges.map(j => ({ ...j, email: judgeEmailMap[j.id] ?? null })))
       setNominations(rawNoms)
       setJudgePool(rawNoms.map(n => n.judge_id))
       setAssignments(assignmentsRes.data ?? [])
