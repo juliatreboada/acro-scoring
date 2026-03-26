@@ -66,7 +66,7 @@ export default function Page() {
           ? supabase.from('routine_music').select('id,team_id,competition_id,routine_type,music_path,ts_path,uploaded_at').in('team_id', teamIds)
           : Promise.resolve({ data: [] }),
         judgeIds.length > 0
-          ? supabase.from('judges').select('id,name,email,phone,licence,avatar_url').in('id', judgeIds)
+          ? supabase.from('judges').select('id,full_name,phone,licence,avatar_url').in('id', judgeIds)
           : Promise.resolve({ data: [] }),
       ])
 
@@ -87,7 +87,14 @@ export default function Page() {
 
       const mappedComps: Competition[] = (compsRes.data ?? []).map(c => ({ ...c, admin: null }))
 
-      const agLabelsMap = Object.fromEntries((rulesRes.data ?? []).map(r => [r.id, `${r.age_group} (${r.ruleset})`]))
+      const agLabelsMap = Object.fromEntries(((rulesRes.data ?? []) as { id: string; age_group: string; ruleset: string }[]).map(r => [r.id, `${r.age_group} (${r.ruleset})`]))
+
+      const rawJudges = judgesRes.data ?? []
+      const fetchedJudgeIds = rawJudges.map((j: { id: string }) => j.id)
+      const { data: judgeProfiles } = fetchedJudgeIds.length > 0
+        ? await supabase.from('profiles').select('id,email').in('id', fetchedJudgeIds)
+        : { data: [] }
+      const judgeEmailMap = Object.fromEntries((judgeProfiles ?? []).map(p => [p.id, p.email ?? null]))
 
       setClub(clubRes.data)
       setGymnasts(gymnastsRes.data ?? [])
@@ -95,7 +102,7 @@ export default function Page() {
       setCompetitions(mappedComps)
       setEntries(entriesRes.data ?? [])
       setMusicState(mappedMusic)
-      setJudges(judgesRes.data ?? [])
+      setJudges(rawJudges.map((j: { id: string; full_name: string; phone: string | null; licence: string | null; avatar_url: string | null }) => ({ ...j, email: judgeEmailMap[j.id] ?? null })))
       setNominations(nomsRes.data ?? [])
       setAgLabels(agLabelsMap)
       setLoading(false)

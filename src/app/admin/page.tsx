@@ -59,7 +59,7 @@ export default function Page() {
         admin: admin_id ? (adminMap[admin_id] ?? null) : null,
       }))
 
-      setAgeGroupRules(rulesRes.data ?? [])
+      setAgeGroupRules((rulesRes.data ?? []) as AgeGroupRule[])
       setAvailableAdmins(adminsWithEmail)
       setCompetitions(mapped)
       setLoading(false)

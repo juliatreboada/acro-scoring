@@ -189,7 +189,7 @@ export default function HomePage() {
         supabase.from('age_group_rules').select('id, age_group, ruleset').order('sort_order'),
       ])
       setComps(data ?? [])
-      setAgLabel(Object.fromEntries((rulesData ?? []).map(r => [r.id, `${r.age_group} (${r.ruleset})`])))
+      setAgLabel(Object.fromEntries(((rulesData ?? []) as { id: string; age_group: string; ruleset: string }[]).map(r => [r.id, `${r.age_group} (${r.ruleset})`])))
       setLoading(false)
     }
     load()

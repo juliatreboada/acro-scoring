@@ -115,7 +115,7 @@ export default function Page() {
       setLockedSessions(locked)
       setSessionOrders(ordersData ?? [])
       setAvailableAdmins(adminsWithEmail)
-      setAgeGroupRules(rulesRes.data ?? [])
+      setAgeGroupRules((rulesRes.data ?? []) as AgeGroupRule[])
       setLoading(false)
     }
     load()
