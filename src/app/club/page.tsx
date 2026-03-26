@@ -87,7 +87,7 @@ export default function Page() {
 
       const mappedComps: Competition[] = (compsRes.data ?? []).map(c => ({ ...c, admin: null }))
 
-      const agLabelsMap = Object.fromEntries(((rulesRes.data ?? []) as { id: string; age_group: string; ruleset: string }[]).map(r => [r.id, `${r.age_group} (${r.ruleset})`]))
+      const agLabelsMap = Object.fromEntries(((rulesRes.data ?? []) as unknown as { id: string; age_group: string; ruleset: string }[]).map(r => [r.id, `${r.age_group} (${r.ruleset})`]))
 
       const rawJudges = judgesRes.data ?? []
       const fetchedJudgeIds = rawJudges.map((j: { id: string }) => j.id)
