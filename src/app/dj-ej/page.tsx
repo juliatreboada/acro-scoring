@@ -1,0 +1,72 @@
+'use client'
+
+import { useState } from 'react'
+import { useJudgeSession } from '@/hooks/useJudgeSession'
+import DJEJView from '@/components/dj-ej-scoring/DJEJView'
+import AuthBar from '@/components/shared/AuthBar'
+import type { Lang } from '@/components/aj-scoring/types'
+import type { TsElement } from '@/components/ej-scoring/types'
+import type { JudgeScore } from '@/components/cjp/types'
+
+const ELEMENTS: TsElement[] = []
+
+export default function Page() {
+  const [lang, setLang] = useState<Lang>('en')
+  const {
+    loading, sessionId,
+    assignedRoles, panelJudges, currentPerfId, currentPerf, judgeScores, results,
+    handleJudgeScoreSubmit,
+  } = useJudgeSession()
+
+  if (loading) return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+    </div>
+  )
+
+  if (!sessionId) return (
+    <div className="min-h-screen bg-slate-50"><AuthBar />
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-48px)] gap-3">
+        <p className="text-xl font-semibold text-slate-600">No active session</p>
+      </div>
+    </div>
+  )
+
+  const djRole = assignedRoles.find(r => r.role === 'DJ')
+  const ejRole = assignedRoles.find(r => r.role === 'EJ')
+  const currentScores = currentPerfId ? (judgeScores[currentPerfId] ?? []) : []
+  const mySubmitted = [djRole, ejRole].filter(Boolean).every(r => currentScores.some(s => s.panelJudgeId === r!.id))
+  const currentResult = currentPerfId ? (results[currentPerfId] ?? null) : null
+  const waitingForOtherScores = mySubmitted && !currentResult
+
+  function handleSubmit(difficulty: number, djPenalty: number, ejScore: number) {
+    const scores: JudgeScore[] = []
+    if (djRole) scores.push({ panelJudgeId: djRole.id, ejScore: null, ajScore: null, djDifficulty: difficulty, djPenalty, cjpPenalty: null })
+    if (ejRole) scores.push({ panelJudgeId: ejRole.id, ejScore, ajScore: null, djDifficulty: null, djPenalty: null, cjpPenalty: null })
+    scores.forEach(s => handleJudgeScoreSubmit(s))
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-100">
+      <AuthBar />
+      <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-4 sticky top-0 z-10">
+        <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+          {(['en', 'es'] as Lang[]).map((l) => (
+            <button key={l} onClick={() => setLang(l)}
+              className={['px-3 py-1 rounded-md text-sm font-medium transition-all',
+                lang === l ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'].join(' ')}>
+              {l.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      </div>
+      <DJEJView
+        currentPerf={currentPerf} lang={lang} elements={ELEMENTS}
+        onSubmit={handleSubmit}
+        panelJudges={panelJudges} judgeScores={currentScores}
+        waitingForOtherScores={waitingForOtherScores}
+        result={currentResult ?? undefined}
+      />
+    </div>
+  )
+}
