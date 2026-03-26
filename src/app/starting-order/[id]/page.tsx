@@ -77,7 +77,7 @@ export default function Page() {
         : { data: [] as Club[] }
 
       setCompetition(comp)
-      setPanels(panelsRes.data ?? [])
+      setPanels((panelsRes.data ?? []) as unknown as Panel[])
       setSections(sectionsRes.data ?? [])
       setSessions(rawSessions.map(({ order_locked: _, ...s }) => s) as Session[])
       setLockedSessions(locked)

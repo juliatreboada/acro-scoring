@@ -41,7 +41,7 @@ function computeAge(dob: string): number {
 }
 
 export function gymnastFullName(g: Gymnast): string {
-  return `${g.first_name} ${g.last_name_1} ${g.last_name_2}`.trim()
+  return [g.first_name, g.last_name_1, g.last_name_2].filter(Boolean).join(' ')
 }
 
 type FormState = { first_name: string; last_name_1: string; last_name_2: string; date_of_birth: string }
@@ -142,7 +142,7 @@ export default function GymnastsTab({
           {sorted.map((g) =>
             editingId === g.id ? (
               <GymnastForm key={g.id} lang={lang}
-                initial={{ first_name: g.first_name, last_name_1: g.last_name_1, last_name_2: g.last_name_2, date_of_birth: g.date_of_birth }}
+                initial={{ first_name: g.first_name, last_name_1: g.last_name_1, last_name_2: g.last_name_2 ?? '', date_of_birth: g.date_of_birth }}
                 onCancel={() => setEditingId(null)}
                 onSave={(f) => { onUpdate(g.id, f); setEditingId(null) }} />
             ) : (

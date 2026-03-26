@@ -79,7 +79,7 @@ export default function Page() {
         : { data: [] }
 
       const adminProfiles = adminsRes.data ?? []
-      let adminsWithEmail: AdminUser[] = adminProfiles.map(p => ({ ...p, email: '' }))
+      let adminsWithEmail: AdminUser[] = []
       if (adminProfiles.length > 0) {
         const res = await fetch('/api/admin/users', {
           method: 'POST',
@@ -102,7 +102,7 @@ export default function Page() {
       const rawNoms = nominationsRes.data ?? []
 
       setCompetition({ ...compRest, admin: admin_id ? (adminMap[admin_id] ?? null) : null })
-      setPanels(panelsRes.data ?? [])
+      setPanels((panelsRes.data ?? []) as unknown as Panel[])
       setSections(sectionsRes.data ?? [])
       setSessions(rawSessions.map(({ order_locked: _, ...s }) => s) as Session[])
       setGlobalJudges(rawJudges.map(j => ({ ...j, email: judgeEmailMap[j.id] ?? null })))

@@ -291,7 +291,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
 
 // ─── panel column ─────────────────────────────────────────────────────────────
 
-function PanelColumn({ lang, panel, sessions, globalTeams, clubs, entries, sessionOrders, lockedSessions, onReorder, onToggleLock }: {
+function PanelColumn({ lang, panel, sessions, globalTeams, clubs, entries, sessionOrders, lockedSessions, agLabels, onReorder, onToggleLock }: {
   lang: Lang
   panel: Panel
   sessions: Session[]
@@ -300,6 +300,7 @@ function PanelColumn({ lang, panel, sessions, globalTeams, clubs, entries, sessi
   entries: CompetitionEntry[]
   sessionOrders: SessionOrder[]
   lockedSessions: string[]
+  agLabels: Record<string, string>
   onReorder: (sessionId: string, teamIds: string[]) => void
   onToggleLock: (sessionId: string) => void
 }) {
@@ -409,6 +410,7 @@ export default function StartingOrderTab({
                   entries={entries}
                   sessionOrders={sessionOrders}
                   lockedSessions={lockedSessions}
+                  agLabels={agLabels}
                   onReorder={onReorder}
                   onToggleLock={onToggleLock}
                 />

@@ -52,10 +52,13 @@ const T = {
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-function formatDateRange(start: string, end: string): string {
+function formatDateRange(start: string | null, end: string | null): string {
   const fmt = (d: string) =>
     new Date(d + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-  return start !== end ? `${fmt(start)} – ${fmt(end)}` : fmt(start)
+  if (start && end) return start !== end ? `${fmt(start)} – ${fmt(end)}` : fmt(start)
+  if (start) return fmt(start)
+  if (end) return fmt(end)
+  return ''
 }
 
 // ─── competition card ─────────────────────────────────────────────────────────

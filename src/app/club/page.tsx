@@ -177,12 +177,14 @@ export default function Page() {
 
   // ── judges ────────────────────────────────────────────────────────────────────
   async function handleAddJudge(j: Omit<Judge, 'id' | 'avatar_url'>) {
-    const { data } = await supabase.from('judges').insert({ ...j, avatar_url: null }).select().single()
-    if (data) setJudges(prev => [...prev, data as Judge])
+    const { full_name, phone, licence } = j
+    const { data } = await supabase.from('judges').insert({ full_name, phone, licence, avatar_url: null } as any).select().single()
+    if (data) setJudges(prev => [...prev, { ...data, email: j.email } as unknown as Judge])
   }
 
   async function handleUpdateJudge(id: string, j: Omit<Judge, 'id' | 'avatar_url'>) {
-    await supabase.from('judges').update(j).eq('id', id)
+    const { full_name, phone, licence } = j
+    await supabase.from('judges').update({ full_name, phone, licence }).eq('id', id)
     setJudges(prev => prev.map(x => x.id === id ? { ...x, ...j } : x))
   }
 

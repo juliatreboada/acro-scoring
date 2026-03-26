@@ -84,7 +84,7 @@ export type Gymnast = {
   club_id: string
   first_name: string
   last_name_1: string       // first surname
-  last_name_2: string       // second surname
+  last_name_2: string | null  // second surname (optional)
   date_of_birth: string     // 'YYYY-MM-DD'
 }
 

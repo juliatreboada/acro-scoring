@@ -44,7 +44,7 @@ function buildDisplay(gymnasts: Gymnast[], ids: string[]): string {
   return ids
     .map((id) => gymnasts.find((g) => g.id === id))
     .filter(Boolean)
-    .map((g) => `${g!.last_name_1} ${g!.last_name_2}`)
+    .map((g) => [g!.last_name_1, g!.last_name_2].filter(Boolean).join(' '))
     .join(' / ')
 }
 

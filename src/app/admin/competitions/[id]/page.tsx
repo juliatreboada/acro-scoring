@@ -86,7 +86,7 @@ export default function Page() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ids: adminProfiles.map(p => p.id) }),
         })
-        adminsWithEmail = res.ok ? await res.json() : adminProfiles.map(p => ({ ...p, email: '' }))
+        adminsWithEmail = res.ok ? await res.json() : []
       }
 
       // fetch judge emails from profiles
@@ -102,7 +102,7 @@ export default function Page() {
       const rawNoms = nominationsRes.data ?? []
 
       setCompetition({ ...compRest, admin: admin_id ? (adminMap[admin_id] ?? null) : null })
-      setPanels((panelsRes.data ?? []) as Panel[])
+      setPanels((panelsRes.data ?? []) as unknown as Panel[])
       setSections(sectionsRes.data ?? [])
       setSessions(rawSessions.map(({ order_locked: _, ...s }) => s) as Session[])
       setGlobalJudges(rawJudges.map(j => ({ ...j, email: judgeEmailMap[j.id] ?? null })))
@@ -223,10 +223,12 @@ export default function Page() {
   }
 
   async function handleCreateJudge(data: Omit<Judge, 'id' | 'avatar_url'>) {
+    const { full_name, phone, licence } = data
     const { data: newJudge } = await supabase.from('judges')
-      .insert({ ...data, avatar_url: null }).select().single()
+      .insert({ full_name, phone, licence, avatar_url: null } as any)
+      .select().single()
     if (!newJudge) return
-    setGlobalJudges(prev => [...prev, newJudge as Judge])
+    setGlobalJudges(prev => [...prev, { ...newJudge, email: data.email } as unknown as Judge])
     await handleAddToPool(newJudge.id)
   }
 
