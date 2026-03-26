@@ -138,7 +138,7 @@ export default function Page() {
       const { data } = await supabase.from('panels')
         .insert({ competition_id: id, panel_number: 1 }).select().single()
       if (!data) return
-      p1 = data
+      p1 = data as unknown as Panel
     }
 
     if (count === 1) {
@@ -155,7 +155,7 @@ export default function Page() {
         const { data } = await supabase.from('panels')
           .insert({ competition_id: id, panel_number: 2 }).select().single()
         if (!data) return
-        p2 = data
+        p2 = data as unknown as Panel
       }
       setPanels([p1, p2])
     }
