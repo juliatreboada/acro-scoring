@@ -124,20 +124,32 @@ export default function Page() {
 
   // ── panel count ───────────────────────────────────────────────────────────────
   async function handleSetPanelCount(count: 1 | 2) {
+    // Ensure panel 1 always exists
+    let p1 = panels.find(p => p.panel_number === 1)
+    if (!p1) {
+      const { data } = await supabase.from('panels')
+        .insert({ competition_id: id, panel_number: 1 }).select().single()
+      if (!data) return
+      p1 = data
+    }
+
     if (count === 1) {
       const p2 = panels.find(p => p.panel_number === 2)
       if (p2) {
         await supabase.from('panels').delete().eq('id', p2.id)
-        const p1 = panels.find(p => p.panel_number === 1)!
         await supabase.from('sessions').update({ panel_id: p1.id }).eq('competition_id', id).eq('panel_id', p2.id)
-        setPanels([p1])
-        setSessions(prev => prev.map(s => s.panel_id === p2.id ? { ...s, panel_id: p1.id } : s))
+        setSessions(prev => prev.map(s => s.panel_id === p2.id ? { ...s, panel_id: p1!.id } : s))
       }
+      setPanels([p1])
     } else {
-      if (panels.length === 2) return
-      const { data: p2 } = await supabase.from('panels')
-        .insert({ competition_id: id, panel_number: 2 }).select().single()
-      if (p2) setPanels(prev => [...prev, p2])
+      let p2 = panels.find(p => p.panel_number === 2)
+      if (!p2) {
+        const { data } = await supabase.from('panels')
+          .insert({ competition_id: id, panel_number: 2 }).select().single()
+        if (!data) return
+        p2 = data
+      }
+      setPanels([p1, p2])
     }
   }
 
