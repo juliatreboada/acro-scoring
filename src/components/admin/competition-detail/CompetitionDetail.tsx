@@ -577,6 +577,7 @@ export default function CompetitionDetail({
           globalTeams={globalTeams}
           clubs={clubs}
           entries={entries}
+          agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group} (${r.ruleset})`]))}
           onToggleDropout={onToggleDropout}
         />
       )}

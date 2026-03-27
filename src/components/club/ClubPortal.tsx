@@ -164,7 +164,7 @@ export default function ClubPortal({
         {activeTab === 'competitions' && (
           <CompetitionsTab lang={lang} competitions={competitions} teams={teams}
             entries={entries} music={music} judges={judges} nominations={nominations}
-            agLabels={agLabels}
+            agLabels={agLabels} ageGroupRules={ageGroupRules}
             onRegister={onRegister} onUnregister={onUnregister} onSetFile={onSetFile}
             onNominate={onNominate} onRemoveNomination={onRemoveNomination}
             onInviteJudge={onInviteJudge} />

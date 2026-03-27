@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Competition, Team, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination } from '@/components/admin/types'
+import type { Competition, Team, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule } from '@/components/admin/types'
 import { ROUTINE_TYPES } from '@/components/admin/types'
 
 // ─── translations ─────────────────────────────────────────────────────────────
@@ -272,8 +272,16 @@ function InviteJudgeForm({ lang, onSend, onCancel }: {
 
 // ─── detail view ─────────────────────────────────────────────────────────────
 
+function routineTypesForTeam(team: Team, ageGroupRules: AgeGroupRule[]): (typeof ROUTINE_TYPES[number])[] {
+  const rule = ageGroupRules.find(r => r.id === team.age_group)
+  const count = rule?.routine_count ?? 3
+  if (count === 1) return ['Combined']
+  if (count === 2) return ['Balance', 'Dynamic']
+  return ['Balance', 'Dynamic', 'Combined']
+}
+
 function CompetitionDetailView({
-  lang, competition, teams, entries, music, judges, nominations, agLabels, onBack,
+  lang, competition, teams, entries, music, judges, nominations, agLabels, ageGroupRules, onBack,
   onRegister, onUnregister, onSetFile, onNominate, onRemoveNomination, onInviteJudge,
 }: {
   lang: Lang
@@ -284,6 +292,7 @@ function CompetitionDetailView({
   judges: Judge[]
   nominations: CompetitionJudgeNomination[]
   agLabels: Record<string, string>
+  ageGroupRules: AgeGroupRule[]
   onBack: () => void
   onRegister: (teamId: string) => void
   onUnregister: (entryId: string) => void
@@ -521,7 +530,7 @@ function CompetitionDetailView({
                         <span className="text-xs font-semibold px-2 py-0.5 bg-red-50 text-red-400 rounded-full">{t.dropout}</span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5">{team.category} · {team.age_group}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{team.category} · {agLabels[team.age_group] ?? team.age_group}</p>
                   </div>
                   <div className="shrink-0">
                     {entry ? (
@@ -549,7 +558,7 @@ function CompetitionDetailView({
                 {entry && (
                   <div className="px-4 pb-4 pt-1">
                     <div className="bg-slate-50 rounded-xl px-4 py-1">
-                      {ROUTINE_TYPES.map((rt) => (
+                      {routineTypesForTeam(team, ageGroupRules).map((rt) => (
                         <RoutineRow key={rt} lang={lang} routineType={rt}
                           record={recordFor(team.id, rt)}
                           onSet={(field, filename) => onSetFile(team.id, rt, field, filename)} />
@@ -639,7 +648,7 @@ function CompetitionListView({
 // ─── main export ──────────────────────────────────────────────────────────────
 
 export default function CompetitionsTab({
-  lang, competitions, teams, entries, music, judges, nominations, agLabels,
+  lang, competitions, teams, entries, music, judges, nominations, agLabels, ageGroupRules,
   onRegister, onUnregister, onSetFile, onNominate, onRemoveNomination, onInviteJudge,
 }: {
   lang: Lang
@@ -650,6 +659,7 @@ export default function CompetitionsTab({
   judges: Judge[]
   nominations: CompetitionJudgeNomination[]
   agLabels: Record<string, string>
+  ageGroupRules: AgeGroupRule[]
   onRegister: (competitionId: string, teamId: string) => void
   onUnregister: (entryId: string) => void
   onSetFile: (teamId: string, competitionId: string, routineType: 'Balance' | 'Dynamic' | 'Combined', field: 'music' | 'ts', filename: string | null) => void
@@ -671,6 +681,7 @@ export default function CompetitionsTab({
         judges={judges}
         nominations={nominations}
         agLabels={agLabels}
+        ageGroupRules={ageGroupRules}
         onBack={() => setSelectedId(null)}
         onRegister={(teamId) => onRegister(selected.id, teamId)}
         onUnregister={onUnregister}

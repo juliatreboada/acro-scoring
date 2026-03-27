@@ -399,14 +399,22 @@ export default function JudgeLobby({ lang }: { lang: Lang }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
 
-      // Get competitions where this judge is in the pool
-      const { data: noms } = await supabase
-        .from('competition_judge_nominations')
-        .select('competition_id')
+      // Derive competitions from actual panel assignments (section_panel_judges)
+      // This is more reliable than nominations (avoids RLS / club_id nullability issues)
+      const { data: spjs } = await supabase
+        .from('section_panel_judges')
+        .select('section_id')
         .eq('judge_id', user.id)
-      if (!noms?.length) { setLoading(false); return }
+      if (!spjs?.length) { setLoading(false); return }
 
-      const compIds = [...new Set(noms.map(n => n.competition_id))]
+      const sectionIds = [...new Set(spjs.map(s => s.section_id))]
+      const { data: sections } = await supabase
+        .from('sections')
+        .select('competition_id')
+        .in('id', sectionIds)
+      if (!sections?.length) { setLoading(false); return }
+
+      const compIds = [...new Set(sections.map(s => s.competition_id))]
       const { data: comps } = await supabase
         .from('competitions')
         .select('id, name, location, start_date, end_date, status')

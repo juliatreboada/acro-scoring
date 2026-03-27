@@ -53,11 +53,12 @@ function TeamAvatar({ team }: { team: Team }) {
 
 type GroupItem = { entry: CompetitionEntry; team: Team; club: Club | undefined }
 
-function RegistrationGroup({ age_group, category, items, lang, onToggleDropout }: {
+function RegistrationGroup({ age_group, category, items, lang, agLabels, onToggleDropout }: {
   age_group: string
   category: string
   items: GroupItem[]
   lang: Lang
+  agLabels: Record<string, string>
   onToggleDropout: (entryId: string) => void
 }) {
   const t = T[lang]
@@ -69,7 +70,7 @@ function RegistrationGroup({ age_group, category, items, lang, onToggleDropout }
       {/* group header */}
       <div className="flex items-baseline gap-3 mb-3">
         <h3 className="text-sm font-semibold text-slate-700">
-          {age_group} · {category}
+          {agLabels[age_group] ?? age_group} · {category}
         </h3>
         <span className="text-xs text-slate-400">{t.registered(activeCount)}</span>
         {dropoutCount > 0 && (
@@ -137,11 +138,12 @@ export type RegistrationsTabProps = {
   globalTeams: Team[]
   clubs: Club[]
   entries: CompetitionEntry[]
+  agLabels: Record<string, string>
   onToggleDropout: (entryId: string) => void
 }
 
 export default function RegistrationsTab({
-  lang, globalTeams, clubs, entries, onToggleDropout,
+  lang, globalTeams, clubs, entries, agLabels, onToggleDropout,
 }: RegistrationsTabProps) {
   const t = T[lang]
 
@@ -182,6 +184,7 @@ export default function RegistrationsTab({
           category={g.category}
           items={g.items}
           lang={lang}
+          agLabels={agLabels}
           onToggleDropout={onToggleDropout}
         />
       ))}

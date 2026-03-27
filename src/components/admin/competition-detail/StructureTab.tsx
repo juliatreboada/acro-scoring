@@ -78,35 +78,42 @@ type AddSessionFormProps = {
 function AddSessionForm({ lang, panel, ageGroups, agLabels, ageGroupRules, sectionId, nextOrderIndex, onAdd, onCancel }: AddSessionFormProps) {
   const t = T[lang]
 
-  function getCategoriesForAgeGroup(ageGroupId: string): string[] {
-    const rule = ageGroupRules.find(r => r.id === ageGroupId)
-    if (!rule) return [...ACRO_CATEGORIES]
-    return categoriesForRuleset(rule.ruleset)
-  }
+  const [ageGroup, setAgeGroupState] = useState('')
+  const [category, setCategory] = useState('')
+  const [routineType, setRoutineType] = useState<'Balance' | 'Dynamic' | 'Combined' | ''>('')
 
-  const initialAgeGroup = ageGroups[0] ?? ''
-  const initialCategories = getCategoriesForAgeGroup(initialAgeGroup)
+  const selectedRule = ageGroupRules.find(r => r.id === ageGroup)
 
-  const [ageGroup, setAgeGroupState] = useState(initialAgeGroup)
-  const [availableCategories, setAvailableCategories] = useState<string[]>(initialCategories)
-  const [category, setCategory] = useState<string>(initialCategories[0] ?? ACRO_CATEGORIES[0])
-  const [routineType, setRoutineType] = useState<'Balance' | 'Dynamic' | 'Combined'>('Balance')
+  const availableCategories: string[] = ageGroup
+    ? categoriesForRuleset(selectedRule?.age_group ?? '')
+    : []
+
+  const availableRoutineTypes: (typeof ROUTINE_TYPES[number])[] = (() => {
+    const count = selectedRule?.routine_count ?? 3
+    if (count === 1) return ['Combined']
+    if (count === 2) return ['Balance', 'Dynamic']
+    return ['Balance', 'Dynamic', 'Combined']
+  })()
 
   function handleAgeGroupChange(ag: string) {
-    const cats = getCategoriesForAgeGroup(ag)
     setAgeGroupState(ag)
-    setAvailableCategories(cats)
-    setCategory(cats[0] ?? '')
+    setCategory('')
+    setRoutineType('')
+  }
+
+  function handleCategoryChange(cat: string) {
+    setCategory(cat)
+    setRoutineType('')
   }
 
   function handleAdd() {
-    if (!ageGroup) return
+    if (!ageGroup || !category || !routineType) return
     onAdd({
       competition_id: panel.competition_id,
       panel_id: panel.id,
       section_id: sectionId,
       name: t.sessionName(agLabels[ageGroup] ?? ageGroup, category, routineType),
-      age_group: agLabels[ageGroup] ?? ageGroup,
+      age_group: ageGroup,
       category,
       routine_type: routineType,
       status: 'waiting',
@@ -122,29 +129,36 @@ function AddSessionForm({ lang, panel, ageGroups, agLabels, ageGroupRules, secti
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-slate-500">{t.ageGroup}</label>
           <select value={ageGroup} onChange={(e) => handleAgeGroupChange(e.target.value)} className={selectCls}>
+            <option value="">—</option>
             {ageGroups.map((ag) => <option key={ag} value={ag}>{agLabels[ag] ?? ag}</option>)}
           </select>
         </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-slate-500">{t.category}</label>
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className={selectCls}>
-            {availableCategories.map((c) => (
-              <option key={c} value={c}>{CATEGORY_LABELS[lang]?.[c] ?? c}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-slate-500">{t.routineType}</label>
-          <select value={routineType} onChange={(e) => setRoutineType(e.target.value as typeof routineType)} className={selectCls}>
-            {ROUTINE_TYPES.map((r) => <option key={r} value={r}>{r}</option>)}
-          </select>
-        </div>
+        {ageGroup && (
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-slate-500">{t.category}</label>
+            <select value={category} onChange={(e) => handleCategoryChange(e.target.value)} className={selectCls}>
+              <option value="">—</option>
+              {availableCategories.map((c) => (
+                <option key={c} value={c}>{CATEGORY_LABELS[lang]?.[c] ?? c}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        {ageGroup && category && (
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-slate-500">{t.routineType}</label>
+            <select value={routineType} onChange={(e) => setRoutineType(e.target.value as typeof routineType)} className={selectCls}>
+              <option value="">—</option>
+              {availableRoutineTypes.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+        )}
       </div>
       <div className="flex gap-2">
         <button onClick={onCancel} className="flex-1 py-1.5 text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all">
           {t.cancel}
         </button>
-        <button onClick={handleAdd} disabled={!ageGroup}
+        <button onClick={handleAdd} disabled={!ageGroup || !category || !routineType}
           className="flex-1 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 transition-all">
           {t.save}
         </button>

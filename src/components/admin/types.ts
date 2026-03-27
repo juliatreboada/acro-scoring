@@ -6,6 +6,7 @@ export type AgeGroupRule = {
   ruleset: string
   min_age: number
   max_age: number | null   // null = no upper limit (e.g. Senior)
+  routine_count: number    // 1=Combined only, 2=Balance+Dynamic, 3=all three
 }
 
 export type AdminUser = {
@@ -171,10 +172,10 @@ export const ACRO_CATEGORIES = [
   "Mixed Group",
 ] as const
 
-// Categories available depending on ruleset ('Escolar'/'Base' vs FIG)
-export function categoriesForRuleset(ruleset: string): string[] {
-  const r = ruleset.toLowerCase()
-  if (r === 'escolar' || r === 'base') return ['Pairs', 'Groups 3', 'Groups 4']
+// Categories available depending on age_group name ('Escolar'/'Base' → 3 cats, otherwise 5)
+export function categoriesForRuleset(ageGroup: string): string[] {
+  const r = ageGroup.toLowerCase()
+  if (r.includes('escolar') || r.includes('base')) return ['Pairs', 'Groups 3', 'Groups 4']
   return ["Women's Pair", "Men's Pair", "Mixed Pair", "Women's Group", "Mixed Group"]
 }
 

@@ -66,7 +66,7 @@ export function useJudgeSession(): JudgeSessionData {
 
       const { data: allSessions } = await supabase
         .from('sessions')
-        .select('id, name, status, section_id, panel_id, current_team_id, age_group, category, routine_type')
+        .select('id, name, status, section_id, panel_id, competition_id, current_team_id, age_group, category, routine_type')
         .in('section_id', sectionIds)
         .in('panel_id',   panelIds)
 
@@ -116,7 +116,28 @@ export function useJudgeSession(): JudgeSessionData {
         roleNumber: s.role_number,
       }))
 
-      const teamIds = (ordersRes.data ?? []).map(o => o.team_id)
+      // If no starting order saved yet, fall back to all registered teams for this session
+      let orderedEntries: { team_id: string; position: number }[] = (ordersRes.data ?? []).map(o => ({
+        team_id: o.team_id, position: o.position,
+      }))
+
+      if (orderedEntries.length === 0) {
+        const { data: entries } = await supabase
+          .from('competition_entries')
+          .select('team_id')
+          .eq('competition_id', (session as any).competition_id)
+          .eq('dropped_out', false)
+        const { data: fallbackTeams } = (entries ?? []).length > 0
+          ? await supabase.from('teams')
+              .select('id')
+              .in('id', (entries ?? []).map(e => e.team_id))
+              .eq('age_group', session.age_group)
+              .eq('category', session.category)
+          : { data: [] as { id: string }[] }
+        orderedEntries = (fallbackTeams ?? []).map((t, i) => ({ team_id: t.id, position: i + 1 }))
+      }
+
+      const teamIds = orderedEntries.map(o => o.team_id)
       const teamsRes = teamIds.length > 0
         ? await supabase.from('teams').select('id, gymnast_display, age_group, category').in('id', teamIds)
         : { data: [] as { id: string; gymnast_display: string; age_group: string; category: string }[] }
@@ -124,7 +145,7 @@ export function useJudgeSession(): JudgeSessionData {
       const teamMap: Record<string, { gymnast_display: string; age_group: string; category: string }> =
         Object.fromEntries((teamsRes.data ?? []).map(t => [t.id, t]))
 
-      const builtPerfs: MockPerf[] = (ordersRes.data ?? []).map(o => ({
+      const builtPerfs: MockPerf[] = orderedEntries.map(o => ({
         id:          `${session.id}_${o.team_id}`,
         position:    o.position,
         gymnasts:    teamMap[o.team_id]?.gymnast_display ?? '',

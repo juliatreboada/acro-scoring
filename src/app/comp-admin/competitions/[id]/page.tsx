@@ -59,7 +59,7 @@ export default function Page() {
           ? supabase.from('section_panel_judges').select('id,section_id,panel_id,judge_id,role,role_number').in('section_id', sectionIds)
           : Promise.resolve({ data: [] }),
         supabase.from('competition_entries').select('id,competition_id,team_id,dropped_out').eq('competition_id', id),
-        supabase.from('age_group_rules').select('id,age_group,ruleset,min_age,max_age,sort_order').order('sort_order'),
+        supabase.from('age_group_rules').select('id,age_group,ruleset,min_age,max_age,routine_count,sort_order').order('sort_order'),
         supabase.from('profiles').select('id,email').eq('role', 'admin'),
       ])
 

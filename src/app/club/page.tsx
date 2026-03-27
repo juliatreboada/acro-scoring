@@ -48,7 +48,7 @@ export default function Page() {
           .neq('status', 'draft')
           .order('start_date', { ascending: false }),
         supabase.from('competition_judge_nominations').select('id,competition_id,judge_id,club_id').eq('club_id', cid),
-        supabase.from('age_group_rules').select('id,age_group,ruleset,min_age,max_age').order('sort_order'),
+        supabase.from('age_group_rules').select('id,age_group,ruleset,min_age,max_age,routine_count').order('sort_order'),
       ])
 
       const rawTeams = teamsRes.data ?? []

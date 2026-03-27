@@ -37,8 +37,13 @@ const T = {
   },
 }
 
-function gymAge(g: Gymnast): number {
-  return new Date().getFullYear() - new Date(g.date_of_birth).getFullYear()
+// Uses birth year only (not exact date) so birthday month doesn't affect eligibility
+function birthYear(g: Gymnast): number {
+  return parseInt(g.date_of_birth.slice(0, 4), 10)
+}
+
+function gymAgeThisYear(g: Gymnast): number {
+  return new Date().getFullYear() - birthYear(g)
 }
 
 function ageRangeStr(rule: AgeGroupRule): string {
@@ -71,17 +76,16 @@ function TeamForm({
 }) {
   const t = T[lang]
 
-  // Compute initial categories based on the initial age_group
   function getCategoriesForAgeGroup(ageGroupId: string): string[] {
-    if (!ageGroupId) return ["Women's Pair", "Men's Pair", "Mixed Pair", "Women's Group", "Mixed Group"]
+    if (!ageGroupId) return []   // hide category until age group is chosen
     const rule = ageGroupRules.find(r => r.id === ageGroupId)
-    if (!rule) return ["Women's Pair", "Men's Pair", "Mixed Pair", "Women's Group", "Mixed Group"]
-    return categoriesForRuleset(rule.ruleset)
+    if (!rule) return []
+    return categoriesForRuleset(rule.age_group)
   }
 
   const [form, setForm] = useState<FormState>(() => {
     const cats = getCategoriesForAgeGroup(initial.age_group)
-    const cat = initial.category && cats.includes(initial.category) ? initial.category : cats[0] ?? ''
+    const cat = initial.category && cats.includes(initial.category) ? initial.category : ''
     return { ...initial, category: cat }
   })
 
@@ -100,8 +104,7 @@ function TeamForm({
 
   // when age group changes, recompute available categories and reset category + slots
   function setAgeGroup(ageGroupId: string) {
-    const cats = getCategoriesForAgeGroup(ageGroupId)
-    setForm((f) => ({ ...f, age_group: ageGroupId, category: cats[0] ?? '', gymnast_ids: [] }))
+    setForm((f) => ({ ...f, age_group: ageGroupId, category: '', gymnast_ids: [] }))
   }
 
   // when category changes, reset slots
@@ -114,7 +117,8 @@ function TeamForm({
 
   function isAgeEligible(g: Gymnast): boolean {
     if (!selectedRule) return true
-    const age = new Date().getFullYear() - new Date(g.date_of_birth).getFullYear()
+    // Year-based only: birth year determines eligibility, birthday month is irrelevant
+    const age = new Date().getFullYear() - birthYear(g)
     if (age < selectedRule.min_age) return false
     if (selectedRule.max_age !== null && age > selectedRule.max_age) return false
     return true
@@ -147,19 +151,21 @@ function TeamForm({
         </select>
       </div>
 
-      {/* category */}
-      <div>
-        <label className="block text-xs font-medium text-slate-500 mb-1">{t.category} *</label>
-        <select required value={form.category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
-          <option value="">{t.selectCategory}</option>
-          {availableCategories.map((c) => (
-            <option key={c} value={c}>{CATEGORY_LABELS[lang]?.[c] ?? c}</option>
-          ))}
-        </select>
-      </div>
+      {/* category — only shown after age group is chosen */}
+      {form.age_group && (
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.category} *</label>
+          <select required value={form.category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
+            <option value="">{t.selectCategory}</option>
+            {availableCategories.map((c) => (
+              <option key={c} value={c}>{CATEGORY_LABELS[lang]?.[c] ?? c}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
-      {/* gymnast slots */}
-      {slots.map((selectedId, idx) => {
+      {/* gymnast slots — only shown after category is chosen */}
+      {form.age_group && form.category && slots.map((selectedId, idx) => {
         // show all gymnasts not used elsewhere / not in another slot; disable ineligible by age
         const candidates = sortedGymnasts.filter((g) =>
           !usedInOtherTeams.has(g.id) &&
@@ -174,7 +180,7 @@ function TeamForm({
                 const eligible = isAgeEligible(g)
                 return (
                   <option key={g.id} value={g.id} disabled={!eligible}>
-                    {gymnastFullName(g)} ({gymAge(g)}){!eligible ? ' ✕' : ''}
+                    {gymnastFullName(g)} ({gymAgeThisYear(g)}){!eligible ? ' ✕' : ''}
                   </option>
                 )
               })}
