@@ -11,7 +11,7 @@ import type { JudgeScore } from '@/components/cjp/types'
 const ELEMENTS: TsElement[] = []
 
 export default function Page() {
-  const [lang, setLang] = useState<Lang>('en')
+  const [lang, setLang] = useState<Lang>('es')
   const {
     loading, sessionId,
     assignedRoles, panelJudges, currentPerfId, currentPerf, judgeScores, results,

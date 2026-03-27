@@ -12,6 +12,7 @@ import type {
   AgeGroupRule, CompetitionJudgeNomination,
 } from '@/components/admin/types'
 import { ROLE_CONFIG, defaultSlots, NEXT_STATUS } from '@/components/admin/types'
+import type { PanelLock } from '@/components/admin/competition-detail/JudgesTab'
 
 // ─── page ─────────────────────────────────────────────────────────────────────
 
@@ -20,7 +21,7 @@ export default function Page() {
   const router  = useRouter()
   const supabase = createClient()
 
-  const [lang, setLang]             = useState<Lang>('en')
+  const [lang, setLang]             = useState<Lang>('es')
   const [loading, setLoading]       = useState(true)
   const [competition, setCompetition]         = useState<Competition | null>(null)
   const [panels, setPanels]                   = useState<Panel[]>([])
@@ -35,6 +36,7 @@ export default function Page() {
   const [entries, setEntries]                 = useState<CompetitionEntry[]>([])
   const [sessionOrders, setSessionOrders]     = useState<SessionOrder[]>([])
   const [lockedSessions, setLockedSessions]   = useState<string[]>([])
+  const [panelLocks, setPanelLocks]           = useState<PanelLock[]>([])
   const [availableAdmins, setAvailableAdmins] = useState<AdminUser[]>([])
   const [ageGroupRules, setAgeGroupRules]     = useState<AgeGroupRule[]>([])
 
@@ -101,6 +103,16 @@ export default function Page() {
       const { admin_id, ...compRest } = compRes.data
       const rawNoms = nominationsRes.data ?? []
 
+      // fetch panel locks
+      const rawSectionIds = (sectionsRes.data ?? []).map(s => s.id)
+      const rawPanelIds   = (panelsRes.data ?? []).map(p => p.id)
+      const { data: panelLocksData } = rawSectionIds.length > 0 && rawPanelIds.length > 0
+        ? await supabase.from('section_panel_locks')
+            .select('section_id,panel_id,locked')
+            .in('section_id', rawSectionIds)
+            .in('panel_id', rawPanelIds)
+        : { data: [] as { section_id: string; panel_id: string; locked: boolean }[] }
+
       setCompetition({ ...compRest, admin: admin_id ? (adminMap[admin_id] ?? null) : null })
       setPanels((panelsRes.data ?? []) as unknown as Panel[])
       setSections(sectionsRes.data ?? [])
@@ -113,6 +125,7 @@ export default function Page() {
       setClubs(clubsData ?? [])
       setEntries(entriesRes.data ?? [])
       setLockedSessions(locked)
+      setPanelLocks(panelLocksData ?? [])
       setSessionOrders(ordersData ?? [])
       setAvailableAdmins(adminsWithEmail)
       setAgeGroupRules((rulesRes.data ?? []) as unknown as AgeGroupRule[])
@@ -156,6 +169,17 @@ export default function Page() {
           .insert({ competition_id: id, panel_number: 2 }).select().single()
         if (!data) return
         p2 = data as unknown as Panel
+        // seed default spj slots for Panel 2 × every existing section
+        const slots = sections.flatMap(sec =>
+          defaultSlots(sec.id, p2!.id).map(slot => ({
+            section_id: slot.section_id, panel_id: slot.panel_id,
+            judge_id: slot.judge_id, role: slot.role, role_number: slot.role_number,
+          }))
+        )
+        if (slots.length > 0) {
+          const { data: newSlots } = await supabase.from('section_panel_judges').insert(slots).select()
+          if (newSlots) setAssignments(prev => [...prev, ...newSlots])
+        }
       }
       setPanels([p1, p2])
     }
@@ -163,13 +187,24 @@ export default function Page() {
 
   // ── sections ─────────────────────────────────────────────────────────────────
   async function handleAddSection() {
+    // Ensure Panel 1 exists (may not exist if Overview was never visited)
+    let activePanels = panels
+    if (activePanels.length === 0) {
+      const { data } = await supabase.from('panels')
+        .insert({ competition_id: id, panel_number: 1 }).select().single()
+      if (!data) return
+      const p1 = data as unknown as Panel
+      setPanels([p1])
+      activePanels = [p1]
+    }
+
     const nextNum = sections.length > 0 ? Math.max(...sections.map(s => s.section_number)) + 1 : 1
     const { data: newSection } = await supabase.from('sections')
       .insert({ competition_id: id, section_number: nextNum, label: null }).select().single()
     if (!newSection) return
     setSections(prev => [...prev, newSection])
     // insert default spj slots for new section × all panels
-    const slots = panels.flatMap(pan =>
+    const slots = activePanels.flatMap(pan =>
       defaultSlots(newSection.id, pan.id).map(slot => ({
         section_id: slot.section_id, panel_id: slot.panel_id,
         judge_id: slot.judge_id, role: slot.role, role_number: slot.role_number,
@@ -254,6 +289,19 @@ export default function Page() {
     const toRemove = slots[0]
     await supabase.from('section_panel_judges').delete().eq('id', toRemove.id)
     setAssignments(prev => prev.filter(a => a.id !== toRemove.id))
+  }
+
+  async function handleTogglePanelLock(sectionId: string, panelId: string) {
+    const current = panelLocks.find(l => l.section_id === sectionId && l.panel_id === panelId)
+    const nextLocked = !(current?.locked ?? false)
+    await supabase.from('section_panel_locks').upsert(
+      { section_id: sectionId, panel_id: panelId, locked: nextLocked, updated_at: new Date().toISOString() },
+      { onConflict: 'section_id,panel_id' }
+    )
+    setPanelLocks(prev => {
+      const without = prev.filter(l => !(l.section_id === sectionId && l.panel_id === panelId))
+      return [...without, { section_id: sectionId, panel_id: panelId, locked: nextLocked }]
+    })
   }
 
   // ── registrations ─────────────────────────────────────────────────────────────
@@ -358,11 +406,13 @@ export default function Page() {
         judgePool={judgePool}
         nominations={nominations}
         assignments={assignments}
+        panelLocks={panelLocks}
         onAddToPool={handleAddToPool}
         onRemoveFromPool={handleRemoveFromPool}
         onAssignJudge={handleAssignJudge}
         onAddSlot={handleAddSlot}
         onRemoveSlot={handleRemoveSlot}
+        onTogglePanelLock={handleTogglePanelLock}
         onCreateJudge={handleCreateJudge}
         globalTeams={globalTeams}
         clubs={clubs}

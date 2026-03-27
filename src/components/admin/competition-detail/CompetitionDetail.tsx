@@ -5,7 +5,7 @@ import type { Lang } from '@/components/aj-scoring/types'
 import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination } from '@/components/admin/types'
 import { NEXT_STATUS } from '@/components/admin/types'
 import StructureTab from './StructureTab'
-import JudgesTab, { type JudgesTabProps } from './JudgesTab'
+import JudgesTab, { type JudgesTabProps, type PanelLock } from './JudgesTab'
 import RegistrationsTab, { type RegistrationsTabProps } from './RegistrationsTab'
 import StartingOrderTab, { type StartingOrderTabProps } from './StartingOrderTab'
 import CompetitionDayTab from './CompetitionDayTab'
@@ -33,6 +33,9 @@ const T = {
     admin: 'Competition admin',
     ageGroups: 'Age groups',
     poster: 'Poster / logo',
+    panels: 'Judging panels',
+    panelN: (n: number) => `${n} panel${n !== 1 ? 's' : ''}`,
+    warningPanelChange: 'Changing to 1 panel will reassign all sessions to Panel 1.',
     none: '—',
     noAdmin: '— assign later —',
     // overview — edit
@@ -72,7 +75,7 @@ const T = {
       day:           'Día de competición',
     },
     soon: 'Próximamente',
-    soonSub: 'Esta sección aún no está construida.',
+    soonSub: 'Esta jornada aún no está construida.',
     name: 'Nombre',
     location: 'Sede',
     dates: 'Fechas',
@@ -80,6 +83,9 @@ const T = {
     admin: 'Admin de competición',
     ageGroups: 'Grupos de edad',
     poster: 'Póster / logo',
+    panels: 'Paneles de jueces',
+    panelN: (n: number) => `${n} panel${n !== 1 ? 'es' : ''}`,
+    warningPanelChange: 'Cambiar a 1 panel reasignará todas las sesiones al Panel 1.',
     none: '—',
     noAdmin: '— asignar después —',
     edit: 'Editar',
@@ -157,12 +163,15 @@ function PlaceholderTab({ lang }: { lang: Lang }) {
 
 type OverviewUpdate = Omit<Competition, 'id' | 'created_at' | 'status'>
 
-function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, onUpdate }: {
+function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels, sessions, onUpdate, onSetPanelCount }: {
   competition: Competition
   lang: Lang
   availableAdmins: AdminUser[]
   ageGroupRules: AgeGroupRule[]
+  panels: Panel[]
+  sessions: Session[]
   onUpdate: (updates: OverviewUpdate) => void
+  onSetPanelCount: (count: 1 | 2) => void
 }) {
   const t = T[lang]
   const agLabels = Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group} (${r.ruleset})`]))
@@ -289,6 +298,15 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, onUpda
 
   const dateStr = formatDateRange(competition.start_date, competition.end_date)
   const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+  const panelCount = panels.length as 1 | 2
+
+  function handlePanelCountChange(count: 1 | 2) {
+    if (count === panelCount) return
+    if (count === 1 && sessions.length > 0) {
+      if (!confirm(t.warningPanelChange)) return
+    }
+    onSetPanelCount(count)
+  }
 
   return (
     <div>
@@ -315,6 +333,26 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, onUpda
             <dd className="text-sm text-slate-700">{value}</dd>
           </div>
         ))}
+        {/* panel count — inline toggle */}
+        <div className="py-3 flex items-center gap-4">
+          <dt className="w-48 shrink-0 text-sm text-slate-400">{t.panels}</dt>
+          <dd className="flex gap-2">
+            {([1, 2] as const).map((n) => (
+              <button
+                key={n}
+                onClick={() => handlePanelCountChange(n)}
+                className={[
+                  'px-3 py-1 rounded-lg border text-sm font-semibold transition-all',
+                  panelCount === n
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600',
+                ].join(' ')}
+              >
+                {t.panelN(n)}
+              </button>
+            ))}
+          </dd>
+        </div>
       </dl>
     </div>
   )
@@ -341,11 +379,13 @@ export type CompetitionDetailProps = {
   judgePool: string[]
   nominations: CompetitionJudgeNomination[]
   assignments: SectionPanelJudge[]
+  panelLocks: PanelLock[]
   onAddToPool: (judgeId: string) => void
   onRemoveFromPool: (judgeId: string) => void
   onAssignJudge: (slotId: string, judgeId: string | null) => void
   onAddSlot: (sectionId: string, panelId: string, role: Role) => void
   onRemoveSlot: (sectionId: string, panelId: string, role: Role) => void
+  onTogglePanelLock: (sectionId: string, panelId: string) => Promise<void>
   onCreateJudge?: (data: Omit<Judge, 'id' | 'avatar_url'>) => void
   // registrations
   globalTeams: Team[]
@@ -371,7 +411,8 @@ export default function CompetitionDetail({
   onSetPanelCount, onAddSection, onUpdateSectionLabel,
   onDeleteSection, onAddSession, onDeleteSession,
   globalJudges, judgePool, nominations, assignments,
-  onAddToPool, onRemoveFromPool, onAssignJudge, onAddSlot, onRemoveSlot, onCreateJudge,
+  panelLocks, onAddToPool, onRemoveFromPool, onAssignJudge, onAddSlot, onRemoveSlot,
+  onTogglePanelLock, onCreateJudge,
   globalTeams, clubs, entries, onToggleDropout, sessionOrders, lockedSessions, onReorder, onToggleLock,
   availableAdmins, ageGroupRules, onUpdateCompetition,
   onStartSession, onFinishSession,
@@ -471,10 +512,10 @@ export default function CompetitionDetail({
           competitionId={competition.id}
           ageGroups={competition.age_groups}
           agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group} (${r.ruleset})`]))}
+          ageGroupRules={ageGroupRules}
           panels={panels}
           sections={sections}
           sessions={sessions}
-          onSetPanelCount={onSetPanelCount}
           onAddSection={onAddSection}
           onUpdateSectionLabel={onUpdateSectionLabel}
           onDeleteSection={onDeleteSection}
@@ -488,7 +529,10 @@ export default function CompetitionDetail({
           lang={lang}
           availableAdmins={availableAdmins}
           ageGroupRules={ageGroupRules}
+          panels={panels}
+          sessions={sessions}
           onUpdate={onUpdateCompetition}
+          onSetPanelCount={onSetPanelCount}
         />
       )}
       {activeTab === 'judges' && (
@@ -501,11 +545,13 @@ export default function CompetitionDetail({
           assignments={assignments}
           sections={sections}
           panels={panels}
+          panelLocks={panelLocks}
           onAddToPool={onAddToPool}
           onRemoveFromPool={onRemoveFromPool}
           onAssignJudge={onAssignJudge}
           onAddSlot={onAddSlot}
           onRemoveSlot={onRemoveSlot}
+          onTogglePanelLock={onTogglePanelLock}
           onCreateJudge={onCreateJudge}
         />
       )}

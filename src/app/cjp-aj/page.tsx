@@ -8,7 +8,7 @@ import type { Lang } from '@/components/aj-scoring/types'
 import type { JudgeScore } from '@/components/cjp/types'
 
 export default function Page() {
-  const [lang, setLang] = useState<Lang>('en')
+  const [lang, setLang] = useState<Lang>('es')
   const {
     loading, sessionId,
     assignedRoles, panelJudges, performances, currentPerfId, judgeScores, results,

@@ -173,7 +173,7 @@ function CompCard({
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const [lang, setLang]           = useState<Lang>('en')
+  const [lang, setLang]           = useState<Lang>('es')
   const [comps, setComps]         = useState<Competition[]>([])
   const [agLabel, setAgLabel]     = useState<Record<string, string>>({})
   const [loading, setLoading]     = useState(true)

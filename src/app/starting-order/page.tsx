@@ -57,7 +57,7 @@ function formatDateRange(start: string | null, end: string | null): string {
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function Page() {
-  const [lang, setLang]       = useState<Lang>('en')
+  const [lang, setLang]       = useState<Lang>('es')
   const [comps, setComps]     = useState<Competition[]>([])
   const [loading, setLoading] = useState(true)
   const router   = useRouter()

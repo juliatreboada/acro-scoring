@@ -24,7 +24,7 @@ const T = {
     noTeams: 'Sin equipos inscritos para esta sesión.',
     noSections: 'Sin sesiones definidas. Ve a Estructura.',
     panelN: (n: number) => `Panel ${n}`,
-    sectionN: (n: number) => `Sección ${n}`,
+    sectionN: (n: number) => `Jornada ${n}`,
     shuffle: 'Aleatorio',
     lock: 'Publicar',
     unlock: 'Publicado',

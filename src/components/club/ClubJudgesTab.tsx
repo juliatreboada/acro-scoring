@@ -6,48 +6,88 @@ import type { Judge } from '@/components/admin/types'
 
 const T = {
   en: {
-    addJudge: 'Add judge',
+    inviteJudge: 'Invite new judge',
     name: 'Full name',
     email: 'Email',
     phone: 'Phone',
     licence: 'Licence no.',
-    save: 'Save',
+    send: 'Send invitation',
     cancel: 'Cancel',
-    empty: 'No judges registered yet. Add at least one — competitions require clubs to provide judges.',
-    confirmDelete: 'Remove this judge from the registry?',
+    inviteSent: 'Invitation sent to',
+    inviteInfo: 'The judge will receive an email to set up their account and will appear in the list once they accept.',
+    empty: 'No judges in the system yet.',
+    confirmDelete: 'Remove this judge from the system?',
+    edit: 'Edit',
+    save: 'Save',
+    search: 'Search judges…',
+    judges: (n: number) => `${n} judge${n !== 1 ? 's' : ''} in pool`,
+    noResults: 'No judges match your search.',
   },
   es: {
-    addJudge: 'Añadir juez',
+    inviteJudge: 'Invitar nuevo juez',
     name: 'Nombre completo',
     email: 'Email',
     phone: 'Teléfono',
     licence: 'Nº licencia',
-    save: 'Guardar',
+    send: 'Enviar invitación',
     cancel: 'Cancelar',
-    empty: 'Aún no hay jueces registrados. Añade al menos uno — las competiciones requieren que los clubs aporten jueces.',
-    confirmDelete: '¿Eliminar este juez del registro?',
+    inviteSent: 'Invitación enviada a',
+    inviteInfo: 'El juez recibirá un email para crear su cuenta y aparecerá en la lista cuando acepte.',
+    empty: 'Aún no hay jueces en el sistema.',
+    confirmDelete: '¿Eliminar este juez del sistema?',
+    edit: 'Editar',
+    save: 'Guardar',
+    search: 'Buscar jueces…',
+    judges: (n: number) => `${n} jue${n !== 1 ? 'ces' : 'z'}`,
+    noResults: 'Ningún juez coincide con tu búsqueda.',
   },
 }
 
-type FormState = { full_name: string; email: string; phone: string; licence: string }
-const EMPTY: FormState = { full_name: '', email: '', phone: '', licence: '' }
+type InviteForm = { full_name: string; email: string; phone: string; licence: string }
+const EMPTY_INVITE: InviteForm = { full_name: '', email: '', phone: '', licence: '' }
+type EditForm = { full_name: string; phone: string; licence: string }
 
-function JudgeForm({ lang, initial, onSave, onCancel }: {
+function InviteJudgeForm({ lang, onSend, onCancel }: {
   lang: Lang
-  initial: FormState
-  onSave: (f: FormState) => void
+  onSend: (f: InviteForm) => Promise<void>
   onCancel: () => void
 }) {
   const t = T[lang]
-  const [form, setForm] = useState<FormState>(initial)
+  const [form, setForm] = useState<InviteForm>(EMPTY_INVITE)
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
 
-  function set(k: keyof FormState, v: string) { setForm((f) => ({ ...f, [k]: v })) }
+  function set(k: keyof InviteForm, v: string) { setForm(f => ({ ...f, [k]: v })) }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.full_name.trim()) return
-    onSave({ full_name: form.full_name.trim(), email: form.email.trim(), phone: form.phone.trim(), licence: form.licence.trim() })
+    if (!form.full_name.trim() || !form.email.trim()) return
+    setSending(true); setError(null)
+    try {
+      await onSend({ ...form, full_name: form.full_name.trim(), email: form.email.trim() })
+      setSent(form.email.trim())
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSending(false)
+    }
+  }
+
+  if (sent) {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded-2xl p-4 space-y-2">
+        <p className="text-sm font-semibold text-green-800">{t.inviteSent} {sent}</p>
+        <p className="text-xs text-green-700">{t.inviteInfo}</p>
+        <div className="flex justify-end">
+          <button onClick={onCancel}
+            className="px-4 py-2 rounded-xl text-sm font-medium text-green-700 hover:bg-green-100 transition-all">
+            {t.cancel}
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -57,9 +97,9 @@ function JudgeForm({ lang, initial, onSave, onCancel }: {
           <label className="block text-xs font-medium text-slate-500 mb-1">{t.name} *</label>
           <input type="text" required value={form.full_name} onChange={(e) => set('full_name', e.target.value)} className={inputCls} autoFocus />
         </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">{t.email}</label>
-          <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} className={inputCls} />
+        <div className="col-span-2">
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.email} *</label>
+          <input type="email" required value={form.email} onChange={(e) => set('email', e.target.value)} className={inputCls} />
         </div>
         <div>
           <label className="block text-xs font-medium text-slate-500 mb-1">{t.phone}</label>
@@ -70,80 +110,136 @@ function JudgeForm({ lang, initial, onSave, onCancel }: {
           <input type="text" value={form.licence} onChange={(e) => set('licence', e.target.value)} className={inputCls} />
         </div>
       </div>
+      {error && <p className="text-xs text-red-600">{error}</p>}
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onCancel}
           className="px-4 py-2 rounded-xl text-sm font-medium text-slate-500 hover:bg-slate-100 transition-all">
           {t.cancel}
         </button>
-        <button type="submit"
-          className="px-4 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-all">
-          {t.save}
+        <button type="submit" disabled={sending}
+          className="px-4 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-all">
+          {t.send}
         </button>
       </div>
     </form>
   )
 }
 
-export default function ClubJudgesTab({ lang, judges, onAdd, onUpdate, onDelete }: {
+export default function ClubJudgesTab({ lang, judges, onInvite, onUpdate, onDelete }: {
   lang: Lang
-  judges: Judge[]
-  onAdd: (f: Omit<Judge, 'id' | 'avatar_url'>) => void
+  judges: Judge[]            // full system judge pool
+  onInvite: (f: { full_name: string; email: string; phone?: string; licence?: string }) => Promise<void>
   onUpdate: (id: string, f: Omit<Judge, 'id' | 'avatar_url'>) => void
   onDelete: (id: string) => void
 }) {
   const t = T[lang]
-  const [showAdd, setShowAdd] = useState(false)
+  const [showInvite, setShowInvite] = useState(false)
+  const [query, setQuery] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<EditForm>({ full_name: '', phone: '', licence: '' })
 
-  const sorted = [...judges].sort((a, b) => a.full_name.localeCompare(b.full_name))
+  const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+
+  const q = query.trim().toLowerCase()
+  const filtered = [...judges]
+    .sort((a, b) => a.full_name.localeCompare(b.full_name))
+    .filter(j =>
+      !q ||
+      j.full_name.toLowerCase().includes(q) ||
+      (j.email ?? '').toLowerCase().includes(q) ||
+      (j.licence ?? '').toLowerCase().includes(q)
+    )
+
+  function startEdit(judge: Judge) {
+    setEditingId(judge.id)
+    setEditForm({ full_name: judge.full_name, phone: judge.phone ?? '', licence: judge.licence ?? '' })
+  }
+
+  function saveEdit(judge: Judge) {
+    onUpdate(judge.id, { full_name: editForm.full_name, email: judge.email, phone: editForm.phone || null, licence: editForm.licence || null })
+    setEditingId(null)
+  }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5">
-        <p className="text-sm text-slate-500">{judges.length} judge{judges.length !== 1 ? 's' : ''}</p>
-        {!showAdd && (
-          <button onClick={() => setShowAdd(true)}
+      {/* header row */}
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-slate-500">{t.judges(judges.length)}</p>
+        {!showInvite && (
+          <button onClick={() => setShowInvite(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-all">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
-            {t.addJudge}
+            {t.inviteJudge}
           </button>
         )}
       </div>
 
-      {showAdd && (
+      {/* invite form */}
+      {showInvite && (
         <div className="mb-4">
-          <JudgeForm lang={lang} initial={EMPTY}
-            onCancel={() => setShowAdd(false)}
-            onSave={(f) => {
-              const duplicate = judges.find((j) =>
-                (f.licence && j.licence && j.licence === f.licence) ||
-                (f.email && j.email && j.email.toLowerCase() === f.email.toLowerCase())
-              )
-              if (duplicate) { alert(`A judge with this ${f.licence ? 'licence' : 'email'} already exists.`); return }
-              onAdd({ full_name: f.full_name, email: f.email || null, phone: f.phone || null, licence: f.licence || null })
-              setShowAdd(false)
-            }} />
+          <InviteJudgeForm
+            lang={lang}
+            onSend={async (f) => onInvite({ full_name: f.full_name, email: f.email, phone: f.phone || undefined, licence: f.licence || undefined })}
+            onCancel={() => setShowInvite(false)}
+          />
         </div>
       )}
 
-      {sorted.length === 0 && !showAdd ? (
+      {/* search bar */}
+      {judges.length > 0 && (
+        <div className="relative mb-4">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+          </svg>
+          <input
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder={t.search}
+            className="w-full border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+      )}
+
+      {/* list */}
+      {judges.length === 0 && !showInvite ? (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-6 text-center">
           <p className="text-sm text-amber-700">{t.empty}</p>
         </div>
+      ) : filtered.length === 0 ? (
+        <p className="text-sm text-slate-400 text-center py-8">{t.noResults}</p>
       ) : (
         <div className="space-y-2">
-          {sorted.map((judge) =>
+          {filtered.map((judge) =>
             editingId === judge.id ? (
-              <JudgeForm key={judge.id} lang={lang}
-                initial={{ full_name: judge.full_name, email: judge.email ?? '', phone: judge.phone ?? '', licence: judge.licence ?? '' }}
-                onCancel={() => setEditingId(null)}
-                onSave={(f) => {
-                  onUpdate(judge.id, { full_name: f.full_name, email: f.email || null, phone: f.phone || null, licence: f.licence || null })
-                  setEditingId(null)
-                }} />
-
+              <div key={judge.id} className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-slate-500 mb-1">{t.name}</label>
+                    <input type="text" value={editForm.full_name} onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">{t.phone}</label>
+                    <input type="tel" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">{t.licence}</label>
+                    <input type="text" value={editForm.licence} onChange={e => setEditForm(f => ({ ...f, licence: e.target.value }))} className={inputCls} />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => setEditingId(null)}
+                    className="px-4 py-2 rounded-xl text-sm font-medium text-slate-500 hover:bg-slate-100 transition-all">
+                    {t.cancel}
+                  </button>
+                  <button onClick={() => saveEdit(judge)}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-all">
+                    {t.save}
+                  </button>
+                </div>
+              </div>
             ) : (
               <div key={judge.id} className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3">
                 <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-sm font-semibold text-slate-500">
@@ -162,7 +258,7 @@ export default function ClubJudgesTab({ lang, judges, onAdd, onUpdate, onDelete 
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => setEditingId(judge.id)}
+                  <button onClick={() => startEdit(judge)}
                     className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />

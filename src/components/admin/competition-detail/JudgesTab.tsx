@@ -12,7 +12,7 @@ const T = {
     pool: 'Competition judges',
     poolHint: 'Add judges from the global pool who will attend this competition.',
     addJudge: 'Add judge',
-    newJudge: 'New judge',
+    newJudge: 'Invite judge',
     noPool: 'No judges added yet.',
     removeFromPool: 'Remove',
     assignments: 'Role assignments',
@@ -29,21 +29,23 @@ const T = {
     fieldLicence: 'Licence',
     cancel: 'Cancel',
     create: 'Create & add',
+    lock: 'Lock assignments',
+    unlock: 'Unlock',
   },
   es: {
     pool: 'Jueces de la competición',
     poolHint: 'Añade jueces del pool global que asistirán a esta competición.',
     addJudge: 'Añadir juez',
-    newJudge: 'Nuevo juez',
+    newJudge: 'Invitar juez',
     noPool: 'Sin jueces añadidos.',
     removeFromPool: 'Quitar',
     assignments: 'Asignación de roles',
-    assignmentsHint: 'Asigna jueces a cada rol por sección y panel. Las asignaciones pueden cambiar entre secciones.',
+    assignmentsHint: 'Asigna jueces a cada rol por jornada y panel. Las asignaciones pueden cambiar entre jornadas.',
     unassigned: 'Sin asignar',
     selectJudge: 'Seleccionar juez…',
-    sectionN: (n: number) => `Sección ${n}`,
+    sectionN: (n: number) => `Jornada ${n}`,
     panelN: (n: number) => `Panel ${n}`,
-    noSections: 'Sin secciones definidas. Ve a Estructura para añadir secciones.',
+    noSections: 'Sin jornadas definidas. Ve a Estructura para añadir jornadas.',
     warningRemove: 'Este juez tiene roles asignados. ¿Quitar igualmente?',
     fieldName: 'Nombre completo',
     fieldEmail: 'Email',
@@ -51,6 +53,8 @@ const T = {
     fieldLicence: 'Licencia',
     cancel: 'Cancelar',
     create: 'Crear y añadir',
+    lock: 'Bloquear asignación',
+    unlock: 'Desbloquear',
   },
 }
 
@@ -91,6 +95,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
   onCreateJudge?: (data: Omit<Judge, 'id' | 'avatar_url'>) => void
 }) {
   const t = T[lang]
+  const [collapsed, setCollapsed] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -114,51 +119,72 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
 
   return (
     <section>
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div>
-          <h2 className="text-sm font-semibold text-slate-700">{t.pool}</h2>
-          <p className="text-xs text-slate-400 mt-0.5">{t.poolHint}</p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {onCreateJudge && (
-            <button onClick={() => { setShowCreateForm((v) => !v); setShowPicker(false) }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
-              </svg>
-              {t.newJudge}
-            </button>
-          )}
-          {available.length > 0 && (
-            <div className="relative">
-              <button onClick={() => { setShowPicker((v) => !v); setShowCreateForm(false) }}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-                {t.addJudge}
-              </button>
-
-              {showPicker && (
-                <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-lg z-20 overflow-hidden">
-                  {available.map((j) => (
-                    <button key={j.id} onClick={() => { onAdd(j.id); setShowPicker(false) }}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors text-left">
-                      <Avatar judge={j} size="sm" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-700 truncate">{j.full_name}</p>
-                        {j.email && <p className="text-xs text-slate-400 truncate">{j.email}</p>}
-                      </div>
-                    </button>
-                  ))}
-                </div>
+      <div className="flex items-center gap-3 mb-3">
+        <button
+          onClick={() => setCollapsed(v => !v)}
+          className="flex items-center gap-2 flex-1 min-w-0 text-left group"
+        >
+          <svg
+            className={['w-4 h-4 text-slate-400 shrink-0 transition-transform', collapsed ? '-rotate-90' : ''].join(' ')}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+          <div>
+            <h2 className="text-sm font-semibold text-slate-700 group-hover:text-slate-900 transition-colors">
+              {t.pool}
+              {judges.length > 0 && (
+                <span className="ml-2 text-xs font-medium text-slate-400">({judges.length})</span>
               )}
-            </div>
-          )}
-        </div>
+            </h2>
+            {collapsed && judges.length > 0 && (
+              <div className="flex items-center gap-1 mt-0.5">
+                {judges.slice(0, 5).map(j => <Avatar key={j.id} judge={j} size="sm" />)}
+                {judges.length > 5 && <span className="text-xs text-slate-400">+{judges.length - 5}</span>}
+              </div>
+            )}
+          </div>
+        </button>
+        {!collapsed && (
+          <div className="flex items-center gap-2 shrink-0">
+            {onCreateJudge && (
+              <button onClick={() => { setShowCreateForm((v) => !v); setShowPicker(false) }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+                </svg>
+                {t.newJudge}
+              </button>
+            )}
+            {available.length > 0 && (
+              <div className="relative">
+                <button onClick={() => { setShowPicker((v) => !v); setShowCreateForm(false) }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  {t.addJudge}
+                </button>
+                {showPicker && (
+                  <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-lg z-20 overflow-hidden">
+                    {available.map((j) => (
+                      <button key={j.id} onClick={() => { onAdd(j.id); setShowPicker(false) }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors text-left">
+                        <Avatar judge={j} size="sm" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-slate-700 truncate">{j.full_name}</p>
+                          {j.email && <p className="text-xs text-slate-400 truncate">{j.email}</p>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {showCreateForm && (
+      {!collapsed && showCreateForm && (
         <form onSubmit={handleCreate} className="mb-4 p-4 border border-slate-200 rounded-xl bg-slate-50 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
@@ -207,7 +233,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
         </form>
       )}
 
-      {judges.length === 0 ? (
+      {!collapsed && (judges.length === 0 ? (
         <p className="text-sm text-slate-400 py-4 text-center border border-dashed border-slate-200 rounded-xl">
           {t.noPool}
         </p>
@@ -221,10 +247,8 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                 <Avatar judge={j} size="sm" />
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-700 leading-tight">{j.full_name}</p>
-                  {nominatingClub ? (
+                  {nominatingClub && (
                     <p className="text-xs text-slate-400 leading-tight">{nominatingClub.club_name}</p>
-                  ) : (
-                    <p className="text-xs text-blue-400 leading-tight">admin</p>
                   )}
                 </div>
                 <button onClick={() => handleRemove(j.id)}
@@ -237,80 +261,56 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
             )
           })}
         </div>
-      )}
+      ))}
     </section>
   )
 }
 
-// ─── role group ───────────────────────────────────────────────────────────────
+// ─── slot cell ────────────────────────────────────────────────────────────────
 
-function RoleGroup({ role, slots, poolJudges, onAssign, onAddSlot, onRemoveSlot, lang }: {
-  role: Role
-  slots: SectionPanelJudge[]
+function SlotCell({ label, slot, poolJudges, locked, selectPlaceholder, onAssign }: {
+  label: string
+  slot: SectionPanelJudge
   poolJudges: Judge[]
+  locked: boolean
+  selectPlaceholder: string
   onAssign: (slotId: string, judgeId: string | null) => void
-  onAddSlot: () => void
-  onRemoveSlot: () => void
-  lang: Lang
 }) {
-  const t = T[lang]
-  const cfg = ROLE_CONFIG[role]
-  const canAdd = slots.length < cfg.max
-  const canRemove = slots.length > cfg.min
-
+  const assigned = poolJudges.find((j) => j.id === slot.judge_id)
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">{role}</span>
-        <div className="flex items-center gap-1">
-          {canRemove && (
-            <button onClick={onRemoveSlot}
-              className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all text-xs font-bold">
-              −
-            </button>
-          )}
-          {canAdd && (
-            <button onClick={onAddSlot}
-              className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all text-xs font-bold">
-              +
-            </button>
-          )}
-        </div>
+    <div className="flex flex-col gap-1.5">
+      <span className="text-xs font-bold text-slate-400">{label}</span>
+      <div className="flex items-center gap-1.5">
+        {assigned
+          ? <Avatar judge={assigned} size="sm" />
+          : <div className="w-7 h-7 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 shrink-0" />
+        }
+        <select
+          value={slot.judge_id ?? ''}
+          disabled={locked}
+          onChange={(e) => onAssign(slot.id, e.target.value || null)}
+          className="min-w-0 w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+        >
+          <option value="">{selectPlaceholder}</option>
+          {poolJudges.map((j) => (
+            <option key={j.id} value={j.id}>{j.full_name}</option>
+          ))}
+        </select>
       </div>
-
-      {slots.map((slot) => {
-        const assigned = poolJudges.find((j) => j.id === slot.judge_id)
-        return (
-          <div key={slot.id} className="flex items-center gap-2">
-            {assigned
-              ? <Avatar judge={assigned} size="sm" />
-              : <div className="w-7 h-7 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 shrink-0" />
-            }
-            <select
-              value={slot.judge_id ?? ''}
-              onChange={(e) => onAssign(slot.id, e.target.value || null)}
-              className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">{t.selectJudge}</option>
-              {poolJudges.map((j) => (
-                <option key={j.id} value={j.id}>{j.full_name}</option>
-              ))}
-            </select>
-          </div>
-        )
-      })}
     </div>
   )
 }
 
 // ─── panel assignment column ──────────────────────────────────────────────────
 
-function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, onAssign, onAddSlot, onRemoveSlot }: {
+function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked, onToggleLock, onAssign, onAddSlot, onRemoveSlot }: {
   lang: Lang
   panel: Panel
   section: Section
   slots: SectionPanelJudge[]
   poolJudges: Judge[]
+  locked: boolean
+  onToggleLock: () => void
   onAssign: (slotId: string, judgeId: string | null) => void
   onAddSlot: (role: Role) => void
   onRemoveSlot: (role: Role) => void
@@ -318,29 +318,138 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, onAssi
   const t = T[lang]
   const headerCls = PANEL_HEADER[panel.panel_number] ?? PANEL_HEADER[1]
 
+  const byRole = (role: Role) =>
+    slots.filter((s) => s.role === role).sort((a, b) => a.role_number - b.role_number)
+
+  const cjpSlots = byRole('CJP')
+  const djSlots  = byRole('DJ')
+  const ejSlots  = byRole('EJ')
+  const ajSlots  = byRole('AJ')
+
+  // Columns: col 0 = CJP/DJ, cols 1..n = EJ/AJ pairs
+  const ejCount   = ejSlots.length
+  const totalCols = 1 + ejCount
+
+  const canAddEjAj    = ejSlots.length < ROLE_CONFIG['EJ'].max
+  const canRemoveEjAj = ejSlots.length > ROLE_CONFIG['EJ'].min
+  const canAddDj      = djSlots.length < ROLE_CONFIG['DJ'].max
+  const canRemoveDj   = djSlots.length > ROLE_CONFIG['DJ'].min
+
   return (
     <div className="border border-slate-200 rounded-xl overflow-hidden">
-      <div className={['px-4 py-2 text-xs font-bold border-b', headerCls].join(' ')}>
-        {t.panelN(panel.panel_number)}
+      <div className={['px-4 py-2 text-xs font-bold border-b flex items-center gap-4', headerCls].join(' ')}>
+        <span className="shrink-0">{t.panelN(panel.panel_number)}</span>
+        {/* CJP inline in header */}
+        {cjpSlots[0] && (
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            <span className="text-xs font-bold opacity-70 shrink-0">CJP</span>
+            {(() => { const assigned = poolJudges.find(j => j.id === cjpSlots[0].judge_id); return assigned ? <Avatar judge={assigned} size="sm" /> : <div className="w-7 h-7 rounded-full bg-white/50 border-2 border-dashed border-current opacity-40 shrink-0" /> })()}
+            <select
+              value={cjpSlots[0].judge_id ?? ''}
+              disabled={locked}
+              onChange={(e) => onAssign(cjpSlots[0].id, e.target.value || null)}
+              className={['min-w-0 w-full max-w-52 border rounded-lg px-2 py-1 text-xs bg-white/70 focus:outline-none focus:ring-2 focus:ring-current disabled:opacity-50 disabled:cursor-not-allowed', headerCls].join(' ')}
+            >
+              <option value="">{t.selectJudge}</option>
+              {poolJudges.map(j => <option key={j.id} value={j.id}>{j.full_name}</option>)}
+            </select>
+          </div>
+        )}
+        <button
+          onClick={onToggleLock}
+          className={['ml-auto shrink-0 px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
+            locked ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-white/60 text-slate-500 hover:bg-white border border-transparent hover:border-slate-200'].join(' ')}>
+          {locked ? `🔒 ${t.unlock}` : `🔓 ${t.lock}`}
+        </button>
       </div>
-      <div className="p-4 space-y-4">
-        {ROLE_ORDER.map((role) => {
-          const roleSlots = slots
-            .filter((s) => s.role === role)
-            .sort((a, b) => a.role_number - b.role_number)
-          return (
-            <RoleGroup
-              key={role}
-              role={role}
-              slots={roleSlots}
+
+      <div className="p-4 space-y-3">
+        {/* grid: col 0 = DJ, cols 1..n = EJ/AJ */}
+        <div
+          style={{ display: 'grid', gridTemplateColumns: `repeat(${totalCols}, minmax(0, 1fr))`, gap: '0.75rem 1rem' }}
+        >
+          {/* row 1: DJ1 in col 0, EJ1..EJn in remaining cols */}
+          {djSlots[0] ? (
+            <SlotCell
+              label={djSlots.length > 1 ? 'DJ1' : 'DJ'}
+              slot={djSlots[0]}
               poolJudges={poolJudges}
+              locked={locked}
+              selectPlaceholder={t.selectJudge}
               onAssign={onAssign}
-              onAddSlot={() => onAddSlot(role)}
-              onRemoveSlot={() => onRemoveSlot(role)}
-              lang={lang}
             />
-          )
-        })}
+          ) : <div />}
+          {ejSlots.map((slot) => (
+            <SlotCell
+              key={slot.id}
+              label={ejSlots.length > 1 ? `EJ${slot.role_number}` : 'EJ'}
+              slot={slot}
+              poolJudges={poolJudges}
+              locked={locked}
+              selectPlaceholder={t.selectJudge}
+              onAssign={onAssign}
+            />
+          ))}
+
+          {/* row 3: DJ2 in col 0 (if exists), AJ1..AJn in remaining cols */}
+          {djSlots[1] ? (
+            <SlotCell
+              label="DJ2"
+              slot={djSlots[1]}
+              poolJudges={poolJudges}
+              locked={locked}
+              selectPlaceholder={t.selectJudge}
+              onAssign={onAssign}
+            />
+          ) : <div />}
+          {ajSlots.map((slot) => (
+            <SlotCell
+              key={slot.id}
+              label={ajSlots.length > 1 ? `AJ${slot.role_number}` : 'AJ'}
+              slot={slot}
+              poolJudges={poolJudges}
+              locked={locked}
+              selectPlaceholder={t.selectJudge}
+              onAssign={onAssign}
+            />
+          ))}
+        </div>
+
+        {/* +/- controls */}
+        {!locked && (
+          <div className="flex items-center gap-4 pt-2 border-t border-slate-100">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-slate-400">EJ / AJ</span>
+              {canRemoveEjAj && (
+                <button onClick={() => { onRemoveSlot('EJ'); onRemoveSlot('AJ') }}
+                  className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all text-xs font-bold">
+                  −
+                </button>
+              )}
+              {canAddEjAj && (
+                <button onClick={() => { onAddSlot('EJ'); onAddSlot('AJ') }}
+                  className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all text-xs font-bold">
+                  +
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-slate-400">DJ</span>
+              {canRemoveDj && (
+                <button onClick={() => onRemoveSlot('DJ')}
+                  className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all text-xs font-bold">
+                  −
+                </button>
+              )}
+              {canAddDj && (
+                <button onClick={() => onAddSlot('DJ')}
+                  className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all text-xs font-bold">
+                  +
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -348,12 +457,14 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, onAssi
 
 // ─── section assignment block ─────────────────────────────────────────────────
 
-function SectionAssignmentBlock({ lang, section, panels, slots, poolJudges, onAssign, onAddSlot, onRemoveSlot }: {
+function SectionAssignmentBlock({ lang, section, panels, slots, poolJudges, panelLocks, onToggleLock, onAssign, onAddSlot, onRemoveSlot }: {
   lang: Lang
   section: Section
   panels: Panel[]
   slots: SectionPanelJudge[]
   poolJudges: Judge[]
+  panelLocks: PanelLock[]
+  onToggleLock: (sectionId: string, panelId: string) => void
   onAssign: (slotId: string, judgeId: string | null) => void
   onAddSlot: (sectionId: string, panelId: string, role: Role) => void
   onRemoveSlot: (sectionId: string, panelId: string, role: Role) => void
@@ -364,26 +475,33 @@ function SectionAssignmentBlock({ lang, section, panels, slots, poolJudges, onAs
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold text-slate-600">{label}</h3>
-      <div className={['grid gap-4', panels.length === 2 ? 'grid-cols-2' : 'grid-cols-1 max-w-sm'].join(' ')}>
-        {[...panels].sort((a, b) => a.panel_number - b.panel_number).map((panel) => (
-          <PanelAssignmentColumn
-            key={panel.id}
-            lang={lang}
-            panel={panel}
-            section={section}
-            slots={slots.filter((s) => s.panel_id === panel.id)}
-            poolJudges={poolJudges}
-            onAssign={onAssign}
-            onAddSlot={(role) => onAddSlot(section.id, panel.id, role)}
-            onRemoveSlot={(role) => onRemoveSlot(section.id, panel.id, role)}
-          />
-        ))}
+      <div className="flex flex-col gap-4">
+        {[...panels].sort((a, b) => a.panel_number - b.panel_number).map((panel) => {
+          const locked = panelLocks.some(l => l.section_id === section.id && l.panel_id === panel.id && l.locked)
+          return (
+            <PanelAssignmentColumn
+              key={panel.id}
+              lang={lang}
+              panel={panel}
+              section={section}
+              slots={slots.filter((s) => s.panel_id === panel.id)}
+              poolJudges={poolJudges}
+              locked={locked}
+              onToggleLock={() => onToggleLock(section.id, panel.id)}
+              onAssign={onAssign}
+              onAddSlot={(role) => onAddSlot(section.id, panel.id, role)}
+              onRemoveSlot={(role) => onRemoveSlot(section.id, panel.id, role)}
+            />
+          )
+        })}
       </div>
     </div>
   )
 }
 
 // ─── main component ───────────────────────────────────────────────────────────
+
+export type PanelLock = { section_id: string; panel_id: string; locked: boolean }
 
 export type JudgesTabProps = {
   lang: Lang
@@ -394,17 +512,20 @@ export type JudgesTabProps = {
   assignments: SectionPanelJudge[]
   sections: Section[]
   panels: Panel[]
+  panelLocks: PanelLock[]
   onAddToPool: (judgeId: string) => void
   onRemoveFromPool: (judgeId: string) => void
   onAssignJudge: (slotId: string, judgeId: string | null) => void
   onAddSlot: (sectionId: string, panelId: string, role: Role) => void
   onRemoveSlot: (sectionId: string, panelId: string, role: Role) => void
+  onTogglePanelLock: (sectionId: string, panelId: string) => Promise<void>
   onCreateJudge?: (data: Omit<Judge, 'id' | 'avatar_url'>) => void
 }
 
 export default function JudgesTab({
   lang, globalJudges, judgePool, nominations, clubs, assignments, sections, panels,
-  onAddToPool, onRemoveFromPool, onAssignJudge, onAddSlot, onRemoveSlot, onCreateJudge,
+  panelLocks, onAddToPool, onRemoveFromPool, onAssignJudge, onAddSlot, onRemoveSlot,
+  onTogglePanelLock, onCreateJudge,
 }: JudgesTabProps) {
   const t = T[lang]
   const poolJudges = globalJudges.filter((j) => judgePool.includes(j.id))
@@ -467,6 +588,8 @@ export default function JudgesTab({
                 panels={panels}
                 slots={assignments.filter((a) => a.section_id === activeSection.id)}
                 poolJudges={poolJudges}
+                panelLocks={panelLocks}
+                onToggleLock={onTogglePanelLock}
                 onAssign={onAssignJudge}
                 onAddSlot={onAddSlot}
                 onRemoveSlot={onRemoveSlot}

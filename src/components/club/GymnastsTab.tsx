@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Gymnast } from '@/components/admin/types'
 
@@ -16,6 +16,7 @@ const T = {
     empty: 'No gymnasts yet. Add your first gymnast to get started.',
     yrs: 'yrs',
     confirmDelete: 'Remove this gymnast from the roster?',
+    gymnasts: (n: number) => `${n} gymnast${n !== 1 ? 's' : ''}`,
   },
   es: {
     addGymnast: 'Añadir gimnasta',
@@ -28,6 +29,7 @@ const T = {
     empty: 'Aún no hay gimnastas. Añade el primero para empezar.',
     yrs: 'años',
     confirmDelete: '¿Eliminar este gimnasta del registro?',
+    gymnasts: (n: number) => `${n} gimnasta${n !== 1 ? 's' : ''}`,
   },
 }
 
@@ -43,6 +45,44 @@ function computeAge(dob: string): number {
 export function gymnastFullName(g: Gymnast): string {
   return [g.first_name, g.last_name_1, g.last_name_2].filter(Boolean).join(' ')
 }
+
+// ─── photo avatar ─────────────────────────────────────────────────────────────
+
+function PhotoAvatar({ photoUrl, initials, size = 'md', onUpload }: {
+  photoUrl: string | null
+  initials: string
+  size?: 'sm' | 'md'
+  onUpload: (file: File) => void
+}) {
+  const ref = useRef<HTMLInputElement>(null)
+  const dim = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm'
+
+  return (
+    <div className={`relative shrink-0 ${dim}`}>
+      <div className={`${dim} rounded-full bg-slate-100 flex items-center justify-center font-semibold text-slate-500 overflow-hidden`}>
+        {photoUrl
+          ? <img src={photoUrl} alt="" className="w-full h-full object-cover" />
+          : initials}
+      </div>
+      <button
+        type="button"
+        onClick={() => ref.current?.click()}
+        className="absolute inset-0 rounded-full bg-black/0 hover:bg-black/25 flex items-center justify-center opacity-0 hover:opacity-100 transition-all cursor-pointer">
+        <svg className="w-3 h-3 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+        </svg>
+      </button>
+      <input ref={ref} type="file" accept="image/*" className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) { onUpload(f); e.target.value = '' } }} />
+    </div>
+  )
+}
+
+// Export so TeamsTab can reuse
+export { PhotoAvatar }
+
+// ─── gymnast form ─────────────────────────────────────────────────────────────
 
 type FormState = { first_name: string; last_name_1: string; last_name_2: string; date_of_birth: string }
 const EMPTY_FORM: FormState = { first_name: '', last_name_1: '', last_name_2: '', date_of_birth: '' }
@@ -97,14 +137,17 @@ function GymnastForm({ lang, initial, onSave, onCancel }: {
   )
 }
 
+// ─── tab ─────────────────────────────────────────────────────────────────────
+
 export default function GymnastsTab({
-  lang, gymnasts, onAdd, onUpdate, onDelete,
+  lang, gymnasts, onAdd, onUpdate, onDelete, onUploadPhoto,
 }: {
   lang: Lang
   gymnasts: Gymnast[]
   onAdd: (g: Omit<Gymnast, 'id' | 'club_id'>) => void
   onUpdate: (id: string, g: Omit<Gymnast, 'id' | 'club_id'>) => void
   onDelete: (id: string) => void
+  onUploadPhoto: (id: string, file: File) => Promise<void>
 }) {
   const t = T[lang]
   const [showAdd, setShowAdd] = useState(false)
@@ -115,7 +158,7 @@ export default function GymnastsTab({
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
-        <p className="text-sm text-slate-500">{gymnasts.length} gymnast{gymnasts.length !== 1 ? 's' : ''}</p>
+        <p className="text-sm text-slate-500">{t.gymnasts(gymnasts.length)}</p>
         {!showAdd && (
           <button onClick={() => setShowAdd(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-all">
@@ -131,7 +174,7 @@ export default function GymnastsTab({
         <div className="mb-4">
           <GymnastForm lang={lang} initial={EMPTY_FORM}
             onCancel={() => setShowAdd(false)}
-            onSave={(f) => { onAdd(f); setShowAdd(false) }} />
+            onSave={(f) => { onAdd({ ...f, photo_url: null }); setShowAdd(false) }} />
         </div>
       )}
 
@@ -144,12 +187,14 @@ export default function GymnastsTab({
               <GymnastForm key={g.id} lang={lang}
                 initial={{ first_name: g.first_name, last_name_1: g.last_name_1, last_name_2: g.last_name_2 ?? '', date_of_birth: g.date_of_birth }}
                 onCancel={() => setEditingId(null)}
-                onSave={(f) => { onUpdate(g.id, f); setEditingId(null) }} />
+                onSave={(f) => { onUpdate(g.id, { ...f, photo_url: g.photo_url }); setEditingId(null) }} />
             ) : (
               <div key={g.id} className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3">
-                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-sm font-semibold text-slate-500">
-                  {g.first_name[0]}{g.last_name_1[0]}
-                </div>
+                <PhotoAvatar
+                  photoUrl={g.photo_url}
+                  initials={`${g.first_name[0]}${g.last_name_1[0]}`}
+                  onUpload={(file) => onUploadPhoto(g.id, file)}
+                />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-800">{gymnastFullName(g)}</p>
                   <p className="text-xs text-slate-400">

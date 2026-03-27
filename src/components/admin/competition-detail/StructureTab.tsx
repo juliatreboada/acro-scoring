@@ -1,18 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Panel, Section, Session } from '@/components/admin/types'
-import { ACRO_CATEGORIES, ROUTINE_TYPES } from '@/components/admin/types'
+import type { Panel, Section, Session, AgeGroupRule } from '@/components/admin/types'
+import { ACRO_CATEGORIES, ROUTINE_TYPES, categoriesForRuleset, CATEGORY_LABELS } from '@/components/admin/types'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
 const T = {
   en: {
-    panels: 'Judging panels',
-    panelsHint: 'Choose how many panels will judge this competition',
-    panel: (n: number) => `${n} panel`,
-    panels2: '2 panels',
     sections: 'Sections',
     addSection: 'Add section',
     sectionLabel: 'Label',
@@ -33,21 +29,17 @@ const T = {
     sectionN: (n: number) => `Section ${n}`,
     panelBadge: (n: number) => `P${n}`,
     panelN: (n: number) => `Panel ${n}`,
-    warningPanelChange: 'Changing to 1 panel will reassign all sessions to Panel 1.',
   },
   es: {
-    panels: 'Paneles de jueces',
-    panelsHint: 'Elige cuántos paneles juzgarán esta competición',
-    panels2: '2 paneles',
-    sections: 'Secciones',
-    addSection: 'Añadir sección',
+    sections: 'Jornadas',
+    addSection: 'Añadir jornada',
     sectionLabel: 'Etiqueta',
     sectionLabelPlaceholder: 'p.ej. Mañana, Tarde…',
-    deleteSection: 'Eliminar sección',
-    noSections: 'Sin secciones',
-    noSectionsSub: 'Añade una sección para empezar a construir el programa.',
+    deleteSection: 'Eliminar jornada',
+    noSections: 'Sin jornadas',
+    noSectionsSub: 'Añade una joranada para empezar a construir el programa.',
     addSession: 'Añadir sesión',
-    noSessions: 'Sin sesiones en esta sección.',
+    noSessions: 'Sin sesiones en esta jornada.',
     panelLabel: 'Panel',
     ageGroup: 'Grupo de edad',
     category: 'Categoría',
@@ -56,10 +48,9 @@ const T = {
     cancel: 'Cancelar',
     deleteSession: 'Eliminar',
     sessionName: (ag: string, cat: string, rt: string) => `${ag} · ${cat} · ${rt}`,
-    sectionN: (n: number) => `Sección ${n}`,
+    sectionN: (n: number) => `Jornada ${n}`,
     panelBadge: (n: number) => `P${n}`,
     panelN: (n: number) => `Panel ${n}`,
-    warningPanelChange: 'Cambiar a 1 panel reasignará todas las sesiones al Panel 1.',
   },
 }
 
@@ -77,17 +68,36 @@ type AddSessionFormProps = {
   panel: Panel          // always pre-determined (from column or single-panel context)
   ageGroups: string[]
   agLabels: Record<string, string>
+  ageGroupRules: AgeGroupRule[]
   sectionId: string
   nextOrderIndex: number
   onAdd: (s: Omit<Session, 'id'>) => void
   onCancel: () => void
 }
 
-function AddSessionForm({ lang, panel, ageGroups, agLabels, sectionId, nextOrderIndex, onAdd, onCancel }: AddSessionFormProps) {
+function AddSessionForm({ lang, panel, ageGroups, agLabels, ageGroupRules, sectionId, nextOrderIndex, onAdd, onCancel }: AddSessionFormProps) {
   const t = T[lang]
-  const [ageGroup, setAgeGroup] = useState(ageGroups[0] ?? '')
-  const [category, setCategory] = useState<string>(ACRO_CATEGORIES[0])
+
+  function getCategoriesForAgeGroup(ageGroupId: string): string[] {
+    const rule = ageGroupRules.find(r => r.id === ageGroupId)
+    if (!rule) return [...ACRO_CATEGORIES]
+    return categoriesForRuleset(rule.ruleset)
+  }
+
+  const initialAgeGroup = ageGroups[0] ?? ''
+  const initialCategories = getCategoriesForAgeGroup(initialAgeGroup)
+
+  const [ageGroup, setAgeGroupState] = useState(initialAgeGroup)
+  const [availableCategories, setAvailableCategories] = useState<string[]>(initialCategories)
+  const [category, setCategory] = useState<string>(initialCategories[0] ?? ACRO_CATEGORIES[0])
   const [routineType, setRoutineType] = useState<'Balance' | 'Dynamic' | 'Combined'>('Balance')
+
+  function handleAgeGroupChange(ag: string) {
+    const cats = getCategoriesForAgeGroup(ag)
+    setAgeGroupState(ag)
+    setAvailableCategories(cats)
+    setCategory(cats[0] ?? '')
+  }
 
   function handleAdd() {
     if (!ageGroup) return
@@ -111,14 +121,16 @@ function AddSessionForm({ lang, panel, ageGroups, agLabels, sectionId, nextOrder
       <div className="space-y-2">
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-slate-500">{t.ageGroup}</label>
-          <select value={ageGroup} onChange={(e) => setAgeGroup(e.target.value)} className={selectCls}>
+          <select value={ageGroup} onChange={(e) => handleAgeGroupChange(e.target.value)} className={selectCls}>
             {ageGroups.map((ag) => <option key={ag} value={ag}>{agLabels[ag] ?? ag}</option>)}
           </select>
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-slate-500">{t.category}</label>
           <select value={category} onChange={(e) => setCategory(e.target.value)} className={selectCls}>
-            {ACRO_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            {availableCategories.map((c) => (
+              <option key={c} value={c}>{CATEGORY_LABELS[lang]?.[c] ?? c}</option>
+            ))}
           </select>
         </div>
         <div className="flex flex-col gap-1">
@@ -165,12 +177,13 @@ function SessionRow({ session, borderStyle, onDelete, lang }: {
 
 // ─── panel column ─────────────────────────────────────────────────────────────
 
-function PanelColumn({ lang, panel, sessions, ageGroups, agLabels, sectionId, onAddSession, onDeleteSession }: {
+function PanelColumn({ lang, panel, sessions, ageGroups, agLabels, ageGroupRules, sectionId, onAddSession, onDeleteSession }: {
   lang: Lang
   panel: Panel
   sessions: Session[]
   ageGroups: string[]
   agLabels: Record<string, string>
+  ageGroupRules: AgeGroupRule[]
   sectionId: string
   onAddSession: (s: Omit<Session, 'id'>) => void
   onDeleteSession: (id: string) => void
@@ -204,6 +217,7 @@ function PanelColumn({ lang, panel, sessions, ageGroups, agLabels, sectionId, on
           panel={panel}
           ageGroups={ageGroups}
           agLabels={agLabels}
+          ageGroupRules={ageGroupRules}
           sectionId={sectionId}
           nextOrderIndex={sessions.length + 1}
           onAdd={(s) => { onAddSession(s); setShowForm(false) }}
@@ -231,6 +245,7 @@ type SectionBlockProps = {
   panels: Panel[]
   ageGroups: string[]
   agLabels: Record<string, string>
+  ageGroupRules: AgeGroupRule[]
   onUpdateLabel: (label: string) => void
   onDelete: () => void
   onAddSession: (s: Omit<Session, 'id'>) => void
@@ -238,7 +253,7 @@ type SectionBlockProps = {
 }
 
 function SectionBlock({
-  lang, section, sessions, panels, ageGroups, agLabels,
+  lang, section, sessions, panels, ageGroups, agLabels, ageGroupRules,
   onUpdateLabel, onDelete, onAddSession, onDeleteSession,
 }: SectionBlockProps) {
   const t = T[lang]
@@ -279,6 +294,7 @@ function SectionBlock({
                 sessions={sessions.filter((s) => s.panel_id === panel.id)}
                 ageGroups={ageGroups}
                 agLabels={agLabels}
+                ageGroupRules={ageGroupRules}
                 sectionId={section.id}
                 onAddSession={onAddSession}
                 onDeleteSession={onDeleteSession}
@@ -305,6 +321,7 @@ function SectionBlock({
                 panel={panels[0]}
                 ageGroups={ageGroups}
                 agLabels={agLabels}
+                ageGroupRules={ageGroupRules}
                 sectionId={section.id}
                 nextOrderIndex={sessions.length + 1}
                 onAdd={(s) => { onAddSession(s); setShowForm(false) }}
@@ -333,10 +350,10 @@ export type StructureTabProps = {
   competitionId: string
   ageGroups: string[]          // age group IDs enabled for this competition
   agLabels: Record<string, string>  // UUID → display label
+  ageGroupRules: AgeGroupRule[]
   panels: Panel[]
   sections: Section[]
   sessions: Session[]
-  onSetPanelCount: (count: 1 | 2) => void
   onAddSection: () => void
   onUpdateSectionLabel: (sectionId: string, label: string) => void
   onDeleteSection: (sectionId: string) => void
@@ -345,86 +362,96 @@ export type StructureTabProps = {
 }
 
 export default function StructureTab({
-  lang, competitionId, ageGroups, agLabels, panels, sections, sessions,
-  onSetPanelCount, onAddSection, onUpdateSectionLabel, onDeleteSection,
+  lang, competitionId, ageGroups, agLabels, ageGroupRules, panels, sections, sessions,
+  onAddSection, onUpdateSectionLabel, onDeleteSection,
   onAddSession, onDeleteSession,
 }: StructureTabProps) {
   const t = T[lang]
-  const panelCount = panels.length as 1 | 2
+  const sorted = [...sections].sort((a, b) => a.section_number - b.section_number)
+  const [activeSectionId, setActiveSectionId] = useState<string>(sorted[0]?.id ?? '')
 
-  function handlePanelCountChange(count: 1 | 2) {
-    if (count === panelCount) return
-    if (count === 1 && sessions.length > 0) {
-      if (!confirm(t.warningPanelChange)) return
+  // auto-select the newest section when one is added
+  useEffect(() => {
+    if (sorted.length === 0) { setActiveSectionId(''); return }
+    if (!sorted.find(s => s.id === activeSectionId)) {
+      setActiveSectionId(sorted[sorted.length - 1].id)
     }
-    onSetPanelCount(count)
+  }, [sections]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const activeSection = sorted.find(s => s.id === activeSectionId) ?? sorted[0]
+
+  function handleDelete(sec: Section) {
+    const idx = sorted.findIndex(s => s.id === sec.id)
+    const next = sorted[idx + 1] ?? sorted[idx - 1]
+    onDeleteSection(sec.id)
+    if (next) setActiveSectionId(next.id)
+  }
+
+  if (sections.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-slate-200 rounded-2xl">
+        <p className="text-sm font-medium text-slate-500">{t.noSections}</p>
+        <p className="text-xs text-slate-400 mt-1 mb-4">{t.noSectionsSub}</p>
+        <button onClick={onAddSection}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          {t.addSection}
+        </button>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-8">
-      {/* ── panels ── */}
-      <section>
-        <h2 className="text-sm font-semibold text-slate-700 mb-1">{t.panels}</h2>
-        <p className="text-xs text-slate-400 mb-3">{t.panelsHint}</p>
-        <div className="flex gap-3">
-          {([1, 2] as const).map((n) => (
-            <button
-              key={n}
-              onClick={() => handlePanelCountChange(n)}
-              className={[
-                'flex-1 max-w-[160px] py-4 rounded-2xl border-2 text-sm font-semibold transition-all',
-                panelCount === n
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-slate-200 text-slate-500 hover:border-slate-300',
-              ].join(' ')}
-            >
-              <span className="text-2xl font-bold block mb-1">{n}</span>
-              {n === 1 ? t.panelN(1) : t.panels2}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {/* ── sections ── */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-700">{t.sections}</h2>
-          <button onClick={onAddSection}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            {t.addSection}
+    <div>
+      {/* section tab bar */}
+      <div className="flex items-center border-b border-slate-200 mb-6 gap-0">
+        {sorted.map((sec) => (
+          <button
+            key={sec.id}
+            onClick={() => setActiveSectionId(sec.id)}
+            className={[
+              'px-4 py-2.5 text-sm font-semibold border-b-2 transition-all whitespace-nowrap',
+              activeSectionId === sec.id
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-slate-400 hover:text-slate-600',
+            ].join(' ')}
+          >
+            {sec.label ?? t.sectionN(sec.section_number)}
           </button>
-        </div>
+        ))}
+        {/* add section button as a + tab */}
+        <button
+          onClick={onAddSection}
+          className="px-3 py-2.5 text-slate-400 hover:text-blue-600 border-b-2 border-transparent transition-all"
+          title={t.addSection}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+        </button>
+      </div>
 
-        {sections.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-slate-200 rounded-2xl">
-            <p className="text-sm font-medium text-slate-500">{t.noSections}</p>
-            <p className="text-xs text-slate-400 mt-1">{t.noSectionsSub}</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {[...sections].sort((a, b) => a.section_number - b.section_number).map((sec) => (
-              <SectionBlock
-                key={sec.id}
-                lang={lang}
-                section={sec}
-                sessions={sessions
-                  .filter((s) => s.section_id === sec.id)
-                  .sort((a, b) => a.order_index - b.order_index)}
-                panels={panels}
-                ageGroups={ageGroups}
-                agLabels={agLabels}
-                onUpdateLabel={(label) => onUpdateSectionLabel(sec.id, label)}
-                onDelete={() => onDeleteSection(sec.id)}
-                onAddSession={onAddSession}
-                onDeleteSession={onDeleteSession}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+      {/* active section content */}
+      {activeSection && (
+        <SectionBlock
+          key={activeSection.id}
+          lang={lang}
+          section={activeSection}
+          sessions={sessions
+            .filter(s => s.section_id === activeSection.id)
+            .sort((a, b) => a.order_index - b.order_index)}
+          panels={panels}
+          ageGroups={ageGroups}
+          agLabels={agLabels}
+          ageGroupRules={ageGroupRules}
+          onUpdateLabel={(label) => onUpdateSectionLabel(activeSection.id, label)}
+          onDelete={() => handleDelete(activeSection)}
+          onAddSession={onAddSession}
+          onDeleteSession={onDeleteSession}
+        />
+      )}
     </div>
   )
 }

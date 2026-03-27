@@ -13,7 +13,7 @@ export default function Page() {
   const { id } = useParams<{ id: string }>()
   const supabase = createClient()
 
-  const [lang, setLang]                   = useState<Lang>('en')
+  const [lang, setLang]                   = useState<Lang>('es')
   const [competitionName, setCompName]    = useState('')
   const [performances, setPerformances]   = useState<MockPerf[]>([])
   const [results, setResults]             = useState<Record<string, RoutineResult>>({})

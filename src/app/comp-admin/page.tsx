@@ -11,7 +11,7 @@ import type { Competition } from '@/components/admin/types'
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function Page() {
-  const [lang, setLang]             = useState<Lang>('en')
+  const [lang, setLang]             = useState<Lang>('es')
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [loading, setLoading]       = useState(true)
   const router   = useRouter()

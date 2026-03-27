@@ -9,7 +9,7 @@ import type { Sheet } from '@/components/dj-review/types'
 
 export default function Page() {
   const supabase = createClient()
-  const [lang, setLang] = useState<Lang>('en')
+  const [lang, setLang] = useState<Lang>('es')
   const [sheets, setSheets] = useState<Sheet[]>([])
   const [loading, setLoading] = useState(true)
 

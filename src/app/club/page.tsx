@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Club, Gymnast, Team, Competition, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination } from '@/components/admin/types'
+import type { Club, Gymnast, Team, Competition, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule } from '@/components/admin/types'
 import ClubPortal from '@/components/club/ClubPortal'
 import AuthBar from '@/components/shared/AuthBar'
 
@@ -11,7 +11,7 @@ import AuthBar from '@/components/shared/AuthBar'
 
 export default function Page() {
   const supabase = createClient()
-  const [lang, setLang]       = useState<Lang>('en')
+  const [lang, setLang]       = useState<Lang>('es')
   const [loading, setLoading] = useState(true)
 
   const [club,         setClub]         = useState<Club | null>(null)
@@ -24,6 +24,7 @@ export default function Page() {
   const [nominations,  setNominations]  = useState<CompetitionJudgeNomination[]>([])
   const [clubId,       setClubId]       = useState<string>('')
   const [agLabels,     setAgLabels]     = useState<Record<string, string>>({})
+  const [ageGroupRules, setAgeGroupRules] = useState<AgeGroupRule[]>([])
 
   useEffect(() => {
     async function load() {
@@ -40,21 +41,20 @@ export default function Page() {
       // ── parallel: club + gymnasts + teams + competitions + nominations + rules ─
       const [clubRes, gymnastsRes, teamsRes, compsRes, nomsRes, rulesRes] = await Promise.all([
         supabase.from('clubs').select('id,club_name,contact_name,phone,avatar_url').eq('id', cid).single(),
-        supabase.from('gymnasts').select('id,club_id,first_name,last_name_1,last_name_2,date_of_birth').eq('club_id', cid),
+        supabase.from('gymnasts').select('id,club_id,first_name,last_name_1,last_name_2,date_of_birth,photo_url').eq('club_id', cid),
         supabase.from('teams').select('id,club_id,category,age_group,gymnast_display,photo_url').eq('club_id', cid),
         supabase.from('competitions')
           .select('id,name,status,location,start_date,end_date,registration_deadline,age_groups,poster_url,created_at')
           .neq('status', 'draft')
           .order('start_date', { ascending: false }),
         supabase.from('competition_judge_nominations').select('id,competition_id,judge_id,club_id').eq('club_id', cid),
-        supabase.from('age_group_rules').select('id,age_group,ruleset').order('sort_order'),
+        supabase.from('age_group_rules').select('id,age_group,ruleset,min_age,max_age').order('sort_order'),
       ])
 
       const rawTeams = teamsRes.data ?? []
       const teamIds  = rawTeams.map(t => t.id)
 
-      // ── parallel: team_gymnasts + entries + music + judges ───────────────────
-      const judgeIds = [...new Set((nomsRes.data ?? []).map(n => n.judge_id))]
+      // ── parallel: team_gymnasts + entries + music + all judges ───────────────
       const [tgRes, entriesRes, musicRes, judgesRes] = await Promise.all([
         teamIds.length > 0
           ? supabase.from('team_gymnasts').select('team_id,gymnast_id').in('team_id', teamIds)
@@ -65,9 +65,7 @@ export default function Page() {
         teamIds.length > 0
           ? supabase.from('routine_music').select('id,team_id,competition_id,routine_type,music_path,ts_path,uploaded_at').in('team_id', teamIds)
           : Promise.resolve({ data: [] }),
-        judgeIds.length > 0
-          ? supabase.from('judges').select('id,full_name,phone,licence,avatar_url').in('id', judgeIds)
-          : Promise.resolve({ data: [] }),
+        supabase.from('judges').select('id,full_name,phone,licence,avatar_url'),
       ])
 
       // attach gymnast_ids to each team
@@ -87,7 +85,8 @@ export default function Page() {
 
       const mappedComps: Competition[] = (compsRes.data ?? []).map(c => ({ ...c, admin: null }))
 
-      const agLabelsMap = Object.fromEntries(((rulesRes.data ?? []) as unknown as { id: string; age_group: string; ruleset: string }[]).map(r => [r.id, `${r.age_group} (${r.ruleset})`]))
+      const agLabelsMap = Object.fromEntries(((rulesRes.data ?? []) as unknown as { id: string; age_group: string; ruleset: string; min_age: number; max_age: number | null }[]).map(r => [r.id, `${r.age_group} (${r.ruleset})`]))
+      setAgeGroupRules((rulesRes.data ?? []) as unknown as AgeGroupRule[])
 
       const rawJudges = judgesRes.data ?? []
       const fetchedJudgeIds = rawJudges.map((j: { id: string }) => j.id)
@@ -97,7 +96,7 @@ export default function Page() {
       const judgeEmailMap = Object.fromEntries((judgeProfiles ?? []).map(p => [p.id, p.email ?? null]))
 
       setClub(clubRes.data)
-      setGymnasts(gymnastsRes.data ?? [])
+      setGymnasts((gymnastsRes.data ?? []) as unknown as Gymnast[])
       setTeams(teamsWithIds)
       setCompetitions(mappedComps)
       setEntries(entriesRes.data ?? [])
@@ -113,7 +112,7 @@ export default function Page() {
   // ── gymnasts ──────────────────────────────────────────────────────────────────
   async function handleAddGymnast(g: Omit<Gymnast, 'id' | 'club_id'>) {
     const { data } = await supabase.from('gymnasts').insert({ ...g, club_id: clubId }).select().single()
-    if (data) setGymnasts(prev => [...prev, data as Gymnast])
+    if (data) setGymnasts(prev => [...prev, data as unknown as Gymnast])
   }
 
   async function handleUpdateGymnast(id: string, g: Omit<Gymnast, 'id' | 'club_id'>) {
@@ -176,10 +175,16 @@ export default function Page() {
   }
 
   // ── judges ────────────────────────────────────────────────────────────────────
-  async function handleAddJudge(j: Omit<Judge, 'id' | 'avatar_url'>) {
-    const { full_name, phone, licence } = j
-    const { data } = await supabase.from('judges').insert({ full_name, phone, licence, avatar_url: null } as any).select().single()
-    if (data) setJudges(prev => [...prev, { ...data, email: j.email } as unknown as Judge])
+  async function handleInviteJudge(j: { full_name: string; email: string; phone?: string; licence?: string }) {
+    const res = await fetch('/api/club/invite-judge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(j),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error ?? 'Failed to send invitation')
+    }
   }
 
   async function handleUpdateJudge(id: string, j: Omit<Judge, 'id' | 'avatar_url'>) {
@@ -205,6 +210,45 @@ export default function Page() {
   async function handleRemoveNomination(nominationId: string) {
     await supabase.from('competition_judge_nominations').delete().eq('id', nominationId)
     setNominations(prev => prev.filter(n => n.id !== nominationId))
+  }
+
+  // ── club profile ──────────────────────────────────────────────────────────────
+  async function handleUpdateClub(data: Partial<Pick<Club, 'club_name' | 'contact_name' | 'phone'>>) {
+    await supabase.from('clubs').update(data).eq('id', clubId)
+    setClub(prev => prev ? { ...prev, ...data } : prev)
+  }
+
+  async function handleUploadGymnastPhoto(id: string, file: File) {
+    const ext = file.name.split('.').pop() ?? 'jpg'
+    const path = `gymnasts/${id}/photo.${ext}`
+    const { error } = await supabase.storage.from('photos').upload(path, file, { upsert: true })
+    if (error) { console.error('Gymnast photo upload failed:', error.message); return }
+    const { data } = supabase.storage.from('photos').getPublicUrl(path)
+    const url = data.publicUrl
+    await supabase.from('gymnasts').update({ photo_url: url } as Record<string, string>).eq('id', id)
+    setGymnasts(prev => prev.map(g => g.id === id ? { ...g, photo_url: url } : g))
+  }
+
+  async function handleUploadTeamPhoto(id: string, file: File) {
+    const ext = file.name.split('.').pop() ?? 'jpg'
+    const path = `teams/${id}/photo.${ext}`
+    const { error } = await supabase.storage.from('photos').upload(path, file, { upsert: true })
+    if (error) { console.error('Team photo upload failed:', error.message); return }
+    const { data } = supabase.storage.from('photos').getPublicUrl(path)
+    const url = data.publicUrl
+    await supabase.from('teams').update({ photo_url: url }).eq('id', id)
+    setTeams(prev => prev.map(t => t.id === id ? { ...t, photo_url: url } : t))
+  }
+
+  async function handleUploadAvatar(file: File) {
+    const ext = file.name.split('.').pop() ?? 'jpg'
+    const path = `clubs/${clubId}/avatar.${ext}`
+    const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+    if (error) { console.error('Avatar upload failed:', error.message); return }
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+    const url = data.publicUrl
+    await supabase.from('clubs').update({ avatar_url: url }).eq('id', clubId)
+    setClub(prev => prev ? { ...prev, avatar_url: url } : prev)
   }
 
   // ── files (music + TS sheet) ──────────────────────────────────────────────────
@@ -265,6 +309,7 @@ export default function Page() {
         judges={judges}
         nominations={nominations}
         agLabels={agLabels}
+        ageGroupRules={ageGroupRules}
         onAddGymnast={handleAddGymnast}
         onUpdateGymnast={handleUpdateGymnast}
         onDeleteGymnast={handleDeleteGymnast}
@@ -274,11 +319,15 @@ export default function Page() {
         onRegister={handleRegister}
         onUnregister={handleUnregister}
         onSetFile={handleSetFile}
-        onAddJudge={handleAddJudge}
+        onInviteJudge={handleInviteJudge}
         onUpdateJudge={handleUpdateJudge}
         onDeleteJudge={handleDeleteJudge}
         onNominate={handleNominate}
         onRemoveNomination={handleRemoveNomination}
+        onUpdateClub={handleUpdateClub}
+        onUploadAvatar={handleUploadAvatar}
+        onUploadGymnastPhoto={handleUploadGymnastPhoto}
+        onUploadTeamPhoto={handleUploadTeamPhoto}
       />
     </div>
   )

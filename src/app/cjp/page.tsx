@@ -7,7 +7,7 @@ import AuthBar from '@/components/shared/AuthBar'
 import type { Lang } from '@/components/aj-scoring/types'
 
 export default function Page() {
-  const [lang, setLang] = useState<Lang>('en')
+  const [lang, setLang] = useState<Lang>('es')
   const {
     loading, sessionId,
     panelJudges, performances, currentPerfId, judgeScores, results,

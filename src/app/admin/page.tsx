@@ -13,7 +13,7 @@ const T_USERS = { en: 'Users', es: 'Usuarios' }
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function Page() {
-  const [lang, setLang]               = useState<Lang>('en')
+  const [lang, setLang]               = useState<Lang>('es')
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [ageGroupRules, setAgeGroupRules] = useState<AgeGroupRule[]>([])
   const [availableAdmins, setAvailableAdmins] = useState<AdminUser[]>([])

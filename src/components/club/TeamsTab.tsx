@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Gymnast, Team } from '@/components/admin/types'
-import { ACRO_CATEGORIES, CATEGORY_SIZE } from '@/components/admin/types'
-import { gymnastFullName } from './GymnastsTab'
+import type { Gymnast, Team, AgeGroupRule } from '@/components/admin/types'
+import { CATEGORY_SIZE, categoriesForRuleset, CATEGORY_LABELS } from '@/components/admin/types'
+import { gymnastFullName, PhotoAvatar } from './GymnastsTab'
 
 const T = {
   en: {
@@ -20,7 +20,6 @@ const T = {
     selectCategory: 'Select category',
     selectAgeGroup: 'Select age group',
     selectGymnast: '— select gymnast —',
-    ageGroups: ['Youth', 'Junior FIG', 'Senior FIG'],
   },
   es: {
     addTeam: 'Añadir equipo',
@@ -35,8 +34,15 @@ const T = {
     selectCategory: 'Seleccionar categoría',
     selectAgeGroup: 'Seleccionar grupo de edad',
     selectGymnast: '— seleccionar gimnasta —',
-    ageGroups: ['Youth', 'Junior FIG', 'Senior FIG'],
   },
+}
+
+function gymAge(g: Gymnast): number {
+  return new Date().getFullYear() - new Date(g.date_of_birth).getFullYear()
+}
+
+function ageRangeStr(rule: AgeGroupRule): string {
+  return rule.max_age != null ? `${rule.min_age}–${rule.max_age}` : `${rule.min_age}+`
 }
 
 // Build gymnast_display from selected gymnasts: "Fernández García / Ruiz López"
@@ -52,18 +58,34 @@ type FormState = { category: string; age_group: string; gymnast_ids: string[] }
 const EMPTY_FORM: FormState = { category: '', age_group: '', gymnast_ids: [] }
 
 function TeamForm({
-  lang, gymnasts, usedInOtherTeams, initial, onSave, onCancel,
+  lang, gymnasts, ageGroupRules, agLabels, usedInOtherTeams, initial, onSave, onCancel,
 }: {
   lang: Lang
   gymnasts: Gymnast[]
+  ageGroupRules: AgeGroupRule[]
+  agLabels: Record<string, string>
   usedInOtherTeams: Set<string>
   initial: FormState
   onSave: (f: FormState & { gymnast_display: string }) => void
   onCancel: () => void
 }) {
   const t = T[lang]
-  const [form, setForm] = useState<FormState>(initial)
 
+  // Compute initial categories based on the initial age_group
+  function getCategoriesForAgeGroup(ageGroupId: string): string[] {
+    if (!ageGroupId) return ["Women's Pair", "Men's Pair", "Mixed Pair", "Women's Group", "Mixed Group"]
+    const rule = ageGroupRules.find(r => r.id === ageGroupId)
+    if (!rule) return ["Women's Pair", "Men's Pair", "Mixed Pair", "Women's Group", "Mixed Group"]
+    return categoriesForRuleset(rule.ruleset)
+  }
+
+  const [form, setForm] = useState<FormState>(() => {
+    const cats = getCategoriesForAgeGroup(initial.age_group)
+    const cat = initial.category && cats.includes(initial.category) ? initial.category : cats[0] ?? ''
+    return { ...initial, category: cat }
+  })
+
+  const availableCategories = getCategoriesForAgeGroup(form.age_group)
   const slotCount = form.category ? (CATEGORY_SIZE[form.category] ?? 2) : 2
   // ensure gymnast_ids array has exactly slotCount entries (pad with '' or trim)
   const slots: string[] = Array.from({ length: slotCount }, (_, i) => form.gymnast_ids[i] ?? '')
@@ -76,9 +98,26 @@ function TeamForm({
     })
   }
 
+  // when age group changes, recompute available categories and reset category + slots
+  function setAgeGroup(ageGroupId: string) {
+    const cats = getCategoriesForAgeGroup(ageGroupId)
+    setForm((f) => ({ ...f, age_group: ageGroupId, category: cats[0] ?? '', gymnast_ids: [] }))
+  }
+
   // when category changes, reset slots
   function setCategory(cat: string) {
     setForm((f) => ({ ...f, category: cat, gymnast_ids: [] }))
+  }
+
+  // Age validation: get the selected rule's min/max age
+  const selectedRule = ageGroupRules.find(r => r.id === form.age_group)
+
+  function isAgeEligible(g: Gymnast): boolean {
+    if (!selectedRule) return true
+    const age = new Date().getFullYear() - new Date(g.date_of_birth).getFullYear()
+    if (age < selectedRule.min_age) return false
+    if (selectedRule.max_age !== null && age > selectedRule.max_age) return false
+    return true
   }
 
   const isComplete = form.category && form.age_group && slots.every((s) => s !== '')
@@ -95,28 +134,34 @@ function TeamForm({
 
   return (
     <form onSubmit={handleSubmit} className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3">
+      {/* age group */}
+      <div>
+        <label className="block text-xs font-medium text-slate-500 mb-1">{t.ageGroup} *</label>
+        <select required value={form.age_group} onChange={(e) => setAgeGroup(e.target.value)} className={inputCls}>
+          <option value="">{t.selectAgeGroup}</option>
+          {ageGroupRules.map((rule) => (
+            <option key={rule.id} value={rule.id}>
+              {agLabels[rule.id] ?? rule.age_group} ({ageRangeStr(rule)})
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* category */}
       <div>
         <label className="block text-xs font-medium text-slate-500 mb-1">{t.category} *</label>
         <select required value={form.category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
           <option value="">{t.selectCategory}</option>
-          {ACRO_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-      </div>
-
-      {/* age group */}
-      <div>
-        <label className="block text-xs font-medium text-slate-500 mb-1">{t.ageGroup} *</label>
-        <select required value={form.age_group} onChange={(e) => setForm((f) => ({ ...f, age_group: e.target.value }))} className={inputCls}>
-          <option value="">{t.selectAgeGroup}</option>
-          {t.ageGroups.map((ag) => <option key={ag} value={ag}>{ag}</option>)}
+          {availableCategories.map((c) => (
+            <option key={c} value={c}>{CATEGORY_LABELS[lang]?.[c] ?? c}</option>
+          ))}
         </select>
       </div>
 
       {/* gymnast slots */}
       {slots.map((selectedId, idx) => {
-        // available: not used in another team AND not selected in another slot
-        const available = sortedGymnasts.filter((g) =>
+        // show all gymnasts not used elsewhere / not in another slot; disable ineligible by age
+        const candidates = sortedGymnasts.filter((g) =>
           !usedInOtherTeams.has(g.id) &&
           !slots.some((s, j) => j !== idx && s === g.id)
         )
@@ -125,9 +170,14 @@ function TeamForm({
             <label className="block text-xs font-medium text-slate-500 mb-1">{t.gymnast(idx + 1)} *</label>
             <select required value={selectedId} onChange={(e) => setSlot(idx, e.target.value)} className={inputCls}>
               <option value="">{t.selectGymnast}</option>
-              {available.map((g) => (
-                <option key={g.id} value={g.id}>{gymnastFullName(g)}</option>
-              ))}
+              {candidates.map((g) => {
+                const eligible = isAgeEligible(g)
+                return (
+                  <option key={g.id} value={g.id} disabled={!eligible}>
+                    {gymnastFullName(g)} ({gymAge(g)}){!eligible ? ' ✕' : ''}
+                  </option>
+                )
+              })}
             </select>
           </div>
         )
@@ -149,14 +199,17 @@ function TeamForm({
 }
 
 export default function TeamsTab({
-  lang, gymnasts, teams, onAdd, onUpdate, onDelete,
+  lang, gymnasts, teams, ageGroupRules, agLabels, onAdd, onUpdate, onDelete, onUploadPhoto,
 }: {
   lang: Lang
   gymnasts: Gymnast[]
   teams: Team[]
+  ageGroupRules: AgeGroupRule[]
+  agLabels: Record<string, string>
   onAdd: (f: FormState & { gymnast_display: string }) => void
   onUpdate: (id: string, f: FormState & { gymnast_display: string }) => void
   onDelete: (id: string) => void
+  onUploadPhoto: (id: string, file: File) => Promise<void>
 }) {
   const t = T[lang]
   const [showAdd, setShowAdd] = useState(false)
@@ -195,7 +248,8 @@ export default function TeamsTab({
 
       {showAdd && (
         <div className="mb-4">
-          <TeamForm lang={lang} gymnasts={gymnasts} usedInOtherTeams={allUsed} initial={EMPTY_FORM}
+          <TeamForm lang={lang} gymnasts={gymnasts} ageGroupRules={ageGroupRules} agLabels={agLabels}
+            usedInOtherTeams={allUsed} initial={EMPTY_FORM}
             onCancel={() => setShowAdd(false)}
             onSave={(f) => { onAdd(f); setShowAdd(false) }} />
         </div>
@@ -207,25 +261,31 @@ export default function TeamsTab({
         <div className="space-y-6">
           {Object.entries(grouped).map(([category, catTeams]) => (
             <div key={category}>
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">{category}</p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                {CATEGORY_LABELS[lang]?.[category] ?? category}
+              </p>
               <div className="space-y-2">
                 {catTeams.map((team) =>
                   editingId === team.id ? (
                     <TeamForm key={team.id} lang={lang} gymnasts={gymnasts}
+                      ageGroupRules={ageGroupRules} agLabels={agLabels}
                       usedInOtherTeams={usedExcluding(team.id)}
                       initial={{ category: team.category, age_group: team.age_group, gymnast_ids: team.gymnast_ids ?? [] }}
                       onCancel={() => setEditingId(null)}
                       onSave={(f) => { onUpdate(team.id, f); setEditingId(null) }} />
                   ) : (
                     <div key={team.id} className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3">
-                      <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
-                        <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-                        </svg>
-                      </div>
+                      <PhotoAvatar
+                        photoUrl={team.photo_url}
+                        initials={team.gymnast_display.charAt(0)}
+                        size="md"
+                        onUpload={(file) => onUploadPhoto(team.id, file)}
+                      />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-slate-800">{team.gymnast_display}</p>
-                        <p className="text-xs text-slate-400">{team.age_group}</p>
+                        <p className="text-xs text-slate-400">
+                          {agLabels[team.age_group] ?? team.age_group} · {CATEGORY_LABELS[lang]?.[team.category] ?? team.category}
+                        </p>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <button onClick={() => setEditingId(team.id)}

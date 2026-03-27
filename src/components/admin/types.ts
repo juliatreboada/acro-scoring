@@ -86,6 +86,7 @@ export type Gymnast = {
   last_name_1: string       // first surname
   last_name_2: string | null  // second surname (optional)
   date_of_birth: string     // 'YYYY-MM-DD'
+  photo_url: string | null
 }
 
 // How many gymnasts each category requires
@@ -95,6 +96,9 @@ export const CATEGORY_SIZE: Record<string, number> = {
   "Mixed Pair":    2,
   "Women's Group": 3,
   "Mixed Group":   4,
+  'Pairs':    2,
+  'Groups 3': 3,
+  'Groups 4': 4,
 }
 
 export type Team = {
@@ -166,6 +170,37 @@ export const ACRO_CATEGORIES = [
   "Women's Group",
   "Mixed Group",
 ] as const
+
+// Categories available depending on ruleset ('Escolar'/'Base' vs FIG)
+export function categoriesForRuleset(ruleset: string): string[] {
+  const r = ruleset.toLowerCase()
+  if (r === 'escolar' || r === 'base') return ['Pairs', 'Groups 3', 'Groups 4']
+  return ["Women's Pair", "Men's Pair", "Mixed Pair", "Women's Group", "Mixed Group"]
+}
+
+// Translations for category keys
+export const CATEGORY_LABELS: Record<string, Record<string, string>> = {
+  en: {
+    "Women's Pair":  "Women's Pair",
+    "Men's Pair":    "Men's Pair",
+    "Mixed Pair":    "Mixed Pair",
+    "Women's Group": "Women's Group",
+    "Mixed Group":   "Mixed Group",
+    'Pairs':    'Pairs',
+    'Groups 3': 'Groups 3',
+    'Groups 4': 'Groups 4',
+  },
+  es: {
+    "Women's Pair":  'Pareja Femenina',
+    "Men's Pair":    'Pareja Masculina',
+    "Mixed Pair":    'Pareja Mixta',
+    "Women's Group": 'Grupo Femenino',
+    "Mixed Group":   'Grupo Mixto',
+    'Pairs':    'Parejas',
+    'Groups 3': 'Tríos',
+    'Groups 4': 'Cuartetos',
+  },
+}
 
 export const ROUTINE_TYPES = ['Balance', 'Dynamic', 'Combined'] as const
 

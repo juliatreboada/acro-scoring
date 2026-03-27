@@ -12,7 +12,7 @@ import StartingOrderView from '@/components/starting-order/StartingOrderView'
 export default function Page() {
   const { id } = useParams<{ id: string }>()
   const supabase = createClient()
-  const [lang, setLang] = useState<Lang>('en')
+  const [lang, setLang] = useState<Lang>('es')
 
   const [competition,   setCompetition]   = useState<Competition | null>(null)
   const [panels,        setPanels]        = useState<Panel[]>([])

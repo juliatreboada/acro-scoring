@@ -28,16 +28,16 @@ const T = {
   es: {
     notActive: 'La competición aún no está en curso.',
     notActiveSub: 'Los controles de sesión estarán disponibles cuando la competición esté activa.',
-    section: 'Sección',
+    section: 'Jornada',
     panel: 'Panel',
     waiting: 'En espera',
     active: 'En curso',
     finished: 'Finalizada',
     start: 'Iniciar sesión',
-    startSection: 'Iniciar sección',
+    startSection: 'Iniciar jornada',
     finish: 'Finalizar sesión',
     confirmStart: '¿Iniciar esta sesión? Los jueces podrán enviar puntuaciones.',
-    confirmStartSection: '¿Iniciar todas las sesiones de esta sección simultáneamente?',
+    confirmStartSection: '¿Iniciar todas las sesiones de esta jornada simultáneamente?',
     confirmFinish: '¿Marcar esta sesión como finalizada?',
     noTeams: 'Sin equipos asignados.',
     dropout: 'Baja',
@@ -235,19 +235,6 @@ export default function CompetitionDayTab({
       )}
 
       {/* section-level start button (multi-panel only) */}
-      {multiPanel && canControl && hasWaiting && (
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={() => { if (confirm(t.confirmStartSection)) startSection() }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-all">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z" />
-            </svg>
-            {t.startSection}
-          </button>
-        </div>
-      )}
-
       {/* panel columns */}
       {!multiPanel ? (
         <div className="space-y-3">
@@ -264,28 +251,59 @@ export default function CompetitionDayTab({
             ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {panels.map((panel) => (
-            <div key={panel.id}>
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">
-                {t.panel} {panel.panel_number}
-              </p>
-              <div className="space-y-3">
-                {sectionSessions
-                  .filter((s) => s.panel_id === panel.id)
-                  .sort((a, b) => a.order_index - b.order_index)
-                  .map((session) => (
-                    <SessionCard key={session.id} lang={lang} session={session}
-                      sessionOrders={sessionOrders} globalTeams={globalTeams}
-                      clubs={clubs} entries={entries} canControl={canControl}
-                      showStart={false}
-                      onStart={() => onStartSession(session.id)}
-                      onFinish={() => onFinishSession(session.id)} />
-                  ))}
-              </div>
+        (() => {
+          // multi-panel: pair sessions by order_index
+          const orderIndices = [...new Set(sectionSessions.map(s => s.order_index))].sort((a, b) => a - b)
+
+          return (
+            <div className="space-y-4">
+              {orderIndices.map(idx => {
+                const rowSessions = panels
+                  .map(p => sectionSessions.find(s => s.panel_id === p.id && s.order_index === idx))
+                  .filter(Boolean) as Session[]
+                const allWaiting = rowSessions.every(s => s.status === 'waiting')
+                const allActive = rowSessions.every(s => s.status === 'active')
+                const allFinished = rowSessions.every(s => s.status === 'finished')
+
+                return (
+                  <div key={idx} className="border border-slate-200 rounded-2xl overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-100">
+                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">#{idx}</span>
+                      {canControl && !allFinished && (
+                        <div className="flex gap-2">
+                          {allWaiting && (
+                            <button
+                              onClick={() => { if (confirm(t.confirmStart)) rowSessions.forEach(s => onStartSession(s.id)) }}
+                              className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-all">
+                              ▶ {t.start}
+                            </button>
+                          )}
+                          {allActive && (
+                            <button
+                              onClick={() => { if (confirm(t.confirmFinish)) rowSessions.forEach(s => onFinishSession(s.id)) }}
+                              className="flex items-center gap-1.5 px-3 py-1 bg-slate-700 text-white text-xs font-semibold rounded-lg hover:bg-slate-800 transition-all">
+                              ✓ {t.finish}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className={`grid gap-0 ${panels.length > 1 ? 'grid-cols-2 divide-x divide-slate-100' : ''}`}>
+                      {rowSessions.map(session => (
+                        <SessionCard key={session.id} lang={lang} session={session}
+                          sessionOrders={sessionOrders} globalTeams={globalTeams}
+                          clubs={clubs} entries={entries} canControl={false}
+                          showStart={false}
+                          onStart={() => {}}
+                          onFinish={() => {}} />
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          ))}
-        </div>
+          )
+        })()
       )}
     </div>
   )

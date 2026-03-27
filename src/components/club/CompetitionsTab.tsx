@@ -30,8 +30,22 @@ const T = {
     nominate: 'Nominate',
     nominated: 'Nominated',
     removeNomination: 'Remove',
-    noJudges: 'No judges in your registry. Add judges in the Judges tab first.',
+    noJudges: 'No judges nominated yet.',
     judgesWarning: 'At least 1 judge must be nominated for this competition.',
+    addFromPool: '+ Add from pool',
+    inviteNew: '+ Invite new judge',
+    noPoolJudges: 'No other judges available in the pool.',
+    searchJudges: 'Search judges…',
+    // invite form
+    inviteJudge: 'Invite new judge',
+    name: 'Full name',
+    email: 'Email',
+    phone: 'Phone',
+    licence: 'Licence no.',
+    send: 'Send invitation',
+    cancel: 'Cancel',
+    inviteSent: 'Invitation sent to',
+    inviteInfo: 'The judge will receive an email to set up their account.',
     status: {
       draft: 'Draft',
       registration_open: 'Open',
@@ -63,8 +77,22 @@ const T = {
     nominate: 'Nominar',
     nominated: 'Nominado',
     removeNomination: 'Quitar',
-    noJudges: 'No hay jueces en tu registro. Añade jueces en la pestaña Jueces primero.',
+    noJudges: 'Aún no hay jueces nominados.',
     judgesWarning: 'Debes nominar al menos 1 juez para esta competición.',
+    addFromPool: '+ Añadir del pool',
+    inviteNew: '+ Invitar nuevo juez',
+    noPoolJudges: 'No hay otros jueces disponibles en el pool.',
+    searchJudges: 'Buscar jueces…',
+    // invite form
+    inviteJudge: 'Invitar nuevo juez',
+    name: 'Nombre completo',
+    email: 'Email',
+    phone: 'Teléfono',
+    licence: 'Nº licencia',
+    send: 'Enviar invitación',
+    cancel: 'Cancelar',
+    inviteSent: 'Invitación enviada a',
+    inviteInfo: 'El juez recibirá un email para crear su cuenta.',
     status: {
       draft: 'Borrador',
       registration_open: 'Abierta',
@@ -131,7 +159,7 @@ function FileChip({ label, filename, accept, onUpload, onRemove }: {
   )
 }
 
-// ─── routine row (1 line: routine name · TS chip · Music chip) ────────────────
+// ─── routine row ──────────────────────────────────────────────────────────────
 
 function RoutineRow({
   lang, routineType, record, onSet,
@@ -159,11 +187,94 @@ function RoutineRow({
   )
 }
 
+// ─── invite judge form ────────────────────────────────────────────────────────
+
+type InviteForm = { full_name: string; email: string; phone: string; licence: string }
+const EMPTY_INVITE: InviteForm = { full_name: '', email: '', phone: '', licence: '' }
+
+function InviteJudgeForm({ lang, onSend, onCancel }: {
+  lang: Lang
+  onSend: (f: InviteForm) => Promise<void>
+  onCancel: () => void
+}) {
+  const t = T[lang]
+  const [form, setForm] = useState<InviteForm>(EMPTY_INVITE)
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+
+  function set(k: keyof InviteForm, v: string) { setForm(f => ({ ...f, [k]: v })) }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.full_name.trim() || !form.email.trim()) return
+    setSending(true); setError(null)
+    try {
+      await onSend({ ...form, full_name: form.full_name.trim(), email: form.email.trim() })
+      setSent(form.email.trim())
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSending(false)
+    }
+  }
+
+  if (sent) {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded-2xl p-4 space-y-2">
+        <p className="text-sm font-semibold text-green-800">{t.inviteSent} {sent}</p>
+        <p className="text-xs text-green-700">{t.inviteInfo}</p>
+        <div className="flex justify-end">
+          <button onClick={onCancel}
+            className="px-4 py-2 rounded-xl text-sm font-medium text-green-700 hover:bg-green-100 transition-all">
+            {t.cancel}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2">
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.name} *</label>
+          <input type="text" required value={form.full_name} onChange={(e) => set('full_name', e.target.value)} className={inputCls} autoFocus />
+        </div>
+        <div className="col-span-2">
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.email} *</label>
+          <input type="email" required value={form.email} onChange={(e) => set('email', e.target.value)} className={inputCls} />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.phone}</label>
+          <input type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} className={inputCls} />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.licence}</label>
+          <input type="text" value={form.licence} onChange={(e) => set('licence', e.target.value)} className={inputCls} />
+        </div>
+      </div>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancel}
+          className="px-4 py-2 rounded-xl text-sm font-medium text-slate-500 hover:bg-slate-100 transition-all">
+          {t.cancel}
+        </button>
+        <button type="submit" disabled={sending}
+          className="px-4 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-all">
+          {t.send}
+        </button>
+      </div>
+    </form>
+  )
+}
+
 // ─── detail view ─────────────────────────────────────────────────────────────
 
 function CompetitionDetailView({
   lang, competition, teams, entries, music, judges, nominations, agLabels, onBack,
-  onRegister, onUnregister, onSetFile, onNominate, onRemoveNomination,
+  onRegister, onUnregister, onSetFile, onNominate, onRemoveNomination, onInviteJudge,
 }: {
   lang: Lang
   competition: Competition
@@ -179,15 +290,36 @@ function CompetitionDetailView({
   onSetFile: (teamId: string, routineType: 'Balance' | 'Dynamic' | 'Combined', field: 'music' | 'ts', filename: string | null) => void
   onNominate: (judgeId: string) => void
   onRemoveNomination: (nominationId: string) => void
+  onInviteJudge: (f: { full_name: string; email: string; phone?: string; licence?: string }) => Promise<void>
 }) {
   const t = T[lang]
   const isOpen = competition.status === 'registration_open'
   const dateStr = formatDateRange(competition.start_date, competition.end_date)
-  const eligibleTeams = teams.filter((team) => competition.age_groups.includes(team.age_group))
+
+  // Fix eligible teams filter: match by UUID (ag_group = rule.id) OR by label name (legacy)
+  const eligibleTeams = teams.filter((team) =>
+    competition.age_groups.some(agId =>
+      agId === team.age_group ||
+      (agLabels[agId] && agLabels[agId] === team.age_group)
+    )
+  )
+
   const compNominations = nominations.filter((n) => n.competition_id === competition.id)
   const nominatedIds = new Set(compNominations.map((n) => n.judge_id))
   const hasJudgeWarning = compNominations.length === 0 && isOpen
   const [judgesOpen, setJudgesOpen] = useState(hasJudgeWarning)
+  const [showPoolPicker, setShowPoolPicker] = useState(false)
+  const [showInviteForm, setShowInviteForm] = useState(false)
+  const [poolSearch, setPoolSearch] = useState('')
+
+  // Judges already nominated for this competition
+  const nominatedJudges = judges.filter(j => nominatedIds.has(j.id))
+  // Judges in pool but not yet nominated for this competition
+  const availableForNomination = judges.filter(j => !nominatedIds.has(j.id))
+  const filteredPool = availableForNomination.filter(j =>
+    !poolSearch.trim() ||
+    j.full_name.toLowerCase().includes(poolSearch.trim().toLowerCase())
+  )
 
   function entryFor(teamId: string) {
     return entries.find((e) => e.competition_id === competition.id && e.team_id === teamId)
@@ -264,17 +396,16 @@ function CompetitionDetailView({
         </button>
 
         {judgesOpen && (
-          <div className="px-5 py-4 border-t border-slate-100">
-            {judges.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-3">{t.noJudges}</p>
+          <div className="px-5 py-4 border-t border-slate-100 space-y-3">
+            {/* nominated judges for this competition */}
+            {nominatedJudges.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-2">{t.noJudges}</p>
             ) : (
               <div className="space-y-2">
-                {[...judges].sort((a, b) => a.full_name.localeCompare(b.full_name)).map((judge) => {
+                {nominatedJudges.map((judge) => {
                   const nomination = compNominations.find((n) => n.judge_id === judge.id)
-                  const isNominated = nominatedIds.has(judge.id)
                   return (
-                    <div key={judge.id} className={['flex items-center gap-3 rounded-xl px-3 py-2.5 border transition-all',
-                      isNominated ? 'bg-green-50 border-green-200' : 'bg-white border-slate-200'].join(' ')}>
+                    <div key={judge.id} className="flex items-center gap-3 rounded-xl px-3 py-2.5 border bg-green-50 border-green-200">
                       <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-xs font-semibold text-slate-500">
                         {judge.full_name.charAt(0)}
                       </div>
@@ -286,27 +417,83 @@ function CompetitionDetailView({
                           )}
                         </div>
                       </div>
-                      <div className="shrink-0">
-                        {isNominated ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold px-2 py-0.5 bg-green-100 text-green-600 rounded-full">{t.nominated}</span>
-                            {isOpen && nomination && (
-                              <button onClick={() => onRemoveNomination(nomination.id)}
-                                className="text-xs text-slate-400 hover:text-red-500 transition-colors">
-                                {t.removeNomination}
-                              </button>
-                            )}
-                          </div>
-                        ) : isOpen ? (
-                          <button onClick={() => onNominate(judge.id)}
-                            className="text-xs font-semibold px-2.5 py-1 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-all">
-                            {t.nominate}
+                      <div className="shrink-0 flex items-center gap-2">
+                        <span className="text-xs font-semibold px-2 py-0.5 bg-green-100 text-green-600 rounded-full">{t.nominated}</span>
+                        {isOpen && nomination && (
+                          <button onClick={() => onRemoveNomination(nomination.id)}
+                            className="text-xs text-slate-400 hover:text-red-500 transition-colors">
+                            {t.removeNomination}
                           </button>
-                        ) : null}
+                        )}
                       </div>
                     </div>
                   )
                 })}
+              </div>
+            )}
+
+            {/* pool picker */}
+            {isOpen && (
+              <div className="space-y-2">
+                {!showInviteForm && (
+                  <button
+                    onClick={() => { setShowPoolPicker(v => !v); setShowInviteForm(false) }}
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+                    {t.addFromPool}
+                  </button>
+                )}
+
+                {showPoolPicker && !showInviteForm && (
+                  <div className="border border-slate-200 rounded-xl overflow-hidden">
+                    <div className="px-3 py-2 border-b border-slate-100">
+                      <input
+                        type="text"
+                        value={poolSearch}
+                        onChange={e => setPoolSearch(e.target.value)}
+                        placeholder={t.searchJudges}
+                        className="w-full text-sm text-slate-700 bg-transparent outline-none placeholder:text-slate-300"
+                      />
+                    </div>
+                    {filteredPool.length === 0 ? (
+                      <p className="px-3 py-3 text-xs text-slate-400 text-center">{t.noPoolJudges}</p>
+                    ) : (
+                      <div className="max-h-48 overflow-y-auto divide-y divide-slate-50">
+                        {filteredPool.map(judge => (
+                          <button key={judge.id}
+                            onClick={() => { onNominate(judge.id); setShowPoolPicker(false); setPoolSearch('') }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 transition-colors text-left">
+                            <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-xs font-semibold text-slate-500">
+                              {judge.full_name.charAt(0)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-slate-700 truncate">{judge.full_name}</p>
+                              {judge.licence && <p className="text-xs text-slate-400">{judge.licence}</p>}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* invite new judge */}
+                {!showPoolPicker && (
+                  <button
+                    onClick={() => { setShowInviteForm(v => !v); setShowPoolPicker(false) }}
+                    className="text-xs font-semibold text-slate-500 hover:text-slate-700 transition-colors">
+                    {t.inviteNew}
+                  </button>
+                )}
+
+                {showInviteForm && (
+                  <InviteJudgeForm
+                    lang={lang}
+                    onSend={async (f) => {
+                      await onInviteJudge({ full_name: f.full_name, email: f.email, phone: f.phone || undefined, licence: f.licence || undefined })
+                    }}
+                    onCancel={() => setShowInviteForm(false)}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -453,7 +640,7 @@ function CompetitionListView({
 
 export default function CompetitionsTab({
   lang, competitions, teams, entries, music, judges, nominations, agLabels,
-  onRegister, onUnregister, onSetFile, onNominate, onRemoveNomination,
+  onRegister, onUnregister, onSetFile, onNominate, onRemoveNomination, onInviteJudge,
 }: {
   lang: Lang
   competitions: Competition[]
@@ -468,6 +655,7 @@ export default function CompetitionsTab({
   onSetFile: (teamId: string, competitionId: string, routineType: 'Balance' | 'Dynamic' | 'Combined', field: 'music' | 'ts', filename: string | null) => void
   onNominate: (competitionId: string, judgeId: string) => void
   onRemoveNomination: (nominationId: string) => void
+  onInviteJudge: (f: { full_name: string; email: string; phone?: string; licence?: string }) => Promise<void>
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selected = competitions.find((c) => c.id === selectedId) ?? null
@@ -489,6 +677,7 @@ export default function CompetitionsTab({
         onSetFile={(teamId, routineType, field, filename) => onSetFile(teamId, selected.id, routineType, field, filename)}
         onNominate={(judgeId) => onNominate(selected.id, judgeId)}
         onRemoveNomination={onRemoveNomination}
+        onInviteJudge={onInviteJudge}
       />
     )
   }

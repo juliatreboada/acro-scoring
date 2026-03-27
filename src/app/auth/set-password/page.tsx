@@ -49,7 +49,7 @@ export default function SetPasswordPage() {
   const router   = useRouter()
   const supabase = createClient()
 
-  const [lang, setLang]         = useState<Lang>('en')
+  const [lang, setLang]         = useState<Lang>('es')
   const [status, setStatus]     = useState<'loading' | 'ready' | 'no_session'>('loading')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm]   = useState('')

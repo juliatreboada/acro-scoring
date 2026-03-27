@@ -113,7 +113,7 @@ export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  const [lang, setLang]         = useState<Lang>('en')
+  const [lang, setLang]         = useState<Lang>('es')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')

@@ -52,7 +52,7 @@ const T = {
 export default function Page() {
   const supabase = createClient()
   const router   = useRouter()
-  const [lang, setLang] = useState<Lang>('en')
+  const [lang, setLang] = useState<Lang>('es')
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Role>('admin')
 
