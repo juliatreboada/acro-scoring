@@ -107,7 +107,7 @@ export default function Page() {
       const rawSectionIds = (sectionsRes.data ?? []).map(s => s.id)
       const rawPanelIds   = (panelsRes.data ?? []).map(p => p.id)
       const { data: panelLocksData } = rawSectionIds.length > 0 && rawPanelIds.length > 0
-        ? await supabase.from('section_panel_locks')
+        ? await (supabase as any).from('section_panel_locks')
             .select('section_id,panel_id,locked')
             .in('section_id', rawSectionIds)
             .in('panel_id', rawPanelIds)
@@ -282,7 +282,7 @@ export default function Page() {
   async function handleTogglePanelLock(sectionId: string, panelId: string) {
     const current = panelLocks.find(l => l.section_id === sectionId && l.panel_id === panelId)
     const nextLocked = !(current?.locked ?? false)
-    await supabase.from('section_panel_locks').upsert(
+    await (supabase as any).from('section_panel_locks').upsert(
       { section_id: sectionId, panel_id: panelId, locked: nextLocked, updated_at: new Date().toISOString() },
       { onConflict: 'section_id,panel_id' }
     )

@@ -193,14 +193,14 @@ function CompetitionDetail({ comp, lang, onBack }: {
       const sectionIds = sections.map(s => s.id)
 
       // 2. Get locked panels for these sections
-      const { data: locks } = await supabase
+      const { data: locks } = await (supabase as any)
         .from('section_panel_locks')
         .select('section_id, panel_id, locked')
         .in('section_id', sectionIds)
         .eq('locked', true)
       if (!locks?.length) { setLoading(false); return }
 
-      const lockedPairs = locks.map(l => `${l.section_id}|${l.panel_id}`)
+      const lockedPairs = (locks as { section_id: string; panel_id: string }[]).map(l => `${l.section_id}|${l.panel_id}`)
 
       // 3. Get my assignments in these sections
       const { data: mySpjs } = await supabase
