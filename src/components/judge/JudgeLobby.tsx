@@ -66,6 +66,7 @@ const T = {
     startingOrder: 'Starting order',
     noOrder: 'Starting order not yet published.',
     scoreButton: 'Score',
+    djReviewButton: 'Review TS sheets',
     loadingDetail: 'Loading…',
   },
   es: {
@@ -93,6 +94,7 @@ const T = {
     startingOrder: 'Orden de salida',
     noOrder: 'El orden de salida aún no está publicado.',
     scoreButton: 'Puntuar',
+    djReviewButton: 'Revisar hojas de tarifa',
     loadingDetail: 'Cargando…',
   },
 }
@@ -332,6 +334,16 @@ function CompetitionDetail({ comp, lang, onBack }: {
                         </span>
                       ))}
                   </div>
+                  {/* DJ review button — available from registration_closed onward */}
+                  {(['registration_closed', 'active', 'finished'] as CompetitionStatus[]).includes(comp.status) &&
+                    panel.roles.some(r => r.role === 'DJ') && (
+                    <button
+                      onClick={() => router.push('/dj-review')}
+                      className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600 transition-all"
+                    >
+                      {t.djReviewButton}
+                    </button>
+                  )}
                 </div>
 
                 {/* sessions */}

@@ -18,63 +18,151 @@ export default function Page() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
 
-      // In new schema, judges.id = profiles.id = auth.uid()
       const { data: judge } = await supabase
         .from('judges').select('id').eq('id', user.id).single()
       if (!judge) { setLoading(false); return }
 
-      // find this judge's section_panel_judge assignments
+      // 1. SPJs where this judge is assigned as DJ (role filter)
       const { data: spjs } = await supabase
-        .from('section_panel_judges').select('section_id, panel_id').eq('judge_id', judge.id)
+        .from('section_panel_judges')
+        .select('section_id, panel_id')
+        .eq('judge_id', judge.id)
+        .eq('role', 'DJ')
       if (!spjs?.length) { setLoading(false); return }
 
       const sectionIds = [...new Set(spjs.map(s => s.section_id))]
-      const panelIds   = [...new Set(spjs.map(s => s.panel_id))]
 
+      // 2. Only locked panels
+      const { data: locks } = await (supabase as any)
+        .from('section_panel_locks')
+        .select('section_id, panel_id')
+        .in('section_id', sectionIds)
+        .eq('locked', true)
+
+      const lockedPairs = new Set(
+        ((locks ?? []) as { section_id: string; panel_id: string }[])
+          .map(l => `${l.section_id}|${l.panel_id}`)
+      )
+      const lockedSpjs = spjs.filter(s => lockedPairs.has(`${s.section_id}|${s.panel_id}`))
+      if (!lockedSpjs.length) { setLoading(false); return }
+
+      const lockedSectionIds = [...new Set(lockedSpjs.map(s => s.section_id))]
+
+      // 3. Sections → competitions
+      const { data: sections } = await supabase
+        .from('sections')
+        .select('id, competition_id')
+        .in('id', lockedSectionIds)
+      if (!sections?.length) { setLoading(false); return }
+
+      const competitionIds = [...new Set(sections.map(s => s.competition_id))]
+      const sectionToComp = Object.fromEntries(sections.map(s => [s.id, s.competition_id]))
+
+      // 4. Only registration_closed / active / finished competitions
+      const { data: competitions } = await supabase
+        .from('competitions')
+        .select('id, status')
+        .in('id', competitionIds)
+        .in('status', ['registration_closed', 'active', 'finished'])
+      if (!competitions?.length) { setLoading(false); return }
+
+      const validCompIds = new Set(competitions.map(c => c.id))
+      const validSpjs = lockedSpjs.filter(s => validCompIds.has(sectionToComp[s.section_id]))
+      if (!validSpjs.length) { setLoading(false); return }
+
+      const validSectionIds = [...new Set(validSpjs.map(s => s.section_id))]
+      const validPanelIds   = [...new Set(validSpjs.map(s => s.panel_id))]
+
+      // 5. Sessions for my DJ panels
       const { data: allSessions } = await supabase
         .from('sessions')
         .select('id, section_id, panel_id, routine_type, competition_id, age_group, category')
-        .in('section_id', sectionIds).in('panel_id', panelIds)
-
+        .in('section_id', validSectionIds)
+        .in('panel_id', validPanelIds)
       if (!allSessions?.length) { setLoading(false); return }
 
-      const spjPairs = new Set(spjs.map(s => `${s.section_id}|${s.panel_id}`))
-      const mySessions = allSessions.filter(s => spjPairs.has(`${s.section_id}|${s.panel_id}`))
+      const spjPairs = new Set(validSpjs.map(s => `${s.section_id}|${s.panel_id}`))
+      const mySessions = allSessions.filter(
+        s => spjPairs.has(`${s.section_id}|${s.panel_id}`) && validCompIds.has(s.competition_id)
+      )
       if (!mySessions.length) { setLoading(false); return }
 
-      // collect all team IDs + competition IDs from session orders
-      const sessionIds     = mySessions.map(s => s.id)
-      const competitionIds = [...new Set(mySessions.map(s => s.competition_id))]
+      const sessionIds = mySessions.map(s => s.id)
 
+      // 6. Starting order — with fallback to competition_entries
       const { data: orders } = await supabase
-        .from('session_orders').select('session_id, team_id').in('session_id', sessionIds)
-      if (!orders?.length) { setLoading(false); return }
+        .from('session_orders')
+        .select('session_id, team_id')
+        .in('session_id', sessionIds)
 
-      const teamIds = [...new Set(orders.map(o => o.team_id))]
+      let sessionTeams: { session_id: string; team_id: string }[] = orders ?? []
+
+      if (sessionTeams.length === 0) {
+        // Fallback: registered teams filtered by session age_group + category
+        const { data: entries } = await supabase
+          .from('competition_entries')
+          .select('team_id, competition_id')
+          .in('competition_id', [...validCompIds])
+          .eq('dropped_out', false)
+
+        if (entries?.length) {
+          const entryTeamIds = [...new Set(entries.map(e => e.team_id))]
+          const { data: entryTeams } = await supabase
+            .from('teams')
+            .select('id, age_group, category')
+            .in('id', entryTeamIds)
+
+          const teamInfoMap = Object.fromEntries((entryTeams ?? []).map(t => [t.id, t]))
+
+          for (const session of mySessions) {
+            const matching = entries.filter(e => {
+              const info = teamInfoMap[e.team_id]
+              return (
+                e.competition_id === session.competition_id &&
+                info?.age_group === session.age_group &&
+                info?.category === session.category
+              )
+            })
+            for (const entry of matching) {
+              sessionTeams.push({ session_id: session.id, team_id: entry.team_id })
+            }
+          }
+        }
+      }
+
+      if (!sessionTeams.length) { setLoading(false); return }
+
+      const teamIds = [...new Set(sessionTeams.map(o => o.team_id))]
 
       const [teamsRes, musicRes] = await Promise.all([
         supabase.from('teams').select('id, gymnast_display, age_group, category').in('id', teamIds),
         supabase.from('routine_music')
           .select('team_id, competition_id, routine_type, ts_path')
-          .in('team_id', teamIds).in('competition_id', competitionIds),
+          .in('team_id', teamIds).in('competition_id', [...validCompIds]),
       ])
 
       const teamMap: Record<string, { gymnast_display: string; age_group: string; category: string }> =
         Object.fromEntries((teamsRes.data ?? []).map(t => [t.id, t]))
 
-      // Build sheets: one per team per session (matching routine type)
-      const builtSheets: Sheet[] = orders.flatMap(o => {
+      // Build one sheet per (session × team), deduplicating
+      const seenKeys = new Set<string>()
+      const builtSheets: Sheet[] = sessionTeams.flatMap(o => {
+        const key = `${o.session_id}_${o.team_id}`
+        if (seenKeys.has(key)) return []
+        seenKeys.add(key)
+
         const session = mySessions.find(s => s.id === o.session_id)
         if (!session) return []
         const team = teamMap[o.team_id]
         if (!team) return []
         const music = (musicRes.data ?? []).find(
-          m => m.team_id === o.team_id &&
-               m.competition_id === session.competition_id &&
-               m.routine_type === session.routine_type
+          m =>
+            m.team_id === o.team_id &&
+            m.competition_id === session.competition_id &&
+            m.routine_type === session.routine_type
         )
         return [{
-          id:          `${o.session_id}_${o.team_id}`,
+          id:          key,
           gymnasts:    team.gymnast_display,
           ageGroup:    team.age_group,
           category:    team.category,
