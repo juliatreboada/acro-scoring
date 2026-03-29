@@ -8,7 +8,6 @@ import GymnastsTab from './GymnastsTab'
 import TeamsTab from './TeamsTab'
 import CompetitionsTab from './CompetitionsTab'
 import ClubProfileTab from './ClubProfileTab'
-import ClubJudgesTab from './ClubJudgesTab'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -27,7 +26,7 @@ const T = {
   },
 }
 
-type Tab = 'gymnasts' | 'teams' | 'competitions' | 'judges' | 'profile'
+type Tab = 'gymnasts' | 'teams' | 'competitions' | 'profile'
 
 // ─── props ────────────────────────────────────────────────────────────────────
 
@@ -92,7 +91,6 @@ export default function ClubPortal({
     { key: 'gymnasts',     label: t.tabs.gymnasts,     count: gymnasts.length },
     { key: 'teams',        label: t.tabs.teams,        count: teams.length },
     { key: 'competitions', label: t.tabs.competitions, count: uniqueCompIds.size },
-    { key: 'judges',       label: t.tabs.judges,       count: judges.length },
     { key: 'profile',      label: t.tabs.profile },
   ]
 
@@ -171,11 +169,6 @@ export default function ClubPortal({
             onRegister={onRegister} onUnregister={onUnregister} onSetFile={onSetFile}
             onNominate={onNominate} onRemoveNomination={onRemoveNomination}
             onInviteJudge={onInviteJudge} />
-        )}
-        {activeTab === 'judges' && (
-          <ClubJudgesTab lang={lang} judges={judges}
-            onInvite={onInviteJudge} onUpdate={onUpdateJudge} onDelete={onDeleteJudge}
-            onUploadPhoto={onUploadJudgePhoto} />
         )}
         {activeTab === 'profile' && (
           <ClubProfileTab lang={lang} club={club} onUpdate={onUpdateClub} onUploadAvatar={onUploadAvatar} />
