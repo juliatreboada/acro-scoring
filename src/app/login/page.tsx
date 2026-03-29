@@ -252,8 +252,8 @@ export default function LoginPage() {
             </form>
           )}
 
-          {/* dev quick-access */}
-          {!session && (
+          {/* dev quick-access — local only, stripped from production builds */}
+          {process.env.NODE_ENV === 'development' && !session && (
             <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-5 space-y-3">
               <div>
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.devTitle}</p>

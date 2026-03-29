@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Judge } from '@/components/admin/types'
 
@@ -125,12 +125,34 @@ function InviteJudgeForm({ lang, onSend, onCancel }: {
   )
 }
 
-export default function ClubJudgesTab({ lang, judges, onInvite, onUpdate, onDelete }: {
+function JudgeAvatar({ judge, onUpload }: { judge: Judge; onUpload: (file: File) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  return (
+    <div className="relative shrink-0 group cursor-pointer" onClick={() => inputRef.current?.click()}>
+      <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-sm font-semibold text-slate-500 overflow-hidden">
+        {judge.avatar_url
+          ? <img src={judge.avatar_url} alt={judge.full_name} className="w-full h-full object-cover" />
+          : judge.full_name.charAt(0)}
+      </div>
+      <div className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+        </svg>
+      </div>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); if (inputRef.current) inputRef.current.value = '' }} />
+    </div>
+  )
+}
+
+export default function ClubJudgesTab({ lang, judges, onInvite, onUpdate, onDelete, onUploadPhoto }: {
   lang: Lang
-  judges: Judge[]            // full system judge pool
+  judges: Judge[]
   onInvite: (f: { full_name: string; email: string; phone?: string; licence?: string }) => Promise<void>
   onUpdate: (id: string, f: Omit<Judge, 'id' | 'avatar_url'>) => void
   onDelete: (id: string) => void
+  onUploadPhoto: (id: string, file: File) => Promise<void>
 }) {
   const t = T[lang]
   const [showInvite, setShowInvite] = useState(false)
@@ -242,9 +264,7 @@ export default function ClubJudgesTab({ lang, judges, onInvite, onUpdate, onDele
               </div>
             ) : (
               <div key={judge.id} className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3">
-                <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-sm font-semibold text-slate-500">
-                  {judge.full_name.charAt(0)}
-                </div>
+                <JudgeAvatar judge={judge} onUpload={(file) => onUploadPhoto(judge.id, file)} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-semibold text-slate-800">{judge.full_name}</p>

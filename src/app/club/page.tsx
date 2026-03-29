@@ -221,9 +221,9 @@ export default function Page() {
   async function handleUploadGymnastPhoto(id: string, file: File) {
     const ext = file.name.split('.').pop() ?? 'jpg'
     const path = `gymnasts/${id}/photo.${ext}`
-    const { error } = await supabase.storage.from('photos').upload(path, file, { upsert: true })
+    const { error } = await supabase.storage.from('gymnasts-photos').upload(path, file, { upsert: true })
     if (error) { console.error('Gymnast photo upload failed:', error.message); return }
-    const { data } = supabase.storage.from('photos').getPublicUrl(path)
+    const { data } = supabase.storage.from('gymnasts-photos').getPublicUrl(path)
     const url = data.publicUrl
     await supabase.from('gymnasts').update({ photo_url: url } as Record<string, string>).eq('id', id)
     setGymnasts(prev => prev.map(g => g.id === id ? { ...g, photo_url: url } : g))
@@ -232,9 +232,9 @@ export default function Page() {
   async function handleUploadTeamPhoto(id: string, file: File) {
     const ext = file.name.split('.').pop() ?? 'jpg'
     const path = `teams/${id}/photo.${ext}`
-    const { error } = await supabase.storage.from('photos').upload(path, file, { upsert: true })
+    const { error } = await supabase.storage.from('team-photos').upload(path, file, { upsert: true })
     if (error) { console.error('Team photo upload failed:', error.message); return }
-    const { data } = supabase.storage.from('photos').getPublicUrl(path)
+    const { data } = supabase.storage.from('team-photos').getPublicUrl(path)
     const url = data.publicUrl
     await supabase.from('teams').update({ photo_url: url }).eq('id', id)
     setTeams(prev => prev.map(t => t.id === id ? { ...t, photo_url: url } : t))
@@ -243,32 +243,55 @@ export default function Page() {
   async function handleUploadAvatar(file: File) {
     const ext = file.name.split('.').pop() ?? 'jpg'
     const path = `clubs/${clubId}/avatar.${ext}`
-    const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+    const { error } = await supabase.storage.from('club-logos').upload(path, file, { upsert: true })
     if (error) { console.error('Avatar upload failed:', error.message); return }
-    const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+    const { data } = supabase.storage.from('club-logos').getPublicUrl(path)
     const url = data.publicUrl
     await supabase.from('clubs').update({ avatar_url: url }).eq('id', clubId)
     setClub(prev => prev ? { ...prev, avatar_url: url } : prev)
+  }
+
+  async function handleUploadJudgePhoto(id: string, file: File) {
+    const ext = file.name.split('.').pop() ?? 'jpg'
+    const path = `${id}/photo.${ext}`
+    const { error } = await supabase.storage.from('judge-photos').upload(path, file, { upsert: true })
+    if (error) { console.error('Judge photo upload failed:', error.message); return }
+    const { data } = supabase.storage.from('judge-photos').getPublicUrl(path)
+    const url = data.publicUrl
+    await supabase.from('judges').update({ avatar_url: url }).eq('id', id)
+    setJudges(prev => prev.map(j => j.id === id ? { ...j, avatar_url: url } : j))
   }
 
   // ── files (music + TS sheet) ──────────────────────────────────────────────────
   async function handleSetFile(
     teamId: string, competitionId: string,
     routineType: 'Balance' | 'Dynamic' | 'Combined',
-    field: 'music' | 'ts', filename: string | null,
+    field: 'music' | 'ts', file: File | null,
   ) {
     const pathField = field === 'music' ? 'music_path' : 'ts_path'
+    const frontendField = field === 'music' ? 'music_filename' : 'ts_filename'
+
+    let storagePath: string | null = null
+    if (file) {
+      const ext = file.name.split('.').pop() ?? (field === 'ts' ? 'pdf' : 'mp3')
+      const bucket = field === 'music' ? 'musics' : 'TS'
+      const path = `${teamId}/${competitionId}/${routineType}.${ext}`
+      const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
+      if (error) { console.error(`${field} upload failed:`, error.message); return }
+      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path)
+      storagePath = urlData.publicUrl
+    }
+
     const existing = music.find(m => m.team_id === teamId && m.competition_id === competitionId && m.routine_type === routineType)
 
     if (existing) {
-      await supabase.from('routine_music').update({ [pathField]: filename }).eq('id', existing.id)
-      const frontendField = field === 'music' ? 'music_filename' : 'ts_filename'
-      setMusicState(prev => prev.map(m => m.id === existing.id ? { ...m, [frontendField]: filename } : m))
+      await supabase.from('routine_music').update({ [pathField]: storagePath }).eq('id', existing.id)
+      setMusicState(prev => prev.map(m => m.id === existing.id ? { ...m, [frontendField]: storagePath } : m))
     } else {
       const { data } = await supabase.from('routine_music').insert({
         team_id: teamId, competition_id: competitionId, routine_type: routineType,
-        music_path: field === 'music' ? filename : null,
-        ts_path:    field === 'ts'    ? filename : null,
+        music_path: field === 'music' ? storagePath : null,
+        ts_path:    field === 'ts'    ? storagePath : null,
       }).select().single()
       if (data) {
         const { music_path, ts_path, ...rest } = data as typeof data & { music_path: string | null; ts_path: string | null }
@@ -322,6 +345,7 @@ export default function Page() {
         onInviteJudge={handleInviteJudge}
         onUpdateJudge={handleUpdateJudge}
         onDeleteJudge={handleDeleteJudge}
+        onUploadJudgePhoto={handleUploadJudgePhoto}
         onNominate={handleNominate}
         onRemoveNomination={handleRemoveNomination}
         onUpdateClub={handleUpdateClub}

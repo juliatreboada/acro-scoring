@@ -88,7 +88,11 @@ export default function Page() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ids: adminProfiles.map(p => p.id) }),
         })
-        adminsWithEmail = res.ok ? await res.json() : []
+        if (res.ok) {
+          adminsWithEmail = await res.json()
+        } else {
+          adminsWithEmail = adminProfiles.map(p => ({ id: p.id, full_name: '', email: p.email ?? '' }))
+        }
       }
 
       // fetch judge emails from profiles
