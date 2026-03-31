@@ -61,15 +61,22 @@ function DJReviewPage() {
       const competitionIds = [...new Set(sections.map(s => s.competition_id))]
       const sectionToComp = Object.fromEntries(sections.map(s => [s.id, s.competition_id]))
 
-      // 4. Only registration_closed / active / finished competitions
+      // 4. Competitions where ts_music_deadline has passed (or fallback: registration_closed/active/finished)
       const { data: competitions } = await supabase
         .from('competitions')
-        .select('id, status')
+        .select('id, status, ts_music_deadline')
         .in('id', competitionIds)
-        .in('status', ['registration_closed', 'active', 'finished'])
       if (!competitions?.length) { setLoading(false); return }
 
-      const allValidCompIds = new Set(competitions.map(c => c.id))
+      const today = new Date().toISOString().slice(0, 10)
+      const validComps = (competitions as { id: string; status: string; ts_music_deadline: string | null }[])
+        .filter(c =>
+          (c.ts_music_deadline && today > c.ts_music_deadline) ||
+          ['registration_closed', 'active', 'finished'].includes(c.status)
+        )
+      if (!validComps.length) { setLoading(false); return }
+
+      const allValidCompIds = new Set(validComps.map(c => c.id))
       // If a specific competition was requested, scope to it only
       const validCompIds = filterCompId && allValidCompIds.has(filterCompId)
         ? new Set([filterCompId])

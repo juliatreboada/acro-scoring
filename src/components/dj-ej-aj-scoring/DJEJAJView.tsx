@@ -315,7 +315,7 @@ export default function DJEJAJView({
             </div>
           </div>
         </div>
-        {!waitingForOtherScores && judgeScores && panelJudges && (
+        {judgeScores && panelJudges && (
           <div className="px-4">
             <ScoreBoard judgeScores={judgeScores} panelJudges={panelJudges} result={result} lang={lang} />
           </div>
@@ -378,15 +378,19 @@ export default function DJEJAJView({
       {/* ── tablet / desktop (md+): PDF viewer + right panel with tabs ── */}
       <div className="hidden md:block h-full px-4 pb-4">
         <div className="flex gap-4 h-full">
-          {/* PDF / TS placeholder */}
-          <div className="flex-1 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-3 bg-white text-slate-400 min-h-0">
-            <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6M9 17h4" />
-            </svg>
-            <p className="font-medium">{t.pdfPlaceholder}</p>
-            <p className="text-xs">{t.pdfNote}</p>
-          </div>
+          {/* TS PDF */}
+          {currentPerf.tsUrl ? (
+            <iframe src={currentPerf.tsUrl} className="flex-1 rounded-2xl border border-slate-200 bg-white min-h-0" title={t.pdfPlaceholder} />
+          ) : (
+            <div className="flex-1 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-3 bg-white text-slate-400 min-h-0">
+              <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6M9 17h4" />
+              </svg>
+              <p className="font-medium">{t.pdfPlaceholder}</p>
+              <p className="text-xs">{t.pdfNote}</p>
+            </div>
+          )}
 
           {/* right panel */}
           <div className="w-[480px] flex flex-col gap-3 min-h-0">

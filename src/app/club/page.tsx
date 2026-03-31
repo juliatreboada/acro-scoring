@@ -44,7 +44,7 @@ export default function Page() {
         supabase.from('gymnasts').select('id,club_id,first_name,last_name_1,last_name_2,date_of_birth,photo_url').eq('club_id', cid),
         supabase.from('teams').select('id,club_id,category,age_group,gymnast_display,photo_url').eq('club_id', cid),
         supabase.from('competitions')
-          .select('id,name,status,location,start_date,end_date,registration_deadline,age_groups,poster_url,created_at')
+          .select('id,name,status,location,start_date,end_date,registration_deadline,ts_music_deadline,age_groups,poster_url,created_at')
           .neq('status', 'draft')
           .order('start_date', { ascending: false }),
         supabase.from('competition_judge_nominations').select('id,competition_id,judge_id,club_id').eq('club_id', cid),
@@ -60,7 +60,7 @@ export default function Page() {
           ? supabase.from('team_gymnasts').select('team_id,gymnast_id').in('team_id', teamIds)
           : Promise.resolve({ data: [] as { team_id: string; gymnast_id: string }[] }),
         teamIds.length > 0
-          ? supabase.from('competition_entries').select('id,competition_id,team_id,dropped_out').in('team_id', teamIds)
+          ? supabase.from('competition_entries').select('id,competition_id,team_id,dorsal,dropped_out').in('team_id', teamIds)
           : Promise.resolve({ data: [] }),
         teamIds.length > 0
           ? supabase.from('routine_music').select('id,team_id,competition_id,routine_type,music_path,ts_path,uploaded_at').in('team_id', teamIds)
@@ -167,11 +167,12 @@ export default function Page() {
     if (data) setEntries(prev => [...prev, data as CompetitionEntry])
   }
 
-  async function handleUnregister(entryId: string) {
+  async function handleDropout(entryId: string) {
     const entry = entries.find(e => e.id === entryId)
-    await supabase.from('competition_entries').delete().eq('id', entryId)
-    setEntries(prev => prev.filter(e => e.id !== entryId))
-    if (entry) setMusicState(prev => prev.filter(m => !(m.team_id === entry.team_id && m.competition_id === entry.competition_id)))
+    if (!entry) return
+    const newValue = !entry.dropped_out
+    await supabase.from('competition_entries').update({ dropped_out: newValue }).eq('id', entryId)
+    setEntries(prev => prev.map(e => e.id === entryId ? { ...e, dropped_out: newValue } : e))
   }
 
   // ── judges ────────────────────────────────────────────────────────────────────
@@ -220,7 +221,7 @@ export default function Page() {
 
   async function handleUploadGymnastPhoto(id: string, file: File) {
     const ext = file.name.split('.').pop() ?? 'jpg'
-    const path = `gymnasts/${id}/photo.${ext}`
+    const path = `${id}/photo.${ext}`
     const { error } = await supabase.storage.from('gymnasts-photos').upload(path, file, { upsert: true })
     if (error) { console.error('Gymnast photo upload failed:', error.message); return }
     const { data } = supabase.storage.from('gymnasts-photos').getPublicUrl(path)
@@ -231,7 +232,7 @@ export default function Page() {
 
   async function handleUploadTeamPhoto(id: string, file: File) {
     const ext = file.name.split('.').pop() ?? 'jpg'
-    const path = `teams/${id}/photo.${ext}`
+    const path = `${id}/photo.${ext}`
     const { error } = await supabase.storage.from('team-photos').upload(path, file, { upsert: true })
     if (error) { console.error('Team photo upload failed:', error.message); return }
     const { data } = supabase.storage.from('team-photos').getPublicUrl(path)
@@ -242,7 +243,7 @@ export default function Page() {
 
   async function handleUploadAvatar(file: File) {
     const ext = file.name.split('.').pop() ?? 'jpg'
-    const path = `clubs/${clubId}/avatar.${ext}`
+    const path = `${clubId}/avatar.${ext}`
     const { error } = await supabase.storage.from('club-logos').upload(path, file, { upsert: true })
     if (error) { console.error('Avatar upload failed:', error.message); return }
     const { data } = supabase.storage.from('club-logos').getPublicUrl(path)
@@ -275,7 +276,13 @@ export default function Page() {
     if (file) {
       const ext = file.name.split('.').pop() ?? (field === 'ts' ? 'pdf' : 'mp3')
       const bucket = field === 'music' ? 'musics' : 'TS'
-      const path = `${teamId}/${competitionId}/${routineType}.${ext}`
+      const entry = entries.find(e => e.team_id === teamId && e.competition_id === competitionId)
+      const team = teams.find(t => t.id === teamId)
+      const dorsal = entry?.dorsal ?? 0
+      const ageGroupRule = ageGroupRules.find(r => r.id === team?.age_group)
+      const ageGroup = (ageGroupRule?.age_group ?? team?.age_group ?? 'unknown').replace(/\s+/g, '-')
+      const clubSlug = club?.club_name.replace(/\s+/g, '-') ?? 'club'
+      const path = `${competitionId}/${dorsal}-${ageGroup}-${routineType}-${clubSlug}.${ext}`
       const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
       if (error) { console.error(`${field} upload failed:`, error.message); return }
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path)
@@ -329,7 +336,7 @@ export default function Page() {
         onUpdateTeam={handleUpdateTeam}
         onDeleteTeam={handleDeleteTeam}
         onRegister={handleRegister}
-        onUnregister={handleUnregister}
+        onDropout={handleDropout}
         onSetFile={handleSetFile}
         onInviteJudge={handleInviteJudge}
         onUpdateJudge={handleUpdateJudge}

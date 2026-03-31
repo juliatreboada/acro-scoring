@@ -13,4 +13,5 @@ export type Performance = {
   category: string
   routineType: string
   position: number
+  tsUrl?: string | null
 }

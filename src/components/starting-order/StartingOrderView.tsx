@@ -2,7 +2,102 @@
 
 import { useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Competition, Section, Panel, Session, SessionOrder, Team, Club, CompetitionEntry } from '@/components/admin/types'
+import type { Competition, Section, Panel, Session, SessionOrder, Team, Club, CompetitionEntry, AgeGroupRule } from '@/components/admin/types'
+
+// ─── time helpers ─────────────────────────────────────────────────────────────
+
+function routineDurationSec(routineType: string, routineCount: number): number {
+  if (routineType === 'Balance') return 150
+  if (routineType === 'Combined' && routineCount === 3) return 150
+  return 120
+}
+
+function addSecsToHHMM(hhmm: string, secs: number): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  const total = h * 3600 + m * 60 + secs
+  const adj = ((total % 86400) + 86400) % 86400
+  return `${String(Math.floor(adj / 3600)).padStart(2, '0')}:${String(Math.floor((adj % 3600) / 60)).padStart(2, '0')}`
+}
+
+type SlotTimes = { warmup: string; compete: string }
+
+function calcPanelTimes(
+  section: Section,
+  panelSessions: Session[],
+  sessionOrders: SessionOrder[],
+  ageGroupRules: AgeGroupRule[],
+): Map<string, SlotTimes> {
+  const result = new Map<string, SlotTimes>()
+  if (!section.starting_time) return result
+  const startHHMM = section.starting_time.slice(0, 5)
+  const waitSec   = section.waiting_time_seconds    ?? 0
+  const warmupSec = (section.warmup_duration_minutes ?? 0) * 60
+  let elapsed = 0
+  const sorted = [...panelSessions].sort((a, b) => a.order_index - b.order_index)
+  for (const session of sorted) {
+    const rule = ageGroupRules.find(r => r.id === session.age_group)
+    const duration = routineDurationSec(session.routine_type, rule?.routine_count ?? 2)
+    const orders = sessionOrders.filter(o => o.session_id === session.id).sort((a, b) => a.position - b.position)
+    for (const o of orders) {
+      result.set(`${session.id}:${o.team_id}`, {
+        compete: addSecsToHHMM(startHHMM, elapsed),
+        warmup:  addSecsToHHMM(startHHMM, elapsed - warmupSec),
+      })
+      elapsed += duration + waitSec
+    }
+  }
+  return result
+}
+
+// Alternating 2-panel: P1[0], P2[0], P1[1], P2[1], … share a single clock
+function calcInterleavedTimes(
+  section: Section,
+  p1Sessions: Session[],
+  p2Sessions: Session[],
+  sessionOrders: SessionOrder[],
+  ageGroupRules: AgeGroupRule[],
+): Map<string, SlotTimes> {
+  const result = new Map<string, SlotTimes>()
+  if (!section.starting_time) return result
+  const startHHMM = section.starting_time.slice(0, 5)
+  const waitSec   = section.waiting_time_seconds    ?? 0
+  const warmupSec = (section.warmup_duration_minutes ?? 0) * 60
+
+  type PerfEntry = { sessionId: string; teamId: string; duration: number }
+  function buildSeq(sessions: Session[]): PerfEntry[] {
+    const seq: PerfEntry[] = []
+    for (const s of [...sessions].sort((a, b) => a.order_index - b.order_index)) {
+      const rule = ageGroupRules.find(r => r.id === s.age_group)
+      const dur  = routineDurationSec(s.routine_type, rule?.routine_count ?? 2)
+      for (const o of sessionOrders.filter(o => o.session_id === s.id).sort((a, b) => a.position - b.position)) {
+        seq.push({ sessionId: s.id, teamId: o.team_id, duration: dur })
+      }
+    }
+    return seq
+  }
+
+  const seq1 = buildSeq(p1Sessions)
+  const seq2 = buildSeq(p2Sessions)
+  let elapsed = 0
+  const maxLen = Math.max(seq1.length, seq2.length)
+  for (let i = 0; i < maxLen; i++) {
+    if (i < seq1.length) {
+      result.set(`${seq1[i].sessionId}:${seq1[i].teamId}`, {
+        compete: addSecsToHHMM(startHHMM, elapsed),
+        warmup:  addSecsToHHMM(startHHMM, elapsed - warmupSec),
+      })
+      elapsed += seq1[i].duration + waitSec
+    }
+    if (i < seq2.length) {
+      result.set(`${seq2[i].sessionId}:${seq2[i].teamId}`, {
+        compete: addSecsToHHMM(startHHMM, elapsed),
+        warmup:  addSecsToHHMM(startHHMM, elapsed - warmupSec),
+      })
+      elapsed += seq2[i].duration + waitSec
+    }
+  }
+  return result
+}
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -49,7 +144,7 @@ function formatDateRange(start: string | null, end: string | null): string {
 // ─── session order card ───────────────────────────────────────────────────────
 
 function SessionOrderCard({
-  session, sessionOrders, isLocked, entries, globalTeams, clubs, lang,
+  session, sessionOrders, isLocked, entries, globalTeams, clubs, lang, timesMap,
 }: {
   session: Session
   sessionOrders: SessionOrder[]
@@ -58,6 +153,7 @@ function SessionOrderCard({
   globalTeams: Team[]
   clubs: Club[]
   lang: Lang
+  timesMap: Map<string, SlotTimes>
 }) {
   const t = T[lang]
 
@@ -147,12 +243,28 @@ function SessionOrderCard({
           const info = teamLabel(teamId)
           const isDropout = droppedOutIds.has(teamId)
           if (typeof info === 'string') return null
+          const times = timesMap.get(`${session.id}:${teamId}`)
+          const dorsal = entries.find(e => e.team_id === teamId)?.dorsal
           return (
             <li key={teamId} className={['flex items-center gap-3 px-4 py-3', isDropout ? 'opacity-50' : ''].join(' ')}>
+              {times && !isDropout ? (
+                <div className="flex flex-col shrink-0 w-14 gap-0">
+                  <span className="text-[10px] text-slate-400 leading-tight">⏰ {times.warmup}</span>
+                  <span className="text-[10px] font-semibold text-slate-600 leading-tight">▶ {times.compete}</span>
+                </div>
+              ) : (
+                <div className="w-14 shrink-0" />
+              )}
               <span className={['w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0',
                 isDropout ? 'bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-600'].join(' ')}>
                 {idx + 1}
               </span>
+              {dorsal != null && (
+                <span className={['text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
+                  isDropout ? 'bg-slate-100 text-slate-300' : 'bg-slate-800 text-white'].join(' ')}>
+                  #{dorsal}
+                </span>
+              )}
               <div className="flex-1 min-w-0">
                 <p className={['text-sm font-medium text-slate-800 truncate', isDropout ? 'line-through text-slate-400' : ''].join(' ')}>
                   {info.gymnasts}
@@ -175,7 +287,7 @@ function SessionOrderCard({
 // ─── interleaved timeline (2 panels) ─────────────────────────────────────────
 
 type PerfSlot =
-  | { kind: 'team'; panelNumber: number; sessionName: string; teamId: string; isDropout: boolean }
+  | { kind: 'team'; panelNumber: number; sessionId: string; sessionName: string; teamId: string; isDropout: boolean }
   | { kind: 'pending'; panelNumber: number; sessionName: string }
 
 const PANEL_COLORS: Record<number, { badge: string; num: string }> = {
@@ -218,6 +330,7 @@ function buildPanelSlots(
       slots.push({
         kind: 'team',
         panelNumber: panel.panel_number,
+        sessionId: session.id,
         sessionName: session.name,
         teamId: o.team_id,
         isDropout: droppedIds.has(o.team_id),
@@ -228,7 +341,7 @@ function buildPanelSlots(
 }
 
 function InterleavedTimeline({
-  lang, panels, sessions, sessionOrders, lockedSessions, entries, globalTeams, clubs,
+  lang, panels, sessions, sessionOrders, lockedSessions, entries, globalTeams, clubs, section, ageGroupRules,
 }: {
   lang: Lang
   panels: Panel[]
@@ -238,11 +351,20 @@ function InterleavedTimeline({
   entries: CompetitionEntry[]
   globalTeams: Team[]
   clubs: Club[]
+  section: Section
+  ageGroupRules: AgeGroupRule[]
 }) {
   const t = T[lang]
   const [p1, p2] = panels.slice(0, 2)
   const slots1 = buildPanelSlots(p1, sessions, sessionOrders, lockedSessions, entries, globalTeams)
   const slots2 = buildPanelSlots(p2, sessions, sessionOrders, lockedSessions, entries, globalTeams)
+  const combinedTimes = calcInterleavedTimes(
+    section,
+    sessions.filter(s => s.panel_id === p1.id),
+    sessions.filter(s => s.panel_id === p2.id),
+    sessionOrders,
+    ageGroupRules,
+  )
 
   const merged: PerfSlot[] = []
   const len = Math.max(slots1.length, slots2.length)
@@ -287,16 +409,32 @@ function InterleavedTimeline({
           slotIndex++
           const team = teamById[slot.teamId]
           const club = team ? clubById[team.club_id] : null
+          const slotTimes = combinedTimes.get(`${slot.sessionId}:${slot.teamId}`)
+          const dorsal = entries.find(e => e.team_id === slot.teamId)?.dorsal
 
           return (
             <li key={`${slot.panelNumber}-${slot.teamId}-${i}`}
               className={['flex items-center gap-3 px-4 py-3', slot.isDropout ? 'opacity-50' : ''].join(' ')}>
+              {slotTimes && !slot.isDropout ? (
+                <div className="flex flex-col shrink-0 w-14 gap-0">
+                  <span className="text-[10px] text-slate-400 leading-tight">⏰ {slotTimes.warmup}</span>
+                  <span className="text-[10px] font-semibold text-slate-600 leading-tight">▶ {slotTimes.compete}</span>
+                </div>
+              ) : (
+                <div className="w-14 shrink-0" />
+              )}
               <span className={['w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0', panelColors.num].join(' ')}>
                 {slotIndex}
               </span>
               <span className={['inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold shrink-0', panelColors.badge].join(' ')}>
                 P{slot.panelNumber}
               </span>
+              {dorsal != null && (
+                <span className={['text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
+                  slot.isDropout ? 'bg-slate-100 text-slate-300' : 'bg-slate-800 text-white'].join(' ')}>
+                  #{dorsal}
+                </span>
+              )}
               <div className="min-w-0 flex-1">
                 <p className={['text-sm font-medium text-slate-800 truncate', slot.isDropout ? 'line-through text-slate-400' : ''].join(' ')}>
                   {team?.gymnast_display ?? slot.teamId}
@@ -329,11 +467,12 @@ export type StartingOrderViewProps = {
   globalTeams: Team[]
   clubs: Club[]
   entries: CompetitionEntry[]
+  ageGroupRules: AgeGroupRule[]
 }
 
 export default function StartingOrderView({
   lang, competition, sections, panels, sessions,
-  sessionOrders, lockedSessions, globalTeams, clubs, entries,
+  sessionOrders, lockedSessions, globalTeams, clubs, entries, ageGroupRules,
 }: StartingOrderViewProps) {
   const t = T[lang]
   const [activeSection, setActiveSection] = useState<string>(sections[0]?.id ?? '')
@@ -395,23 +534,31 @@ export default function StartingOrderView({
       <div className="max-w-4xl mx-auto px-4 py-6">
         {panels.length === 1 ? (
           // single panel — full width
-          <div className="space-y-4">
-            {sectionSessions
-              .filter((s) => s.panel_id === panels[0].id)
-              .sort((a, b) => a.order_index - b.order_index)
-              .map((session) => (
-                <SessionOrderCard
-                  key={session.id}
-                  session={session}
-                  sessionOrders={sessionOrders}
-                  isLocked={lockedSessions.includes(session.id)}
-                  entries={entries}
-                  globalTeams={globalTeams}
-                  clubs={clubs}
-                  lang={lang}
-                />
-              ))}
-          </div>
+          (() => {
+            const panelSessions = sectionSessions.filter((s) => s.panel_id === panels[0].id)
+            const timesMap = currentSection
+              ? calcPanelTimes(currentSection, panelSessions, sessionOrders, ageGroupRules)
+              : new Map<string, SlotTimes>()
+            return (
+              <div className="space-y-4">
+                {panelSessions
+                  .sort((a, b) => a.order_index - b.order_index)
+                  .map((session) => (
+                    <SessionOrderCard
+                      key={session.id}
+                      session={session}
+                      sessionOrders={sessionOrders}
+                      isLocked={lockedSessions.includes(session.id)}
+                      entries={entries}
+                      globalTeams={globalTeams}
+                      clubs={clubs}
+                      lang={lang}
+                      timesMap={timesMap}
+                    />
+                  ))}
+              </div>
+            )
+          })()
         ) : (
           // two panels — single interleaved timeline
           <InterleavedTimeline
@@ -423,6 +570,8 @@ export default function StartingOrderView({
             entries={entries}
             globalTeams={globalTeams}
             clubs={clubs}
+            section={currentSection ?? sections[0]}
+            ageGroupRules={ageGroupRules}
           />
         )}
 

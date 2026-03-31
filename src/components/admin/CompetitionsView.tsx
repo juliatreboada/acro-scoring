@@ -139,6 +139,7 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
       end_date: endDate || null,
       age_groups: [...selectedAGs],
       registration_deadline: registrationDeadline || null,
+      ts_music_deadline: null,
       poster_url: posterUrl.trim() || null,
       admin,
     })

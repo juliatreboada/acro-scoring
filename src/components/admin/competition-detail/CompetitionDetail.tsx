@@ -30,6 +30,7 @@ const T = {
     location: 'Location',
     dates: 'Dates',
     registrationDeadline: 'Registration deadline',
+    tsMusicDeadline: 'TS & Music deadline',
     admin: 'Competition admin',
     ageGroups: 'Age groups',
     poster: 'Poster / logo',
@@ -80,6 +81,7 @@ const T = {
     location: 'Sede',
     dates: 'Fechas',
     registrationDeadline: 'Fecha límite de inscripción',
+    tsMusicDeadline: 'Fecha límite de TS y música',
     admin: 'Admin de competición',
     ageGroups: 'Grupos de edad',
     poster: 'Póster / logo',
@@ -178,11 +180,11 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<{
     name: string; location: string; start_date: string; end_date: string
-    registration_deadline: string; poster_url: string; adminId: string
+    registration_deadline: string; ts_music_deadline: string; poster_url: string; adminId: string
     age_groups: Set<string>
   }>({
     name: '', location: '', start_date: '', end_date: '',
-    registration_deadline: '', poster_url: '', adminId: '', age_groups: new Set(),
+    registration_deadline: '', ts_music_deadline: '', poster_url: '', adminId: '', age_groups: new Set(),
   })
 
   function startEditing() {
@@ -192,6 +194,7 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
       start_date: competition.start_date ?? '',
       end_date: competition.end_date ?? '',
       registration_deadline: competition.registration_deadline ?? '',
+      ts_music_deadline: competition.ts_music_deadline ?? '',
       poster_url: competition.poster_url ?? '',
       adminId: competition.admin?.id ?? '',
       age_groups: new Set(competition.age_groups),
@@ -208,6 +211,7 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
       start_date: form.start_date || null,
       end_date: form.end_date || null,
       registration_deadline: form.registration_deadline || null,
+      ts_music_deadline: form.ts_music_deadline || null,
       poster_url: form.poster_url.trim() || null,
       admin: availableAdmins.find((u) => u.id === form.adminId) ?? null,
       age_groups: [...form.age_groups],
@@ -245,6 +249,11 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
         <div>
           <label className="block text-xs font-medium text-slate-500 mb-1.5">{t.registrationDeadline}</label>
           <input type="date" value={form.registration_deadline} max={form.start_date || undefined} onChange={(e) => setForm((f) => ({ ...f, registration_deadline: e.target.value }))} className={inputCls} />
+        </div>
+        {/* TS & music deadline */}
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1.5">{t.tsMusicDeadline}</label>
+          <input type="date" value={form.ts_music_deadline} max={form.start_date || undefined} onChange={(e) => setForm((f) => ({ ...f, ts_music_deadline: e.target.value }))} className={inputCls} />
         </div>
         {/* age groups */}
         <div>
@@ -325,6 +334,7 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
           [t.location,             competition.location || t.none],
           [t.dates,                dateStr || t.none],
           [t.registrationDeadline, competition.registration_deadline ? fmt(competition.registration_deadline) : t.none],
+          [t.tsMusicDeadline,      competition.ts_music_deadline ? fmt(competition.ts_music_deadline) : t.none],
           [t.admin,                competition.admin?.full_name || t.none],
           [t.ageGroups,            competition.age_groups.map(ag => agLabels[ag] ?? ag).join(', ') || t.none],
         ] as [string, string][]).map(([label, value]) => (
@@ -371,6 +381,7 @@ export type CompetitionDetailProps = {
   onSetPanelCount: (count: 1 | 2) => void
   onAddSection: () => void
   onUpdateSectionLabel: (sectionId: string, label: string) => void
+  onUpdateSectionTimes: (sectionId: string, times: { starting_time: string | null; waiting_time_seconds: number | null; warmup_duration_minutes: number | null }) => void
   onDeleteSection: (sectionId: string) => void
   onAddSession: (s: Omit<Session, 'id'>) => void
   onDeleteSession: (sessionId: string) => void
@@ -408,7 +419,7 @@ export type CompetitionDetailProps = {
 
 export default function CompetitionDetail({
   lang, competition, panels, sections, sessions, onBack, onAdvanceStatus,
-  onSetPanelCount, onAddSection, onUpdateSectionLabel,
+  onSetPanelCount, onAddSection, onUpdateSectionLabel, onUpdateSectionTimes,
   onDeleteSection, onAddSession, onDeleteSession,
   globalJudges, judgePool, nominations, assignments,
   panelLocks, onAddToPool, onRemoveFromPool, onAssignJudge, onAddSlot, onRemoveSlot,
@@ -518,6 +529,7 @@ export default function CompetitionDetail({
           sessions={sessions}
           onAddSection={onAddSection}
           onUpdateSectionLabel={onUpdateSectionLabel}
+          onUpdateSectionTimes={onUpdateSectionTimes}
           onDeleteSection={onDeleteSection}
           onAddSession={onAddSession}
           onDeleteSession={onDeleteSession}
@@ -567,6 +579,7 @@ export default function CompetitionDetail({
           sessionOrders={sessionOrders}
           lockedSessions={lockedSessions}
           agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group} (${r.ruleset})`]))}
+          ageGroupRules={ageGroupRules}
           onReorder={onReorder}
           onToggleLock={onToggleLock}
         />

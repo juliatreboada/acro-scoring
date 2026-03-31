@@ -23,6 +23,7 @@ export type Competition = {
   start_date: string | null            // ISO date 'YYYY-MM-DD'
   end_date: string | null
   registration_deadline: string | null // last day clubs can register
+  ts_music_deadline: string | null     // after this date clubs cannot upload/modify/delete TS or music
   age_groups: string[]                 // selected age groups for this competition
   poster_url: string | null            // event poster / logo
   admin: AdminUser | null              // assigned competition-admin
@@ -40,6 +41,9 @@ export type Section = {
   competition_id: string
   section_number: number
   label: string | null
+  starting_time: string | null           // 'HH:MM' (or 'HH:MM:SS' from DB, normalised on read)
+  waiting_time_seconds: number | null    // buffer between performances, in seconds
+  warmup_duration_minutes: number | null // how many minutes before competing the team starts warmup
 }
 
 export type Session = {
@@ -126,6 +130,7 @@ export type CompetitionEntry = {
   id: string
   competition_id: string
   team_id: string
+  dorsal: number | null
   dropped_out: boolean
 }
 
@@ -163,14 +168,6 @@ export function defaultSlots(sectionId: string, panelId: string): Omit<SectionPa
   }
   return slots
 }
-
-export const ACRO_CATEGORIES = [
-  "Women's Pair",
-  "Men's Pair",
-  "Mixed Pair",
-  "Women's Group",
-  "Mixed Group",
-] as const
 
 // Categories available depending on age_group name ('Escolar'/'Base' → 3 cats, otherwise 5)
 export function categoriesForRuleset(ageGroup: string): string[] {

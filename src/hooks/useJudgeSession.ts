@@ -144,12 +144,26 @@ export function useJudgeSession(): JudgeSessionData {
       }
 
       const teamIds = orderedEntries.map(o => o.team_id)
-      const teamsRes = teamIds.length > 0
-        ? await supabase.from('teams').select('id, gymnast_display, age_group, category').in('id', teamIds)
-        : { data: [] as { id: string; gymnast_display: string; age_group: string; category: string }[] }
+      const [teamsRes, musicRes] = await Promise.all([
+        teamIds.length > 0
+          ? supabase.from('teams').select('id, gymnast_display, age_group, category').in('id', teamIds)
+          : Promise.resolve({ data: [] as { id: string; gymnast_display: string; age_group: string; category: string }[] }),
+        teamIds.length > 0
+          ? supabase.from('routine_music')
+              .select('team_id, ts_path')
+              .eq('competition_id', (session as any).competition_id)
+              .eq('routine_type', session.routine_type)
+              .in('team_id', teamIds)
+          : Promise.resolve({ data: [] as { team_id: string; ts_path: string | null }[] }),
+      ])
 
       const teamMap: Record<string, { gymnast_display: string; age_group: string; category: string }> =
         Object.fromEntries((teamsRes.data ?? []).map(t => [t.id, t]))
+
+      const tsUrlMap: Record<string, string | null> = Object.fromEntries(
+        ((musicRes.data ?? []) as { team_id: string; ts_path: string | null }[])
+          .map(m => [m.team_id, m.ts_path ?? null])
+      )
 
       const builtPerfs: MockPerf[] = orderedEntries.map(o => ({
         id:          `${session.id}_${o.team_id}`,
@@ -159,6 +173,7 @@ export function useJudgeSession(): JudgeSessionData {
         category:    teamMap[o.team_id]?.category  ?? session.category,
         routineType: session.routine_type,
         skipped:     false,
+        tsUrl:       tsUrlMap[o.team_id] ?? null,
       }))
 
       const builtJudgeScores: Record<string, JudgeScore[]> = {}

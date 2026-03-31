@@ -92,6 +92,13 @@ function RegistrationGroup({ age_group, category, items, lang, agLabels, onToggl
               <TeamAvatar team={team} />
             </div>
 
+            {entry.dorsal != null && (
+              <span className={['text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
+                entry.dropped_out ? 'bg-slate-100 text-slate-300' : 'bg-slate-800 text-white'].join(' ')}>
+                #{entry.dorsal}
+              </span>
+            )}
+
             <div className="flex-1 min-w-0">
               <p className={[
                 'text-sm font-medium text-slate-800 truncate',

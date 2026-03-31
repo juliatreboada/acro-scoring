@@ -102,6 +102,7 @@ export type Database = {
       competition_entries: {
         Row: {
           competition_id: string
+          dorsal: number | null
           dropped_out: boolean
           id: string
           registered_at: string
@@ -109,6 +110,7 @@ export type Database = {
         }
         Insert: {
           competition_id: string
+          dorsal?: number | null
           dropped_out?: boolean
           id?: string
           registered_at?: string
@@ -116,6 +118,7 @@ export type Database = {
         }
         Update: {
           competition_id?: string
+          dorsal?: number | null
           dropped_out?: boolean
           id?: string
           registered_at?: string
@@ -193,6 +196,7 @@ export type Database = {
           name: string
           poster_url: string | null
           registration_deadline: string | null
+          ts_music_deadline: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["competition_status"]
           updated_at: string
@@ -208,6 +212,7 @@ export type Database = {
           name: string
           poster_url?: string | null
           registration_deadline?: string | null
+          ts_music_deadline?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["competition_status"]
           updated_at?: string
@@ -223,6 +228,7 @@ export type Database = {
           name?: string
           poster_url?: string | null
           registration_deadline?: string | null
+          ts_music_deadline?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["competition_status"]
           updated_at?: string
@@ -601,18 +607,27 @@ export type Database = {
           id: string
           label: string | null
           section_number: number
+          starting_time: string | null
+          waiting_time_seconds: number | null
+          warmup_duration_minutes: number | null
         }
         Insert: {
           competition_id: string
           id?: string
           label?: string | null
           section_number: number
+          starting_time?: string | null
+          waiting_time_seconds?: number | null
+          warmup_duration_minutes?: number | null
         }
         Update: {
           competition_id?: string
           id?: string
           label?: string | null
           section_number?: number
+          starting_time?: string | null
+          waiting_time_seconds?: number | null
+          warmup_duration_minutes?: number | null
         }
         Relationships: [
           {

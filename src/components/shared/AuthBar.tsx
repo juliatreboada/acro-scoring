@@ -22,7 +22,7 @@ const ROLE_LABEL: Record<DbRole, string> = {
 
 export default function AuthBar({ lang, onLangChange }: {
   lang?: string
-  onLangChange?: (lang: string) => void
+  onLangChange?: (lang: 'en' | 'es') => void
 } = {}) {
   const router = useRouter()
   const supabase = createClient()
@@ -74,7 +74,7 @@ export default function AuthBar({ lang, onLangChange }: {
       <div className="flex items-center gap-3 ml-auto">
         {lang && onLangChange && (
           <div className="flex items-center gap-0.5 bg-slate-100 rounded-lg p-0.5">
-            {(['en', 'es']).map((l) => (
+            {(['en', 'es'] as const).map((l) => (
               <button key={l} onClick={() => onLangChange(l)}
                 className={['px-2.5 py-0.5 rounded-md text-xs font-medium transition-all',
                   lang === l ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'].join(' ')}>

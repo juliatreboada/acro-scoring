@@ -46,16 +46,16 @@ export default function Page() {
       const [compRes, panelsRes, sectionsRes, sessionsRes, judgesRes,
              nominationsRes, assignmentsRes, entriesRes, rulesRes, adminsRes] = await Promise.all([
         supabase.from('competitions')
-          .select('id,name,status,location,start_date,end_date,registration_deadline,age_groups,poster_url,admin_id,created_at')
+          .select('id,name,status,location,start_date,end_date,registration_deadline,ts_music_deadline,age_groups,poster_url,admin_id,created_at')
           .eq('id', id).single(),
         supabase.from('panels').select('id,competition_id,panel_number').eq('competition_id', id).order('panel_number'),
-        supabase.from('sections').select('id,competition_id,section_number,label').eq('competition_id', id).order('section_number'),
+        supabase.from('sections').select('id,competition_id,section_number,label,starting_time,waiting_time_seconds,warmup_duration_minutes').eq('competition_id', id).order('section_number'),
         supabase.from('sessions').select('id,competition_id,panel_id,section_id,name,age_group,category,routine_type,status,order_index,order_locked').eq('competition_id', id).order('order_index'),
         supabase.from('judges').select('id,full_name,phone,licence,avatar_url'),
         supabase.from('competition_judge_nominations').select('id,competition_id,judge_id,club_id').eq('competition_id', id),
         supabase.from('section_panel_judges').select('id,section_id,panel_id,judge_id,role,role_number')
           .in('section_id', (await supabase.from('sections').select('id').eq('competition_id', id)).data?.map(s => s.id) ?? []),
-        supabase.from('competition_entries').select('id,competition_id,team_id,dropped_out').eq('competition_id', id),
+        supabase.from('competition_entries').select('id,competition_id,team_id,dorsal,dropped_out').eq('competition_id', id),
         supabase.from('age_group_rules').select('id, age_group, ruleset, min_age, max_age, routine_count, sort_order').order('sort_order'),
         supabase.from('profiles').select('id,email').eq('role', 'admin'),
       ])
@@ -225,6 +225,15 @@ export default function Page() {
     setSections(prev => prev.map(s => s.id === sectionId ? { ...s, label: label || null } : s))
   }
 
+  async function handleUpdateSectionTimes(sectionId: string, times: {
+    starting_time: string | null
+    waiting_time_seconds: number | null
+    warmup_duration_minutes: number | null
+  }) {
+    await supabase.from('sections').update(times).eq('id', sectionId)
+    setSections(prev => prev.map(s => s.id === sectionId ? { ...s, ...times } : s))
+  }
+
   async function handleDeleteSection(sectionId: string) {
     await supabase.from('sections').delete().eq('id', sectionId)
     setSections(prev => prev.filter(s => s.id !== sectionId))
@@ -346,6 +355,7 @@ export default function Page() {
       start_date:            updates.start_date,
       end_date:              updates.end_date,
       registration_deadline: updates.registration_deadline,
+      ts_music_deadline:     updates.ts_music_deadline,
       age_groups:            updates.age_groups,
       poster_url:            updates.poster_url,
       admin_id:              updates.admin?.id ?? null,
@@ -379,7 +389,7 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <AuthBar lang={lang} onLangChange={setLang} />
+      <AuthBar lang={lang} onLangChange={(l) => setLang(l as Lang)} />
 
       <CompetitionDetail
         lang={lang}
@@ -392,6 +402,7 @@ export default function Page() {
         onSetPanelCount={handleSetPanelCount}
         onAddSection={handleAddSection}
         onUpdateSectionLabel={handleUpdateSectionLabel}
+        onUpdateSectionTimes={handleUpdateSectionTimes}
         onDeleteSection={handleDeleteSection}
         onAddSession={handleAddSession}
         onDeleteSession={handleDeleteSession}

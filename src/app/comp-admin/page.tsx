@@ -24,7 +24,7 @@ export default function Page() {
 
       const { data } = await supabase
         .from('competitions')
-        .select('id,name,status,location,start_date,end_date,registration_deadline,age_groups,poster_url,admin_id,created_at')
+        .select('id,name,status,location,start_date,end_date,registration_deadline,ts_music_deadline,age_groups,poster_url,admin_id,created_at')
         .eq('admin_id', user.id)
         .order('created_at', { ascending: false })
 

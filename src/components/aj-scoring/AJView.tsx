@@ -351,7 +351,7 @@ export default function AJView({ currentPerf, lang, onSubmit, waitingForOtherSco
         )}
 
         {/* panel scoreboard */}
-        {!waitingForOtherScores && judgeScores && panelJudges && (
+        {judgeScores && panelJudges && (
           <ScoreBoard judgeScores={judgeScores} panelJudges={panelJudges} result={result} lang={lang} />
         )}
       </div>

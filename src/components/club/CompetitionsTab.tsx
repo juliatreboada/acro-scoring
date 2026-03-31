@@ -14,13 +14,16 @@ const T = {
     register: 'Register',
     registered: 'Registered',
     dropout: 'Dropout',
-    unregister: 'Unregister',
-    confirmUnregister: 'Remove this team from the competition?',
+    toggleDropout: 'Declare dropout',
+    undoDropout: 'Undo dropout',
+    dorsal: 'Dorsal',
     registrationClosed: 'Registration closed',
     noEligibleTeams: 'None of your teams match the age groups of this competition.',
     noTeams: 'Create teams first to be able to register.',
     teamsTitle: 'Your teams',
-    deadline: 'Deadline',
+    deadline: 'Entry deadline',
+    tsMusicDeadline: 'TS & Music deadline',
+    filesLocked: 'File upload closed',
     music: 'Music',
     ts: 'TS',
     noFile: 'No file',
@@ -61,13 +64,16 @@ const T = {
     register: 'Inscribir',
     registered: 'Inscrito',
     dropout: 'Baja',
-    unregister: 'Retirar',
-    confirmUnregister: '¿Retirar este equipo de la competición?',
+    toggleDropout: 'Declarar baja',
+    undoDropout: 'Deshacer baja',
+    dorsal: 'Dorsal',
     registrationClosed: 'Inscripción cerrada',
     noEligibleTeams: 'Ningún equipo coincide con los grupos de edad de esta competición.',
     noTeams: 'Crea equipos primero para poder inscribirte.',
     teamsTitle: 'Tus equipos',
-    deadline: 'Plazo',
+    deadline: 'Inscripción hasta',
+    tsMusicDeadline: 'Plazo de TS y música',
+    filesLocked: 'Entrega de archivos cerrada',
     music: 'Música',
     ts: 'TS',
     noFile: 'Sin archivo',
@@ -127,12 +133,14 @@ function formatDate(d: string) {
 
 // ─── compact file chip ────────────────────────────────────────────────────────
 
-function FileChip({ label, filename, accept, onUpload, onRemove }: {
+function FileChip({ label, filename, accept, locked, onUpload, onRemove, onPreview }: {
   label: string
   filename: string | null | undefined
   accept: string
+  locked: boolean
   onUpload: (file: File) => void
   onRemove: () => void
+  onPreview?: () => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -148,45 +156,142 @@ function FileChip({ label, filename, accept, onUpload, onRemove }: {
       <span className="text-xs font-semibold text-slate-400">{label}</span>
       {displayName ? (
         <span className="flex items-center gap-1 bg-green-50 border border-green-200 rounded-full pl-2 pr-1 py-0.5 max-w-[140px]">
-          <span className="text-xs text-green-700 truncate">{displayName}</span>
-          <button onClick={onRemove} className="text-green-400 hover:text-red-500 transition-colors ml-0.5 shrink-0 leading-none">✕</button>
+          {onPreview ? (
+            <button onClick={onPreview} className="text-xs text-green-700 truncate hover:underline underline-offset-2 text-left">
+              {displayName}
+            </button>
+          ) : (
+            <span className="text-xs text-green-700 truncate">{displayName}</span>
+          )}
+          {!locked && (
+            <button onClick={onRemove} className="text-green-400 hover:text-red-500 transition-colors ml-0.5 shrink-0 leading-none">✕</button>
+          )}
         </span>
+      ) : locked ? (
+        <span className="text-xs text-slate-300 border border-dashed border-slate-200 rounded-full px-2 py-0.5">—</span>
       ) : (
         <button onClick={() => inputRef.current?.click()}
           className="text-xs text-slate-400 hover:text-blue-600 border border-dashed border-slate-300 hover:border-blue-400 rounded-full px-2 py-0.5 transition-all">
           + upload
         </button>
       )}
-      <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={handleChange} />
+      {!locked && <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={handleChange} />}
     </span>
+  )
+}
+
+// ─── pdf viewer modal ─────────────────────────────────────────────────────────
+
+function PDFViewerModal({ url, title, onClose }: { url: string; title: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+      {/* header */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 shrink-0">
+        <button
+          onClick={onClose}
+          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+          Volver
+        </button>
+        <span className="text-slate-300">|</span>
+        <span className="text-sm font-semibold text-slate-700 truncate flex-1">{title}</span>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 text-xs font-medium text-blue-600 hover:text-blue-700 underline underline-offset-2"
+        >
+          Abrir en nueva pestaña
+        </a>
+      </div>
+      {/* iframe */}
+      <iframe src={url} className="flex-1 w-full border-0" title={title} />
+    </div>
+  )
+}
+
+// ─── music player modal ───────────────────────────────────────────────────────
+
+function MusicPlayerModal({ url, title, onClose }: { url: string; title: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+        {/* header */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
+          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+            <svg className="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z" />
+            </svg>
+          </div>
+          <span className="text-sm font-semibold text-slate-700 truncate flex-1">{title}</span>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors shrink-0">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        {/* player */}
+        <div className="px-4 py-5">
+          <audio controls autoPlay className="w-full" src={url}>
+            Your browser does not support the audio element.
+          </audio>
+        </div>
+      </div>
+    </div>
   )
 }
 
 // ─── routine row ──────────────────────────────────────────────────────────────
 
 function RoutineRow({
-  lang, routineType, record, onSet,
+  lang, routineType, record, locked, onSet,
 }: {
   lang: Lang
   routineType: 'Balance' | 'Dynamic' | 'Combined'
   record: RoutineMusic | undefined
+  locked: boolean
   onSet: (field: 'music' | 'ts', file: File | null) => void
 }) {
   const t = T[lang]
+  const [tsPreviewUrl, setTsPreviewUrl] = useState<string | null>(null)
+  const [musicPreviewUrl, setMusicPreviewUrl] = useState<string | null>(null)
   return (
-    <div className="flex items-center gap-3 py-2 border-t border-slate-100 first:border-0">
-      <span className="w-16 shrink-0 text-xs font-semibold text-slate-600">{routineType}</span>
-      <div className="flex items-center gap-3 flex-wrap">
-        <FileChip label={t.ts} filename={record?.ts_filename}
-          accept=".pdf,application/pdf"
-          onUpload={(file) => onSet('ts', file)}
-          onRemove={() => onSet('ts', null)} />
-        <FileChip label={t.music} filename={record?.music_filename}
-          accept="audio/*,.mp3,.wav,.aac,.m4a"
-          onUpload={(file) => onSet('music', file)}
-          onRemove={() => onSet('music', null)} />
+    <>
+      <div className="flex items-center gap-3 py-2 border-t border-slate-100 first:border-0">
+        <span className="w-16 shrink-0 text-xs font-semibold text-slate-600">{routineType}</span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <FileChip label={t.ts} filename={record?.ts_filename}
+            accept=".pdf,application/pdf"
+            locked={locked}
+            onPreview={record?.ts_filename ? () => setTsPreviewUrl(record.ts_filename!) : undefined}
+            onUpload={(file) => onSet('ts', file)}
+            onRemove={() => onSet('ts', null)} />
+          <FileChip label={t.music} filename={record?.music_filename}
+            accept="audio/*,.mp3,.wav,.aac,.m4a"
+            locked={locked}
+            onPreview={record?.music_filename ? () => setMusicPreviewUrl(record.music_filename!) : undefined}
+            onUpload={(file) => onSet('music', file)}
+            onRemove={() => onSet('music', null)} />
+        </div>
       </div>
-    </div>
+      {tsPreviewUrl && (
+        <PDFViewerModal
+          url={tsPreviewUrl}
+          title={`${routineType} — TS`}
+          onClose={() => setTsPreviewUrl(null)}
+        />
+      )}
+      {musicPreviewUrl && (
+        <MusicPlayerModal
+          url={musicPreviewUrl}
+          title={`${routineType} — Music`}
+          onClose={() => setMusicPreviewUrl(null)}
+        />
+      )}
+    </>
   )
 }
 
@@ -285,7 +390,7 @@ function routineTypesForTeam(team: Team, ageGroupRules: AgeGroupRule[]): (typeof
 
 function CompetitionDetailView({
   lang, competition, teams, entries, music, judges, nominations, agLabels, ageGroupRules, onBack,
-  onRegister, onUnregister, onSetFile, onNominate, onRemoveNomination, onInviteJudge,
+  onRegister, onDropout, onSetFile, onNominate, onRemoveNomination, onInviteJudge,
 }: {
   lang: Lang
   competition: Competition
@@ -298,7 +403,7 @@ function CompetitionDetailView({
   ageGroupRules: AgeGroupRule[]
   onBack: () => void
   onRegister: (teamId: string) => void
-  onUnregister: (entryId: string) => void
+  onDropout: (entryId: string) => void
   onSetFile: (teamId: string, routineType: 'Balance' | 'Dynamic' | 'Combined', field: 'music' | 'ts', file: File | null) => void
   onNominate: (judgeId: string) => void
   onRemoveNomination: (nominationId: string) => void
@@ -307,6 +412,8 @@ function CompetitionDetailView({
   const t = T[lang]
   const isOpen = competition.status === 'registration_open'
   const dateStr = formatDateRange(competition.start_date, competition.end_date)
+  const today = new Date().toISOString().slice(0, 10)
+  const isFileEditLocked = !!competition.ts_music_deadline && today > competition.ts_music_deadline
 
   // Fix eligible teams filter: match by UUID (ag_group = rule.id) OR by label name (legacy)
   const eligibleTeams = teams.filter((team) =>
@@ -367,6 +474,11 @@ function CompetitionDetailView({
               {competition.registration_deadline && (
                 <span className="text-xs font-medium text-amber-600">
                   {t.deadline}: {formatDate(competition.registration_deadline)}
+                </span>
+              )}
+              {competition.ts_music_deadline && (
+                <span className={['text-xs font-medium', isFileEditLocked ? 'text-red-500' : 'text-amber-600'].join(' ')}>
+                  {t.tsMusicDeadline}: {formatDate(competition.ts_music_deadline)}
                 </span>
               )}
             </div>
@@ -528,6 +640,9 @@ function CompetitionDetailView({
                 <div className="flex items-center justify-between gap-3 px-4 py-3">
                   <div>
                     <div className="flex items-center gap-2">
+                      {entry?.dorsal != null && (
+                        <span className="text-xs font-bold px-2 py-0.5 bg-slate-800 text-white rounded-full">#{entry.dorsal}</span>
+                      )}
                       <p className="text-sm font-semibold text-slate-800">{team.gymnast_display}</p>
                       {entry?.dropped_out && (
                         <span className="text-xs font-semibold px-2 py-0.5 bg-red-50 text-red-400 rounded-full">{t.dropout}</span>
@@ -539,12 +654,14 @@ function CompetitionDetailView({
                     {entry ? (
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold px-2.5 py-1 bg-green-50 text-green-600 rounded-full">{t.registered}</span>
-                        {isOpen && (
-                          <button onClick={() => { if (confirm(t.confirmUnregister)) onUnregister(entry.id) }}
-                            className="text-xs text-slate-400 hover:text-red-500 transition-colors">
-                            {t.unregister}
-                          </button>
-                        )}
+                        <button
+                          onClick={() => onDropout(entry.id)}
+                          className={['text-xs font-medium px-2.5 py-1 rounded-lg border transition-all',
+                            entry.dropped_out
+                              ? 'border-slate-200 text-slate-500 hover:bg-white'
+                              : 'border-red-100 text-red-500 hover:bg-red-50'].join(' ')}>
+                          {entry.dropped_out ? t.undoDropout : t.toggleDropout}
+                        </button>
                       </div>
                     ) : isOpen ? (
                       <button onClick={() => onRegister(team.id)}
@@ -560,10 +677,19 @@ function CompetitionDetailView({
                 {/* uploads — only if registered */}
                 {entry && (
                   <div className="px-4 pb-4 pt-1">
+                    {isFileEditLocked && (
+                      <p className="text-xs font-medium text-red-500 mb-2 flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                        </svg>
+                        {t.filesLocked}
+                      </p>
+                    )}
                     <div className="bg-slate-50 rounded-xl px-4 py-1">
                       {routineTypesForTeam(team, ageGroupRules).map((rt) => (
                         <RoutineRow key={rt} lang={lang} routineType={rt}
                           record={recordFor(team.id, rt)}
+                          locked={isFileEditLocked}
                           onSet={(field, filename) => onSetFile(team.id, rt, field, filename)} />
                       ))}
                     </div>
@@ -652,7 +778,7 @@ function CompetitionListView({
 
 export default function CompetitionsTab({
   lang, competitions, teams, entries, music, judges, nominations, agLabels, ageGroupRules,
-  onRegister, onUnregister, onSetFile, onNominate, onRemoveNomination, onInviteJudge,
+  onRegister, onDropout, onSetFile, onNominate, onRemoveNomination, onInviteJudge,
 }: {
   lang: Lang
   competitions: Competition[]
@@ -664,7 +790,7 @@ export default function CompetitionsTab({
   agLabels: Record<string, string>
   ageGroupRules: AgeGroupRule[]
   onRegister: (competitionId: string, teamId: string) => void
-  onUnregister: (entryId: string) => void
+  onDropout: (entryId: string) => void
   onSetFile: (teamId: string, competitionId: string, routineType: 'Balance' | 'Dynamic' | 'Combined', field: 'music' | 'ts', file: File | null) => void
   onNominate: (competitionId: string, judgeId: string) => void
   onRemoveNomination: (nominationId: string) => void
@@ -687,7 +813,7 @@ export default function CompetitionsTab({
         ageGroupRules={ageGroupRules}
         onBack={() => setSelectedId(null)}
         onRegister={(teamId) => onRegister(selected.id, teamId)}
-        onUnregister={onUnregister}
+        onDropout={onDropout}
         onSetFile={(teamId, routineType, field, file) => onSetFile(teamId, selected.id, routineType, field, file)}
         onNominate={(judgeId) => onNominate(selected.id, judgeId)}
         onRemoveNomination={onRemoveNomination}

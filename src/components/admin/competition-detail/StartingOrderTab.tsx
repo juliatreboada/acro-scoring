@@ -2,7 +2,102 @@
 
 import { useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Section, Panel, Session, Team, Club, CompetitionEntry, SessionOrder } from '@/components/admin/types'
+import type { Section, Panel, Session, Team, Club, CompetitionEntry, SessionOrder, AgeGroupRule } from '@/components/admin/types'
+
+// ─── time helpers ─────────────────────────────────────────────────────────────
+
+function routineDurationSec(routineType: string, routineCount: number): number {
+  if (routineType === 'Balance') return 150
+  if (routineType === 'Combined' && routineCount === 3) return 150
+  return 120
+}
+
+function addSecsToHHMM(hhmm: string, secs: number): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  const total = h * 3600 + m * 60 + secs
+  const adj = ((total % 86400) + 86400) % 86400
+  return `${String(Math.floor(adj / 3600)).padStart(2, '0')}:${String(Math.floor((adj % 3600) / 60)).padStart(2, '0')}`
+}
+
+type SlotTimes = { warmup: string; compete: string }
+
+function calcPanelTimes(
+  section: Section,
+  panelSessions: Session[],
+  sessionOrders: SessionOrder[],
+  ageGroupRules: AgeGroupRule[],
+): Map<string, SlotTimes> {
+  const result = new Map<string, SlotTimes>()
+  if (!section.starting_time) return result
+  const startHHMM = section.starting_time.slice(0, 5)
+  const waitSec   = section.waiting_time_seconds    ?? 0
+  const warmupSec = (section.warmup_duration_minutes ?? 0) * 60
+  let elapsed = 0
+  const sorted = [...panelSessions].sort((a, b) => a.order_index - b.order_index)
+  for (const session of sorted) {
+    const rule = ageGroupRules.find(r => r.id === session.age_group)
+    const duration = routineDurationSec(session.routine_type, rule?.routine_count ?? 2)
+    const orders = sessionOrders.filter(o => o.session_id === session.id).sort((a, b) => a.position - b.position)
+    for (const o of orders) {
+      result.set(`${session.id}:${o.team_id}`, {
+        compete: addSecsToHHMM(startHHMM, elapsed),
+        warmup:  addSecsToHHMM(startHHMM, elapsed - warmupSec),
+      })
+      elapsed += duration + waitSec
+    }
+  }
+  return result
+}
+
+// Alternating 2-panel: P1[0], P2[0], P1[1], P2[1], … share a single clock
+function calcInterleavedTimes(
+  section: Section,
+  p1Sessions: Session[],
+  p2Sessions: Session[],
+  sessionOrders: SessionOrder[],
+  ageGroupRules: AgeGroupRule[],
+): Map<string, SlotTimes> {
+  const result = new Map<string, SlotTimes>()
+  if (!section.starting_time) return result
+  const startHHMM = section.starting_time.slice(0, 5)
+  const waitSec   = section.waiting_time_seconds    ?? 0
+  const warmupSec = (section.warmup_duration_minutes ?? 0) * 60
+
+  type PerfEntry = { sessionId: string; teamId: string; duration: number }
+  function buildSeq(sessions: Session[]): PerfEntry[] {
+    const seq: PerfEntry[] = []
+    for (const s of [...sessions].sort((a, b) => a.order_index - b.order_index)) {
+      const rule = ageGroupRules.find(r => r.id === s.age_group)
+      const dur  = routineDurationSec(s.routine_type, rule?.routine_count ?? 2)
+      for (const o of sessionOrders.filter(o => o.session_id === s.id).sort((a, b) => a.position - b.position)) {
+        seq.push({ sessionId: s.id, teamId: o.team_id, duration: dur })
+      }
+    }
+    return seq
+  }
+
+  const seq1 = buildSeq(p1Sessions)
+  const seq2 = buildSeq(p2Sessions)
+  let elapsed = 0
+  const maxLen = Math.max(seq1.length, seq2.length)
+  for (let i = 0; i < maxLen; i++) {
+    if (i < seq1.length) {
+      result.set(`${seq1[i].sessionId}:${seq1[i].teamId}`, {
+        compete: addSecsToHHMM(startHHMM, elapsed),
+        warmup:  addSecsToHHMM(startHHMM, elapsed - warmupSec),
+      })
+      elapsed += seq1[i].duration + waitSec
+    }
+    if (i < seq2.length) {
+      result.set(`${seq2[i].sessionId}:${seq2[i].teamId}`, {
+        compete: addSecsToHHMM(startHHMM, elapsed),
+        warmup:  addSecsToHHMM(startHHMM, elapsed - warmupSec),
+      })
+      elapsed += seq2[i].duration + waitSec
+    }
+  }
+  return result
+}
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -18,6 +113,8 @@ const T = {
     unlock: 'Published',
     notCompeting: 'Not competing',
     baja: 'Dropout',
+    warmup: 'W',
+    compete: 'C',
   },
   es: {
     hint: 'Establece el orden de actuación en cada sesión.',
@@ -30,6 +127,8 @@ const T = {
     unlock: 'Publicado',
     notCompeting: 'No compiten',
     baja: 'Baja',
+    warmup: 'C',
+    compete: 'A',
   },
 }
 
@@ -62,7 +161,7 @@ function LockIcon({ locked }: { locked: boolean }) {
 
 // ─── session order card ───────────────────────────────────────────────────────
 
-function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders, isLocked, lang, agLabels, onReorder, onToggleLock }: {
+function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders, isLocked, lang, agLabels, timesMap, onReorder, onToggleLock }: {
   session: Session
   globalTeams: Team[]
   clubs: Club[]
@@ -71,6 +170,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
   isLocked: boolean
   lang: Lang
   agLabels: Record<string, string>
+  timesMap: Map<string, SlotTimes>
   onReorder: (sessionId: string, teamIds: string[]) => void
   onToggleLock: (sessionId: string) => void
 }) {
@@ -182,13 +282,28 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
           <div className="space-y-0.5">
             {orderedAll.map(({ team, isDropout }, idx) => {
               const club = clubs.find((c) => c.id === team.club_id)
-              // Arrow index within active-only list
               const activeIdx = isDropout ? -1 : activeIdxInAll.indexOf(idx)
+              const times = timesMap.get(`${session.id}:${team.id}`)
+              const dorsal = sessionEntries.find(e => e.team_id === team.id)?.dorsal
               return (
                 <div key={team.id} className={['flex items-center gap-2 py-1.5 group', isDropout ? 'opacity-50' : ''].join(' ')}>
+                  {times && !isDropout ? (
+                    <div className="flex flex-col shrink-0 w-14 gap-0 text-right">
+                      <span className="text-[10px] text-slate-400 font-mono leading-tight">{t.warmup} {times.warmup}</span>
+                      <span className="text-[10px] text-slate-600 font-mono font-semibold leading-tight">{t.compete} {times.compete}</span>
+                    </div>
+                  ) : (
+                    <div className="w-14 shrink-0" />
+                  )}
                   <span className={['text-xs font-mono w-5 shrink-0 text-right', isDropout ? 'text-slate-300 line-through' : 'text-slate-400'].join(' ')}>
                     {idx + 1}.
                   </span>
+                  {dorsal != null && (
+                    <span className={['text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0',
+                      isDropout ? 'bg-slate-100 text-slate-300' : 'bg-slate-800 text-white'].join(' ')}>
+                      #{dorsal}
+                    </span>
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className={['text-xs font-medium truncate', isDropout ? 'text-slate-400 line-through' : 'text-slate-700'].join(' ')}>
                       {team.gymnast_display}
@@ -230,9 +345,13 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
           <div className="space-y-0.5">
             {orderedActive.map((team, idx) => {
               const club = clubs.find((c) => c.id === team.club_id)
+              const dorsal = sessionEntries.find(e => e.team_id === team.id)?.dorsal
               return (
                 <div key={team.id} className="flex items-center gap-2 py-1.5 group">
                   <span className="text-xs font-mono text-slate-400 w-5 shrink-0 text-right">{idx + 1}.</span>
+                  {dorsal != null && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-white shrink-0">#{dorsal}</span>
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-slate-700 truncate">{team.gymnast_display}</p>
                     <p className="text-xs text-slate-400 truncate">{club?.club_name ?? '—'}</p>
@@ -269,9 +388,13 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                 </div>
                 {dropoutTeams.map((team) => {
                   const club = clubs.find((c) => c.id === team.club_id)
+                  const dorsal = sessionEntries.find(e => e.team_id === team.id)?.dorsal
                   return (
                     <div key={team.id} className="flex items-center gap-2 py-1.5">
                       <span className="w-5 shrink-0" />
+                      {dorsal != null && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-300 shrink-0">#{dorsal}</span>
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-slate-300 line-through truncate">{team.gymnast_display}</p>
                         <p className="text-xs text-slate-300 truncate">{club?.club_name ?? '—'}</p>
@@ -291,7 +414,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
 
 // ─── panel column ─────────────────────────────────────────────────────────────
 
-function PanelColumn({ lang, panel, sessions, globalTeams, clubs, entries, sessionOrders, lockedSessions, agLabels, onReorder, onToggleLock }: {
+function PanelColumn({ lang, panel, sessions, globalTeams, clubs, entries, sessionOrders, lockedSessions, agLabels, timesMap, onReorder, onToggleLock }: {
   lang: Lang
   panel: Panel
   sessions: Session[]
@@ -301,6 +424,7 @@ function PanelColumn({ lang, panel, sessions, globalTeams, clubs, entries, sessi
   sessionOrders: SessionOrder[]
   lockedSessions: string[]
   agLabels: Record<string, string>
+  timesMap: Map<string, SlotTimes>
   onReorder: (sessionId: string, teamIds: string[]) => void
   onToggleLock: (sessionId: string) => void
 }) {
@@ -327,6 +451,7 @@ function PanelColumn({ lang, panel, sessions, globalTeams, clubs, entries, sessi
               isLocked={lockedSessions.includes(session.id)}
               lang={lang}
               agLabels={agLabels}
+              timesMap={timesMap}
               onReorder={onReorder}
               onToggleLock={onToggleLock}
             />
@@ -350,13 +475,14 @@ export type StartingOrderTabProps = {
   sessionOrders: SessionOrder[]
   lockedSessions: string[]
   agLabels: Record<string, string>
+  ageGroupRules: AgeGroupRule[]
   onReorder: (sessionId: string, teamIds: string[]) => void
   onToggleLock: (sessionId: string) => void
 }
 
 export default function StartingOrderTab({
   lang, globalTeams, clubs, entries, sections, panels, sessions,
-  sessionOrders, lockedSessions, agLabels, onReorder, onToggleLock,
+  sessionOrders, lockedSessions, agLabels, ageGroupRules, onReorder, onToggleLock,
 }: StartingOrderTabProps) {
   const t = T[lang]
   const sortedSections = [...sections].sort((a, b) => a.section_number - b.section_number)
@@ -395,28 +521,40 @@ export default function StartingOrderTab({
             ))}
           </div>
 
-          {activeSection && (
-            <div className={['grid gap-4', panels.length === 2 ? 'grid-cols-2' : 'grid-cols-1 max-w-sm'].join(' ')}>
-              {[...panels].sort((a, b) => a.panel_number - b.panel_number).map((panel) => (
-                <PanelColumn
-                  key={panel.id}
-                  lang={lang}
-                  panel={panel}
-                  sessions={sessions.filter(
-                    (s) => s.section_id === activeSection.id && s.panel_id === panel.id,
-                  )}
-                  globalTeams={globalTeams}
-                  clubs={clubs}
-                  entries={entries}
-                  sessionOrders={sessionOrders}
-                  lockedSessions={lockedSessions}
-                  agLabels={agLabels}
-                  onReorder={onReorder}
-                  onToggleLock={onToggleLock}
-                />
-              ))}
-            </div>
-          )}
+          {activeSection && (() => {
+            const sortedPanels = [...panels].sort((a, b) => a.panel_number - b.panel_number)
+            const sectionSessions = sessions.filter(s => s.section_id === activeSection.id)
+            const timesMap = sortedPanels.length === 2
+              ? calcInterleavedTimes(
+                  activeSection,
+                  sectionSessions.filter(s => s.panel_id === sortedPanels[0].id),
+                  sectionSessions.filter(s => s.panel_id === sortedPanels[1].id),
+                  sessionOrders,
+                  ageGroupRules,
+                )
+              : calcPanelTimes(activeSection, sectionSessions, sessionOrders, ageGroupRules)
+            return (
+              <div className={['grid gap-4', panels.length === 2 ? 'grid-cols-2' : 'grid-cols-1 max-w-sm'].join(' ')}>
+                {sortedPanels.map((panel) => (
+                  <PanelColumn
+                    key={panel.id}
+                    lang={lang}
+                    panel={panel}
+                    sessions={sectionSessions.filter(s => s.panel_id === panel.id)}
+                    globalTeams={globalTeams}
+                    clubs={clubs}
+                    entries={entries}
+                    sessionOrders={sessionOrders}
+                    lockedSessions={lockedSessions}
+                    agLabels={agLabels}
+                    timesMap={timesMap}
+                    onReorder={onReorder}
+                    onToggleLock={onToggleLock}
+                  />
+                ))}
+              </div>
+            )
+          })()}
         </>
       )}
     </div>

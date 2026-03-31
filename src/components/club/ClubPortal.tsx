@@ -59,7 +59,7 @@ export type ClubPortalProps = {
   onUploadJudgePhoto: (id: string, file: File) => Promise<void>
   // competition registration
   onRegister: (competitionId: string, teamId: string) => void
-  onUnregister: (entryId: string) => void
+  onDropout: (entryId: string) => void
   // files (TS + music per routine)
   onSetFile: (teamId: string, competitionId: string, routineType: 'Balance' | 'Dynamic' | 'Combined', field: 'music' | 'ts', file: File | null) => void
   // judge nominations
@@ -77,7 +77,7 @@ export default function ClubPortal({
   onAddGymnast, onUpdateGymnast, onDeleteGymnast, onUploadGymnastPhoto,
   onAddTeam, onUpdateTeam, onDeleteTeam, onUploadTeamPhoto,
   onInviteJudge, onUpdateJudge, onDeleteJudge, onUploadJudgePhoto,
-  onRegister, onUnregister, onSetFile,
+  onRegister, onDropout, onSetFile,
   onNominate, onRemoveNomination,
   onUpdateClub, onUploadAvatar,
 }: ClubPortalProps) {
@@ -166,7 +166,7 @@ export default function ClubPortal({
           <CompetitionsTab lang={lang} competitions={competitions} teams={teams}
             entries={entries} music={music} judges={judges} nominations={nominations}
             agLabels={agLabels} ageGroupRules={ageGroupRules}
-            onRegister={onRegister} onUnregister={onUnregister} onSetFile={onSetFile}
+            onRegister={onRegister} onDropout={onDropout} onSetFile={onSetFile}
             onNominate={onNominate} onRemoveNomination={onRemoveNomination}
             onInviteJudge={onInviteJudge} />
         )}

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Panel, Section, Session, AgeGroupRule } from '@/components/admin/types'
-import { ACRO_CATEGORIES, ROUTINE_TYPES, categoriesForRuleset, CATEGORY_LABELS } from '@/components/admin/types'
+import { ROUTINE_TYPES, categoriesForRuleset, CATEGORY_LABELS } from '@/components/admin/types'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -13,6 +13,9 @@ const T = {
     addSection: 'Add section',
     sectionLabel: 'Label',
     sectionLabelPlaceholder: 'e.g. Morning, Afternoon…',
+    startingTime: 'Start time',
+    waitingSec: 'Wait (s)',
+    warmupMin: 'Warmup (min)',
     deleteSection: 'Delete section',
     noSections: 'No sections yet',
     noSectionsSub: 'Add a section to start building the schedule.',
@@ -35,6 +38,9 @@ const T = {
     addSection: 'Añadir jornada',
     sectionLabel: 'Etiqueta',
     sectionLabelPlaceholder: 'p.ej. Mañana, Tarde…',
+    startingTime: 'Hora inicio',
+    waitingSec: 'Espera (s)',
+    warmupMin: 'Calent. (min)',
     deleteSection: 'Eliminar jornada',
     noSections: 'Sin jornadas',
     noSectionsSub: 'Añade una joranada para empezar a construir el programa.',
@@ -252,6 +258,12 @@ function PanelColumn({ lang, panel, sessions, ageGroups, agLabels, ageGroupRules
 
 // ─── section block ────────────────────────────────────────────────────────────
 
+type SectionTimes = {
+  starting_time: string | null
+  waiting_time_seconds: number | null
+  warmup_duration_minutes: number | null
+}
+
 type SectionBlockProps = {
   lang: Lang
   section: Section
@@ -261,6 +273,7 @@ type SectionBlockProps = {
   agLabels: Record<string, string>
   ageGroupRules: AgeGroupRule[]
   onUpdateLabel: (label: string) => void
+  onUpdateTimes: (times: SectionTimes) => void
   onDelete: () => void
   onAddSession: (s: Omit<Session, 'id'>) => void
   onDeleteSession: (id: string) => void
@@ -268,12 +281,25 @@ type SectionBlockProps = {
 
 function SectionBlock({
   lang, section, sessions, panels, ageGroups, agLabels, ageGroupRules,
-  onUpdateLabel, onDelete, onAddSession, onDeleteSession,
+  onUpdateLabel, onUpdateTimes, onDelete, onAddSession, onDeleteSession,
 }: SectionBlockProps) {
   const t = T[lang]
   const [showForm, setShowForm] = useState(false)
   const [label, setLabel] = useState(section.label ?? '')
+  const [startingTime, setStartingTime]   = useState(section.starting_time?.slice(0, 5) ?? '')
+  const [waitingSec, setWaitingSec]       = useState(section.waiting_time_seconds?.toString() ?? '')
+  const [warmupMin, setWarmupMin]         = useState(section.warmup_duration_minutes?.toString() ?? '')
   const twoPanel = panels.length === 2
+
+  function saveTimes() {
+    onUpdateTimes({
+      starting_time:           startingTime || null,
+      waiting_time_seconds:    waitingSec !== '' ? parseInt(waitingSec, 10) : null,
+      warmup_duration_minutes: warmupMin  !== '' ? parseInt(warmupMin,  10) : null,
+    })
+  }
+
+  const inputCls = 'w-full border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400'
 
   return (
     <div className="border border-slate-200 rounded-2xl overflow-hidden">
@@ -294,6 +320,36 @@ function SectionBlock({
           className="shrink-0 text-xs text-slate-400 hover:text-red-500 hover:bg-red-50 px-2 py-1 rounded-lg transition-all">
           {t.deleteSection}
         </button>
+      </div>
+
+      {/* timing row */}
+      <div className="flex items-end gap-3 px-4 py-2.5 bg-slate-50/60 border-b border-slate-100">
+        <div className="flex flex-col gap-1 w-28">
+          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t.startingTime}</label>
+          <input type="time" value={startingTime}
+            onChange={(e) => setStartingTime(e.target.value)}
+            onBlur={saveTimes}
+            className={inputCls}
+          />
+        </div>
+        <div className="flex flex-col gap-1 w-20">
+          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t.waitingSec}</label>
+          <input type="number" min={0} value={waitingSec}
+            onChange={(e) => setWaitingSec(e.target.value)}
+            onBlur={saveTimes}
+            placeholder="0"
+            className={inputCls}
+          />
+        </div>
+        <div className="flex flex-col gap-1 w-24">
+          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t.warmupMin}</label>
+          <input type="number" min={0} value={warmupMin}
+            onChange={(e) => setWarmupMin(e.target.value)}
+            onBlur={saveTimes}
+            placeholder="0"
+            className={inputCls}
+          />
+        </div>
       </div>
 
       {/* sessions — 2-column when 2 panels, single column otherwise */}
@@ -370,6 +426,7 @@ export type StructureTabProps = {
   sessions: Session[]
   onAddSection: () => void
   onUpdateSectionLabel: (sectionId: string, label: string) => void
+  onUpdateSectionTimes: (sectionId: string, times: SectionTimes) => void
   onDeleteSection: (sectionId: string) => void
   onAddSession: (s: Omit<Session, 'id'>) => void
   onDeleteSession: (sessionId: string) => void
@@ -377,7 +434,7 @@ export type StructureTabProps = {
 
 export default function StructureTab({
   lang, competitionId, ageGroups, agLabels, ageGroupRules, panels, sections, sessions,
-  onAddSection, onUpdateSectionLabel, onDeleteSection,
+  onAddSection, onUpdateSectionLabel, onUpdateSectionTimes, onDeleteSection,
   onAddSession, onDeleteSession,
 }: StructureTabProps) {
   const t = T[lang]
@@ -461,6 +518,7 @@ export default function StructureTab({
           agLabels={agLabels}
           ageGroupRules={ageGroupRules}
           onUpdateLabel={(label) => onUpdateSectionLabel(activeSection.id, label)}
+          onUpdateTimes={(times) => onUpdateSectionTimes(activeSection.id, times)}
           onDelete={() => handleDelete(activeSection)}
           onAddSession={onAddSession}
           onDeleteSession={onDeleteSession}

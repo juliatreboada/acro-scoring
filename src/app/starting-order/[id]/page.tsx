@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Competition, Panel, Section, Session, SessionOrder, Team, Club, CompetitionEntry } from '@/components/admin/types'
+import type { Competition, Panel, Section, Session, SessionOrder, Team, Club, CompetitionEntry, AgeGroupRule } from '@/components/admin/types'
 import StartingOrderView from '@/components/starting-order/StartingOrderView'
 
 // ─── page ─────────────────────────────────────────────────────────────────────
@@ -23,21 +23,22 @@ export default function Page() {
   const [globalTeams,   setGlobalTeams]   = useState<Team[]>([])
   const [clubs,         setClubs]         = useState<Club[]>([])
   const [entries,       setEntries]       = useState<CompetitionEntry[]>([])
+  const [ageGroupRules, setAgeGroupRules] = useState<AgeGroupRule[]>([])
   const [loading,       setLoading]       = useState(true)
 
   useEffect(() => {
     async function load() {
       // ── first wave: competition + panels + sections + sessions + entries ──────
-      const [compRes, panelsRes, sectionsRes, sessionsRes, entriesRes] = await Promise.all([
+      const [compRes, panelsRes, sectionsRes, sessionsRes, entriesRes, rulesRes] = await Promise.all([
         supabase.from('competitions')
-          .select('id, name, status, location, start_date, end_date, registration_deadline, age_groups, poster_url, created_at')
+          .select('id, name, status, location, start_date, end_date, registration_deadline, ts_music_deadline, age_groups, poster_url, created_at')
           .eq('id', id).single(),
         supabase.from('panels')
           .select('id, competition_id, panel_number')
           .eq('competition_id', id)
           .order('panel_number'),
         supabase.from('sections')
-          .select('id, competition_id, section_number, label')
+          .select('id, competition_id, section_number, label, starting_time, waiting_time_seconds, warmup_duration_minutes')
           .eq('competition_id', id)
           .order('section_number'),
         supabase.from('sessions')
@@ -45,8 +46,11 @@ export default function Page() {
           .eq('competition_id', id)
           .order('order_index'),
         supabase.from('competition_entries')
-          .select('id, competition_id, team_id, dropped_out')
+          .select('id, competition_id, team_id, dorsal, dropped_out')
           .eq('competition_id', id),
+        supabase.from('age_group_rules')
+          .select('id, age_group, ruleset, min_age, max_age, routine_count')
+          .order('sort_order'),
       ])
 
       if (!compRes.data) { setLoading(false); return }
@@ -85,6 +89,7 @@ export default function Page() {
       setEntries(rawEntries)
       setGlobalTeams(rawTeams)
       setClubs(clubsData ?? [])
+      setAgeGroupRules((rulesRes.data ?? []) as unknown as AgeGroupRule[])
       setLoading(false)
     }
     load()
@@ -129,6 +134,7 @@ export default function Page() {
         globalTeams={globalTeams}
         clubs={clubs}
         entries={entries}
+        ageGroupRules={ageGroupRules}
       />
     </div>
   )

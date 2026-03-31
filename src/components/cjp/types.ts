@@ -15,6 +15,7 @@ export type MockPerf = {
   category: string
   routineType: string
   skipped: boolean
+  tsUrl?: string | null
 }
 
 export type JudgeScore = {
