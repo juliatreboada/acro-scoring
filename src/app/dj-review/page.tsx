@@ -1,14 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import DJReview from '@/components/dj-review/DJReview'
 import AuthBar from '@/components/shared/AuthBar'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Sheet } from '@/components/dj-review/types'
 
-export default function Page() {
+function DJReviewPage() {
   const supabase = createClient()
+  const searchParams = useSearchParams()
+  const filterCompId = searchParams.get('comp')
   const [lang, setLang] = useState<Lang>('es')
   const [sheets, setSheets] = useState<Sheet[]>([])
   const [loading, setLoading] = useState(true)
@@ -66,7 +69,11 @@ export default function Page() {
         .in('status', ['registration_closed', 'active', 'finished'])
       if (!competitions?.length) { setLoading(false); return }
 
-      const validCompIds = new Set(competitions.map(c => c.id))
+      const allValidCompIds = new Set(competitions.map(c => c.id))
+      // If a specific competition was requested, scope to it only
+      const validCompIds = filterCompId && allValidCompIds.has(filterCompId)
+        ? new Set([filterCompId])
+        : allValidCompIds
       const validSpjs = lockedSpjs.filter(s => validCompIds.has(sectionToComp[s.section_id]))
       if (!validSpjs.length) { setLoading(false); return }
 
@@ -134,12 +141,18 @@ export default function Page() {
 
       const teamIds = [...new Set(sessionTeams.map(o => o.team_id))]
 
-      const [teamsRes, musicRes] = await Promise.all([
+      const [teamsRes, musicRes, rulesRes] = await Promise.all([
         supabase.from('teams').select('id, gymnast_display, age_group, category').in('id', teamIds),
         supabase.from('routine_music')
           .select('team_id, competition_id, routine_type, ts_path')
           .in('team_id', teamIds).in('competition_id', [...validCompIds]),
+        supabase.from('age_group_rules').select('id, age_group, ruleset'),
       ])
+
+      const agLabels: Record<string, string> = Object.fromEntries(
+        ((rulesRes.data ?? []) as unknown as { id: string; age_group: string; ruleset: string }[])
+          .map(r => [r.id, `${r.age_group} (${r.ruleset})`])
+      )
 
       const teamMap: Record<string, { gymnast_display: string; age_group: string; category: string }> =
         Object.fromEntries((teamsRes.data ?? []).map(t => [t.id, t]))
@@ -164,7 +177,7 @@ export default function Page() {
         return [{
           id:          key,
           gymnasts:    team.gymnast_display,
-          ageGroup:    team.age_group,
+          ageGroup:    agLabels[team.age_group] ?? team.age_group,
           category:    team.category,
           routineType: session.routine_type,
           pdfUrl:      music?.ts_path ?? null,
@@ -187,21 +200,18 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-slate-100">
-      <AuthBar />
-      <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-between gap-4 flex-wrap sticky top-0 z-10">
-        <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
-          {(['en', 'es'] as Lang[]).map((l) => (
-            <button key={l} onClick={() => setLang(l)}
-              className={['px-3 py-1 rounded-md text-sm font-medium transition-all',
-                lang === l ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'].join(' ')}>
-              {l.toUpperCase()}
-            </button>
-          ))}
-        </div>
-      </div>
+      <AuthBar lang={lang} onLangChange={setLang} />
       <div className="max-w-5xl mx-auto pt-4 pb-16">
         <DJReview initialSheets={sheets} lang={lang} />
       </div>
     </div>
+  )
+}
+
+export default function Page() {
+  return (
+    <Suspense>
+      <DJReviewPage />
+    </Suspense>
   )
 }

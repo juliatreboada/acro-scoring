@@ -47,19 +47,9 @@ export default function Page() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <AuthBar />
-      <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-4 sticky top-0 z-10">
-        <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
-          {(['en', 'es'] as Lang[]).map((l) => (
-            <button key={l} onClick={() => setLang(l)}
-              className={['px-3 py-1 rounded-md text-sm font-medium transition-all',
-                lang === l ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'].join(' ')}>
-              {l.toUpperCase()}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className="h-screen flex flex-col overflow-hidden bg-slate-100">
+      <AuthBar lang={lang} onLangChange={setLang} />
+      <div className="flex-1 min-h-0">
       <DJAJView
         currentPerf={currentPerf} lang={lang} elements={ELEMENTS}
         onSubmit={handleSubmit}
@@ -67,6 +57,7 @@ export default function Page() {
         waitingForOtherScores={waitingForOtherScores}
         result={currentResult ?? undefined}
       />
+      </div>
     </div>
   )
 }

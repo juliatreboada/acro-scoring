@@ -338,7 +338,7 @@ function CompetitionDetail({ comp, lang, onBack }: {
                   {(['registration_closed', 'active', 'finished'] as CompetitionStatus[]).includes(comp.status) &&
                     panel.roles.some(r => r.role === 'DJ') && (
                     <button
-                      onClick={() => router.push('/dj-review')}
+                      onClick={() => router.push(`/dj-review?comp=${comp.id}`)}
                       className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600 transition-all"
                     >
                       {t.djReviewButton}

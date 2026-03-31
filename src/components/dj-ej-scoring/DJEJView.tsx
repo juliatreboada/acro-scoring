@@ -511,7 +511,7 @@ function TabletLayout({ perf, lang, elements, extraElements, flags, deductions, 
   const allElements = [...elements, ...extraElements]
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-60px)]">
+    <div className="flex gap-4 h-full">
       {/* PDF placeholder */}
       <div className="flex-1 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-3 bg-white text-slate-400 min-h-0">
         <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
@@ -1208,7 +1208,7 @@ export default function DJEJView({ currentPerf, lang, elements, onSubmit, waitin
         )}
       </div>
       {/* tablet/desktop: combined element view */}
-      <div className="hidden md:block px-4 pb-4">
+      <div className="hidden md:block h-full px-4 pb-4">
         <TabletLayout
           perf={currentPerf}
           lang={lang}

@@ -89,14 +89,20 @@ export function useJudgeSession(): JudgeSessionData {
         .eq('panel_id',   session.panel_id)
 
       const judgeIds = [...new Set((allSpjs ?? []).filter(s => s.judge_id).map(s => s.judge_id as string))]
-      const [judgesRes, ordersRes, scoresRes, resultsRes] = await Promise.all([
+      const [judgesRes, ordersRes, scoresRes, resultsRes, rulesRes] = await Promise.all([
         judgeIds.length > 0
           ? supabase.from('judges').select('id, full_name').in('id', judgeIds)
           : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
         supabase.from('session_orders').select('position, team_id').eq('session_id', session.id).order('position'),
         supabase.from('scores').select('*').eq('session_id', session.id),
         supabase.from('routine_results').select('*').eq('session_id', session.id),
+        supabase.from('age_group_rules').select('id, age_group, ruleset'),
       ])
+
+      const agLabels: Record<string, string> = Object.fromEntries(
+        ((rulesRes.data ?? []) as unknown as { id: string; age_group: string; ruleset: string }[])
+          .map(r => [r.id, `${r.age_group} (${r.ruleset})`])
+      )
 
       const judgeNameMap: Record<string, string> = Object.fromEntries(
         (judgesRes.data ?? []).map(j => [j.id, j.full_name])
@@ -149,7 +155,7 @@ export function useJudgeSession(): JudgeSessionData {
         id:          `${session.id}_${o.team_id}`,
         position:    o.position,
         gymnasts:    teamMap[o.team_id]?.gymnast_display ?? '',
-        ageGroup:    teamMap[o.team_id]?.age_group ?? session.age_group,
+        ageGroup:    agLabels[teamMap[o.team_id]?.age_group ?? session.age_group] ?? teamMap[o.team_id]?.age_group ?? session.age_group,
         category:    teamMap[o.team_id]?.category  ?? session.category,
         routineType: session.routine_type,
         skipped:     false,

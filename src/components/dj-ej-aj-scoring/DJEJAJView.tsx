@@ -327,7 +327,7 @@ export default function DJEJAJView({
   // ── scoring ──
   const ejScoreVal = calcEJScore(deductions)
   return (
-    <div>
+    <div className="h-full">
       <div className="md:hidden"><PerformanceHeader perf={currentPerf} /></div>
 
       {/* ── mobile (< md): 3-tab bar + content ── */}
@@ -376,8 +376,8 @@ export default function DJEJAJView({
       </div>
 
       {/* ── tablet / desktop (md+): PDF viewer + right panel with tabs ── */}
-      <div className="hidden md:block px-4 pb-4">
-        <div className="flex gap-4 h-[calc(100vh-60px)]">
+      <div className="hidden md:block h-full px-4 pb-4">
+        <div className="flex gap-4 h-full">
           {/* PDF / TS placeholder */}
           <div className="flex-1 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-3 bg-white text-slate-400 min-h-0">
             <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>

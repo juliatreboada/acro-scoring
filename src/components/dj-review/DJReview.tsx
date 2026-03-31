@@ -234,7 +234,7 @@ function SheetPanel({ sheet, lang, onAddElement, onDeleteElement, onMarkReviewed
   const totalD = sheet.elements.reduce((s, el) => s + el.difficultyValue, 0)
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-180px)] min-h-[400px]">
+    <div className="flex gap-4 h-full min-h-0">
       {/* PDF panel */}
       <div className="flex-1 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-3 bg-white text-slate-400 min-h-0">
         {sheet.pdfUrl ? (
@@ -344,7 +344,7 @@ type DJReviewProps = {
 export default function DJReview({ initialSheets, lang }: DJReviewProps) {
   const t = T[lang]
   const [sheets, setSheets] = useState<Sheet[]>(initialSheets)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [modalSheetId, setModalSheetId] = useState<string | null>(null)
 
   const reviewedCount = sheets.filter((s) => s.reviewedAt !== null).length
 
@@ -385,33 +385,34 @@ export default function DJReview({ initialSheets, lang }: DJReviewProps) {
     return { Balance: t.routineBalance, Dynamic: t.routineDynamic, Combined: t.routineCombined }[rt] ?? rt
   }
 
+  const modalSheet = modalSheetId ? sheets.find((s) => s.id === modalSheetId) ?? null : null
+
   return (
-    <div className="px-4 pb-8">
-      {/* header */}
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-bold text-slate-800">{t.title}</h1>
-        <span className={[
-          'text-sm font-medium px-3 py-1 rounded-full',
-          reviewedCount === sheets.length && sheets.length > 0
-            ? 'bg-emerald-100 text-emerald-700'
-            : 'bg-slate-100 text-slate-500',
-        ].join(' ')}>
-          {reviewedCount} {t.of} {sheets.length} {t.sheets}
-        </span>
-      </div>
+    <>
+      <div className="px-4 pb-8">
+        {/* header */}
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-lg font-bold text-slate-800">{t.title}</h1>
+          <span className={[
+            'text-sm font-medium px-3 py-1 rounded-full',
+            reviewedCount === sheets.length && sheets.length > 0
+              ? 'bg-emerald-100 text-emerald-700'
+              : 'bg-slate-100 text-slate-500',
+          ].join(' ')}>
+            {reviewedCount} {t.of} {sheets.length} {t.sheets}
+          </span>
+        </div>
 
-      {/* sheet list */}
-      <div className="space-y-2">
-        {sheets.map((sheet) => {
-          const isExpanded = expandedId === sheet.id
-          const isReviewed = sheet.reviewedAt !== null
+        {/* sheet list */}
+        <div className="space-y-2">
+          {sheets.map((sheet) => {
+            const isReviewed = sheet.reviewedAt !== null
 
-          return (
-            <div key={sheet.id} className="border border-slate-200 rounded-2xl overflow-hidden bg-white">
-              {/* sheet row */}
+            return (
               <button
-                onClick={() => setExpandedId(isExpanded ? null : sheet.id)}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left"
+                key={sheet.id}
+                onClick={() => setModalSheetId(sheet.id)}
+                className="w-full flex items-center gap-3 px-4 py-3 border border-slate-200 rounded-2xl bg-white hover:bg-slate-50 transition-colors text-left"
               >
                 {/* reviewed indicator */}
                 <div className={[
@@ -432,30 +433,53 @@ export default function DJReview({ initialSheets, lang }: DJReviewProps) {
                 </div>
 
                 <svg
-                  className={['w-4 h-4 text-slate-400 transition-transform shrink-0', isExpanded ? 'rotate-180' : ''].join(' ')}
+                  className="w-4 h-4 text-slate-400 shrink-0"
                   fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </button>
-
-              {/* expanded content */}
-              {isExpanded && (
-                <div className="border-t border-slate-100 p-4">
-                  <SheetPanel
-                    sheet={sheet}
-                    lang={lang}
-                    onAddElement={handleAddElement}
-                    onDeleteElement={handleDeleteElement}
-                    onMarkReviewed={handleMarkReviewed}
-                    onReopen={handleReopen}
-                  />
-                </div>
-              )}
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
-    </div>
+
+      {/* full-screen modal */}
+      {modalSheet && (
+        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+          {/* modal header */}
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 shrink-0">
+            <button
+              onClick={() => setModalSheetId(null)}
+              className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              {t.title}
+            </button>
+            <span className="text-slate-300">|</span>
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-semibold text-slate-800 truncate">{modalSheet.gymnasts}</span>
+              <span className="text-xs text-slate-400 ml-2">
+                {modalSheet.ageGroup} · {modalSheet.category} · {routineLabel(modalSheet.routineType)}
+              </span>
+            </div>
+          </div>
+
+          {/* modal body */}
+          <div className="flex-1 min-h-0 p-4">
+            <SheetPanel
+              sheet={modalSheet}
+              lang={lang}
+              onAddElement={handleAddElement}
+              onDeleteElement={handleDeleteElement}
+              onMarkReviewed={handleMarkReviewed}
+              onReopen={handleReopen}
+            />
+          </div>
+        </div>
+      )}
+    </>
   )
 }
