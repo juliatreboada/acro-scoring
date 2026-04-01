@@ -370,6 +370,45 @@ export type Database = {
         }
         Relationships: []
       }
+      ts_elements: {
+        Row: {
+          id: string
+          team_id: string
+          competition_id: string
+          routine_type: Database["public"]["Enums"]["routine_type"]
+          position: number
+          label: string
+          element_type: string
+          is_static: boolean
+          difficulty_value: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          team_id: string
+          competition_id: string
+          routine_type: Database["public"]["Enums"]["routine_type"]
+          position: number
+          label?: string
+          element_type: string
+          is_static?: boolean
+          difficulty_value?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          team_id?: string
+          competition_id?: string
+          routine_type?: Database["public"]["Enums"]["routine_type"]
+          position?: number
+          label?: string
+          element_type?: string
+          is_static?: boolean
+          difficulty_value?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
       routine_music: {
         Row: {
           competition_id: string

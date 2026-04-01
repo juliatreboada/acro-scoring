@@ -5,10 +5,7 @@ import { useJudgeSession } from '@/hooks/useJudgeSession'
 import EJAJView from '@/components/ej-aj-scoring/EJAJView'
 import AuthBar from '@/components/shared/AuthBar'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { TsElement } from '@/components/ej-scoring/types'
 import type { JudgeScore } from '@/components/cjp/types'
-
-const ELEMENTS: TsElement[] = []
 
 export default function Page() {
   const [lang, setLang] = useState<Lang>('es')
@@ -51,7 +48,7 @@ export default function Page() {
       <AuthBar lang={lang} onLangChange={setLang} />
       <div className="flex-1 min-h-0">
       <EJAJView
-        currentPerf={currentPerf} lang={lang} elements={ELEMENTS}
+        currentPerf={currentPerf} lang={lang} elements={currentPerf?.elements ?? []}
         onSubmit={handleSubmit}
         panelJudges={panelJudges} judgeScores={currentScores}
         waitingForOtherScores={waitingForOtherScores}

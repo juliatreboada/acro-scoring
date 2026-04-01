@@ -200,6 +200,10 @@ export const CATEGORY_LABELS: Record<string, Record<string, string>> = {
   },
 }
 
+export function categoryLabel(category: string, lang: string): string {
+  return CATEGORY_LABELS[lang]?.[category] ?? category
+}
+
 export const ROUTINE_TYPES = ['Balance', 'Dynamic', 'Combined'] as const
 
 export type CompetitionStatus = 'draft' | 'registration_open' | 'registration_closed' | 'active' | 'finished'

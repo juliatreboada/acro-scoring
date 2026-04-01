@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { Lang } from '../aj-scoring/types'
 import type { MockPerf, RoutineResult } from '../cjp/types'
+import { categoryLabel } from '@/components/admin/types'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -441,7 +442,7 @@ export default function ResultsView({ performances, results, lang }: ResultsView
           .sort((a, b) => (results[b.id]?.finalScore ?? 0) - (results[a.id]?.finalScore ?? 0))
 
         const perf = performances.find((p) => groupKey(p) === k)!
-        const label = `${perf.ageGroup} · ${perf.category} · ${routineLabel(perf.routineType)}`
+        const label = `${perf.ageGroup} · ${categoryLabel(perf.category, lang)} · ${routineLabel(perf.routineType)}`
         const hasProvisional = rows.some((p) => results[p.id]?.status === 'provisional')
 
         return (

@@ -15,6 +15,7 @@ const T = {
     final: 'Final',
     prov: 'Provisional',
     panelScores: 'Panel scores',
+    djMismatch: 'DJ scores differ — averaged',
   },
   es: {
     ej: 'EJ', aj: 'AJ', dj: 'DJ',
@@ -26,6 +27,7 @@ const T = {
     final: 'Final',
     prov: 'Provisional',
     panelScores: 'Puntuaciones del panel',
+    djMismatch: 'Puntuaciones DJ distintas — promediadas',
   },
 }
 
@@ -68,7 +70,12 @@ export default function ScoreBoard({ judgeScores, panelJudges, result, lang }: {
     ? ajNums.filter((_, i) => !ajDropped.has(i)).reduce((s, v) => s + v, 0) / (ajNums.length - ajDropped.size || 1)
     : null
 
-  const djScore = djJudges.map((j) => judgeScores.find((s) => s.panelJudgeId === j.id)).find(Boolean)
+  const djSubmitted = djJudges
+    .map((j) => judgeScores.find((s) => s.panelJudgeId === j.id))
+    .filter((s): s is JudgeScore => s != null && s.djDifficulty != null)
+  const djMismatch = djSubmitted.length >= 2 &&
+    (djSubmitted.some((s) => s.djDifficulty !== djSubmitted[0].djDifficulty) ||
+     djSubmitted.some((s) => s.djPenalty !== djSubmitted[0].djPenalty))
 
   function ScoreCell({ value, dropped }: { value: number | null | undefined; dropped?: boolean }) {
     if (value == null) return <span className="text-slate-300 text-sm">—</span>
@@ -127,10 +134,14 @@ export default function ScoreBoard({ judgeScores, panelJudges, result, lang }: {
           {/* DJ */}
           <div className="p-3">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">{t.dj}</p>
-            {djJudges.map((j) => {
+            {djJudges.map((j, idx) => {
               const s = judgeScores.find((sc) => sc.panelJudgeId === j.id)
+              const showLabel = djJudges.length > 1
               return (
-                <div key={j.id}>
+                <div key={j.id} className={idx > 0 ? 'mt-2 pt-2 border-t border-slate-100' : ''}>
+                  {showLabel && (
+                    <p className="text-[10px] text-slate-400 mb-1">{t.dj}{j.roleNumber} {j.name}</p>
+                  )}
                   <div className="flex items-center justify-between py-1.5 border-b border-slate-50">
                     <span className="text-xs text-slate-500">{t.djDif}</span>
                     <ScoreCell value={s?.djDifficulty} />
@@ -139,13 +150,18 @@ export default function ScoreBoard({ judgeScores, panelJudges, result, lang }: {
                     <span className="text-xs text-slate-500">{t.djPen}</span>
                     <ScoreCell value={s?.djPenalty != null ? -s.djPenalty : null} />
                   </div>
-                  <div className="flex items-center justify-between py-1.5">
-                    <span className="text-xs text-slate-500">{t.cjpPen}</span>
-                    <ScoreCell value={result?.cjpPenalty != null ? -result.cjpPenalty : null} />
-                  </div>
+                  {idx === djJudges.length - 1 && (
+                    <div className="flex items-center justify-between py-1.5">
+                      <span className="text-xs text-slate-500">{t.cjpPen}</span>
+                      <ScoreCell value={result?.cjpPenalty != null ? -result.cjpPenalty : null} />
+                    </div>
+                  )}
                 </div>
               )
             })}
+            {djMismatch && (
+              <p className="text-[10px] text-amber-600 mt-2 leading-snug">⚠ {t.djMismatch}</p>
+            )}
           </div>
         </div>
       </div>

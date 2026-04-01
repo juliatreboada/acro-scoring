@@ -9,6 +9,7 @@ export type PanelJudge = {
 
 export type MockPerf = {
   id: string
+  teamId: string
   position: number
   gymnasts: string
   ageGroup: string
@@ -16,6 +17,7 @@ export type MockPerf = {
   routineType: string
   skipped: boolean
   tsUrl?: string | null
+  elements: import('../ej-scoring/types').TsElement[]
 }
 
 export type JudgeScore = {
@@ -115,12 +117,18 @@ export function computeResult(
 
   const ejVals = ejJudges.map((j) => scores.find((s) => s.panelJudgeId === j.id)?.ejScore ?? 0)
   const ajVals = ajJudges.map((j) => scores.find((s) => s.panelJudgeId === j.id)?.ajScore ?? 0)
-  const djScore = djJudges.map((j) => scores.find((s) => s.panelJudgeId === j.id)).find(Boolean)
+  const djScores = djJudges
+    .map((j) => scores.find((s) => s.panelJudgeId === j.id))
+    .filter((s): s is JudgeScore => s != null && s.djDifficulty != null)
 
   const eScore = average(ejVals)
   const aScore = average(ajVals)
-  const difScore = djScore?.djDifficulty ?? 0
-  const difPenalty = djScore?.djPenalty ?? 0
+  const difScore = djScores.length > 0
+    ? djScores.reduce((sum, s) => sum + (s.djDifficulty ?? 0), 0) / djScores.length
+    : 0
+  const difPenalty = djScores.length > 0
+    ? djScores.reduce((sum, s) => sum + (s.djPenalty ?? 0), 0) / djScores.length
+    : 0
   const finalScore = Math.max(0, eScore * 2 + aScore + difScore - difPenalty - cjpPenaltyValue)
 
   return {

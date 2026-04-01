@@ -5,10 +5,7 @@ import { useJudgeSession } from '@/hooks/useJudgeSession'
 import DJView from '@/components/dj-scoring/DJView'
 import AuthBar from '@/components/shared/AuthBar'
 import type { Lang } from '@/components/dj-scoring/types'
-import type { TsElement } from '@/components/ej-scoring/types'
 import type { JudgeScore } from '@/components/cjp/types'
-
-const ELEMENTS: TsElement[] = []
 
 export default function Page() {
   const [lang, setLang] = useState<Lang>('es')
@@ -51,7 +48,7 @@ export default function Page() {
         <DJView
           currentPerf={currentPerf}
           lang={lang}
-          elements={ELEMENTS}
+          elements={currentPerf?.elements ?? []}
           onSubmit={handleSubmit}
           panelJudges={panelJudges}
           judgeScores={currentScores}

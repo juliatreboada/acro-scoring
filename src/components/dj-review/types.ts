@@ -13,6 +13,8 @@ export type ReviewElement = {
 
 export type Sheet = {
   id: string
+  teamId: string
+  competitionId: string
   gymnasts: string
   ageGroup: string
   category: string

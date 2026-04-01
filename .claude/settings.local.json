@@ -5,7 +5,11 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
       "Bash(sed -n '380,395p' \"/Users/juliavazquezperez/Documents/Web Treboada/acro-scoring-v3/src/components/ej-scoring/EJView.tsx\")",
       "Bash(sed -n '215,225p' \"/Users/juliavazquezperez/Documents/Web Treboada/acro-scoring-v3/src/components/aj-scoring/AJView.tsx\")",
-      "Bash(sed -n '632,645p' \"/Users/juliavazquezperez/Documents/Web Treboada/acro-scoring-v3/src/components/dj-scoring/DJView.tsx\")"
+      "Bash(sed -n '632,645p' \"/Users/juliavazquezperez/Documents/Web Treboada/acro-scoring-v3/src/components/dj-scoring/DJView.tsx\")",
+      "Bash(grep -r \"invite\\\\|email\\\\|mail\" '/Users/juliavazquezperez/Documents/Web Treboada/acro-scoring-v3/src/app/api' --include=*.ts)",
+      "Bash(xargs ls:*)",
+      "Bash(next build:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

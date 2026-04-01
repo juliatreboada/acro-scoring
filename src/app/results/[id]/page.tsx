@@ -77,12 +77,14 @@ export default function Page() {
         const session = sessionMap[o.session_id]
         return {
           id:          `${o.session_id}_${o.team_id}`,
+          teamId:      o.team_id,
           position:    o.position,
           gymnasts:    teamMap[o.team_id] ?? '',
           ageGroup:    session?.age_group   ?? '',
           category:    session?.category    ?? '',
           routineType: session?.routine_type ?? '',
           skipped:     dropoutSet.has(o.team_id),
+          elements:    [],
         }
       })
 

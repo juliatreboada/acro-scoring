@@ -363,6 +363,12 @@ export default function Page() {
     setCompetition(prev => prev ? { ...prev, ...updates } : prev)
   }
 
+  // ── dj review deadline ────────────────────────────────────────────────────────
+  async function handleSetDJReviewDeadline(date: string | null) {
+    await supabase.from('competitions').update({ ts_music_deadline: date }).eq('id', id)
+    setCompetition(prev => prev ? { ...prev, ts_music_deadline: date } : prev)
+  }
+
   // ── competition day ───────────────────────────────────────────────────────────
   async function handleStartSession(sessionId: string) {
     await supabase.from('sessions').update({ status: 'active' }).eq('id', sessionId)
@@ -429,6 +435,7 @@ export default function Page() {
         availableAdmins={availableAdmins}
         ageGroupRules={ageGroupRules}
         onUpdateCompetition={handleUpdateCompetition}
+        onSetDJReviewDeadline={handleSetDJReviewDeadline}
         onStartSession={handleStartSession}
         onFinishSession={handleFinishSession}
       />

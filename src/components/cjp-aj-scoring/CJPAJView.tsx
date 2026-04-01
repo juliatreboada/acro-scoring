@@ -5,6 +5,7 @@ import type { Performance, Lang } from '../aj-scoring/types'
 import type { PanelJudge, MockPerf, JudgeScore, RoutineResult, PenaltyState } from '../cjp/types'
 import { calcCjpPenalty, DEFAULT_PENALTY } from '../cjp/types'
 import { PenaltyPanel } from '../shared/CJPPenaltyPanel'
+import { categoryLabel } from '@/components/admin/types'
 import AJScoringPanel from '../shared/AJScoringPanel'
 import CJPTabletShell from '../shared/CJPTabletShell'
 import CheckIcon from '../shared/CheckIcon'
@@ -52,7 +53,7 @@ function PerformanceHeader({ perf, lang, ajScore, cjpPenalty }: {
     <div className="bg-slate-800 text-white px-4 py-3 rounded-xl mb-3">
       <div className="flex items-center justify-between mb-0.5">
         <span className="text-xs text-slate-400 uppercase tracking-wide font-medium">
-          #{perf.position} · {perf.ageGroup} · {perf.category} · {routineLabel}
+          #{perf.position} · {perf.ageGroup} · {categoryLabel(perf.category, lang)} · {routineLabel}
         </span>
         <div className="flex items-center gap-3 text-sm font-bold tabular-nums">
           {ajScore !== null && <span className="text-blue-300">A {ajScore.toFixed(2)}</span>}

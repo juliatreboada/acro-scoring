@@ -5,10 +5,7 @@ import { useJudgeSession } from '@/hooks/useJudgeSession'
 import CJPDJView from '@/components/cjp-dj-scoring/CJPDJView'
 import AuthBar from '@/components/shared/AuthBar'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { TsElement } from '@/components/ej-scoring/types'
 import type { JudgeScore } from '@/components/cjp/types'
-
-const ELEMENTS: TsElement[] = []
 
 export default function Page() {
   const [lang, setLang] = useState<Lang>('es')
@@ -44,7 +41,7 @@ export default function Page() {
       <AuthBar lang={lang} onLangChange={setLang} />
       <CJPDJView
         lang={lang}
-        elements={ELEMENTS}
+        elements={performances.find(p => p.id === currentPerfId)?.elements ?? []}
         panelJudges={panelJudges}
         performances={performances}
         currentPerfId={currentPerfId}

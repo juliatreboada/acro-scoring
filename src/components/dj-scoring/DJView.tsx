@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import type { Performance, Lang, TsElement, ElementType, ElementFlag, ElementFlags } from './types'
 import { DEFAULT_FLAG } from './types'
 import type { PanelJudge, JudgeScore, RoutineResult } from '../cjp/types'
-import ScoreBoard from '../shared/ScoreBoard'
+import { categoryLabel } from '@/components/admin/types'
+import { ScoreGrid } from '../shared/CJPTabletShell'
 
 const MAX_RETRIES = 3
 
@@ -170,7 +171,7 @@ function PerformanceHeader({ perf, lang, difficulty, penalty }: {
     <div className="bg-slate-800 text-white px-4 py-3 rounded-xl mb-3">
       <div className="flex items-center justify-between mb-0.5">
         <span className="text-xs text-slate-400 uppercase tracking-wide font-medium">
-          #{perf.position} · {perf.ageGroup} · {perf.category} · {routineLabel}
+          #{perf.position} · {perf.ageGroup} · {categoryLabel(perf.category, lang)} · {routineLabel}
         </span>
         <div className="flex items-center gap-3 text-sm font-bold tabular-nums">
           <span className="text-emerald-400">D {difficulty.toFixed(2)}</span>
@@ -787,7 +788,7 @@ export default function DJView({ currentPerf, lang, elements, onSubmit, waitingF
 
         {/* panel scoreboard */}
         {judgeScores && panelJudges && (
-          <ScoreBoard judgeScores={judgeScores} panelJudges={panelJudges} result={result} lang={lang} />
+          <ScoreGrid scores={judgeScores} panelJudges={panelJudges} lang={lang} locked={true} onReopen={() => {}} />
         )}
       </div>
     )

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Competition, Section, Panel, Session, SessionOrder, Team, Club, CompetitionEntry } from '@/components/admin/types'
 
@@ -16,14 +17,14 @@ const T = {
     active: 'Live',
     finished: 'Finished',
     start: 'Start session',
-    startSection: 'Start section',
     finish: 'Finish session',
     confirmStart: 'Start this session? Judges will be able to submit scores.',
-    confirmStartSection: 'Start all sessions in this section simultaneously?',
     confirmFinish: 'Mark this session as finished?',
     noTeams: 'No teams assigned.',
     dropout: 'Dropout',
     noOrder: 'Starting order not published.',
+    scoring: 'Scoring',
+    noMusic: 'No music uploaded',
   },
   es: {
     notActive: 'La competición aún no está en curso.',
@@ -34,14 +35,14 @@ const T = {
     active: 'En curso',
     finished: 'Finalizada',
     start: 'Iniciar sesión',
-    startSection: 'Iniciar jornada',
     finish: 'Finalizar sesión',
     confirmStart: '¿Iniciar esta sesión? Los jueces podrán enviar puntuaciones.',
-    confirmStartSection: '¿Iniciar todas las sesiones de esta jornada simultáneamente?',
     confirmFinish: '¿Marcar esta sesión como finalizada?',
     noTeams: 'Sin equipos asignados.',
     dropout: 'Baja',
     noOrder: 'Orden de salida no publicado.',
+    scoring: 'Puntuando',
+    noMusic: 'Sin música subida',
   },
 }
 
@@ -55,7 +56,7 @@ const SESSION_BADGE: Record<Session['status'], string> = {
 
 function SessionCard({
   lang, session, sessionOrders, globalTeams, clubs, entries,
-  canControl, showStart, onStart, onFinish,
+  canControl, showStart, cjpCurrentTeamId, musicPaths, onStart, onFinish,
 }: {
   lang: Lang
   session: Session
@@ -64,13 +65,14 @@ function SessionCard({
   clubs: Club[]
   entries: CompetitionEntry[]
   canControl: boolean
-  showStart: boolean   // false when section-level start is used instead
+  showStart: boolean
+  cjpCurrentTeamId: string | null
+  musicPaths: Record<string, string | null>   // team_id → public music URL | null
   onStart: () => void
   onFinish: () => void
 }) {
   const t = T[lang]
 
-  // teams in this session (match by age_group + category)
   const matchingTeamIds = new Set(
     globalTeams
       .filter((tm) => tm.age_group === session.age_group && tm.category === session.category)
@@ -80,7 +82,6 @@ function SessionCard({
     entries.filter((e) => e.dropped_out && matchingTeamIds.has(e.team_id)).map((e) => e.team_id)
   )
 
-  // build ordered team list
   const orders = sessionOrders
     .filter((o) => o.session_id === session.id)
     .sort((a, b) => a.position - b.position)
@@ -89,9 +90,72 @@ function SessionCard({
   const hasOrder = orderedTeamIds.length > 0
 
   const statusLabel = t[session.status]
-  const isActive = session.status === 'active'
-  const isWaiting = session.status === 'waiting'
+  const isActive   = session.status === 'active'
+  const isWaiting  = session.status === 'waiting'
   const isFinished = session.status === 'finished'
+
+  // ── music player state ────────────────────────────────────────────────────────
+  const [currentIdx, setCurrentIdx] = useState(0)
+  const [isPlaying,  setIsPlaying]  = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  // Init audio element once (client-only)
+  useEffect(() => {
+    const audio = new Audio()
+    audio.onended = () => setIsPlaying(false)
+    audioRef.current = audio
+    return () => { audio.pause(); audioRef.current = null }
+  }, [])
+
+  // Reset player when session goes active
+  useEffect(() => {
+    if (isActive) { setCurrentIdx(0); setIsPlaying(false); audioRef.current?.pause() }
+  }, [isActive])
+
+  const activeTeamIds   = orderedTeamIds.filter(id => !droppedOutIds.has(id))
+  const clampedIdx      = Math.min(currentIdx, Math.max(0, activeTeamIds.length - 1))
+  const currentMusicTeamId = activeTeamIds[clampedIdx] ?? null
+  const currentMusicUrl    = currentMusicTeamId ? (musicPaths[currentMusicTeamId] ?? null) : null
+
+  // Sync audio src + play/pause
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    if (!currentMusicUrl) {
+      audio.pause()
+      audio.src = ''
+      if (isPlaying) setIsPlaying(false)
+      return
+    }
+
+    if (audio.src !== currentMusicUrl) {
+      audio.pause()
+      audio.src = currentMusicUrl
+      audio.load()
+    }
+
+    if (isPlaying) {
+      audio.play().catch(() => setIsPlaying(false))
+    } else {
+      audio.pause()
+    }
+  }, [currentMusicTeamId, isPlaying, currentMusicUrl]) // eslint-disable-line
+
+  function prev() {
+    audioRef.current?.pause()
+    setCurrentIdx(i => Math.max(0, i - 1))
+    // keep isPlaying state — next useEffect handles playback
+  }
+
+  function next() {
+    if (clampedIdx < activeTeamIds.length - 1) {
+      audioRef.current?.pause()
+      setCurrentIdx(i => i + 1)
+    } else {
+      setIsPlaying(false)
+    }
+  }
 
   return (
     <div className={['rounded-2xl border overflow-hidden transition-all',
@@ -127,7 +191,7 @@ function SessionCard({
         )}
       </div>
 
-      {/* team list — shown when active or finished */}
+      {/* team list */}
       {(isActive || isFinished) && (
         <div className="border-t border-slate-100">
           {!hasOrder ? (
@@ -135,28 +199,97 @@ function SessionCard({
           ) : orderedTeamIds.length === 0 ? (
             <p className="px-4 py-3 text-xs text-slate-400 italic">{t.noTeams}</p>
           ) : (
-            <ol className="divide-y divide-slate-50">
+            <ol className="divide-y divide-slate-100">
               {orderedTeamIds.map((teamId, idx) => {
-                const team = globalTeams.find((tm) => tm.id === teamId)
-                const club = team ? clubs.find((c) => c.id === team.club_id) : undefined
-                const isDropout = droppedOutIds.has(teamId)
+                const team     = globalTeams.find((tm) => tm.id === teamId)
+                const club     = team ? clubs.find((c) => c.id === team.club_id) : undefined
+                const isDropout    = droppedOutIds.has(teamId)
+                const isMusicActive = isActive && teamId === currentMusicTeamId && !isDropout
+                const isCjpScoring  = isActive && teamId === cjpCurrentTeamId && !isDropout
+                const musicUrl      = musicPaths[teamId] ?? null
                 if (!team) return null
+
                 return (
-                  <li key={teamId} className={['flex items-center gap-3 px-4 py-2.5', isDropout ? 'opacity-40' : ''].join(' ')}>
+                  <li key={teamId}
+                    className={['flex items-center gap-2.5 px-3 py-2.5 transition-colors',
+                      isDropout ? 'opacity-40' : isMusicActive ? 'bg-blue-50' : ''].join(' ')}>
+
+                    {/* position badge */}
                     <span className={['w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0',
-                      isDropout ? 'bg-slate-100 text-slate-400' : isActive ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-500'].join(' ')}>
-                      {idx + 1}
+                      isDropout    ? 'bg-slate-100 text-slate-400'
+                      : isMusicActive ? 'bg-blue-600 text-white'
+                      : isActive   ? 'bg-slate-100 text-slate-500'
+                                   : 'bg-slate-100 text-slate-500'].join(' ')}>
+                      {isMusicActive && isPlaying
+                        ? <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                        : idx + 1}
                     </span>
+
+                    {/* team info */}
                     <div className="flex-1 min-w-0">
-                      <p className={['text-sm font-medium truncate', isDropout ? 'line-through text-slate-400' : 'text-slate-800'].join(' ')}>
+                      <p className={['text-sm font-medium truncate',
+                        isDropout    ? 'line-through text-slate-400'
+                        : isMusicActive ? 'text-blue-700 font-semibold'
+                                      : 'text-slate-800'].join(' ')}>
                         {team.gymnast_display}
                       </p>
                       {club && <p className="text-xs text-slate-400 truncate">{club.club_name}</p>}
                     </div>
+
+                    {/* CJP scoring indicator */}
+                    {isCjpScoring && (
+                      <span className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200">
+                        <svg className="w-3 h-3 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
+                        </svg>
+                        <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wide">{t.scoring}</span>
+                      </span>
+                    )}
+
+                    {/* dropout badge */}
                     {isDropout && (
                       <span className="shrink-0 text-xs font-semibold bg-red-50 text-red-400 px-2 py-0.5 rounded-full">
                         {t.dropout}
                       </span>
+                    )}
+
+                    {/* music controls or warning — only on the active music row */}
+                    {isMusicActive && (
+                      musicUrl ? (
+                        <div className="flex items-center gap-1 shrink-0 ml-1">
+                          <button onClick={prev} disabled={clampedIdx === 0}
+                            className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 disabled:opacity-30 flex items-center justify-center transition-colors">
+                            <svg className="w-3 h-3 text-blue-700" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
+                            </svg>
+                          </button>
+                          <button onClick={() => setIsPlaying(p => !p)}
+                            className="w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-700 flex items-center justify-center transition-colors shadow-sm active:scale-95">
+                            {isPlaying ? (
+                              <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                              </svg>
+                            ) : (
+                              <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z" />
+                              </svg>
+                            )}
+                          </button>
+                          <button onClick={next} disabled={clampedIdx >= activeTeamIds.length - 1}
+                            className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 disabled:opacity-30 flex items-center justify-center transition-colors">
+                            <svg className="w-3 h-3 text-blue-700" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+                            </svg>
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 border border-red-200">
+                          <svg className="w-3 h-3 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z" />
+                          </svg>
+                          <span className="text-[10px] font-bold text-red-500 uppercase tracking-wide">{t.noMusic}</span>
+                        </span>
+                      )
                     )}
                   </li>
                 )
@@ -189,8 +322,58 @@ export default function CompetitionDayTab({
   onFinishSession: (sessionId: string) => void
 }) {
   const t = T[lang]
+  const supabase = createClient()
   const [activeSection, setActiveSection] = useState<string>(sections[0]?.id ?? '')
-  const canControl = competition.status === 'active'
+
+  // sessionId → current_team_id (CJP indicator)
+  const [cjpCurrentTeamIds, setCjpCurrentTeamIds] = useState<Record<string, string | null>>({})
+  // team_id|routine_type → music public URL
+  const [allMusicPaths, setAllMusicPaths] = useState<Array<{ team_id: string; routine_type: string; music_path: string | null }>>([])
+
+  const canControl     = competition.status === 'active'
+  const activeSessions = sessions.filter(s => s.status === 'active')
+  const activeSessionKey = activeSessions.map(s => s.id).join(',')
+
+  // ── fetch music + subscribe to CJP indicator ──────────────────────────────────
+  useEffect(() => {
+    if (!activeSessions.length) return
+
+    const ids     = activeSessions.map(s => s.id)
+    const teamIds = [...new Set(sessionOrders.filter(o => ids.includes(o.session_id)).map(o => o.team_id))]
+
+    // fetch initial CJP current_team_id
+    supabase.from('sessions').select('id, current_team_id').in('id', ids)
+      .then(({ data }) => {
+        if (!data) return
+        const map: Record<string, string | null> = {}
+        data.forEach((s: any) => { map[s.id] = s.current_team_id ?? null })
+        setCjpCurrentTeamIds(map)
+      })
+
+    // fetch music URLs
+    if (teamIds.length) {
+      supabase.from('routine_music')
+        .select('team_id, routine_type, music_path')
+        .eq('competition_id', competition.id)
+        .in('team_id', teamIds)
+        .then(({ data }) => setAllMusicPaths((data ?? []) as typeof allMusicPaths))
+    }
+
+    // subscribe to session updates (CJP indicator)
+    const channels = activeSessions.map(session =>
+      supabase.channel(`day-cjp-${session.id}`)
+        .on('postgres_changes', {
+          event: 'UPDATE', schema: 'public', table: 'sessions',
+          filter: `id=eq.${session.id}`,
+        }, (payload) => {
+          const row = payload.new as { id: string; current_team_id: string | null }
+          setCjpCurrentTeamIds(prev => ({ ...prev, [row.id]: row.current_team_id ?? null }))
+        })
+        .subscribe()
+    )
+
+    return () => { channels.forEach(ch => supabase.removeChannel(ch)) }
+  }, [activeSessionKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (competition.status !== 'active' && competition.status !== 'finished') {
     return (
@@ -207,15 +390,14 @@ export default function CompetitionDayTab({
   }
 
   const sectionSessions = sessions.filter((s) => s.section_id === activeSection)
-  const multiPanel = panels.length > 1
+  const multiPanel      = panels.length > 1
 
-  // for multi-panel: section-level start — only when at least one session is still waiting
-  const hasWaiting = sectionSessions.some((s) => s.status === 'waiting')
-
-  function startSection() {
-    sectionSessions
-      .filter((s) => s.status === 'waiting')
-      .forEach((s) => onStartSession(s.id))
+  function getMusicPaths(session: Session): Record<string, string | null> {
+    return Object.fromEntries(
+      allMusicPaths
+        .filter(m => m.routine_type === session.routine_type)
+        .map(m => [m.team_id, m.music_path])
+    )
   }
 
   return (
@@ -234,8 +416,6 @@ export default function CompetitionDayTab({
         </div>
       )}
 
-      {/* section-level start button (multi-panel only) */}
-      {/* panel columns */}
       {!multiPanel ? (
         <div className="space-y-3">
           {sectionSessions
@@ -246,23 +426,23 @@ export default function CompetitionDayTab({
                 sessionOrders={sessionOrders} globalTeams={globalTeams}
                 clubs={clubs} entries={entries} canControl={canControl}
                 showStart={true}
+                cjpCurrentTeamId={cjpCurrentTeamIds[session.id] ?? null}
+                musicPaths={getMusicPaths(session)}
                 onStart={() => onStartSession(session.id)}
                 onFinish={() => onFinishSession(session.id)} />
             ))}
         </div>
       ) : (
         (() => {
-          // multi-panel: pair sessions by order_index
           const orderIndices = [...new Set(sectionSessions.map(s => s.order_index))].sort((a, b) => a - b)
-
           return (
             <div className="space-y-4">
               {orderIndices.map(idx => {
                 const rowSessions = panels
                   .map(p => sectionSessions.find(s => s.panel_id === p.id && s.order_index === idx))
                   .filter(Boolean) as Session[]
-                const allWaiting = rowSessions.every(s => s.status === 'waiting')
-                const allActive = rowSessions.every(s => s.status === 'active')
+                const allWaiting  = rowSessions.every(s => s.status === 'waiting')
+                const allActive   = rowSessions.every(s => s.status === 'active')
                 const allFinished = rowSessions.every(s => s.status === 'finished')
 
                 return (
@@ -294,6 +474,8 @@ export default function CompetitionDayTab({
                           sessionOrders={sessionOrders} globalTeams={globalTeams}
                           clubs={clubs} entries={entries} canControl={false}
                           showStart={false}
+                          cjpCurrentTeamId={cjpCurrentTeamIds[session.id] ?? null}
+                          musicPaths={getMusicPaths(session)}
                           onStart={() => {}}
                           onFinish={() => {}} />
                       ))}

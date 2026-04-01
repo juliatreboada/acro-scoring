@@ -9,6 +9,7 @@ import type { PanelJudge, MockPerf, JudgeScore, RoutineResult, PenaltyState } fr
 import { calcCjpPenalty, DEFAULT_PENALTY } from '../cjp/types'
 import DJModeSelector, { type DJPhoneMode } from '../shared/DJModeSelector'
 import CJPTabletShell from '../shared/CJPTabletShell'
+import { categoryLabel } from '@/components/admin/types'
 import { PenaltyPanel } from '../shared/CJPPenaltyPanel'
 import { getElementConfig, calcDJTotals, DualKeypad, PhoneDJElementsList } from '../shared/DJElementsShared'
 import { DJTabContent } from '../shared/DJEJElementsShared'
@@ -54,7 +55,7 @@ function PerformanceHeader({ perf, lang, difficulty, djPenalty, cjpPenalty }: {
     <div className="bg-slate-800 text-white px-4 py-3 rounded-xl mb-3">
       <div className="flex items-center justify-between mb-0.5">
         <span className="text-xs text-slate-400 uppercase tracking-wide font-medium">
-          #{perf.position} · {perf.ageGroup} · {perf.category} · {routineLabel}
+          #{perf.position} · {perf.ageGroup} · {categoryLabel(perf.category, lang)} · {routineLabel}
         </span>
         <div className="flex items-center gap-3 text-sm font-bold tabular-nums">
           <span className="text-emerald-400">D {difficulty.toFixed(2)}</span>

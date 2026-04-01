@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import type { Answers, Lang, Performance } from './types'
 import { getSections, getQuestionValues, calcSectionScore, calcTotal } from './aj-content'
 import type { PanelJudge, JudgeScore, RoutineResult } from '../cjp/types'
-import ScoreBoard from '../shared/ScoreBoard'
+import { categoryLabel } from '@/components/admin/types'
+import { ScoreGrid } from '../shared/CJPTabletShell'
 
 // ─── translations ────────────────────────────────────────────────────────────
 
@@ -65,7 +66,7 @@ function PerformanceHeader({ perf, lang }: { perf: Performance; lang: Lang }) {
     <div className="bg-slate-800 text-white px-4 py-3 rounded-xl mb-4 space-y-0.5">
       <div className="flex items-center justify-between">
         <span className="text-xs text-slate-400 uppercase tracking-wide font-medium">
-          #{perf.position} · {perf.ageGroup} · {perf.category} · {routineLabel}
+          #{perf.position} · {perf.ageGroup} · {categoryLabel(perf.category, lang)} · {routineLabel}
         </span>
       </div>
       <p className="text-lg font-semibold leading-tight">{perf.gymnasts}</p>
@@ -352,7 +353,7 @@ export default function AJView({ currentPerf, lang, onSubmit, waitingForOtherSco
 
         {/* panel scoreboard */}
         {judgeScores && panelJudges && (
-          <ScoreBoard judgeScores={judgeScores} panelJudges={panelJudges} result={result} lang={lang} />
+          <ScoreGrid scores={judgeScores} panelJudges={panelJudges} lang={lang} locked={true} onReopen={() => {}} />
         )}
       </div>
     )

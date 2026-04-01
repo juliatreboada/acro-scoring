@@ -1,8 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { createClient } from '@/lib/supabase'
 import type { Lang } from '../aj-scoring/types'
 import type { Sheet, ReviewElement, ElementType } from './types'
+import { categoryLabel } from '@/components/admin/types'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -29,6 +31,9 @@ const T = {
     reopen: 'Reopen',
     reviewedBy: 'Reviewed',
     deleteElement: 'Delete',
+    editElement: 'Edit',
+    saveElement: 'Save',
+    cancelEdit: 'Cancel',
     balance: 'Balance',
     mount: 'Mount',
     dynamic: 'Dynamic',
@@ -61,6 +66,9 @@ const T = {
     reopen: 'Reabrir',
     reviewedBy: 'Revisada',
     deleteElement: 'Eliminar',
+    editElement: 'Editar',
+    saveElement: 'Guardar',
+    cancelEdit: 'Cancelar',
     balance: 'Balance',
     mount: 'Mount',
     dynamic: 'Dinámico',
@@ -114,7 +122,7 @@ const EMPTY_FORM: ElementFormState = {
 function ElementForm({ lang, integerMode, onAdd }: {
   lang: Lang
   integerMode: boolean
-  onAdd: (el: Omit<ReviewElement, 'id' | 'position'>) => void
+  onAdd: (el: Omit<ReviewElement, 'id' | 'position'>) => Promise<void>
 }) {
   const t = T[lang]
   const [form, setForm] = useState<ElementFormState>(EMPTY_FORM)
@@ -128,15 +136,15 @@ function ElementForm({ lang, integerMode, onAdd }: {
     rawNum >= 0 &&
     (integerMode ? rawNum <= 400 : rawNum <= 4)
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!isValid || form.elementType === '') return
-    onAdd({
+    setForm(EMPTY_FORM)
+    await onAdd({
       elementType: form.elementType,
       isStatic: form.isStatic,
       label: form.label.trim(),
       difficultyValue: parseFloat(diffNum.toFixed(2)),
     })
-    setForm(EMPTY_FORM)
   }
 
   return (
@@ -180,7 +188,7 @@ function ElementForm({ lang, integerMode, onAdd }: {
           onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
           onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
           placeholder={t.label}
-          className="flex-1 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-slate-400 placeholder:text-slate-300 bg-white"
+          className="flex-1 text-sm text-slate-800 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-slate-400 placeholder:text-slate-300 bg-white"
         />
         <div className="flex flex-col items-end gap-0.5">
           <input
@@ -192,7 +200,7 @@ function ElementForm({ lang, integerMode, onAdd }: {
             min={0}
             max={integerMode ? 400 : 4}
             step={integerMode ? 1 : 0.01}
-            className="w-28 text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-slate-400 placeholder:text-slate-300 bg-white text-right tabular-nums"
+            className="w-28 text-sm text-slate-800 border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:border-slate-400 placeholder:text-slate-300 bg-white text-right tabular-nums"
           />
           {integerMode && form.difficultyValue !== '' && !isNaN(rawNum) && (
             <span className="text-xs text-slate-400 tabular-nums">
@@ -218,13 +226,111 @@ function ElementForm({ lang, integerMode, onAdd }: {
   )
 }
 
+// ─── inline element edit ──────────────────────────────────────────────────────
+
+function ElementEditRow({ el, lang, integerMode, onSave, onCancel }: {
+  el: ReviewElement
+  lang: Lang
+  integerMode: boolean
+  onSave: (updated: Omit<ReviewElement, 'id' | 'position'>) => void
+  onCancel: () => void
+}) {
+  const t = T[lang]
+  const [form, setForm] = useState<ElementFormState>({
+    elementType: el.elementType,
+    isStatic: el.isStatic,
+    label: el.label,
+    difficultyValue: integerMode
+      ? String(Math.round(el.difficultyValue * 100))
+      : String(el.difficultyValue),
+  })
+
+  const rawNum = parseFloat(form.difficultyValue)
+  const diffNum = integerMode ? rawNum / 100 : rawNum
+  const isValid =
+    form.elementType !== '' &&
+    form.difficultyValue !== '' &&
+    !isNaN(rawNum) &&
+    rawNum >= 0 &&
+    (integerMode ? rawNum <= 400 : rawNum <= 4)
+
+  function handleSave() {
+    if (!isValid || form.elementType === '') return
+    onSave({
+      elementType: form.elementType,
+      isStatic: form.isStatic,
+      label: form.label.trim(),
+      difficultyValue: parseFloat(diffNum.toFixed(2)),
+    })
+  }
+
+  return (
+    <div className="border border-blue-200 rounded-xl p-3 bg-blue-50 space-y-2">
+      {/* type selector */}
+      <div className="flex gap-1 flex-wrap">
+        {(['balance', 'mount', 'dynamic', 'individual', 'motion'] as ElementType[]).map((type) => (
+          <button key={type} onClick={() => setForm((f) => ({ ...f, elementType: type, isStatic: false }))}
+            className={['px-2.5 py-1 rounded-lg text-xs font-medium border transition-all capitalize',
+              form.elementType === type
+                ? 'bg-slate-800 text-white border-slate-800'
+                : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400',
+            ].join(' ')}
+          >
+            {t[type as 'balance' | 'dynamic' | 'individual']}
+          </button>
+        ))}
+        {form.elementType === 'individual' && (
+          <button onClick={() => setForm((f) => ({ ...f, isStatic: !f.isStatic }))}
+            className={['px-2.5 py-1 rounded-lg text-xs font-medium border transition-all',
+              form.isStatic ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-slate-400 border-slate-200 hover:border-blue-300',
+            ].join(' ')}
+          >
+            {t.isStatic}
+          </button>
+        )}
+      </div>
+      {/* label + difficulty */}
+      <div className="flex gap-2">
+        <input type="text" value={form.label}
+          onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
+          onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+          placeholder={t.label}
+          className="flex-1 text-sm text-slate-800 border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-400 placeholder:text-slate-300 bg-white"
+        />
+        <input type="number" value={form.difficultyValue}
+          onChange={(e) => setForm((f) => ({ ...f, difficultyValue: e.target.value }))}
+          onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+          min={0} max={integerMode ? 400 : 4} step={integerMode ? 1 : 0.01}
+          className="w-24 text-sm text-slate-800 border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-400 bg-white text-right tabular-nums"
+        />
+      </div>
+      {/* save / cancel */}
+      <div className="flex gap-2">
+        <button onClick={handleSave} disabled={!isValid}
+          className={['flex-1 py-1.5 rounded-lg text-xs font-medium transition-all',
+            isValid ? 'bg-slate-800 text-white hover:bg-slate-700' : 'bg-slate-100 text-slate-300 cursor-not-allowed',
+          ].join(' ')}
+        >
+          {t.saveElement}
+        </button>
+        <button onClick={onCancel}
+          className="px-4 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-700 border border-slate-200 hover:border-slate-300 transition-all"
+        >
+          {t.cancelEdit}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── sheet panel ──────────────────────────────────────────────────────────────
 
-function SheetPanel({ sheet, lang, onAddElement, onDeleteElement, onMarkReviewed, onReopen }: {
+function SheetPanel({ sheet, lang, onAddElement, onDeleteElement, onEditElement, onMarkReviewed, onReopen }: {
   sheet: Sheet
   lang: Lang
-  onAddElement: (sheetId: string, el: Omit<ReviewElement, 'id' | 'position'>) => void
-  onDeleteElement: (sheetId: string, elementId: string) => void
+  onAddElement: (sheetId: string, el: Omit<ReviewElement, 'id' | 'position'>) => Promise<void>
+  onDeleteElement: (sheetId: string, elementId: string) => Promise<void>
+  onEditElement: (sheetId: string, elementId: string, el: Omit<ReviewElement, 'id' | 'position'>) => Promise<void>
   onMarkReviewed: (sheetId: string) => void
   onReopen: (sheetId: string) => void
 }) {
@@ -232,6 +338,7 @@ function SheetPanel({ sheet, lang, onAddElement, onDeleteElement, onMarkReviewed
   const isReviewed = sheet.reviewedAt !== null
   const integerMode = usesIntegerDifficulty(sheet.ageGroup)
   const totalD = sheet.elements.reduce((s, el) => s + el.difficultyValue, 0)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   return (
     <div className="flex gap-4 h-full min-h-0">
@@ -259,6 +366,21 @@ function SheetPanel({ sheet, lang, onAddElement, onDeleteElement, onMarkReviewed
             <p className="text-sm text-slate-400 text-center py-6">{t.noElements}</p>
           ) : (
             sheet.elements.map((el) => {
+              if (!isReviewed && editingId === el.id) {
+                return (
+                  <ElementEditRow
+                    key={el.id}
+                    el={el}
+                    lang={lang}
+                    integerMode={integerMode}
+                    onSave={async (updated) => {
+                      setEditingId(null)
+                      await onEditElement(sheet.id, el.id, updated)
+                    }}
+                    onCancel={() => setEditingId(null)}
+                  />
+                )
+              }
               const badge = typeBadge(el.elementType, el.isStatic, t)
               return (
                 <div
@@ -276,15 +398,26 @@ function SheetPanel({ sheet, lang, onAddElement, onDeleteElement, onMarkReviewed
                     {el.difficultyValue.toFixed(2)}
                   </span>
                   {!isReviewed && (
-                    <button
-                      onClick={() => onDeleteElement(sheet.id, el.id)}
-                      className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-400 transition-all ml-1 shrink-0"
-                      aria-label={t.deleteElement}
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <>
+                      <button
+                        onClick={() => setEditingId(el.id)}
+                        className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-blue-400 transition-all shrink-0"
+                        aria-label={t.editElement}
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => onDeleteElement(sheet.id, el.id)}
+                        className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-400 transition-all shrink-0"
+                        aria-label={t.deleteElement}
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </>
                   )}
                 </div>
               )
@@ -342,24 +475,55 @@ type DJReviewProps = {
 }
 
 export default function DJReview({ initialSheets, lang }: DJReviewProps) {
+  const supabase = createClient()
   const t = T[lang]
   const [sheets, setSheets] = useState<Sheet[]>(initialSheets)
   const [modalSheetId, setModalSheetId] = useState<string | null>(null)
 
   const reviewedCount = sheets.filter((s) => s.reviewedAt !== null).length
 
-  function handleAddElement(sheetId: string, el: Omit<ReviewElement, 'id' | 'position'>) {
+  async function handleAddElement(sheetId: string, el: Omit<ReviewElement, 'id' | 'position'>) {
+    const sheet = sheets.find((s) => s.id === sheetId)
+    if (!sheet) return
+    const position = sheet.elements.length + 1
+    const tempId = `temp-${Date.now()}-${Math.random()}`
+
+    // Optimistic update — show immediately
     setSheets((prev) => prev.map((s) => {
       if (s.id !== sheetId) return s
-      const position = s.elements.length + 1
-      return {
-        ...s,
-        elements: [...s.elements, { ...el, id: `el-${Date.now()}-${Math.random()}`, position }],
-      }
+      return { ...s, elements: [...s.elements, { ...el, id: tempId, position }] }
     }))
+
+    // Persist to DB and replace temp ID with real one
+    const { data } = await supabase
+      .from('ts_elements')
+      .insert({
+        team_id: sheet.teamId,
+        competition_id: sheet.competitionId,
+        routine_type: sheet.routineType as 'Balance' | 'Dynamic' | 'Combined',
+        position,
+        label: el.label,
+        element_type: el.elementType,
+        is_static: el.isStatic,
+        difficulty_value: el.difficultyValue,
+      })
+      .select('id')
+      .single()
+
+    if (data) {
+      setSheets((prev) => prev.map((s) => {
+        if (s.id !== sheetId) return s
+        return {
+          ...s,
+          elements: s.elements.map((e) => e.id === tempId ? { ...e, id: data.id } : e),
+        }
+      }))
+    }
   }
 
-  function handleDeleteElement(sheetId: string, elementId: string) {
+  async function handleDeleteElement(sheetId: string, elementId: string) {
+    await supabase.from('ts_elements').delete().eq('id', elementId)
+
     setSheets((prev) => prev.map((s) => {
       if (s.id !== sheetId) return s
       const elements = s.elements
@@ -367,6 +531,30 @@ export default function DJReview({ initialSheets, lang }: DJReviewProps) {
         .map((el, i) => ({ ...el, position: i + 1 }))
       return { ...s, elements }
     }))
+  }
+
+  async function handleEditElement(sheetId: string, elementId: string, el: Omit<ReviewElement, 'id' | 'position'>) {
+    // Optimistic update
+    setSheets((prev) => prev.map((s) => {
+      if (s.id !== sheetId) return s
+      return {
+        ...s,
+        elements: s.elements.map((e) =>
+          e.id === elementId ? { ...e, ...el } : e
+        ),
+      }
+    }))
+
+    // Persist to DB
+    await supabase
+      .from('ts_elements')
+      .update({
+        label: el.label,
+        element_type: el.elementType,
+        is_static: el.isStatic,
+        difficulty_value: el.difficultyValue,
+      })
+      .eq('id', elementId)
   }
 
   function handleMarkReviewed(sheetId: string) {
@@ -423,7 +611,7 @@ export default function DJReview({ initialSheets, lang }: DJReviewProps) {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-800 truncate">{sheet.gymnasts}</p>
                   <p className="text-xs text-slate-400">
-                    {sheet.ageGroup} · {sheet.category} · {routineLabel(sheet.routineType)}
+                    {sheet.ageGroup} · {categoryLabel(sheet.category, lang)} · {routineLabel(sheet.routineType)}
                     {sheet.elements.length > 0 && (
                       <span className="ml-2 text-slate-300">
                         {sheet.elements.length} el · D {sheet.elements.reduce((s, e) => s + e.difficultyValue, 0).toFixed(2)}
@@ -462,7 +650,7 @@ export default function DJReview({ initialSheets, lang }: DJReviewProps) {
             <div className="flex-1 min-w-0">
               <span className="text-sm font-semibold text-slate-800 truncate">{modalSheet.gymnasts}</span>
               <span className="text-xs text-slate-400 ml-2">
-                {modalSheet.ageGroup} · {modalSheet.category} · {routineLabel(modalSheet.routineType)}
+                {modalSheet.ageGroup} · {categoryLabel(modalSheet.category, lang)} · {routineLabel(modalSheet.routineType)}
               </span>
             </div>
           </div>
@@ -474,6 +662,7 @@ export default function DJReview({ initialSheets, lang }: DJReviewProps) {
               lang={lang}
               onAddElement={handleAddElement}
               onDeleteElement={handleDeleteElement}
+              onEditElement={handleEditElement}
               onMarkReviewed={handleMarkReviewed}
               onReopen={handleReopen}
             />

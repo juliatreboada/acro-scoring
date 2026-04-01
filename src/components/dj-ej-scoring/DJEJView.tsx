@@ -6,7 +6,8 @@ import type { TsElement, ElementType, Deductions, ElementDeduction } from '../ej
 import type { ElementFlag, ElementFlags } from '../dj-scoring/types'
 import { DEFAULT_FLAG } from '../dj-scoring/types'
 import type { PanelJudge, JudgeScore, RoutineResult } from '../cjp/types'
-import ScoreBoard from '../shared/ScoreBoard'
+import { ScoreGrid } from '../shared/CJPTabletShell'
+import { categoryLabel } from '@/components/admin/types'
 import DJModeSelector, { type DJPhoneMode } from '../shared/DJModeSelector'
 
 const MAX_RETRIES = 3
@@ -196,7 +197,7 @@ function PerformanceHeader({ perf, lang, difficulty, djPenalty, ejScore }: {
     <div className="bg-slate-800 text-white px-4 py-3 rounded-xl mb-3">
       <div className="flex items-center justify-between mb-0.5">
         <span className="text-xs text-slate-400 uppercase tracking-wide font-medium">
-          #{perf.position} · {perf.ageGroup} · {perf.category} · {routineLabel}
+          #{perf.position} · {perf.ageGroup} · {categoryLabel(perf.category, lang)} · {routineLabel}
         </span>
         <div className="flex items-center gap-3 text-sm font-bold tabular-nums">
           <span className="text-emerald-400">D {difficulty.toFixed(2)}</span>
@@ -1180,7 +1181,7 @@ export default function DJEJView({ currentPerf, lang, elements, onSubmit, waitin
         )}
 
         {judgeScores && panelJudges && (
-          <ScoreBoard judgeScores={judgeScores} panelJudges={panelJudges} result={result} lang={lang} />
+          <ScoreGrid scores={judgeScores} panelJudges={panelJudges} lang={lang} locked={true} onReopen={() => {}} />
         )}
       </div>
     )

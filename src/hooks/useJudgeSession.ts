@@ -43,6 +43,17 @@ export function useJudgeSession(): JudgeSessionData {
   const sessionIdRef = useRef<string | null>(null)
   useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
 
+  // ── #8: prevent back navigation while in an active session ───────────────────
+  useEffect(() => {
+    if (!sessionId) return
+    window.history.pushState(null, '', window.location.href)
+    function handlePopState() {
+      window.history.pushState(null, '', window.location.href)
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [sessionId])
+
   // ── initial load ─────────────────────────────────────────────────────────────
   useEffect(() => {
     async function load() {
@@ -144,7 +155,7 @@ export function useJudgeSession(): JudgeSessionData {
       }
 
       const teamIds = orderedEntries.map(o => o.team_id)
-      const [teamsRes, musicRes] = await Promise.all([
+      const [teamsRes, musicRes, elementsRes] = await Promise.all([
         teamIds.length > 0
           ? supabase.from('teams').select('id, gymnast_display, age_group, category').in('id', teamIds)
           : Promise.resolve({ data: [] as { id: string; gymnast_display: string; age_group: string; category: string }[] }),
@@ -155,6 +166,14 @@ export function useJudgeSession(): JudgeSessionData {
               .eq('routine_type', session.routine_type)
               .in('team_id', teamIds)
           : Promise.resolve({ data: [] as { team_id: string; ts_path: string | null }[] }),
+        teamIds.length > 0
+          ? supabase.from('ts_elements')
+              .select('id, team_id, position, label, element_type, is_static, difficulty_value')
+              .eq('competition_id', (session as any).competition_id)
+              .eq('routine_type', session.routine_type)
+              .in('team_id', teamIds)
+              .order('position')
+          : Promise.resolve({ data: [] as { id: string; team_id: string; position: number; label: string; element_type: string; is_static: boolean; difficulty_value: number }[] }),
       ])
 
       const teamMap: Record<string, { gymnast_display: string; age_group: string; category: string }> =
@@ -165,8 +184,22 @@ export function useJudgeSession(): JudgeSessionData {
           .map(m => [m.team_id, m.ts_path ?? null])
       )
 
+      const elementsMap: Record<string, import('@/components/ej-scoring/types').TsElement[]> = {}
+      for (const el of (elementsRes.data ?? []) as { id: string; team_id: string; position: number; label: string; element_type: string; is_static: boolean; difficulty_value: number }[]) {
+        if (!elementsMap[el.team_id]) elementsMap[el.team_id] = []
+        elementsMap[el.team_id].push({
+          id:              el.id,
+          position:        el.position,
+          label:           el.label,
+          elementType:     el.element_type as import('@/components/ej-scoring/types').ElementType,
+          isStatic:        el.is_static,
+          difficultyValue: el.difficulty_value,
+        })
+      }
+
       const builtPerfs: MockPerf[] = orderedEntries.map(o => ({
         id:          `${session.id}_${o.team_id}`,
+        teamId:      o.team_id,
         position:    o.position,
         gymnasts:    teamMap[o.team_id]?.gymnast_display ?? '',
         ageGroup:    agLabels[teamMap[o.team_id]?.age_group ?? session.age_group] ?? teamMap[o.team_id]?.age_group ?? session.age_group,
@@ -174,6 +207,7 @@ export function useJudgeSession(): JudgeSessionData {
         routineType: session.routine_type,
         skipped:     false,
         tsUrl:       tsUrlMap[o.team_id] ?? null,
+        elements:    elementsMap[o.team_id] ?? [],
       }))
 
       const builtJudgeScores: Record<string, JudgeScore[]> = {}

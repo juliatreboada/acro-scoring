@@ -358,6 +358,11 @@ export default function Page() {
     setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status: 'finished' as const } : s))
   }
 
+  async function handleSetDJReviewDeadline(date: string | null) {
+    await supabase.from('competitions').update({ ts_music_deadline: date }).eq('id', id)
+    setCompetition(prev => prev ? { ...prev, ts_music_deadline: date } : prev)
+  }
+
   // ── render ────────────────────────────────────────────────────────────────────
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -414,6 +419,7 @@ export default function Page() {
         onUpdateCompetition={handleUpdateCompetition}
         onStartSession={handleStartSession}
         onFinishSession={handleFinishSession}
+        onSetDJReviewDeadline={handleSetDJReviewDeadline}
       />
     </div>
   )

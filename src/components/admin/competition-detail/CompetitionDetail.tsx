@@ -64,6 +64,11 @@ const T = {
       registration_closed:  'This will start the competition and enable scoring. Continue?',
       active:               'This will mark the competition as finished. Continue?',
     } as Partial<Record<CompetitionStatus, string>>,
+    djReviewOpen: 'DJ Review open',
+    djReviewClosed: 'DJ Review closed',
+    openDJReview: 'Open DJ review',
+    closeDJReview: 'Close DJ review',
+    confirmCloseDJReview: 'Close the DJ review period? DJs will no longer be able to access the review.',
   },
   es: {
     back: 'Competiciones',
@@ -113,6 +118,11 @@ const T = {
       registration_closed:  '¿Iniciar la competición y habilitar la puntuación?',
       active:               '¿Marcar la competición como finalizada?',
     } as Partial<Record<CompetitionStatus, string>>,
+    djReviewOpen: 'Revisión DJ abierta',
+    djReviewClosed: 'Revisión DJ cerrada',
+    openDJReview: 'Abrir revisión DJ',
+    closeDJReview: 'Cerrar revisión DJ',
+    confirmCloseDJReview: '¿Cerrar el período de revisión DJ? Los jueces DJ ya no podrán acceder.',
   },
 }
 
@@ -412,6 +422,8 @@ export type CompetitionDetailProps = {
   availableAdmins: AdminUser[]
   ageGroupRules: AgeGroupRule[]
   onUpdateCompetition: (updates: Omit<Competition, 'id' | 'created_at' | 'status'>) => void
+  // dj review
+  onSetDJReviewDeadline: (date: string | null) => void
   // competition day
   onStartSession: (sessionId: string) => void
   onFinishSession: (sessionId: string) => void
@@ -426,10 +438,15 @@ export default function CompetitionDetail({
   onTogglePanelLock, onCreateJudge,
   globalTeams, clubs, entries, onToggleDropout, sessionOrders, lockedSessions, onReorder, onToggleLock,
   availableAdmins, ageGroupRules, onUpdateCompetition,
-  onStartSession, onFinishSession,
+  onSetDJReviewDeadline, onStartSession, onFinishSession,
 }: CompetitionDetailProps) {
   const t = T[lang]
   const [activeTab, setActiveTab] = useState<Tab>('structure')
+
+  const today = new Date().toISOString().slice(0, 10)
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+  const djReviewIsOpen = competition.ts_music_deadline !== null && today > competition.ts_music_deadline
+  const showDJReviewToggle = !['draft', 'finished'].includes(competition.status)
 
   const TABS: { key: Tab; label: string; live?: boolean }[] = [
     { key: 'structure',     label: t.tabs.structure     },
@@ -472,6 +489,33 @@ export default function CompetitionDetail({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-4.5m-9 4.5v-4.5m0 0A2.25 2.25 0 019.75 12h4.5A2.25 2.25 0 0116.5 14.25m-9 0V12a4.5 4.5 0 119 0v2.25" />
                 </svg>
               </a>
+            )}
+            {/* DJ review toggle */}
+            {showDJReviewToggle && (
+              djReviewIsOpen ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                    {t.djReviewOpen}
+                  </span>
+                  <button
+                    onClick={() => {
+                      if (!confirm(t.confirmCloseDJReview)) return
+                      onSetDJReviewDeadline('2099-12-31')
+                    }}
+                    className="px-2.5 py-1 rounded-lg text-xs font-medium border border-slate-200 text-slate-500 hover:border-red-300 hover:text-red-600 transition-all"
+                  >
+                    {t.closeDJReview}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => onSetDJReviewDeadline(yesterday)}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold border border-slate-200 text-slate-500 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 transition-all"
+                >
+                  {t.openDJReview}
+                </button>
+              )
             )}
             {/* status badge */}
             <span className={['px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5', STATUS_BADGE[competition.status]].join(' ')}>

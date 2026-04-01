@@ -71,8 +71,10 @@ function DJReviewPage() {
       const today = new Date().toISOString().slice(0, 10)
       const validComps = (competitions as { id: string; status: string; ts_music_deadline: string | null }[])
         .filter(c =>
-          (c.ts_music_deadline && today > c.ts_music_deadline) ||
-          ['registration_closed', 'active', 'finished'].includes(c.status)
+          // if admin set an explicit deadline, use it strictly (covers both open and close actions)
+          c.ts_music_deadline !== null
+            ? today > c.ts_music_deadline
+            : ['registration_closed', 'active', 'finished'].includes(c.status)
         )
       if (!validComps.length) { setLoading(false); return }
 
@@ -148,12 +150,16 @@ function DJReviewPage() {
 
       const teamIds = [...new Set(sessionTeams.map(o => o.team_id))]
 
-      const [teamsRes, musicRes, rulesRes] = await Promise.all([
+      const [teamsRes, musicRes, rulesRes, elementsRes] = await Promise.all([
         supabase.from('teams').select('id, gymnast_display, age_group, category').in('id', teamIds),
         supabase.from('routine_music')
           .select('team_id, competition_id, routine_type, ts_path')
           .in('team_id', teamIds).in('competition_id', [...validCompIds]),
         supabase.from('age_group_rules').select('id, age_group, ruleset'),
+        supabase.from('ts_elements')
+          .select('id, team_id, competition_id, routine_type, position, label, element_type, is_static, difficulty_value')
+          .in('team_id', teamIds).in('competition_id', [...validCompIds])
+          .order('position'),
       ])
 
       const agLabels: Record<string, string> = Object.fromEntries(
@@ -163,6 +169,9 @@ function DJReviewPage() {
 
       const teamMap: Record<string, { gymnast_display: string; age_group: string; category: string }> =
         Object.fromEntries((teamsRes.data ?? []).map(t => [t.id, t]))
+
+      type RawElement = { id: string; team_id: string; competition_id: string; routine_type: string; position: number; label: string; element_type: string; is_static: boolean; difficulty_value: number }
+      const rawElements = (elementsRes.data ?? []) as RawElement[]
 
       // Build one sheet per (session × team), deduplicating
       const seenKeys = new Set<string>()
@@ -181,15 +190,27 @@ function DJReviewPage() {
             m.competition_id === session.competition_id &&
             m.routine_type === session.routine_type
         )
+        const sheetElements = rawElements
+          .filter(e => e.team_id === o.team_id && e.competition_id === session.competition_id && e.routine_type === session.routine_type)
+          .map(e => ({
+            id:              e.id,
+            position:        e.position,
+            label:           e.label,
+            elementType:     e.element_type as import('@/components/dj-review/types').ElementType,
+            isStatic:        e.is_static,
+            difficultyValue: e.difficulty_value,
+          }))
         return [{
-          id:          key,
-          gymnasts:    team.gymnast_display,
-          ageGroup:    agLabels[team.age_group] ?? team.age_group,
-          category:    team.category,
-          routineType: session.routine_type,
-          pdfUrl:      music?.ts_path ?? null,
-          reviewedAt:  null,
-          elements:    [],
+          id:            key,
+          teamId:        o.team_id,
+          competitionId: session.competition_id,
+          gymnasts:      team.gymnast_display,
+          ageGroup:      agLabels[team.age_group] ?? team.age_group,
+          category:      team.category,
+          routineType:   session.routine_type,
+          pdfUrl:        music?.ts_path ?? null,
+          reviewedAt:    null,
+          elements:      sheetElements,
         }]
       })
 

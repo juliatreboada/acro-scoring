@@ -6,7 +6,8 @@ import type { TsElement, ElementType, Deductions } from '../ej-scoring/types'
 import type { ElementFlag, ElementFlags } from '../dj-scoring/types'
 import { DEFAULT_FLAG } from '../dj-scoring/types'
 import type { PanelJudge, JudgeScore, RoutineResult } from '../cjp/types'
-import ScoreBoard from '../shared/ScoreBoard'
+import { ScoreGrid } from '../shared/CJPTabletShell'
+import { categoryLabel } from '@/components/admin/types'
 import DJModeSelector, { type DJPhoneMode } from '../shared/DJModeSelector'
 import { getElementConfig, calcDJTotals, IncorrectTsToggle, DualKeypad, PhoneDJElementsList } from '../shared/DJElementsShared'
 import { calcEJScore, EJKeypad, CombinedElementRow } from '../shared/DJEJElementsShared'
@@ -62,11 +63,11 @@ const T = {
 
 // ─── helper components ────────────────────────────────────────────────────────
 
-function PerformanceHeader({ perf }: { perf: Performance }) {
+function PerformanceHeader({ perf, lang }: { perf: Performance; lang: Lang }) {
   return (
     <div className="bg-slate-800 text-white px-4 py-3 mb-4 space-y-0.5">
       <span className="text-xs text-slate-400 uppercase tracking-wide font-medium">
-        #{perf.position} · {perf.ageGroup} · {perf.category} · {perf.routineType}
+        #{perf.position} · {perf.ageGroup} · {categoryLabel(perf.category, lang)} · {perf.routineType}
       </span>
       <p className="text-lg font-semibold leading-tight">{perf.gymnasts}</p>
     </div>
@@ -285,7 +286,7 @@ export default function DJEJAJView({
   if (allSubmitted) {
     return (
       <div className="overflow-y-auto pb-8 max-w-xl mx-auto">
-        <PerformanceHeader perf={currentPerf} />
+        <PerformanceHeader perf={currentPerf} lang={lang} />
         <div className="px-4 flex flex-col items-center text-center gap-4 mb-6">
           <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
             <svg className="w-8 h-8 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -317,7 +318,7 @@ export default function DJEJAJView({
         </div>
         {judgeScores && panelJudges && (
           <div className="px-4">
-            <ScoreBoard judgeScores={judgeScores} panelJudges={panelJudges} result={result} lang={lang} />
+            <ScoreGrid scores={judgeScores} panelJudges={panelJudges} lang={lang} locked={true} onReopen={() => {}} />
           </div>
         )}
       </div>
@@ -328,7 +329,7 @@ export default function DJEJAJView({
   const ejScoreVal = calcEJScore(deductions)
   return (
     <div className="h-full">
-      <div className="md:hidden"><PerformanceHeader perf={currentPerf} /></div>
+      <div className="md:hidden"><PerformanceHeader perf={currentPerf} lang={lang} /></div>
 
       {/* ── mobile (< md): 3-tab bar + content ── */}
       <div className="md:hidden">
