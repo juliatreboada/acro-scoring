@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Competition, Section, Panel, Session, SessionOrder, Team, Club, CompetitionEntry } from '@/components/admin/types'
+import type { Competition, Section, Panel, Session, SessionOrder, Team, Club, CompetitionEntry, ScoringMethod } from '@/components/admin/types'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -25,6 +25,9 @@ const T = {
     noOrder: 'Starting order not published.',
     scoring: 'Scoring',
     noMusic: 'No music uploaded',
+    inputConfig: 'Scoring input',
+    keyboard: 'Keyboard',
+    elements: 'Elements',
   },
   es: {
     notActive: 'La competición aún no está en curso.',
@@ -43,8 +46,13 @@ const T = {
     noOrder: 'Orden de salida no publicado.',
     scoring: 'Puntuando',
     noMusic: 'Sin música subida',
+    inputConfig: 'Entrada de puntuación',
+    keyboard: 'Teclado',
+    elements: 'Elementos',
   },
 }
+
+// ─── types ────────────────────────────────────────────────────────────────────
 
 const SESSION_BADGE: Record<Session['status'], string> = {
   waiting:  'bg-slate-100 text-slate-500',
@@ -56,7 +64,7 @@ const SESSION_BADGE: Record<Session['status'], string> = {
 
 function SessionCard({
   lang, session, sessionOrders, globalTeams, clubs, entries,
-  canControl, showStart, cjpCurrentTeamId, musicPaths, onStart, onFinish,
+  canControl, showStart, cjpCurrentTeamId, musicPaths, onStart, onFinish, onConfigChange,
 }: {
   lang: Lang
   session: Session
@@ -67,9 +75,10 @@ function SessionCard({
   canControl: boolean
   showStart: boolean
   cjpCurrentTeamId: string | null
-  musicPaths: Record<string, string | null>   // team_id → public music URL | null
+  musicPaths: Record<string, string | null>
   onStart: () => void
   onFinish: () => void
+  onConfigChange: (patch: Partial<Pick<Session, 'dj_method' | 'ej_method'>>) => void
 }) {
   const t = T[lang]
 
@@ -112,8 +121,8 @@ function SessionCard({
     if (isActive) { setCurrentIdx(0); setIsPlaying(false); audioRef.current?.pause() }
   }, [isActive])
 
-  const activeTeamIds   = orderedTeamIds.filter(id => !droppedOutIds.has(id))
-  const clampedIdx      = Math.min(currentIdx, Math.max(0, activeTeamIds.length - 1))
+  const activeTeamIds      = orderedTeamIds.filter(id => !droppedOutIds.has(id))
+  const clampedIdx         = Math.min(currentIdx, Math.max(0, activeTeamIds.length - 1))
   const currentMusicTeamId = activeTeamIds[clampedIdx] ?? null
   const currentMusicUrl    = currentMusicTeamId ? (musicPaths[currentMusicTeamId] ?? null) : null
 
@@ -145,7 +154,6 @@ function SessionCard({
   function prev() {
     audioRef.current?.pause()
     setCurrentIdx(i => Math.max(0, i - 1))
-    // keep isPlaying state — next useEffect handles playback
   }
 
   function next() {
@@ -191,6 +199,37 @@ function SessionCard({
         )}
       </div>
 
+      {/* scoring input config */}
+      {canControl && !isFinished && (
+        <div className="border-t border-slate-100 px-3 py-2 bg-slate-50 flex flex-wrap gap-x-4 gap-y-1.5 items-center">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide shrink-0">{t.inputConfig}</span>
+          {(['dj', 'ej'] as const).map(role => {
+            const method = session[`${role}_method`] as ScoringMethod | null
+            return (
+              <div key={role} className="flex items-center gap-1.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase w-4">{role.toUpperCase()}</span>
+                <div className="flex rounded-md overflow-hidden border border-slate-200 text-[10px] font-semibold">
+                  {(['keyboard', 'elements'] as const).map(opt => (
+                    <button key={opt}
+                      onClick={() => {
+                        const newMethod: ScoringMethod | null = method === opt ? null : opt
+                        if (role === 'dj') onConfigChange({ dj_method: newMethod })
+                        else onConfigChange({ ej_method: newMethod })
+                      }}
+                      className={['px-2 py-0.5 transition-colors',
+                        method === opt
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-slate-400 hover:text-slate-600'].join(' ')}>
+                      {opt === 'keyboard' ? t.keyboard : t.elements}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
       {/* team list */}
       {(isActive || isFinished) && (
         <div className="border-t border-slate-100">
@@ -201,9 +240,9 @@ function SessionCard({
           ) : (
             <ol className="divide-y divide-slate-100">
               {orderedTeamIds.map((teamId, idx) => {
-                const team     = globalTeams.find((tm) => tm.id === teamId)
-                const club     = team ? clubs.find((c) => c.id === team.club_id) : undefined
-                const isDropout    = droppedOutIds.has(teamId)
+                const team          = globalTeams.find((tm) => tm.id === teamId)
+                const club          = team ? clubs.find((c) => c.id === team.club_id) : undefined
+                const isDropout     = droppedOutIds.has(teamId)
                 const isMusicActive = isActive && teamId === currentMusicTeamId && !isDropout
                 const isCjpScoring  = isActive && teamId === cjpCurrentTeamId && !isDropout
                 const musicUrl      = musicPaths[teamId] ?? null
@@ -330,8 +369,11 @@ export default function CompetitionDayTab({
   // team_id|routine_type → music public URL
   const [allMusicPaths, setAllMusicPaths] = useState<Array<{ team_id: string; routine_type: string; music_path: string | null }>>([])
 
-  const canControl     = competition.status === 'active'
-  const activeSessions = sessions.filter(s => s.status === 'active')
+  // Local optimistic state for scoring config (so toggling reflects immediately without prop round-trip)
+  const [localConfig, setLocalConfig] = useState<Record<string, Partial<Pick<Session, 'dj_method' | 'ej_method'>>>>({})
+
+  const canControl       = competition.status === 'active'
+  const activeSessions   = sessions.filter(s => s.status === 'active')
   const activeSessionKey = activeSessions.map(s => s.id).join(',')
 
   // ── fetch music + subscribe to CJP indicator ──────────────────────────────────
@@ -400,6 +442,12 @@ export default function CompetitionDayTab({
     )
   }
 
+  async function handleConfigChange(sessionId: string, patch: Partial<Pick<Session, 'dj_method' | 'ej_method'>>) {
+    // Optimistic local update so the UI responds immediately
+    setLocalConfig(prev => ({ ...prev, [sessionId]: { ...(prev[sessionId] ?? {}), ...patch } }))
+    await supabase.from('sessions').update(patch as never).eq('id', sessionId)
+  }
+
   return (
     <div>
       {/* section tabs */}
@@ -421,16 +469,17 @@ export default function CompetitionDayTab({
           {sectionSessions
             .filter((s) => s.panel_id === panels[0].id)
             .sort((a, b) => a.order_index - b.order_index)
-            .map((session) => (
-              <SessionCard key={session.id} lang={lang} session={session}
+            .map((session) => { const s = { ...session, ...(localConfig[session.id] ?? {}) }; return (
+              <SessionCard key={session.id} lang={lang} session={s}
                 sessionOrders={sessionOrders} globalTeams={globalTeams}
                 clubs={clubs} entries={entries} canControl={canControl}
                 showStart={true}
                 cjpCurrentTeamId={cjpCurrentTeamIds[session.id] ?? null}
                 musicPaths={getMusicPaths(session)}
                 onStart={() => onStartSession(session.id)}
-                onFinish={() => onFinishSession(session.id)} />
-            ))}
+                onFinish={() => onFinishSession(session.id)}
+                onConfigChange={(patch) => handleConfigChange(session.id, patch)} />
+            ) })}
         </div>
       ) : (
         (() => {
@@ -469,16 +518,17 @@ export default function CompetitionDayTab({
                       )}
                     </div>
                     <div className={`grid gap-0 ${panels.length > 1 ? 'grid-cols-2 divide-x divide-slate-100' : ''}`}>
-                      {rowSessions.map(session => (
-                        <SessionCard key={session.id} lang={lang} session={session}
+                      {rowSessions.map(session => { const s = { ...session, ...(localConfig[session.id] ?? {}) }; return (
+                        <SessionCard key={session.id} lang={lang} session={s}
                           sessionOrders={sessionOrders} globalTeams={globalTeams}
                           clubs={clubs} entries={entries} canControl={false}
                           showStart={false}
                           cjpCurrentTeamId={cjpCurrentTeamIds[session.id] ?? null}
                           musicPaths={getMusicPaths(session)}
                           onStart={() => {}}
-                          onFinish={() => {}} />
-                      ))}
+                          onFinish={() => {}}
+                          onConfigChange={(patch) => handleConfigChange(session.id, patch)} />
+                      ) })}
                     </div>
                   </div>
                 )

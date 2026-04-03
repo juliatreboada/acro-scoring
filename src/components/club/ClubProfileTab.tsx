@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Club } from '@/components/admin/types'
+import ClickableImg from '@/components/shared/ClickableImg'
 
 const T = {
   en: {
@@ -77,7 +78,7 @@ export default function ClubProfileTab({ lang, club, onUpdate, onUploadAvatar }:
         <div className="bg-slate-50 border-b border-slate-100 px-5 py-6 flex items-center gap-4">
           <div className="relative shrink-0">
             {club.avatar_url ? (
-              <img src={club.avatar_url} alt={club.club_name}
+              <ClickableImg src={club.avatar_url} alt={club.club_name}
                 className="w-16 h-16 rounded-2xl object-cover" />
             ) : (
               <div className="w-16 h-16 rounded-2xl bg-slate-200 flex items-center justify-center text-2xl font-bold text-slate-400">

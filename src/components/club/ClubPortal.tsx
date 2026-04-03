@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Club, Gymnast, Team, Competition, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination } from '@/components/admin/types'
+import ClickableImg from '@/components/shared/ClickableImg'
 import type { AgeGroupRule } from '@/components/admin/types'
 import GymnastsTab from './GymnastsTab'
 import TeamsTab from './TeamsTab'
@@ -102,7 +103,7 @@ export default function ClubPortal({
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center shrink-0 text-lg font-bold text-slate-500 overflow-hidden">
               {club.avatar_url
-                ? <img src={club.avatar_url} alt={club.club_name} className="w-full h-full object-cover" />
+                ? <ClickableImg src={club.avatar_url} alt={club.club_name} className="w-full h-full object-cover" />
                 : club.club_name.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">

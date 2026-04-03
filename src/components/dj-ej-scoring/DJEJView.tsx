@@ -8,7 +8,6 @@ import { DEFAULT_FLAG } from '../dj-scoring/types'
 import type { PanelJudge, JudgeScore, RoutineResult } from '../cjp/types'
 import { ScoreGrid } from '../shared/CJPTabletShell'
 import { categoryLabel } from '@/components/admin/types'
-import DJModeSelector, { type DJPhoneMode } from '../shared/DJModeSelector'
 
 const MAX_RETRIES = 3
 const DEDUCTION_VALUES = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
@@ -882,17 +881,96 @@ function PhoneDJElementsList({ perf, lang, elements, extraElements, flags, incor
   )
 }
 
+// ─── phone: EJ elements list ──────────────────────────────────────────────────
+
+function PhoneEJElementsList({ elements, extraElements, deductions, lang, onLock, onOpenRetry, onSubmit }: {
+  elements: TsElement[]
+  extraElements: TsElement[]
+  deductions: Deductions
+  lang: Lang
+  onLock: (elementId: string, attemptNumber: number, value: number) => void
+  onOpenRetry: (elementId: string, nextAttemptNumber: number) => void
+  onSubmit: () => void
+}) {
+  const t = T[lang]
+  const allElements = [...elements, ...extraElements]
+  const ejScore = calcEJScore(deductions)
+
+  return (
+    <div className="px-4 space-y-2 pb-4">
+      {allElements.map((el) => {
+        const maxAttempt = maxAttemptInDeductions(el.id, deductions)
+        const isExtra = el.id.startsWith('extra-')
+        return (
+          <div key={el.id} className="border rounded-xl p-3 bg-white border-slate-100">
+            <div className="flex items-start gap-2 mb-2">
+              <span className="text-xs text-slate-400 font-mono w-5 shrink-0 mt-0.5">{isExtra ? '✱' : el.position}</span>
+              <span className="text-sm font-medium text-slate-700 flex-1 leading-snug">{el.label || '—'}</span>
+            </div>
+            {Array.from({ length: maxAttempt }, (_, i) => i + 1).map((attempt) => {
+              const dedKey = `${el.id}:${attempt}`
+              const dedState = deductions[dedKey]
+              const dedLocked = dedState?.locked ?? false
+              const canAddRetry = attempt === maxAttempt && maxAttempt <= MAX_RETRIES
+              return (
+                <div key={attempt} className={attempt > 1 ? 'pl-3 border-l-2 border-slate-200 mt-2' : ''}>
+                  {attempt > 1 && <p className="text-xs text-slate-400 mb-1.5">{t.retry} {attempt - 1}</p>}
+                  <p className="text-xs font-semibold text-sky-500 uppercase tracking-wider mb-1.5">{t.ejLabel} · {t.deduction}</p>
+                  <div className="flex gap-1 flex-wrap mb-1">
+                    {DEDUCTION_VALUES.map((val) => {
+                      const isSelected = dedLocked && dedState?.value === val
+                      const isZero = val === 0
+                      return (
+                        <button
+                          key={val}
+                          disabled={dedLocked}
+                          onClick={() => !dedLocked && onLock(el.id, attempt, val)}
+                          className={[
+                            'px-2 py-1.5 rounded-lg text-xs font-bold transition-all duration-150 min-w-[36px] text-center active:scale-95',
+                            isSelected && isZero ? 'bg-emerald-500 text-white' : '',
+                            isSelected && !isZero ? 'bg-red-500 text-white' : '',
+                            !dedLocked && isZero ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 cursor-pointer' : '',
+                            !dedLocked && !isZero ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 cursor-pointer' : '',
+                            dedLocked && !isSelected ? 'bg-slate-100 text-slate-300 border border-slate-100 cursor-not-allowed' : '',
+                          ].join(' ')}
+                        >
+                          {val === 0 ? '0' : `-${val.toFixed(1).replace('0.', '.')}`}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {canAddRetry && !dedLocked && (
+                    <button onClick={() => onOpenRetry(el.id, maxAttempt + 1)} className="text-xs text-blue-500 hover:text-blue-700 underline underline-offset-2">
+                      + {t.addRetry}
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )
+      })}
+      <button onClick={onSubmit} className="w-full py-4 rounded-2xl font-bold text-lg bg-sky-500 hover:bg-sky-600 active:scale-95 text-white transition-all">
+        {t.submit} · {t.ejScore} {ejScore.toFixed(1)}
+      </button>
+    </div>
+  )
+}
+
 // ─── phone view (two tabs) ────────────────────────────────────────────────────
 
-function PhoneView({ perf, lang, mode, elements, extraElements, flags, incorrectTs, onFlagChange, onOpenRetry, onAddElement, onLabelChange, onTypeChange, onToggleIncorrectTs, onSubmitDJ, onSubmitEJ }: {
+function PhoneView({ perf, lang, djMode, ejMode, elements, extraElements, flags, deductions, incorrectTs, onFlagChange, onLock, onOpenRetry, onAddElement, onLabelChange, onTypeChange, onToggleIncorrectTs, onSubmitDJ, onSubmitEJ }: {
   perf: Performance
   lang: Lang
-  mode: DJPhoneMode
+  djMode: 'elements' | 'keyboard'
+  ejMode: 'elements' | 'keyboard'
   elements: TsElement[]
   extraElements: TsElement[]
   flags: ElementFlags
+  deductions: Deductions
   incorrectTs: boolean
   onFlagChange: (elementId: string, attemptNumber: number, patch: Partial<ElementFlag>) => void
+  onLock: (elementId: string, attemptNumber: number, value: number) => void
   onOpenRetry: (elementId: string, nextAttemptNumber: number) => void
   onAddElement: () => void
   onLabelChange: (id: string, label: string) => void
@@ -979,7 +1057,7 @@ function PhoneView({ perf, lang, mode, elements, extraElements, flags, incorrect
               </button>
             )}
           </div>
-        ) : mode === 'keypad' ? (
+        ) : djMode === 'keyboard' ? (
           <DualKeypad lang={lang} perf={perf} onSubmit={handleDJSubmit} />
         ) : (
           <PhoneDJElementsList
@@ -1009,8 +1087,14 @@ function PhoneView({ perf, lang, mode, elements, extraElements, flags, incorrect
               </button>
             )}
           </div>
-        ) : (
+        ) : ejMode === 'keyboard' ? (
           <NumericKeypad lang={lang} perf={perf} onSubmit={handleEJSubmit} />
+        ) : (
+          <PhoneEJElementsList
+            elements={elements} extraElements={extraElements} deductions={deductions} lang={lang}
+            onLock={onLock} onOpenRetry={onOpenRetry}
+            onSubmit={() => handleEJSubmit(calcEJScore(deductions))}
+          />
         )
       )}
     </div>
@@ -1023,6 +1107,8 @@ export type DJEJViewProps = {
   currentPerf: Performance | null
   lang: Lang
   elements: TsElement[]
+  djMode?: 'elements' | 'keyboard'
+  ejMode?: 'elements' | 'keyboard'
   onSubmit?: (difficulty: number, djPenalty: number, ejScore: number) => void
   waitingForOtherScores?: boolean
   judgeScores?: JudgeScore[]
@@ -1030,9 +1116,8 @@ export type DJEJViewProps = {
   result?: RoutineResult | null
 }
 
-export default function DJEJView({ currentPerf, lang, elements, onSubmit, waitingForOtherScores, judgeScores, panelJudges, result }: DJEJViewProps) {
+export default function DJEJView({ currentPerf, lang, elements, djMode = 'elements', ejMode = 'elements', onSubmit, waitingForOtherScores, judgeScores, panelJudges, result }: DJEJViewProps) {
   const t = T[lang]
-  const [djPhoneMode, setDjPhoneMode] = useState<DJPhoneMode | null>(null)
   const [flags, setFlags] = useState<ElementFlags>({})
   const [deductions, setDeductions] = useState<Deductions>({})
   const [incorrectTs, setIncorrectTs] = useState(false)
@@ -1189,29 +1274,28 @@ export default function DJEJView({ currentPerf, lang, elements, onSubmit, waitin
 
   return (
     <>
-      {/* phone: mode selector gate → two tabs */}
+      {/* phone: two tabs */}
       <div className="md:hidden">
-        {djPhoneMode === null ? (
-          <DJModeSelector lang={lang} onSelect={setDjPhoneMode} />
-        ) : (
-          <PhoneView
-            perf={currentPerf}
-            lang={lang}
-            mode={djPhoneMode}
-            elements={elements}
-            extraElements={extraElements}
-            flags={flags}
-            incorrectTs={incorrectTs}
-            onFlagChange={handleFlagChange}
-            onOpenRetry={handleOpenRetry}
-            onAddElement={handleAddElement}
-            onLabelChange={handleLabelChange}
-            onTypeChange={handleTypeChange}
-            onToggleIncorrectTs={() => setIncorrectTs((v) => !v)}
-            onSubmitDJ={handlePhoneDJ}
-            onSubmitEJ={handlePhoneEJ}
-          />
-        )}
+        <PhoneView
+          perf={currentPerf}
+          lang={lang}
+          djMode={djMode}
+          ejMode={ejMode}
+          elements={elements}
+          extraElements={extraElements}
+          flags={flags}
+          deductions={deductions}
+          incorrectTs={incorrectTs}
+          onFlagChange={handleFlagChange}
+          onLock={handleLock}
+          onOpenRetry={handleOpenRetry}
+          onAddElement={handleAddElement}
+          onLabelChange={handleLabelChange}
+          onTypeChange={handleTypeChange}
+          onToggleIncorrectTs={() => setIncorrectTs((v) => !v)}
+          onSubmitDJ={handlePhoneDJ}
+          onSubmitEJ={handlePhoneEJ}
+        />
       </div>
       {/* tablet/desktop: combined element view */}
       <div className="hidden md:block h-full px-4 pb-4">

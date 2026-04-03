@@ -8,9 +8,8 @@ import { DEFAULT_FLAG } from '../dj-scoring/types'
 import type { PanelJudge, JudgeScore, RoutineResult } from '../cjp/types'
 import { ScoreGrid } from '../shared/CJPTabletShell'
 import { categoryLabel } from '@/components/admin/types'
-import DJModeSelector, { type DJPhoneMode } from '../shared/DJModeSelector'
 import { getElementConfig, calcDJTotals, IncorrectTsToggle, DualKeypad, PhoneDJElementsList } from '../shared/DJElementsShared'
-import { calcEJScore, EJKeypad, CombinedElementRow } from '../shared/DJEJElementsShared'
+import { calcEJScore, EJKeypad, EJElementRow, CombinedElementRow } from '../shared/DJEJElementsShared'
 import AJScoringPanel from '../shared/AJScoringPanel'
 import CheckIcon from '../shared/CheckIcon'
 
@@ -145,6 +144,8 @@ export type DJEJAJViewProps = {
   currentPerf: Performance | null
   lang: Lang
   elements: TsElement[]
+  djMode?: 'elements' | 'keyboard'
+  ejMode?: 'elements' | 'keyboard'
   onSubmit?: (djDifficulty: number, djPenalty: number, ejScore: number, ajScore: number) => void
   panelJudges?: PanelJudge[]
   judgeScores?: JudgeScore[]
@@ -153,7 +154,7 @@ export type DJEJAJViewProps = {
 }
 
 export default function DJEJAJView({
-  currentPerf, lang, elements, onSubmit,
+  currentPerf, lang, elements, djMode = 'elements', ejMode = 'elements', onSubmit,
   panelJudges, judgeScores, waitingForOtherScores, result,
 }: DJEJAJViewProps) {
   const t = T[lang]
@@ -163,7 +164,6 @@ export default function DJEJAJView({
   const [flags, setFlags] = useState<ElementFlags>({})
   const [deductions, setDeductions] = useState<Deductions>({})
   const [incorrectTs, setIncorrectTs] = useState(false)
-  const [djPhoneMode, setDjPhoneMode] = useState<DJPhoneMode | null>(null)
 
   // submission
   const [djSubmitted, setDjSubmitted] = useState<{ difficulty: number; penalty: number } | null>(null)
@@ -185,7 +185,6 @@ export default function DJEJAJView({
       setIncorrectTs(false)
       setExtraElements([])
       setDeductions({})
-      setDjPhoneMode(null)
       setDjSubmitted(null)
       setEjSubmitted(null)
       setAjSubmitted(null)
@@ -342,9 +341,7 @@ export default function DJEJAJView({
         {tab === 'dj' && (
           djSubmitted ? (
             <SubmittedDJCard dj={djSubmitted} lang={lang} />
-          ) : djPhoneMode === null ? (
-            <DJModeSelector lang={lang} onSelect={setDjPhoneMode} />
-          ) : djPhoneMode === 'keypad' ? (
+          ) : djMode === 'keyboard' ? (
             <DualKeypad lang={lang} onSubmit={handleDJSubmit} />
           ) : (
             <PhoneDJElementsList
@@ -362,8 +359,18 @@ export default function DJEJAJView({
         {tab === 'ej' && (
           ejSubmitted !== null ? (
             <SubmittedScoreCard label={t.ejScore} score={ejSubmitted} color="text-sky-600" lang={lang} />
-          ) : (
+          ) : ejMode === 'keyboard' ? (
             <EJKeypad lang={lang} onSubmit={handleEJSubmit} />
+          ) : (
+            <div className="px-4 space-y-2 pb-4">
+              {[...elements, ...extraElements].map((el) => (
+                <EJElementRow key={el.id} element={el} deductions={deductions} lang={lang} onLock={handleLock} />
+              ))}
+              <button onClick={() => handleEJSubmit(calcEJScore(deductions))}
+                className="w-full py-4 rounded-2xl font-bold text-lg bg-sky-500 hover:bg-sky-600 active:scale-95 text-white transition-all">
+                {t.submit} · {t.ejScore} {calcEJScore(deductions).toFixed(1)}
+              </button>
+            </div>
           )
         )}
 

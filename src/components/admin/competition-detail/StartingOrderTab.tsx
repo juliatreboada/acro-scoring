@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Section, Panel, Session, Team, Club, CompetitionEntry, SessionOrder, AgeGroupRule } from '@/components/admin/types'
 
@@ -115,6 +115,8 @@ const T = {
     baja: 'Dropout',
     warmup: 'W',
     compete: 'C',
+    viewSessions: 'Sessions',
+    viewTimeline: 'Timeline',
   },
   es: {
     hint: 'Establece el orden de actuación en cada sesión.',
@@ -129,12 +131,19 @@ const T = {
     baja: 'Baja',
     warmup: 'C',
     compete: 'A',
+    viewSessions: 'Sesiones',
+    viewTimeline: 'Línea de tiempo',
   },
 }
 
 const PANEL_HEADER: Record<number, string> = {
   1: 'bg-blue-50 text-blue-700 border-blue-200',
   2: 'bg-violet-50 text-violet-700 border-violet-200',
+}
+
+const PANEL_COLORS: Record<number, { badge: string; num: string }> = {
+  1: { badge: 'bg-emerald-100 text-emerald-700', num: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
+  2: { badge: 'bg-violet-100 text-violet-700',   num: 'bg-violet-50 text-violet-600 border border-violet-200'   },
 }
 
 // ─── icons ────────────────────────────────────────────────────────────────────
@@ -214,20 +223,6 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
         })
         .filter((x): x is { team: Team; isDropout: boolean } => x !== null)
 
-  // Active-only index for arrow disable logic (ignore dropout rows)
-  const activeIdxInAll = orderedAll
-    .map((x, i) => (!x.isDropout ? i : -1))
-    .filter((i) => i !== -1)
-
-  function move(activeListIdx: number, dir: -1 | 1) {
-    const ids = orderedActive.map((t) => t.id)
-    const target = activeListIdx + dir
-    if (target < 0 || target >= ids.length) return
-    ;[ids[activeListIdx], ids[target]] = [ids[target], ids[activeListIdx]]
-    // Preserve dropout positions at the end
-    onReorder(session.id, [...ids, ...dropoutTeams.map((t) => t.id)])
-  }
-
   function shuffleOrder() {
     const ids = orderedActive.map((t) => t.id)
     for (let i = ids.length - 1; i > 0; i--) {
@@ -240,6 +235,21 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
 
   const hasTeams = sessionEntries.length > 0
 
+  // ── drag-and-drop state (unlocked view) ───────────────────────────────────────
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const [overIdx, setOverIdx] = useState<number | null>(null)
+  const dragNode = useRef<HTMLDivElement | null>(null)
+
+  function handleDrop(toIdx: number) {
+    if (dragIdx === null || dragIdx === toIdx) { setDragIdx(null); setOverIdx(null); return }
+    const ids = orderedActive.map((t) => t.id)
+    const [moved] = ids.splice(dragIdx, 1)
+    ids.splice(toIdx, 0, moved)
+    onReorder(session.id, [...ids, ...dropoutTeams.map((t) => t.id)])
+    setDragIdx(null)
+    setOverIdx(null)
+  }
+
   return (
     <div className={['border rounded-xl overflow-hidden', isLocked ? 'border-blue-200' : 'border-slate-200'].join(' ')}>
       {/* header */}
@@ -250,13 +260,15 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
         </div>
         {hasTeams && (
           <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={shuffleOrder}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-white border border-slate-200 rounded-lg transition-all"
-            >
-              <ShuffleIcon />
-              {t.shuffle}
-            </button>
+            {!isLocked && (
+              <button
+                onClick={shuffleOrder}
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-white border border-slate-200 rounded-lg transition-all"
+              >
+                <ShuffleIcon />
+                {t.shuffle}
+              </button>
+            )}
             <button
               onClick={() => onToggleLock(session.id)}
               className={[
@@ -282,11 +294,10 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
           <div className="space-y-0.5">
             {orderedAll.map(({ team, isDropout }, idx) => {
               const club = clubs.find((c) => c.id === team.club_id)
-              const activeIdx = isDropout ? -1 : activeIdxInAll.indexOf(idx)
               const times = timesMap.get(`${session.id}:${team.id}`)
               const dorsal = sessionEntries.find(e => e.team_id === team.id)?.dorsal
               return (
-                <div key={team.id} className={['flex items-center gap-2 py-1.5 group', isDropout ? 'opacity-50' : ''].join(' ')}>
+                <div key={team.id} className={['flex items-center gap-2 py-1.5', isDropout ? 'opacity-50' : ''].join(' ')}>
                   {times && !isDropout ? (
                     <div className="flex flex-col shrink-0 w-14 gap-0 text-right">
                       <span className="text-[10px] text-slate-400 font-mono leading-tight">{t.warmup} {times.warmup}</span>
@@ -312,42 +323,44 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                       {club?.club_name ?? '—'}
                     </p>
                   </div>
-                  {isDropout ? (
+                  {isDropout && (
                     <span className="text-xs font-semibold text-red-300 shrink-0">{t.baja}</span>
-                  ) : (
-                    <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                      <button
-                        onClick={() => move(activeIdx, -1)}
-                        disabled={activeIdx === 0}
-                        className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                      >
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => move(activeIdx, 1)}
-                        disabled={activeIdx === activeIdxInAll.length - 1}
-                        className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                      >
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                        </svg>
-                      </button>
-                    </div>
                   )}
                 </div>
               )
             })}
           </div>
         ) : (
-          // ── unlocked view: active on top with arrows, dropouts below divider ──
+          // ── unlocked view: drag-and-drop active teams, dropouts below divider ──
           <div className="space-y-0.5">
             {orderedActive.map((team, idx) => {
               const club = clubs.find((c) => c.id === team.club_id)
               const dorsal = sessionEntries.find(e => e.team_id === team.id)?.dorsal
+              const isDragging = dragIdx === idx
+              const isOver = overIdx === idx && dragIdx !== null && dragIdx !== idx
+              const dropAbove = isOver && dragIdx !== null && dragIdx > idx
+              const dropBelow = isOver && dragIdx !== null && dragIdx < idx
               return (
-                <div key={team.id} className="flex items-center gap-2 py-1.5 group">
+                <div
+                  key={team.id}
+                  ref={isDragging ? dragNode : null}
+                  draggable
+                  onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDragIdx(idx) }}
+                  onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setOverIdx(idx) }}
+                  onDragEnd={() => { setDragIdx(null); setOverIdx(null) }}
+                  onDrop={(e) => { e.preventDefault(); handleDrop(idx) }}
+                  className={[
+                    'flex items-center gap-2 py-1.5 rounded-lg transition-all select-none',
+                    isDragging ? 'opacity-40' : 'cursor-grab active:cursor-grabbing',
+                    dropAbove ? 'border-t-2 border-blue-400' : '',
+                    dropBelow ? 'border-b-2 border-blue-400' : '',
+                    isOver ? 'bg-blue-50' : '',
+                  ].join(' ')}
+                >
+                  {/* drag handle */}
+                  <svg className="w-3.5 h-3.5 text-slate-300 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+                  </svg>
                   <span className="text-xs font-mono text-slate-400 w-5 shrink-0 text-right">{idx + 1}.</span>
                   {dorsal != null && (
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-white shrink-0">#{dorsal}</span>
@@ -355,26 +368,6 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-slate-700 truncate">{team.gymnast_display}</p>
                     <p className="text-xs text-slate-400 truncate">{club?.club_name ?? '—'}</p>
-                  </div>
-                  <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                    <button
-                      onClick={() => move(idx, -1)}
-                      disabled={idx === 0}
-                      className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                    >
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={() => move(idx, 1)}
-                      disabled={idx === orderedActive.length - 1}
-                      className="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-20 disabled:cursor-not-allowed transition-all"
-                    >
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                      </svg>
-                    </button>
                   </div>
                 </div>
               )
@@ -462,6 +455,253 @@ function PanelColumn({ lang, panel, sessions, globalTeams, clubs, entries, sessi
   )
 }
 
+// ─── admin timeline view ──────────────────────────────────────────────────────
+
+type AdminSlot = {
+  sessionId: string
+  sessionName: string
+  panelNumber: number
+  teamId: string
+  isDropout: boolean
+}
+
+function calcMergedTimes(
+  section: Section,
+  mergedSlots: AdminSlot[],
+  sessions: Session[],
+  ageGroupRules: AgeGroupRule[],
+): Map<string, SlotTimes> {
+  const result = new Map<string, SlotTimes>()
+  if (!section.starting_time) return result
+  const startHHMM = section.starting_time.slice(0, 5)
+  const waitSec   = section.waiting_time_seconds    ?? 0
+  const warmupSec = (section.warmup_duration_minutes ?? 0) * 60
+  let elapsed = 0
+  for (const slot of mergedSlots) {
+    if (!slot.isDropout) {
+      const sess = sessions.find(s => s.id === slot.sessionId)
+      const rule = sess ? ageGroupRules.find(r => r.id === sess.age_group) : undefined
+      const dur  = sess ? routineDurationSec(sess.routine_type, rule?.routine_count ?? 2) : 120
+      result.set(`${slot.sessionId}:${slot.teamId}`, {
+        compete: addSecsToHHMM(startHHMM, elapsed),
+        warmup:  addSecsToHHMM(startHHMM, elapsed - warmupSec),
+      })
+      elapsed += dur + waitSec
+    }
+  }
+  return result
+}
+
+function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, entries, globalTeams, clubs, ageGroupRules, onReorderTimeline }: {
+  lang: Lang
+  panels: Panel[]
+  section: Section
+  sessions: Session[]
+  sessionOrders: SessionOrder[]
+  entries: CompetitionEntry[]
+  globalTeams: Team[]
+  clubs: Club[]
+  ageGroupRules: AgeGroupRule[]
+  onReorderTimeline: (sectionId: string, order: Array<{ session_id: string; team_id: string }>) => void
+}) {
+  const t = T[lang]
+  const [dragInfo, setDragInfo] = useState<{ sessionId: string; teamId: string } | null>(null)
+  const [overIdx, setOverIdx] = useState<number | null>(null)
+
+  const sortedPanels = [...panels].sort((a, b) => a.panel_number - b.panel_number)
+  const droppedIds = new Set(entries.filter(e => e.dropped_out).map(e => e.team_id))
+  const dorsalMap = Object.fromEntries(entries.map(e => [e.team_id, e.dorsal]))
+
+  function buildPanelSlots(panel: Panel): AdminSlot[] {
+    const panelSessions = sessions
+      .filter(s => s.panel_id === panel.id)
+      .sort((a, b) => a.order_index - b.order_index)
+    const slots: AdminSlot[] = []
+    for (const session of panelSessions) {
+      const orders = sessionOrders.filter(o => o.session_id === session.id).sort((a, b) => a.position - b.position)
+      const matchingTeams = globalTeams.filter(t => t.age_group === session.age_group && t.category === session.category)
+      const matchingIds = new Set(matchingTeams.map(t => t.id))
+      const orderedIds = orders.filter(o => matchingIds.has(o.team_id)).map(o => o.team_id)
+      const unorderedIds = matchingTeams.filter(t => !orderedIds.includes(t.id)).map(t => t.id)
+      for (const teamId of [...orderedIds, ...unorderedIds]) {
+        slots.push({ sessionId: session.id, sessionName: session.name, panelNumber: panel.panel_number, teamId, isDropout: droppedIds.has(teamId) })
+      }
+    }
+    return slots
+  }
+
+  // Build slot lookup for all panels
+  const allPanelSlots = sortedPanels.flatMap(p => buildPanelSlots(p))
+  const slotLookup = new Map<string, AdminSlot>(allPanelSlots.map(s => [`${s.sessionId}:${s.teamId}`, s]))
+
+  // Build merged list: use timeline_order if present, otherwise default interleaving
+  const merged: AdminSlot[] = (() => {
+    if (section.timeline_order && section.timeline_order.length > 0) {
+      const used = new Set<string>()
+      const ordered: AdminSlot[] = []
+      for (const entry of section.timeline_order) {
+        const key = `${entry.session_id}:${entry.team_id}`
+        const slot = slotLookup.get(key)
+        if (slot) { ordered.push(slot); used.add(key) }
+      }
+      // Append any new slots not yet in timeline_order
+      for (const slot of allPanelSlots) {
+        const key = `${slot.sessionId}:${slot.teamId}`
+        if (!used.has(key)) ordered.push(slot)
+      }
+      return ordered
+    }
+    if (sortedPanels.length === 1) return [...allPanelSlots]
+    const slots1 = buildPanelSlots(sortedPanels[0])
+    const slots2 = buildPanelSlots(sortedPanels[1])
+    const result: AdminSlot[] = []
+    const len = Math.max(slots1.length, slots2.length)
+    for (let i = 0; i < len; i++) {
+      if (i < slots1.length) result.push(slots1[i])
+      if (i < slots2.length) result.push(slots2[i])
+    }
+    return result
+  })()
+
+  const timesMap = calcMergedTimes(section, merged, sessions, ageGroupRules)
+
+  // Compute drag validity bounds (based on panel-order preservation constraint)
+  let dragBounds = { prevBound: -1, nextBound: merged.length }
+  if (dragInfo) {
+    const dragIdx = merged.findIndex(s => s.teamId === dragInfo.teamId && s.sessionId === dragInfo.sessionId)
+    if (dragIdx !== -1) {
+      const dragPanel = merged[dragIdx].panelNumber
+      let prevBound = -1
+      for (let i = dragIdx - 1; i >= 0; i--) {
+        if (merged[i].panelNumber === dragPanel) { prevBound = i; break }
+      }
+      let nextBound = merged.length
+      for (let i = dragIdx + 1; i < merged.length; i++) {
+        if (merged[i].panelNumber === dragPanel) { nextBound = i; break }
+      }
+      dragBounds = { prevBound, nextBound }
+    }
+  }
+
+  function handleDrop(dropIdx: number) {
+    if (!dragInfo) return
+    const dragIdx = merged.findIndex(s => s.teamId === dragInfo.teamId && s.sessionId === dragInfo.sessionId)
+    setDragInfo(null); setOverIdx(null)
+    if (dragIdx === -1 || dragIdx === dropIdx) return
+    const dragSlot = merged[dragIdx]
+    if (dragSlot.isDropout || merged[dropIdx].isDropout) return
+    // Validate panel-order constraint
+    if (dropIdx <= dragBounds.prevBound || dropIdx >= dragBounds.nextBound) return
+    // Reorder and save
+    const newOrder = merged.map(s => ({ session_id: s.sessionId, team_id: s.teamId }))
+    const [moved] = newOrder.splice(dragIdx, 1)
+    newOrder.splice(dropIdx, 0, moved)
+    onReorderTimeline(section.id, newOrder)
+  }
+
+  const teamById = Object.fromEntries(globalTeams.map(t => [t.id, t]))
+  const clubById = Object.fromEntries(clubs.map(c => [c.id, c]))
+
+  // Pre-compute sequential position numbers (active teams only)
+  let _n = 0
+  const positions = merged.map(s => { if (!s.isDropout) _n++; return _n })
+
+  if (merged.length === 0) {
+    return <p className="text-center text-sm text-slate-400 py-16">{t.noTeams}</p>
+  }
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+      <ol className="divide-y divide-slate-50">
+        {merged.map((slot, idx) => {
+          const team       = teamById[slot.teamId]
+          const club       = team ? clubById[team.club_id] : null
+          const slotTimes  = timesMap.get(`${slot.sessionId}:${slot.teamId}`)
+          const dorsal     = dorsalMap[slot.teamId]
+          const colors     = PANEL_COLORS[slot.panelNumber] ?? PANEL_COLORS[1]
+          const isDragging = dragInfo?.teamId === slot.teamId && dragInfo?.sessionId === slot.sessionId
+          const isValidDrop = dragInfo !== null && !slot.isDropout && !isDragging
+            && idx > dragBounds.prevBound && idx < dragBounds.nextBound
+          const isDimmed   = dragInfo !== null && !isDragging && !isValidDrop
+          const isOver     = overIdx === idx && isValidDrop
+
+          return (
+            <li
+              key={`${slot.panelNumber}-${slot.teamId}-${idx}`}
+              draggable={!slot.isDropout}
+              onDragStart={!slot.isDropout ? (e) => { e.dataTransfer.effectAllowed = 'move'; setDragInfo({ sessionId: slot.sessionId, teamId: slot.teamId }) } : undefined}
+              onDragOver={(e) => { if (isValidDrop) { e.preventDefault(); setOverIdx(idx) } }}
+              onDragEnd={() => { setDragInfo(null); setOverIdx(null) }}
+              onDrop={(e) => { e.preventDefault(); handleDrop(idx) }}
+              className={[
+                'flex items-center gap-3 px-4 py-3 select-none transition-all',
+                slot.isDropout ? 'opacity-50' : '',
+                isDragging ? 'opacity-30' : '',
+                isDimmed   ? 'opacity-25' : '',
+                isOver     ? 'bg-blue-50 border-t-2 border-blue-400' : '',
+                !slot.isDropout ? 'cursor-grab active:cursor-grabbing' : '',
+              ].join(' ')}
+            >
+              {/* drag handle */}
+              <svg className={['w-3.5 h-3.5 shrink-0', slot.isDropout ? 'text-slate-100' : 'text-slate-300'].join(' ')} fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+              </svg>
+              {/* times */}
+              {slotTimes && !slot.isDropout ? (
+                <div className="flex flex-col shrink-0 w-14 gap-0">
+                  <span className="text-[10px] text-slate-400 leading-tight">⏰ {slotTimes.warmup}</span>
+                  <span className="text-[10px] font-semibold text-slate-600 leading-tight">▶ {slotTimes.compete}</span>
+                </div>
+              ) : (
+                <div className="w-14 shrink-0" />
+              )}
+              {/* position */}
+              <span className={['w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0',
+                slot.isDropout ? 'bg-slate-100 text-slate-400' : colors.num].join(' ')}>
+                {positions[idx]}
+              </span>
+              {/* panel badge — only when dual panel */}
+              {sortedPanels.length > 1 && (
+                <span className={['inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold shrink-0', colors.badge].join(' ')}>
+                  P{slot.panelNumber}
+                </span>
+              )}
+              {/* dorsal */}
+              {dorsal != null && (
+                <span className={['text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
+                  slot.isDropout ? 'bg-slate-100 text-slate-300' : 'bg-slate-800 text-white'].join(' ')}>
+                  #{dorsal}
+                </span>
+              )}
+              {/* photo */}
+              {team?.photo_url ? (
+                <img src={team.photo_url} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-slate-100 shrink-0 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-slate-300" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+                  </svg>
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className={['text-sm font-medium text-slate-800 truncate', slot.isDropout ? 'line-through text-slate-400' : ''].join(' ')}>
+                  {team?.gymnast_display ?? slot.teamId}
+                </p>
+                <p className="text-xs text-slate-400 truncate">{club?.club_name ?? ''} · {slot.sessionName}</p>
+              </div>
+              {slot.isDropout && (
+                <span className="shrink-0 text-xs font-semibold bg-red-50 text-red-400 px-2 py-0.5 rounded-full">
+                  {t.baja}
+                </span>
+              )}
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+}
+
 // ─── main component ───────────────────────────────────────────────────────────
 
 export type StartingOrderTabProps = {
@@ -478,15 +718,17 @@ export type StartingOrderTabProps = {
   ageGroupRules: AgeGroupRule[]
   onReorder: (sessionId: string, teamIds: string[]) => void
   onToggleLock: (sessionId: string) => void
+  onReorderTimeline: (sectionId: string, order: Array<{ session_id: string; team_id: string }>) => void
 }
 
 export default function StartingOrderTab({
   lang, globalTeams, clubs, entries, sections, panels, sessions,
-  sessionOrders, lockedSessions, agLabels, ageGroupRules, onReorder, onToggleLock,
+  sessionOrders, lockedSessions, agLabels, ageGroupRules, onReorder, onToggleLock, onReorderTimeline,
 }: StartingOrderTabProps) {
   const t = T[lang]
   const sortedSections = [...sections].sort((a, b) => a.section_number - b.section_number)
   const [activeSectionId, setActiveSectionId] = useState<string>(sortedSections[0]?.id ?? '')
+  const [view, setView] = useState<'sessions' | 'timeline'>('sessions')
 
   const activeSection = sortedSections.find((s) => s.id === activeSectionId) ?? sortedSections[0]
 
@@ -496,7 +738,18 @@ export default function StartingOrderTab({
 
   return (
     <div className="space-y-6">
-      <p className="text-xs text-slate-400">{t.hint}</p>
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-xs text-slate-400">{t.hint}</p>
+        <div className="flex rounded-lg border border-slate-200 overflow-hidden shrink-0 text-xs font-semibold">
+          {(['sessions', 'timeline'] as const).map(v => (
+            <button key={v} onClick={() => setView(v)}
+              className={['px-3 py-1.5 transition-colors',
+                view === v ? 'bg-blue-600 text-white' : 'bg-white text-slate-400 hover:text-slate-600'].join(' ')}>
+              {v === 'sessions' ? t.viewSessions : t.viewTimeline}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {sortedSections.length === 0 ? (
         <p className="text-sm text-slate-400 text-center py-8 border border-dashed border-slate-200 rounded-xl">
@@ -524,6 +777,24 @@ export default function StartingOrderTab({
           {activeSection && (() => {
             const sortedPanels = [...panels].sort((a, b) => a.panel_number - b.panel_number)
             const sectionSessions = sessions.filter(s => s.section_id === activeSection.id)
+
+            if (view === 'timeline') {
+              return (
+                <OrderTimelineView
+                  lang={lang}
+                  panels={sortedPanels}
+                  section={activeSection}
+                  sessions={sectionSessions}
+                  sessionOrders={sessionOrders}
+                  entries={entries}
+                  globalTeams={globalTeams}
+                  clubs={clubs}
+                  ageGroupRules={ageGroupRules}
+                  onReorderTimeline={onReorderTimeline}
+                />
+              )
+            }
+
             const timesMap = sortedPanels.length === 2
               ? calcInterleavedTimes(
                   activeSection,

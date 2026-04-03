@@ -128,11 +128,12 @@ export function JudgeRow({ judge, value, dropped, roleLabel, reopenLabel, editLa
 
 // ─── score grid ────────────────────────────────────────────────────────────────
 
-export function ScoreGrid({ scores, panelJudges, lang, locked, onReopen, onEditScore }: {
+export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, onReopen, onEditScore }: {
   scores: JudgeScore[]
   panelJudges: PanelJudge[]
   lang: Lang
   locked?: boolean
+  hideLabelCol?: boolean
   onReopen: (panelJudgeId: string | 'all') => void
   onEditScore?: (panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
 }) {
@@ -261,7 +262,7 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, onReopen, onEditS
   const tdLabel = `${tdBase} text-xs font-bold text-slate-400 uppercase tracking-wide whitespace-nowrap`
   const tdScore = `${tdBase} border-l border-slate-100`
   const tdEmpty = `${tdBase} border-l border-slate-100 text-slate-300 text-xs`
-  const tdAvg  = `${tdBase} border-l border-slate-200 whitespace-nowrap`
+  const tdAvg  = `${tdBase} border-l border-slate-100`
 
   return (
     <div className="border border-slate-200 rounded-xl overflow-hidden">
@@ -276,13 +277,36 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, onReopen, onEditS
         </div>
       )}
 
+      {/* ── DJ mismatch warning ── */}
+      {djJudges.length >= 2 && (() => {
+        const djScores  = djJudges.map(j => scores.find(s => s.panelJudgeId === j.id))
+        const diffs     = djScores.map(s => s?.djDifficulty).filter((v): v is number => v != null)
+        const pens      = djScores.map(s => s?.djPenalty).filter((v): v is number => v != null)
+        const diffSpread = diffs.length >= 2 ? Math.max(...diffs) - Math.min(...diffs) : 0
+        const penSpread  = pens.length  >= 2 ? Math.max(...pens)  - Math.min(...pens)  : 0
+        if (diffSpread <= 0.5 && penSpread === 0) return null
+        const parts: string[] = []
+        if (diffSpread > 0.5) parts.push(`D: ${diffs.map(v => v.toFixed(2)).join(' / ')} · Δ ${diffSpread.toFixed(2)}`)
+        if (penSpread  > 0)   parts.push(`Pen: ${pens.map(v => v.toFixed(2)).join(' / ')}`)
+        return (
+          <div className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 border-b border-amber-200">
+            <svg className="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <span className="text-xs font-semibold text-amber-700">
+              DJ mismatch — {parts.join('  ·  ')}
+            </span>
+          </div>
+        )
+      })()}
+
       <div className="overflow-x-auto">
         <table className="w-full text-xs border-collapse">
           <tbody>
 
             {/* ── DJ row (single row with all DJs horizontally) ── */}
             <tr>
-              <td className={tdLabel}>{t.dj}</td>
+              {!hideLabelCol && <td className={tdLabel}>{t.dj}</td>}
               {djJudges.map((j) => {
                 const s = scores.find((sc) => sc.panelJudgeId === j.id)
                 const isEditingDif = editState?.judgeId === j.id && editState?.field === 'djDifficulty'
@@ -322,7 +346,7 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, onReopen, onEditS
 
             {/* ── EJ row ── */}
             <tr>
-              <td className={tdLabel}>{t.ej}</td>
+              {!hideLabelCol && <td className={tdLabel}>{t.ej}</td>}
               {ejJudges.map((j, i) => {
                 const isEditing = editState?.judgeId === j.id && editState?.field === 'ejScore'
                 return (
@@ -361,14 +385,14 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, onReopen, onEditS
               <td className={tdAvg}>
                 <div className="text-[10px] text-slate-400 mb-0.5">{t.avg}</div>
                 <span className="font-bold tabular-nums text-slate-600">
-                  {ejAvg != null ? (ejAvg * 2).toFixed(3) : '—'}
+                  {ejAvg != null ? ejAvg.toFixed(3) : '—'}
                 </span>
               </td>
             </tr>
 
             {/* ── AJ row ── */}
             <tr>
-              <td className={tdLabel}>{t.aj}</td>
+              {!hideLabelCol && <td className={tdLabel}>{t.aj}</td>}
               {ajJudges.map((j, i) => {
                 const isEditing = editState?.judgeId === j.id && editState?.field === 'ajScore'
                 return (
@@ -421,11 +445,12 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, onReopen, onEditS
 
 // ─── score preview ─────────────────────────────────────────────────────────────
 
-export function ScorePreview({ scores, panelJudges, cjpPenalty, lang }: {
+export function ScorePreview({ scores, panelJudges, cjpPenalty, lang, compact }: {
   scores: JudgeScore[]
   panelJudges: PanelJudge[]
   cjpPenalty: number
   lang: Lang
+  compact?: boolean
 }) {
   const t = T[lang]
   const ejJudges = panelJudges.filter((j) => j.role === 'EJ')
@@ -446,6 +471,20 @@ export function ScorePreview({ scores, panelJudges, cjpPenalty, lang }: {
   const difScore = djScore?.djDifficulty ?? 0
   const difPenalty = djScore?.djPenalty ?? 0
   const total = Math.max(0, ejAvg * 2 + ajAvg + difScore - difPenalty - cjpPenalty)
+
+  if (compact) {
+    return (
+      <div className="bg-slate-800 text-white rounded-xl px-4 py-2 flex items-center gap-3 flex-wrap">
+        <span className="text-xs text-slate-400">{t.scoreE} <span className="text-slate-200 font-mono tabular-nums">{(ejAvg * 2).toFixed(3)}</span></span>
+        <span className="text-xs text-slate-400">{t.scoreA} <span className="text-slate-200 font-mono tabular-nums">{ajAvg.toFixed(3)}</span></span>
+        <span className="text-xs text-slate-400">{t.scoreD} <span className="text-slate-200 font-mono tabular-nums">{difScore.toFixed(2)}</span></span>
+        {difPenalty > 0 && <span className="text-xs text-red-400 font-mono tabular-nums">−{difPenalty.toFixed(1)}</span>}
+        {cjpPenalty > 0 && <span className="text-xs text-red-400 font-mono tabular-nums">−{cjpPenalty.toFixed(1)}</span>}
+        <span className="ml-auto text-xl font-bold tabular-nums">{total.toFixed(3)}</span>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-slate-800 text-white rounded-xl p-4">
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400 mb-3">
@@ -584,7 +623,7 @@ export default function CJPTabletShell({
   const t = T[lang]
   const [reviewPerfId,    setReviewPerfId]    = useState<string | null>(null)
   const [leftOpen,        setLeftOpen]        = useState(true)
-  const [viewTab,         setViewTab]         = useState<'scores' | 'ts'>('scores')
+  const [bottomTab,       setBottomTab]       = useState<'ts' | 'ranking'>('ranking')
   const [rightPanelWidth, setRightPanelWidth] = useState(320)
   const resizeStartX     = useRef(0)
   const resizeStartWidth = useRef(0)
@@ -661,6 +700,12 @@ export default function CJPTabletShell({
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 mb-0.5">
+                      {isCurrent && (
+                        <span className="relative flex h-2 w-2 shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                        </span>
+                      )}
                       <span className="text-xs text-slate-400 font-mono shrink-0">{perf.position}</span>
                       <span className="text-xs font-medium text-slate-700 truncate">{perf.gymnasts}</span>
                     </div>
@@ -695,152 +740,155 @@ export default function CJPTabletShell({
         </div>
       </div>
 
-      {/* ── center: tabs (scores / TS) ── */}
-      <div className="flex-1 flex flex-col min-h-0">
-        {/* tab bar */}
-        {(currentPerf || isReviewMode) && (
-          <div className="flex border-b border-slate-200 bg-white shrink-0">
-            {(['scores', 'ts'] as const).map((tab) => (
-              <button key={tab} onClick={() => setViewTab(tab)}
-                className={['flex-1 py-2 text-xs font-semibold uppercase tracking-wide transition-colors',
-                  viewTab === tab
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-slate-400 hover:text-slate-600'].join(' ')}>
-                {tab === 'scores' ? (lang === 'en' ? 'Scores' : 'Puntuaciones') : 'TS'}
-              </button>
-            ))}
-          </div>
-        )}
+      {/* ── center: single scroll area ── */}
+      <div className="flex-1 overflow-y-auto">
 
-        {/* TS tab */}
-        {viewTab === 'ts' && (currentPerf || isReviewMode) && (() => {
-          const activePerf = isReviewMode ? reviewPerf : currentPerf
-          return (
-            <div className="flex-1 flex flex-col min-h-0">
-              {activePerf?.tsUrl ? (
-                <iframe src={activePerf.tsUrl} className="flex-1 min-h-0 w-full border-0" title={t.tsPdfTitle} />
-              ) : (
-                <div className="flex flex-col items-center justify-center flex-1 gap-2 text-slate-300">
-                  <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <p className="text-sm">{t.pdfNote}</p>
-                </div>
-              )}
-            </div>
-          )
-        })()}
-
-        {/* Scores tab */}
-        {(viewTab === 'scores' || (!currentPerf && !isReviewMode)) && (
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
-            {isReviewMode && reviewPerf ? (
-              <>
-                <div className="bg-slate-700 text-white px-4 py-2 rounded-xl">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-xs text-slate-400 uppercase tracking-wide">
-                      {t.reviewing} · #{reviewPerf.position} · {reviewPerf.ageGroup} · {categoryLabel(reviewPerf.category, lang)} · {routineLabel(reviewPerf.routineType)}
-                    </span>
+        {/* ── scores section ── */}
+        <div className="px-4 py-3 space-y-2">
+          {isReviewMode && reviewPerf ? (
+            <>
+              <div className="bg-slate-700 text-white px-4 py-2 rounded-xl flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-xs text-slate-400 uppercase tracking-wide">{t.reviewing}</span>
                     <button onClick={() => setReviewPerfId(null)}
                       className="text-xs text-slate-300 hover:text-white flex items-center gap-1 transition-colors">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                       </svg>
                       {t.backToLive}
                     </button>
                   </div>
-                  <p className="text-sm font-semibold mt-0.5">{reviewPerf.gymnasts}</p>
+                  <p className="text-sm font-semibold truncate">{reviewPerf.gymnasts}</p>
                 </div>
-                <ScoreGrid scores={reviewScores} panelJudges={panelJudges} lang={lang}
-                  locked={reviewResult?.status === 'approved'}
-                  onReopen={(id) => { onReopenScore?.(reviewPerfId!, id); onOpen(reviewPerfId!); setReviewPerfId(null) }}
-                  onEditScore={reviewResult?.status === 'provisional' && onEditScore
-                    ? (judgeId, field, value) => onEditScore(reviewPerfId!, judgeId, field, value)
-                    : undefined
-                  } />
-                <ScorePreview scores={reviewScores} panelJudges={panelJudges} cjpPenalty={reviewCjpPenalty} lang={lang} />
-                {reviewResult?.status === 'provisional' && (
-                  <div className="flex gap-2">
-                    <button onClick={handleUpdateProvisional}
-                      className="flex-1 py-2.5 rounded-xl border-2 border-slate-300 text-slate-700 font-semibold hover:border-slate-400 hover:bg-slate-50 active:scale-95 transition-all">
-                      {t.updateProv}
-                    </button>
-                    <button onClick={handleConfirmFinalFromReview}
-                      className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all">
-                      ✓ {t.confirmFinal}
-                    </button>
-                  </div>
-                )}
-                {reviewResult?.status === 'approved' && (
-                  <div className="py-2.5 rounded-xl bg-emerald-50 border-2 border-emerald-200 text-center">
-                    <span className="text-sm font-semibold text-emerald-700">✓ {t.final} · {reviewResult.finalScore.toFixed(3)}</span>
-                  </div>
-                )}
-              </>
-            ) : !currentPerf ? (
-              <div className="flex flex-col items-center justify-center h-64 text-center gap-3">
-                <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center">
-                  <svg className="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 5v14l11-7z" />
-                  </svg>
-                </div>
-                <p className="text-lg font-semibold text-slate-600">{t.noPerf}</p>
-                <p className="text-sm text-slate-400">{t.noPerfSub}</p>
+                <span className="text-xs text-slate-400 shrink-0 text-right leading-snug">
+                  #{reviewPerf.position} · {reviewPerf.ageGroup}<br />{categoryLabel(reviewPerf.category, lang)} · {routineLabel(reviewPerf.routineType)}
+                </span>
               </div>
-            ) : (
-              <>
-                <div className="bg-slate-800 text-white px-4 py-2 rounded-xl">
-                  <span className="text-xs text-slate-400 uppercase tracking-wide">
-                    #{currentPerf.position} · {currentPerf.ageGroup} · {categoryLabel(currentPerf.category, lang)} · {routineLabel(currentPerf.routineType)}
-                  </span>
-                  <p className="text-sm font-semibold mt-0.5">{currentPerf.gymnasts}</p>
+              <ScoreGrid scores={reviewScores} panelJudges={panelJudges} lang={lang}
+                hideLabelCol
+                locked={reviewResult?.status === 'approved'}
+                onReopen={(id) => { onReopenScore?.(reviewPerfId!, id); onOpen(reviewPerfId!); setReviewPerfId(null) }}
+                onEditScore={reviewResult?.status === 'provisional' && onEditScore
+                  ? (judgeId, field, value) => onEditScore(reviewPerfId!, judgeId, field, value)
+                  : undefined
+                } />
+              <ScorePreview scores={reviewScores} panelJudges={panelJudges} cjpPenalty={reviewCjpPenalty} lang={lang} compact />
+              {reviewResult?.status === 'provisional' && (
+                <div className="flex gap-2">
+                  <button onClick={handleUpdateProvisional}
+                    className="flex-1 py-2 rounded-xl border-2 border-slate-300 text-slate-700 text-sm font-semibold hover:border-slate-400 hover:bg-slate-50 active:scale-95 transition-all">
+                    {t.updateProv}
+                  </button>
+                  <button onClick={handleConfirmFinalFromReview}
+                    className="flex-1 py-2 rounded-xl bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 active:scale-95 transition-all">
+                    ✓ {t.confirmFinal}
+                  </button>
                 </div>
-                <ScoreGrid scores={currentScores} panelJudges={panelJudges} lang={lang}
-                  locked={currentResult?.status === 'approved'}
-                  onReopen={(id) => onReopenScore?.(currentPerfId!, id)} />
-                <ScorePreview scores={currentScores} panelJudges={panelJudges} cjpPenalty={cjpPenalty} lang={lang} />
+              )}
+              {reviewResult?.status === 'approved' && (
+                <div className="py-2 rounded-xl bg-emerald-50 border-2 border-emerald-200 text-center">
+                  <span className="text-sm font-semibold text-emerald-700">✓ {t.final} · {reviewResult.finalScore.toFixed(3)}</span>
+                </div>
+              )}
+            </>
+          ) : currentPerf ? (
+            <>
+              <div className="bg-slate-800 text-white px-4 py-2 rounded-xl flex items-center gap-2">
+                <p className="text-sm font-semibold truncate flex-1">{currentPerf.gymnasts}</p>
+                <span className="text-xs text-slate-400 shrink-0 text-right leading-snug">
+                  #{currentPerf.position} · {currentPerf.ageGroup}<br />{categoryLabel(currentPerf.category, lang)} · {routineLabel(currentPerf.routineType)}
+                </span>
+              </div>
+              <ScoreGrid scores={currentScores} panelJudges={panelJudges} lang={lang}
+                hideLabelCol
+                locked={currentResult?.status === 'approved'}
+                onReopen={(id) => onReopenScore?.(currentPerfId!, id)}
+                onEditScore={onEditScore && currentPerfId
+                  ? (judgeId, field, value) => onEditScore(currentPerfId, judgeId, field, value)
+                  : undefined
+                } />
+              <ScorePreview scores={currentScores} panelJudges={panelJudges} cjpPenalty={cjpPenalty} lang={lang} compact />
+              {!currentResult && (
+                <div className="flex gap-2">
+                  <button onClick={() => handleCJPSubmit('provisional')}
+                    className="flex-1 py-2 rounded-xl border-2 border-slate-300 text-slate-700 text-sm font-semibold hover:border-slate-400 hover:bg-slate-50 active:scale-95 transition-all">
+                    {t.submitProv}
+                  </button>
+                  <button onClick={() => handleCJPSubmit('approved')}
+                    className="flex-1 py-2 rounded-xl bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 active:scale-95 transition-all">
+                    ✓ {t.submitFinal}
+                  </button>
+                </div>
+              )}
+              {currentResult?.status === 'provisional' && (
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 py-2 rounded-xl border-2 border-slate-200 text-center">
+                    <span className="text-sm font-medium text-slate-500">{t.prov} · {currentResult.finalScore.toFixed(3)}</span>
+                  </div>
+                  <button onClick={() => handleCJPSubmit('approved')}
+                    className="flex-1 py-2 rounded-xl bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 active:scale-95 transition-all">
+                    ✓ {t.confirmFinal}
+                  </button>
+                </div>
+              )}
+              {currentResult?.status === 'approved' && (
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 py-2 rounded-xl bg-emerald-50 border-2 border-emerald-200 text-center">
+                    <span className="text-sm font-semibold text-emerald-700">✓ {t.final} · {currentResult.finalScore.toFixed(3)}</span>
+                  </div>
+                  {nextPending && (
+                    <button onClick={() => onOpen(nextPending.id)}
+                      className="flex-1 py-2 rounded-xl bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 active:scale-95 transition-all flex items-center justify-center gap-2">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                      {t.nextPerf}
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-36 text-center gap-2">
+              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 5v14l11-7z" />
+                </svg>
+              </div>
+              <p className="text-base font-semibold text-slate-600">{t.noPerf}</p>
+              <p className="text-xs text-slate-400">{t.noPerfSub}</p>
+            </div>
+          )}
+        </div>
 
-                {/* CJP submit buttons */}
-                {!currentResult && (
-                  <div className="flex gap-2">
-                    <button onClick={() => handleCJPSubmit('provisional')}
-                      className="flex-1 py-2.5 rounded-xl border-2 border-slate-300 text-slate-700 font-semibold hover:border-slate-400 hover:bg-slate-50 active:scale-95 transition-all">
-                      {t.submitProv}
-                    </button>
-                    <button onClick={() => handleCJPSubmit('approved')}
-                      className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all">
-                      ✓ {t.submitFinal}
-                    </button>
-                  </div>
-                )}
-                {currentResult?.status === 'provisional' && (
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 py-2.5 rounded-xl border-2 border-slate-200 text-center">
-                      <span className="text-sm font-medium text-slate-500">{t.prov} · {currentResult.finalScore.toFixed(3)}</span>
-                    </div>
-                    <button onClick={() => handleCJPSubmit('approved')}
-                      className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 active:scale-95 transition-all">
-                      ✓ {t.confirmFinal}
-                    </button>
-                  </div>
-                )}
-                {currentResult?.status === 'approved' && (
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 py-2.5 rounded-xl bg-emerald-50 border-2 border-emerald-200 text-center">
-                      <span className="text-sm font-semibold text-emerald-700">✓ {t.final} · {currentResult.finalScore.toFixed(3)}</span>
-                    </div>
-                    {nextPending && (
-                      <button onClick={() => onOpen(nextPending.id)}
-                        className="flex-1 py-2.5 rounded-xl bg-blue-500 text-white font-semibold hover:bg-blue-600 active:scale-95 transition-all flex items-center justify-center gap-2">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                        {t.nextPerf}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
+        {/* ── sticky tab bar: TS / Ranking ── */}
+        <div className="sticky top-0 z-10 flex border-y border-slate-200 bg-white">
+          {(['ranking', 'ts'] as const).map((tab) => (
+            <button key={tab} onClick={() => setBottomTab(tab)}
+              className={['flex-1 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors',
+                bottomTab === tab
+                  ? 'border-b-2 border-blue-500 text-blue-600'
+                  : 'text-slate-400 hover:text-slate-600'].join(' ')}>
+              {tab === 'ts' ? 'TS' : t.ranking}
+            </button>
+          ))}
+        </div>
 
+        {/* ── tab content ── */}
+        {bottomTab === 'ts' && (() => {
+          const activePerf = isReviewMode ? reviewPerf : currentPerf
+          return activePerf?.tsUrl ? (
+            <iframe src={activePerf.tsUrl} className="w-full border-0" style={{ height: '65vh' }} title={t.tsPdfTitle} />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-48 gap-2 text-slate-300">
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <p className="text-sm">{t.pdfNote}</p>
+            </div>
+          )
+        })()}
+        {bottomTab === 'ranking' && (
+          <div className="px-4 py-3">
             <RankingTable performances={performances} results={results} lang={lang}
               selectedPerfId={activePerfId}
               onSelectPerf={handleRankingRowClick} />

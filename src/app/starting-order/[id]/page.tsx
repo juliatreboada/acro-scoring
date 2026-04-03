@@ -38,7 +38,7 @@ export default function Page() {
           .eq('competition_id', id)
           .order('panel_number'),
         supabase.from('sections')
-          .select('id, competition_id, section_number, label, starting_time, waiting_time_seconds, warmup_duration_minutes')
+          .select('id, competition_id, section_number, label, starting_time, waiting_time_seconds, warmup_duration_minutes, timeline_order')
           .eq('competition_id', id)
           .order('section_number'),
         supabase.from('sessions')
@@ -82,7 +82,7 @@ export default function Page() {
 
       setCompetition(comp)
       setPanels((panelsRes.data ?? []) as unknown as Panel[])
-      setSections(sectionsRes.data ?? [])
+      setSections((sectionsRes.data ?? []) as unknown as Section[])
       setSessions(rawSessions.map(({ order_locked: _, ...s }) => s) as Session[])
       setLockedSessions(locked)
       setSessionOrders(ordersRes.data ?? [])

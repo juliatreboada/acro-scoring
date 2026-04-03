@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Competition, Section, Panel, Session, SessionOrder, Team, Club, CompetitionEntry, AgeGroupRule } from '@/components/admin/types'
+import ClickableImg from '@/components/shared/ClickableImg'
 
 // ─── time helpers ─────────────────────────────────────────────────────────────
 
@@ -113,6 +114,7 @@ const T = {
     location: 'Location',
     dates: 'Dates',
     pendingSession: 'Order not yet published',
+    print: 'Print',
   },
   es: {
     title: 'Orden de salida',
@@ -125,6 +127,7 @@ const T = {
     location: 'Sede',
     dates: 'Fechas',
     pendingSession: 'Orden no publicado aún',
+    print: 'Imprimir',
   },
 }
 
@@ -245,6 +248,7 @@ function SessionOrderCard({
           if (typeof info === 'string') return null
           const times = timesMap.get(`${session.id}:${teamId}`)
           const dorsal = entries.find(e => e.team_id === teamId)?.dorsal
+          const photoUrl = globalTeams.find(t => t.id === teamId)?.photo_url
           return (
             <li key={teamId} className={['flex items-center gap-3 px-4 py-3', isDropout ? 'opacity-50' : ''].join(' ')}>
               {times && !isDropout ? (
@@ -264,6 +268,15 @@ function SessionOrderCard({
                   isDropout ? 'bg-slate-100 text-slate-300' : 'bg-slate-800 text-white'].join(' ')}>
                   #{dorsal}
                 </span>
+              )}
+              {photoUrl ? (
+                <ClickableImg src={photoUrl} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-slate-100 shrink-0 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-slate-300" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+                  </svg>
+                </div>
               )}
               <div className="flex-1 min-w-0">
                 <p className={['text-sm font-medium text-slate-800 truncate', isDropout ? 'line-through text-slate-400' : ''].join(' ')}>
@@ -340,6 +353,33 @@ function buildPanelSlots(
   return slots
 }
 
+function calcTimeFromMerged(
+  section: Section,
+  mergedSlots: PerfSlot[],
+  sessions: Session[],
+  ageGroupRules: AgeGroupRule[],
+): Map<string, SlotTimes> {
+  const result = new Map<string, SlotTimes>()
+  if (!section.starting_time) return result
+  const startHHMM = section.starting_time.slice(0, 5)
+  const waitSec   = section.waiting_time_seconds    ?? 0
+  const warmupSec = (section.warmup_duration_minutes ?? 0) * 60
+  let elapsed = 0
+  for (const slot of mergedSlots) {
+    if (slot.kind === 'team' && !slot.isDropout) {
+      const sess = sessions.find(s => s.id === slot.sessionId)
+      const rule = sess ? ageGroupRules.find(r => r.id === sess.age_group) : undefined
+      const dur  = sess ? routineDurationSec(sess.routine_type, rule?.routine_count ?? 2) : 120
+      result.set(`${slot.sessionId}:${slot.teamId}`, {
+        compete: addSecsToHHMM(startHHMM, elapsed),
+        warmup:  addSecsToHHMM(startHHMM, elapsed - warmupSec),
+      })
+      elapsed += dur + waitSec
+    }
+  }
+  return result
+}
+
 function InterleavedTimeline({
   lang, panels, sessions, sessionOrders, lockedSessions, entries, globalTeams, clubs, section, ageGroupRules,
 }: {
@@ -356,22 +396,46 @@ function InterleavedTimeline({
 }) {
   const t = T[lang]
   const [p1, p2] = panels.slice(0, 2)
+  const droppedIds = new Set(entries.filter(e => e.dropped_out).map(e => e.team_id))
   const slots1 = buildPanelSlots(p1, sessions, sessionOrders, lockedSessions, entries, globalTeams)
   const slots2 = buildPanelSlots(p2, sessions, sessionOrders, lockedSessions, entries, globalTeams)
-  const combinedTimes = calcInterleavedTimes(
-    section,
-    sessions.filter(s => s.panel_id === p1.id),
-    sessions.filter(s => s.panel_id === p2.id),
-    sessionOrders,
-    ageGroupRules,
-  )
 
-  const merged: PerfSlot[] = []
-  const len = Math.max(slots1.length, slots2.length)
-  for (let i = 0; i < len; i++) {
-    if (slots1[i]) merged.push(slots1[i])
-    if (slots2[i]) merged.push(slots2[i])
+  let merged: PerfSlot[]
+  if (section.timeline_order && section.timeline_order.length > 0) {
+    const pendingAdded = new Set<string>()
+    merged = []
+    for (const entry of section.timeline_order) {
+      const sess = sessions.find(s => s.id === entry.session_id)
+      if (!sess) continue
+      const panelNum = panels.find(p => p.id === sess.panel_id)?.panel_number ?? 1
+      if (!lockedSessions.includes(entry.session_id)) {
+        if (!pendingAdded.has(entry.session_id)) {
+          merged.push({ kind: 'pending', panelNumber: panelNum, sessionName: sess.name })
+          pendingAdded.add(entry.session_id)
+        }
+      } else {
+        const team = globalTeams.find(t => t.id === entry.team_id)
+        if (!team || team.age_group !== sess.age_group || team.category !== sess.category) continue
+        merged.push({
+          kind: 'team',
+          panelNumber: panelNum,
+          sessionId: entry.session_id,
+          sessionName: sess.name,
+          teamId: entry.team_id,
+          isDropout: droppedIds.has(entry.team_id),
+        })
+      }
+    }
+  } else {
+    merged = []
+    const len = Math.max(slots1.length, slots2.length)
+    for (let i = 0; i < len; i++) {
+      if (slots1[i]) merged.push(slots1[i])
+      if (slots2[i]) merged.push(slots2[i])
+    }
   }
+
+  const combinedTimes = calcTimeFromMerged(section, merged, sessions, ageGroupRules)
 
   const teamById = Object.fromEntries(globalTeams.map((t) => [t.id, t]))
   const clubById = Object.fromEntries(clubs.map((c) => [c.id, c]))
@@ -435,6 +499,15 @@ function InterleavedTimeline({
                   #{dorsal}
                 </span>
               )}
+              {team?.photo_url ? (
+                <ClickableImg src={team.photo_url} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-slate-100 shrink-0 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-slate-300" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+                  </svg>
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <p className={['text-sm font-medium text-slate-800 truncate', slot.isDropout ? 'line-through text-slate-400' : ''].join(' ')}>
                   {team?.gymnast_display ?? slot.teamId}
@@ -486,8 +559,21 @@ export default function StartingOrderView({
       {/* header */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-4 py-5">
-          <p className="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-1">{t.title}</p>
-          <h1 className="text-xl font-bold text-slate-800 leading-snug">{competition.name}</h1>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-1">{t.title}</p>
+              <h1 className="text-xl font-bold text-slate-800 leading-snug">{competition.name}</h1>
+            </div>
+            <button
+              onClick={() => window.print()}
+              className="print:hidden shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors mt-1"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              {t.print}
+            </button>
+          </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
             {competition.location && (
               <span className="flex items-center gap-1 text-xs text-slate-400">

@@ -12,7 +12,7 @@ export default function Page() {
   const {
     loading, sessionId,
     assignedRoles, panelJudges, currentPerfId, currentPerf, judgeScores, results,
-    handleJudgeScoreSubmit,
+    djMethod, ejMethod, handleJudgeScoreSubmit,
   } = useJudgeSession()
 
   if (loading) return (
@@ -51,6 +51,8 @@ export default function Page() {
       <div className="flex-1 min-h-0">
       <DJEJAJView
         currentPerf={currentPerf} lang={lang} elements={currentPerf?.elements ?? []}
+        djMode={(djMethod as 'elements' | 'keyboard') ?? 'elements'}
+        ejMode={(ejMethod as 'elements' | 'keyboard') ?? 'elements'}
         onSubmit={handleSubmit}
         panelJudges={panelJudges} judgeScores={currentScores}
         waitingForOtherScores={waitingForOtherScores}

@@ -124,6 +124,8 @@ function AddSessionForm({ lang, panel, ageGroups, agLabels, ageGroupRules, secti
       routine_type: routineType,
       status: 'waiting',
       order_index: nextOrderIndex,
+      dj_method: null,
+      ej_method: null,
     })
   }
 

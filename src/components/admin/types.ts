@@ -44,7 +44,10 @@ export type Section = {
   starting_time: string | null           // 'HH:MM' (or 'HH:MM:SS' from DB, normalised on read)
   waiting_time_seconds: number | null    // buffer between performances, in seconds
   warmup_duration_minutes: number | null // how many minutes before competing the team starts warmup
+  timeline_order: Array<{ session_id: string; team_id: string }> | null
 }
+
+export type ScoringMethod = 'keyboard' | 'elements'
 
 export type Session = {
   id: string
@@ -57,6 +60,8 @@ export type Session = {
   routine_type: 'Balance' | 'Dynamic' | 'Combined'
   status: 'waiting' | 'active' | 'finished'
   order_index: number   // order within the section
+  dj_method:  ScoringMethod | null
+  ej_method:  ScoringMethod | null
 }
 
 export type Judge = {
@@ -73,7 +78,7 @@ export type CompetitionJudgeNomination = {
   id: string
   competition_id: string
   judge_id: string
-  club_id: string
+  club_id: string | null
 }
 
 export type Club = {

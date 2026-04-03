@@ -16,9 +16,9 @@ const ROLE_REDIRECT: Record<DbRole, string> = {
 
 const T = {
   en: {
-    title:      'Acro Scoring',
+    title:      'Nosa Acro Suite',
     heading:    'Create your password',
-    subtitle:   'You have been invited to Acro Scoring. Set a password to activate your account.',
+    subtitle:   'You have been invited to Nosa Acro Suite. Set a password to activate your account.',
     password:   'New password',
     confirm:    'Confirm password',
     submit:     'Set password & sign in',
@@ -30,9 +30,9 @@ const T = {
     goToLogin:  'Go to login',
   },
   es: {
-    title:      'Acro Scoring',
+    title:      'Nosa Acro Suite',
     heading:    'Crea tu contraseña',
-    subtitle:   'Has sido invitado a Acro Scoring. Establece una contraseña para activar tu cuenta.',
+    subtitle:   'Has sido invitado a Nosa Acro Suite. Establece una contraseña para activar tu cuenta.',
     password:   'Nueva contraseña',
     confirm:    'Confirmar contraseña',
     submit:     'Establecer contraseña y entrar',

@@ -5,6 +5,7 @@ import type { Lang } from '../aj-scoring/types'
 import type { PanelJudge, MockPerf, JudgeScore, RoutineResult, PenaltyState } from './types'
 import { calcCjpPenalty, droppedIndices, computeResult, DEFAULT_PENALTY } from './types'
 import { categoryLabel } from '@/components/admin/types'
+import { ScoreGrid } from '@/components/shared/CJPTabletShell'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -354,232 +355,6 @@ function PenaltyTable({ state, onChange, lang, readonly, hideHeader }: {
   )
 }
 
-// ─── score grid ───────────────────────────────────────────────────────────────
-
-function ScoreGrid({ scores, panelJudges, isCJP, lang, locked, onReopen, onEditScore }: {
-  scores: JudgeScore[]
-  panelJudges: PanelJudge[]
-  isCJP: boolean
-  lang: Lang
-  locked?: boolean
-  onReopen: (panelJudgeId: string | 'all') => void
-  onEditScore?: (panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
-}) {
-  const t = T[lang]
-
-  const ejJudges = panelJudges.filter((j) => j.role === 'EJ').sort((a, b) => a.roleNumber - b.roleNumber)
-  const ajJudges = panelJudges.filter((j) => j.role === 'AJ').sort((a, b) => a.roleNumber - b.roleNumber)
-  const djJudges = panelJudges.filter((j) => j.role === 'DJ').sort((a, b) => a.roleNumber - b.roleNumber)
-
-  const ejVals = ejJudges.map((j) => scores.find((s) => s.panelJudgeId === j.id)?.ejScore)
-  const ajVals = ajJudges.map((j) => scores.find((s) => s.panelJudgeId === j.id)?.ajScore)
-
-  const ejNums = ejVals.filter((v): v is number => v != null)
-  const ajNums = ajVals.filter((v): v is number => v != null)
-
-  const ejDropped = droppedIndices(ejNums)
-  const ajDropped = droppedIndices(ajNums)
-
-  const ejAvg = ejNums.length > 0
-    ? ejNums.filter((_, i) => !ejDropped.has(i)).reduce((s, v) => s + v, 0) / (ejNums.length - ejDropped.size || 1)
-    : null
-  const ajAvg = ajNums.length > 0
-    ? ajNums.filter((_, i) => !ajDropped.has(i)).reduce((s, v) => s + v, 0) / (ajNums.length - ajDropped.size || 1)
-    : null
-
-  const djScore = djJudges.map((j) => scores.find((s) => s.panelJudgeId === j.id)).find(Boolean)
-  const anyScore = scores.length > 0
-  const canReopen = isCJP && !locked
-  const canEdit = isCJP && !locked && !!onEditScore
-
-  type EditField = 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty'
-  const [editState, setEditState] = useState<{ judgeId: string; field: EditField; value: string } | null>(null)
-
-  function startEdit(judgeId: string, field: EditField, currentVal: number) {
-    setEditState({ judgeId, field, value: String(currentVal) })
-  }
-
-  function commitEdit() {
-    if (!editState || !onEditScore) return
-    const num = parseFloat(editState.value)
-    if (!isNaN(num) && num >= 0) onEditScore(editState.judgeId, editState.field, num)
-    setEditState(null)
-  }
-
-  const EditInput = () => (
-    <div className="flex items-center gap-1">
-      <input
-        type="number" min="0" step="0.1"
-        value={editState!.value}
-        onChange={(e) => setEditState((prev) => prev ? { ...prev, value: e.target.value } : prev)}
-        onKeyDown={(e) => { if (e.key === 'Enter') commitEdit(); if (e.key === 'Escape') setEditState(null) }}
-        className="w-14 text-xs font-mono text-slate-800 border border-blue-300 rounded px-1 py-0.5 text-center focus:outline-none focus:ring-1 focus:ring-blue-400"
-        autoFocus
-      />
-      <button onClick={commitEdit} className="w-5 h-5 rounded text-emerald-500 hover:bg-emerald-50 transition-colors flex items-center justify-center text-xs font-bold">✓</button>
-      <button onClick={() => setEditState(null)} className="w-5 h-5 rounded text-slate-400 hover:bg-slate-50 transition-colors flex items-center justify-center text-xs">✗</button>
-    </div>
-  )
-
-  const PencilIcon = () => (
-    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-    </svg>
-  )
-
-  function ScoreCell({ value, dropped }: { value: number | null | undefined; dropped?: boolean }) {
-    if (value == null) return <span className="text-slate-300">—</span>
-    return (
-      <span className={['tabular-nums font-mono text-sm', dropped ? 'line-through text-slate-300' : 'text-slate-800'].join(' ')}>
-        {value}
-      </span>
-    )
-  }
-
-  const maxCols = Math.max(ejJudges.length, ajJudges.length, djJudges.length > 0 ? 2 : 1)
-
-  const ReopenBtn = ({ judgeId }: { judgeId: string }) => (
-    <button onClick={() => onReopen(judgeId)} title={t.reopen}
-      className="w-5 h-5 rounded text-slate-300 hover:text-amber-500 hover:bg-amber-50 transition-colors flex items-center justify-center">
-      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0114.65-3.65L20 7M4 17l1.35 1.65A9 9 0 0020 15" />
-      </svg>
-    </button>
-  )
-
-  const EditBtn = ({ judgeId, field, value }: { judgeId: string; field: EditField; value: number }) => (
-    <button onClick={() => startEdit(judgeId, field, value)} title={t.editScore}
-      className="w-5 h-5 rounded text-slate-300 hover:text-blue-500 hover:bg-blue-50 transition-colors flex items-center justify-center">
-      <PencilIcon />
-    </button>
-  )
-
-  const tdBase = 'px-3 py-2 border-t border-slate-100 align-top'
-  const tdLabel = `${tdBase} text-xs font-bold text-slate-400 uppercase tracking-wide whitespace-nowrap`
-  const tdScore = `${tdBase} border-l border-slate-100`
-  const tdEmpty = `${tdBase} border-l border-slate-100 text-slate-300 text-xs`
-  const tdAvg  = `${tdBase} border-l border-slate-200 whitespace-nowrap`
-
-  return (
-    <div className="border border-slate-200 rounded-xl overflow-hidden">
-      {canReopen && anyScore && (
-        <div className="flex justify-end px-3 py-1.5 bg-slate-50 border-b border-slate-200">
-          <button onClick={() => onReopen('all')}
-            className="text-xs text-amber-500 hover:text-amber-700 font-medium flex items-center gap-1">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0114.65-3.65L20 7M4 17l1.35 1.65A9 9 0 0020 15" />
-            </svg>
-            {t.reopenAll}
-          </button>
-        </div>
-      )}
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs border-collapse">
-          <tbody>
-
-            {/* ── EJ row ── */}
-            <tr>
-              <td className={tdLabel}>{t.ej}</td>
-              {ejJudges.map((j, i) => {
-                const isEditing = editState?.judgeId === j.id && editState?.field === 'ejScore'
-                return (
-                  <td key={j.id} className={tdScore}>
-                    <div className="text-[10px] text-slate-400 mb-0.5 truncate">EJ{j.roleNumber} {j.name}</div>
-                    {isEditing ? <EditInput /> : (
-                      <div className="flex items-center gap-1">
-                        <ScoreCell value={ejVals[i]} dropped={ejDropped.has(i)} />
-                        {canReopen && ejVals[i] != null && <ReopenBtn judgeId={j.id} />}
-                        {canEdit && ejVals[i] != null && <EditBtn judgeId={j.id} field="ejScore" value={ejVals[i]!} />}
-                      </div>
-                    )}
-                  </td>
-                )
-              })}
-              {Array.from({ length: maxCols - ejJudges.length }).map((_, i) => (
-                <td key={`ej-e-${i}`} className={tdEmpty}>—</td>
-              ))}
-              <td className={tdAvg}>
-                <div className="text-[10px] text-slate-400 mb-0.5">{t.avg}</div>
-                <span className="font-bold tabular-nums text-slate-600">
-                  {ejAvg != null ? ejAvg.toFixed(3) : '—'}
-                </span>
-              </td>
-            </tr>
-
-            {/* ── AJ row ── */}
-            <tr>
-              <td className={tdLabel}>{t.aj}</td>
-              {ajJudges.map((j, i) => {
-                const isEditing = editState?.judgeId === j.id && editState?.field === 'ajScore'
-                return (
-                  <td key={j.id} className={tdScore}>
-                    <div className="text-[10px] text-slate-400 mb-0.5 truncate">AJ{j.roleNumber} {j.name}</div>
-                    {isEditing ? <EditInput /> : (
-                      <div className="flex items-center gap-1">
-                        <ScoreCell value={ajVals[i]} dropped={ajDropped.has(i)} />
-                        {canReopen && ajVals[i] != null && <ReopenBtn judgeId={j.id} />}
-                        {canEdit && ajVals[i] != null && <EditBtn judgeId={j.id} field="ajScore" value={ajVals[i]!} />}
-                      </div>
-                    )}
-                  </td>
-                )
-              })}
-              {Array.from({ length: maxCols - ajJudges.length }).map((_, i) => (
-                <td key={`aj-e-${i}`} className={tdEmpty}>—</td>
-              ))}
-              <td className={tdAvg}>
-                <div className="text-[10px] text-slate-400 mb-0.5">{t.avg}</div>
-                <span className="font-bold tabular-nums text-slate-600">
-                  {ajAvg != null ? ajAvg.toFixed(3) : '—'}
-                </span>
-              </td>
-            </tr>
-
-            {/* ── DJ row ── */}
-            {djJudges.map((j) => {
-              const s = scores.find((sc) => sc.panelJudgeId === j.id)
-              const isEditingDif = editState?.judgeId === j.id && editState?.field === 'djDifficulty'
-              const isEditingPen = editState?.judgeId === j.id && editState?.field === 'djPenalty'
-              return (
-                <tr key={j.id}>
-                  <td className={tdLabel}>{t.dj}</td>
-                  {/* Col 1: Difficulty */}
-                  <td className={tdScore}>
-                    <div className="text-[10px] text-slate-400 mb-0.5 truncate">DJ{j.roleNumber} {j.name}</div>
-                    {isEditingDif ? <EditInput /> : (
-                      <div className="flex items-center gap-1">
-                        <ScoreCell value={s?.djDifficulty} />
-                        {canReopen && s?.djDifficulty != null && <ReopenBtn judgeId={j.id} />}
-                        {canEdit && s?.djDifficulty != null && <EditBtn judgeId={j.id} field="djDifficulty" value={s.djDifficulty!} />}
-                      </div>
-                    )}
-                  </td>
-                  {/* Col 2: Penalty */}
-                  <td className={tdScore}>
-                    <div className="text-[10px] text-slate-400 mb-0.5">{t.djPen}</div>
-                    {isEditingPen ? <EditInput /> : (
-                      <div className="flex items-center gap-1">
-                        <ScoreCell value={s?.djPenalty != null ? -s.djPenalty : null} />
-                        {canEdit && s?.djPenalty != null && <EditBtn judgeId={j.id} field="djPenalty" value={s.djPenalty!} />}
-                      </div>
-                    )}
-                  </td>
-                  {Array.from({ length: maxCols - 2 }).map((_, i) => (
-                    <td key={`dj-e-${i}`} className={tdEmpty}>—</td>
-                  ))}
-                  <td className={tdAvg + ' text-slate-300'}>—</td>
-                </tr>
-              )
-            })}
-
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
-
 // ─── score preview ────────────────────────────────────────────────────────────
 
 function ScorePreview({ scores, panelJudges, cjpPenalty, lang }: {
@@ -867,6 +642,12 @@ export default function CJPView({
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 mb-0.5">
+                      {isCurrent && (
+                        <span className="relative flex h-2 w-2 shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                        </span>
+                      )}
                       <span className="text-xs text-slate-400 font-mono shrink-0">{perf.position}</span>
                       <span className="text-xs font-medium text-slate-700 truncate">{perf.gymnasts}</span>
                     </div>
@@ -975,7 +756,7 @@ export default function CJPView({
                 <ScoreGrid
                   scores={reviewScores}
                   panelJudges={panelJudges}
-                  isCJP={isCJP}
+
                   lang={lang}
                   locked={reviewResult?.status === 'approved'}
                   onReopen={(id) => {
@@ -1040,7 +821,7 @@ export default function CJPView({
                   <ScoreGrid
                     scores={currentScores}
                     panelJudges={panelJudges}
-                    isCJP={isCJP}
+  
                     lang={lang}
                     locked={currentResult?.status === 'approved'}
                     onReopen={(id) => onReopenScore(currentPerfId!, id)}

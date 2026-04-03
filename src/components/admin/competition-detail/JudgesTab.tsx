@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Judge, Panel, Section, SectionPanelJudge, Role, Club, CompetitionJudgeNomination } from '@/components/admin/types'
+import ClickableImg from '@/components/shared/ClickableImg'
 import { ROLE_CONFIG } from '@/components/admin/types'
 
 // ─── translations ─────────────────────────────────────────────────────────────
@@ -71,7 +72,7 @@ function Avatar({ judge, size = 'md' }: { judge: Judge; size?: 'sm' | 'md' }) {
   const initials = judge.full_name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
   const sz = size === 'sm' ? 'w-7 h-7 text-xs' : 'w-10 h-10 text-sm'
   return judge.avatar_url ? (
-    <img src={judge.avatar_url} alt={judge.full_name} className={[sz, 'rounded-full object-cover'].join(' ')} />
+    <ClickableImg src={judge.avatar_url} alt={judge.full_name} className={[sz, 'rounded-full object-cover'].join(' ')} />
   ) : (
     <div className={[sz, 'rounded-full bg-slate-200 text-slate-600 font-semibold flex items-center justify-center shrink-0'].join(' ')}>
       {initials}

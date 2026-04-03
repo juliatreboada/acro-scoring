@@ -418,6 +418,7 @@ export type CompetitionDetailProps = {
   lockedSessions: string[]
   onReorder: (sessionId: string, teamIds: string[]) => void
   onToggleLock: (sessionId: string) => void
+  onReorderTimeline: (sectionId: string, order: Array<{ session_id: string; team_id: string }>) => void
   // overview
   availableAdmins: AdminUser[]
   ageGroupRules: AgeGroupRule[]
@@ -436,7 +437,7 @@ export default function CompetitionDetail({
   globalJudges, judgePool, nominations, assignments,
   panelLocks, onAddToPool, onRemoveFromPool, onAssignJudge, onAddSlot, onRemoveSlot,
   onTogglePanelLock, onCreateJudge,
-  globalTeams, clubs, entries, onToggleDropout, sessionOrders, lockedSessions, onReorder, onToggleLock,
+  globalTeams, clubs, entries, onToggleDropout, sessionOrders, lockedSessions, onReorder, onToggleLock, onReorderTimeline,
   availableAdmins, ageGroupRules, onUpdateCompetition,
   onSetDJReviewDeadline, onStartSession, onFinishSession,
 }: CompetitionDetailProps) {
@@ -626,6 +627,7 @@ export default function CompetitionDetail({
           ageGroupRules={ageGroupRules}
           onReorder={onReorder}
           onToggleLock={onToggleLock}
+          onReorderTimeline={onReorderTimeline}
         />
       )}
       {activeTab === 'registrations' && (

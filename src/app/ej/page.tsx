@@ -12,7 +12,7 @@ export default function Page() {
   const {
     loading, sessionId,
     assignedRoles, panelJudges, currentPerfId, currentPerf, judgeScores, results,
-    handleJudgeScoreSubmit,
+    ejMethod, handleJudgeScoreSubmit,
   } = useJudgeSession()
 
   if (loading) return (
@@ -49,6 +49,7 @@ export default function Page() {
           currentPerf={currentPerf}
           lang={lang}
           elements={currentPerf?.elements ?? []}
+          mode={(ejMethod as 'elements' | 'keyboard') ?? 'elements'}
           onSubmit={handleSubmit}
           panelJudges={panelJudges}
           judgeScores={currentScores}

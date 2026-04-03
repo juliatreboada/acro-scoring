@@ -8,7 +8,6 @@ import { DEFAULT_FLAG } from '../dj-scoring/types'
 import type { PanelJudge, JudgeScore, RoutineResult } from '../cjp/types'
 import { ScoreGrid } from '../shared/CJPTabletShell'
 import { categoryLabel } from '@/components/admin/types'
-import DJModeSelector, { type DJPhoneMode } from '../shared/DJModeSelector'
 import { getElementConfig, calcDJTotals, IncorrectTsToggle, DJElementRow, DualKeypad, PhoneDJElementsList } from '../shared/DJElementsShared'
 import AJScoringPanel from '../shared/AJScoringPanel'
 import CheckIcon from '../shared/CheckIcon'
@@ -137,6 +136,7 @@ export type DJAJViewProps = {
   currentPerf: Performance | null
   lang: Lang
   elements: TsElement[]
+  djMode?: 'elements' | 'keyboard'
   onSubmit?: (djDifficulty: number, djPenalty: number, ajScore: number) => void
   panelJudges?: PanelJudge[]
   judgeScores?: JudgeScore[]
@@ -145,7 +145,7 @@ export type DJAJViewProps = {
 }
 
 export default function DJAJView({
-  currentPerf, lang, elements, onSubmit,
+  currentPerf, lang, elements, djMode = 'elements', onSubmit,
   panelJudges, judgeScores, waitingForOtherScores, result,
 }: DJAJViewProps) {
   const t = T[lang]
@@ -154,7 +154,6 @@ export default function DJAJView({
   const [extraElements, setExtraElements] = useState<TsElement[]>([])
   const [flags, setFlags] = useState<ElementFlags>({})
   const [incorrectTs, setIncorrectTs] = useState(false)
-  const [djPhoneMode, setDjPhoneMode] = useState<DJPhoneMode | null>(null)
 
   // submission
   const [djSubmitted, setDjSubmitted] = useState<{ difficulty: number; penalty: number } | null>(null)
@@ -174,7 +173,6 @@ export default function DJAJView({
       setFlags(initial)
       setIncorrectTs(false)
       setExtraElements([])
-      setDjPhoneMode(null)
       setDjSubmitted(null)
       setAjSubmitted(null)
       setTab('dj')
@@ -300,9 +298,7 @@ export default function DJAJView({
         {tab === 'dj' && (
           djSubmitted ? (
             <SubmittedDJCard dj={djSubmitted} lang={lang} />
-          ) : djPhoneMode === null ? (
-            <DJModeSelector lang={lang} onSelect={setDjPhoneMode} />
-          ) : djPhoneMode === 'keypad' ? (
+          ) : djMode === 'keyboard' ? (
             <DualKeypad lang={lang} onSubmit={handleDJSubmit} />
           ) : (
             <PhoneDJElementsList
@@ -385,6 +381,10 @@ export default function DJAJView({
                     <div className="w-px h-8 bg-slate-200" />
                     <div className="text-center"><p className="text-xs text-slate-400 mb-1">{t.djPenalty}</p><p className="text-2xl font-bold text-red-500 tabular-nums">−{djSubmitted.penalty.toFixed(1)}</p></div>
                   </div>
+                </div>
+              ) : djMode === 'keyboard' ? (
+                <div className="flex-1 overflow-y-auto min-h-0">
+                  <DualKeypad lang={lang} onSubmit={handleDJSubmit} />
                 </div>
               ) : (
                 <>

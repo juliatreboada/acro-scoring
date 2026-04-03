@@ -18,6 +18,8 @@ export type JudgeSessionData = {
   performances:  MockPerf[]
   judgeScores:   Record<string, JudgeScore[]>
   results:       Record<string, RoutineResult>
+  djMethod:      string | null
+  ejMethod:      string | null
   handleOpen:              (perfId: string) => Promise<void>
   handleSkip:              (perfId: string) => void
   handleCJPSubmit:         (status: 'provisional' | 'approved', result: RoutineResult) => Promise<void>
@@ -39,6 +41,8 @@ export function useJudgeSession(): JudgeSessionData {
   const [performances,  setPerformances]  = useState<MockPerf[]>([])
   const [judgeScores,   setJudgeScores]   = useState<Record<string, JudgeScore[]>>({})
   const [results,       setResults]       = useState<Record<string, RoutineResult>>({})
+  const [djMethod,      setDjMethod]      = useState<string | null>(null)
+  const [ejMethod,      setEjMethod]      = useState<string | null>(null)
 
   const sessionIdRef = useRef<string | null>(null)
   useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
@@ -77,7 +81,7 @@ export function useJudgeSession(): JudgeSessionData {
 
       const { data: allSessions } = await supabase
         .from('sessions')
-        .select('id, name, status, section_id, panel_id, competition_id, current_team_id, age_group, category, routine_type')
+        .select('id, name, status, section_id, panel_id, competition_id, current_team_id, age_group, category, routine_type, dj_method, ej_method')
         .in('section_id', sectionIds)
         .in('panel_id',   panelIds)
 
@@ -251,6 +255,8 @@ export function useJudgeSession(): JudgeSessionData {
       setPerformances(builtPerfs)
       setJudgeScores(builtJudgeScores)
       setResults(builtResults)
+      setDjMethod((session as any).dj_method ?? null)
+      setEjMethod((session as any).ej_method ?? null)
       setLoading(false)
     }
     load()
@@ -411,6 +417,7 @@ export function useJudgeSession(): JudgeSessionData {
   return {
     loading, sessionId, sessionStatus, currentPerfId, currentPerf,
     assignedRoles, panelJudges, performances, judgeScores, results,
+    djMethod, ejMethod,
     handleOpen, handleSkip, handleCJPSubmit, handleReopenScore,
     handleJudgeScoreSubmit, handleEditScore,
   }

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Competition, AgeGroupRule, AdminUser } from './types'
+import ClickableImg from '@/components/shared/ClickableImg'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -309,7 +310,7 @@ function CompetitionCard({ competition: c, lang, onManage }: CompetitionCardProp
       {/* poster */}
       <div className="relative w-full aspect-[16/9] bg-slate-100 shrink-0">
         {c.poster_url ? (
-          <img
+          <ClickableImg
             src={c.poster_url}
             alt={c.name}
             className="w-full h-full object-cover"

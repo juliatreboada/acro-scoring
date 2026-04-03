@@ -15,7 +15,7 @@ type Competition = Pick<
 
 const T = {
   en: {
-    appName: 'Acro Scoring',
+    appName: 'Nosa Acro Suite',
     appTagline: 'Competition management & live scoring for Acrobatic Gymnastics',
     signIn: 'Sign in',
     liveNow: 'Live now',
@@ -32,7 +32,7 @@ const T = {
     publicHint: 'Starting order and live results are publicly available — no sign-in needed.',
   },
   es: {
-    appName: 'Acro Scoring',
+    appName: 'Nosa Acro Suite',
     appTagline: 'Gestión de competiciones y puntuación en directo para Gimnasia Acrobática',
     signIn: 'Entrar',
     liveNow: 'En directo',

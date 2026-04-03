@@ -51,8 +51,8 @@ export default function Page() {
           .select('id,name,status,location,start_date,end_date,registration_deadline,ts_music_deadline,age_groups,poster_url,admin_id,created_at')
           .eq('id', id).single(),
         supabase.from('panels').select('id,competition_id,panel_number').eq('competition_id', id).order('panel_number'),
-        supabase.from('sections').select('id,competition_id,section_number,label,starting_time,waiting_time_seconds,warmup_duration_minutes').eq('competition_id', id).order('section_number'),
-        supabase.from('sessions').select('id,competition_id,panel_id,section_id,name,age_group,category,routine_type,status,order_index,order_locked').eq('competition_id', id).order('order_index'),
+        supabase.from('sections').select('id,competition_id,section_number,label,starting_time,waiting_time_seconds,warmup_duration_minutes,timeline_order').eq('competition_id', id).order('section_number'),
+        supabase.from('sessions').select('id,competition_id,panel_id,section_id,name,age_group,category,routine_type,status,order_index,order_locked,dj_method,ej_method').eq('competition_id', id).order('order_index'),
         supabase.from('judges').select('id,full_name,phone,licence,avatar_url'),
         supabase.from('competition_judge_nominations').select('id,competition_id,judge_id,club_id').eq('competition_id', id),
         sectionIds.length > 0
@@ -119,7 +119,7 @@ export default function Page() {
 
       setCompetition({ ...compRest, admin: admin_id ? (adminMap[admin_id] ?? null) : null })
       setPanels((panelsRes.data ?? []) as unknown as Panel[])
-      setSections(sectionsRes.data ?? [])
+      setSections((sectionsRes.data ?? []) as unknown as Section[])
       setSessions(rawSessions.map(({ order_locked: _, ...s }) => s) as Session[])
       setGlobalJudges(rawJudges.map(j => ({ ...j, email: judgeEmailMap[j.id] ?? null })))
       setNominations(rawNoms)
@@ -206,7 +206,7 @@ export default function Page() {
     const { data: newSection } = await supabase.from('sections')
       .insert({ competition_id: id, section_number: nextNum, label: null }).select().single()
     if (!newSection) return
-    setSections(prev => [...prev, newSection])
+    setSections(prev => [...prev, newSection as unknown as Section])
     const slots = activePanels.flatMap(pan =>
       defaultSlots(newSection.id, pan.id).map(slot => ({
         section_id: slot.section_id, panel_id: slot.panel_id,
@@ -253,9 +253,10 @@ export default function Page() {
 
   // ── judges ────────────────────────────────────────────────────────────────────
   async function handleAddToPool(judgeId: string) {
-    const { data: nom } = await supabase.from('competition_judge_nominations')
-      .insert({ competition_id: id, judge_id: judgeId, club_id: null } as never)
+    const { data: nom, error } = await supabase.from('competition_judge_nominations')
+      .insert({ competition_id: id, judge_id: judgeId, club_id: null })
       .select().single()
+    if (error) { console.error('handleAddToPool:', error.message); return }
     if (nom) setNominations(prev => [...prev, nom as CompetitionJudgeNomination])
     setJudgePool(prev => [...prev, judgeId])
   }
@@ -332,6 +333,11 @@ export default function Page() {
       ...prev.filter(o => o.session_id !== sessionId),
       ...newOrders,
     ])
+  }
+
+  async function handleReorderTimeline(sectionId: string, order: Array<{ session_id: string; team_id: string }>) {
+    await supabase.from('sections').update({ timeline_order: order } as never).eq('id', sectionId)
+    setSections(prev => prev.map(s => s.id === sectionId ? { ...s, timeline_order: order } : s))
   }
 
   // ── competition overview ──────────────────────────────────────────────────────
@@ -414,6 +420,7 @@ export default function Page() {
         lockedSessions={lockedSessions}
         onReorder={handleReorder}
         onToggleLock={handleToggleLock}
+        onReorderTimeline={handleReorderTimeline}
         availableAdmins={availableAdmins}
         ageGroupRules={ageGroupRules}
         onUpdateCompetition={handleUpdateCompetition}

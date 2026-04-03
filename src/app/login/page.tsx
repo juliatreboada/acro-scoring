@@ -20,7 +20,7 @@ const ROLE_REDIRECT: Record<DbRole, string> = {
 
 const T = {
   en: {
-    title: 'Acro Scoring',
+    title: 'Nosa Acro Suite',
     subtitle: 'Sign in to your account',
     email: 'Email',
     password: 'Password',
@@ -41,7 +41,7 @@ const T = {
     } as Record<DbRole, string>,
   },
   es: {
-    title: 'Acro Scoring',
+    title: 'Nosa Acro Suite',
     subtitle: 'Inicia sesión en tu cuenta',
     email: 'Email',
     password: 'Contraseña',

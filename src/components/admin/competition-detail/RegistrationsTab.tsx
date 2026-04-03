@@ -2,6 +2,7 @@
 
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Team, Club, CompetitionEntry } from '@/components/admin/types'
+import ClickableImg from '@/components/shared/ClickableImg'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ function TeamAvatar({ team }: { team: Team }) {
     .slice(0, 2)
 
   return team.photo_url ? (
-    <img
+    <ClickableImg
       src={team.photo_url}
       alt={team.gymnast_display}
       className="w-10 h-10 rounded-lg object-cover shrink-0"

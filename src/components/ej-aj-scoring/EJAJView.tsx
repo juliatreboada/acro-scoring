@@ -124,6 +124,7 @@ export type EJAJViewProps = {
   currentPerf: Performance | null
   lang: Lang
   elements: TsElement[]
+  ejMode?: 'elements' | 'keyboard'
   onSubmit?: (ejScore: number, ajScore: number) => void
   panelJudges?: PanelJudge[]
   judgeScores?: JudgeScore[]
@@ -132,7 +133,7 @@ export type EJAJViewProps = {
 }
 
 export default function EJAJView({
-  currentPerf, lang, elements, onSubmit,
+  currentPerf, lang, elements, ejMode = 'elements', onSubmit,
   panelJudges, judgeScores, waitingForOtherScores, result,
 }: EJAJViewProps) {
   const t = T[lang]
@@ -243,8 +244,23 @@ export default function EJAJView({
         {tab === 'ej' && (
           ejSubmitted !== null ? (
             <SubmittedEJCard score={ejSubmitted} lang={lang} />
-          ) : (
+          ) : ejMode === 'keyboard' ? (
             <EJKeypad lang={lang} onSubmit={handleEJSubmit} />
+          ) : (
+            <div className="px-4 space-y-2 pb-4">
+              {elements.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">
+                  <p className="font-medium text-sm">{t.noElements}</p>
+                  <p className="text-xs mt-1">{t.noElementsNote}</p>
+                </div>
+              ) : elements.map((el) => (
+                <EJElementRow key={el.id} element={el} deductions={deductions} lang={lang} onLock={handleLock} />
+              ))}
+              <button onClick={handleTabletEJSubmit}
+                className="w-full py-4 rounded-2xl font-bold text-lg bg-sky-500 hover:bg-sky-600 active:scale-95 text-white transition-all">
+                {t.submit} · E {ejScoreVal.toFixed(1)}
+              </button>
+            </div>
           )
         )}
 
@@ -314,6 +330,10 @@ export default function EJAJView({
                     <p className="text-xs text-slate-400 mb-1">{t.ejScore}</p>
                     <p className="text-2xl font-bold text-sky-600 tabular-nums">{ejSubmitted.toFixed(1)}</p>
                   </div>
+                </div>
+              ) : ejMode === 'keyboard' ? (
+                <div className="flex-1 overflow-y-auto min-h-0">
+                  <EJKeypad lang={lang} onSubmit={handleEJSubmit} />
                 </div>
               ) : (
                 <>
