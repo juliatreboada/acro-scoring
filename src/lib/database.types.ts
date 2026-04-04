@@ -931,6 +931,86 @@ export type Database = {
           },
         ]
       }
+      ts_review_status: {
+        Row: {
+          team_id: string
+          competition_id: string
+          routine_type: "Balance" | "Dynamic" | "Combined"
+          status: string
+          dj1_id: string | null
+          dj1_decision: string | null
+          dj1_comment: string | null
+          dj1_at: string | null
+          dj2_id: string | null
+          dj2_decision: string | null
+          dj2_comment: string | null
+          dj2_at: string | null
+          final_comment: string | null
+          notified_at: string | null
+        }
+        Insert: {
+          team_id: string
+          competition_id: string
+          routine_type: "Balance" | "Dynamic" | "Combined"
+          status?: string
+          dj1_id?: string | null
+          dj1_decision?: string | null
+          dj1_comment?: string | null
+          dj1_at?: string | null
+          dj2_id?: string | null
+          dj2_decision?: string | null
+          dj2_comment?: string | null
+          dj2_at?: string | null
+          final_comment?: string | null
+          notified_at?: string | null
+        }
+        Update: {
+          team_id?: string
+          competition_id?: string
+          routine_type?: "Balance" | "Dynamic" | "Combined"
+          status?: string
+          dj1_id?: string | null
+          dj1_decision?: string | null
+          dj1_comment?: string | null
+          dj1_at?: string | null
+          dj2_id?: string | null
+          dj2_decision?: string | null
+          dj2_comment?: string | null
+          dj2_at?: string | null
+          final_comment?: string | null
+          notified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ts_review_status_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ts_review_status_dj1_id_fkey"
+            columns: ["dj1_id"]
+            isOneToOne: false
+            referencedRelation: "judges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ts_review_status_dj2_id_fkey"
+            columns: ["dj2_id"]
+            isOneToOne: false
+            referencedRelation: "judges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ts_review_status_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never

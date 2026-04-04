@@ -5,7 +5,7 @@ import { useJudgeSession } from '@/hooks/useJudgeSession'
 import DJView from '@/components/dj-scoring/DJView'
 import AuthBar from '@/components/shared/AuthBar'
 import type { Lang } from '@/components/dj-scoring/types'
-import type { JudgeScore } from '@/components/cjp/types'
+import type { JudgeScore, ScoreDetail } from '@/components/cjp/types'
 
 export default function Page() {
   const [lang, setLang] = useState<Lang>('es')
@@ -35,9 +35,9 @@ export default function Page() {
   const currentResult = currentPerfId ? (results[currentPerfId] ?? null) : null
   const waitingForOtherScores = !!myScore && !currentResult
 
-  function handleSubmit(djDifficulty: number, djPenalty: number) {
+  function handleSubmit(djDifficulty: number, djPenalty: number, detail: ScoreDetail) {
     if (!myRole) return
-    const s: JudgeScore = { panelJudgeId: myRole.id, ejScore: null, ajScore: null, djDifficulty, djPenalty, cjpPenalty: null }
+    const s: JudgeScore = { panelJudgeId: myRole.id, ejScore: null, ajScore: null, djDifficulty, djPenalty, cjpPenalty: null, detail }
     handleJudgeScoreSubmit(s)
   }
 

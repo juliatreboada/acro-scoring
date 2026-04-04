@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import CompetitionsView from '@/components/admin/CompetitionsView'
 import AuthBar from '@/components/shared/AuthBar'
+import ProfileEditor from '@/components/shared/ProfileEditor'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Competition } from '@/components/admin/types'
 
@@ -14,8 +15,14 @@ export default function Page() {
   const [lang, setLang]             = useState<Lang>('es')
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [loading, setLoading]       = useState(true)
+  const [view, setView]             = useState<'competitions' | 'profile'>('competitions')
   const router   = useRouter()
   const supabase = createClient()
+
+  const TAB_LABELS = {
+    en: { competitions: 'Competitions', profile: 'Profile' },
+    es: { competitions: 'Competiciones', profile: 'Perfil' },
+  }
 
   useEffect(() => {
     async function load() {
@@ -39,24 +46,49 @@ export default function Page() {
     load()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const tabs = TAB_LABELS[lang]
+
   return (
     <div className="min-h-screen bg-slate-50">
       <AuthBar lang={lang} onLangChange={setLang} />
 
-      {loading ? (
-        <div className="flex justify-center py-24">
-          <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+      {/* tab bar */}
+      <div className="bg-white border-b border-slate-200">
+        <div className="max-w-4xl mx-auto px-4 flex">
+          {(['competitions', 'profile'] as const).map(v => (
+            <button key={v} onClick={() => setView(v)}
+              className={[
+                'px-4 py-2.5 text-sm font-semibold border-b-2 transition-all',
+                view === v ? 'border-blue-500 text-blue-600' : 'border-transparent text-slate-400 hover:text-slate-600',
+              ].join(' ')}>
+              {v === 'competitions' ? tabs.competitions : tabs.profile}
+            </button>
+          ))}
         </div>
-      ) : (
-        <CompetitionsView
-          lang={lang}
-          ageGroupRules={[]}
-          availableAdmins={[]}
-          competitions={competitions}
-          canCreate={false}
-          onCreate={() => {}}
-          onManage={(id) => router.push(`/comp-admin/competitions/${id}`)}
-        />
+      </div>
+
+      {view === 'profile' && (
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          <ProfileEditor lang={lang} />
+        </div>
+      )}
+
+      {view === 'competitions' && (
+        loading ? (
+          <div className="flex justify-center py-24">
+            <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+          </div>
+        ) : (
+          <CompetitionsView
+            lang={lang}
+            ageGroupRules={[]}
+            availableAdmins={[]}
+            competitions={competitions}
+            canCreate={false}
+            onCreate={() => {}}
+            onManage={(id) => router.push(`/comp-admin/competitions/${id}`)}
+          />
+        )
       )}
     </div>
   )

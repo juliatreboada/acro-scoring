@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useDJScoring } from '@/hooks/useDJScoring'
 import type { Performance, Lang } from '../aj-scoring/types'
 import type { TsElement, ElementType, Deductions, ElementDeduction } from '../ej-scoring/types'
 import type { ElementFlag, ElementFlags } from '../dj-scoring/types'
 import { DEFAULT_FLAG } from '../dj-scoring/types'
-import type { PanelJudge, JudgeScore, RoutineResult } from '../cjp/types'
+import type { PanelJudge, JudgeScore, RoutineResult, ScoreDetail } from '../cjp/types'
 import { ScoreGrid } from '../shared/CJPTabletShell'
 import { categoryLabel } from '@/components/admin/types'
 
@@ -957,6 +958,64 @@ function PhoneEJElementsList({ elements, extraElements, deductions, lang, onLock
   )
 }
 
+// ─── phone: combined DJ+EJ view (no tabs, both modes = elements) ──────────────
+
+function PhoneCombinedElementsView({ lang, elements, extraElements, flags, deductions, incorrectTs,
+  onFlagChange, onLock, onOpenRetry, onAddElement, onLabelChange, onTypeChange, onToggleIncorrectTs, onSubmit }: {
+  lang: Lang
+  elements: TsElement[]
+  extraElements: TsElement[]
+  flags: ElementFlags
+  deductions: Deductions
+  incorrectTs: boolean
+  onFlagChange: (elementId: string, attemptNumber: number, patch: Partial<ElementFlag>) => void
+  onLock: (elementId: string, attemptNumber: number, value: number) => void
+  onOpenRetry: (elementId: string, nextAttemptNumber: number) => void
+  onAddElement: () => void
+  onLabelChange: (id: string, label: string) => void
+  onTypeChange: (id: string, type: ElementType, isStatic?: boolean) => void
+  onToggleIncorrectTs: () => void
+  onSubmit: () => void
+}) {
+  const t = T[lang]
+  const { difficulty, penalty } = calcDJTotals(elements, extraElements, flags, incorrectTs)
+  const ejScore = calcEJScore(deductions)
+  const allElements = [...elements, ...extraElements]
+
+  return (
+    <div className="px-4 space-y-2 pb-4">
+      <button onClick={onToggleIncorrectTs}
+        className={['flex items-start gap-3 px-3 py-2.5 rounded-xl border text-left transition-all w-full', incorrectTs ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white hover:border-slate-300'].join(' ')}>
+        <div className={['w-4 h-4 rounded border mt-0.5 shrink-0 flex items-center justify-center', incorrectTs ? 'bg-red-500 border-red-500' : 'border-slate-300'].join(' ')}>
+          {incorrectTs && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+        </div>
+        <div>
+          <p className={['text-sm font-medium', incorrectTs ? 'text-red-700' : 'text-slate-600'].join(' ')}>{t.incorrectTs} <span className="font-normal text-xs ml-1">−0.3</span></p>
+          <p className="text-xs text-slate-400 mt-0.5">{t.incorrectTsNote}</p>
+        </div>
+      </button>
+      {allElements.length === 0 ? (
+        <div className="text-center py-8 text-slate-400">
+          <p className="font-medium text-sm">{t.noElements}</p>
+          <p className="text-xs mt-1">{t.noElementsNote}</p>
+        </div>
+      ) : allElements.map((el) => (
+        <CombinedElementRow
+          key={el.id} element={el} flags={flags} deductions={deductions} lang={lang}
+          onFlagChange={onFlagChange} onLock={onLock} onOpenRetry={onOpenRetry}
+          isExtra={el.id.startsWith('extra-')} onLabelChange={onLabelChange} onTypeChange={onTypeChange}
+        />
+      ))}
+      <button onClick={onAddElement} className="w-full py-2.5 rounded-xl text-sm text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 hover:border-slate-300 transition-all">
+        {t.addElement}
+      </button>
+      <button onClick={onSubmit} className="w-full py-4 rounded-2xl font-bold text-lg bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white transition-all">
+        {t.submit} · D {difficulty.toFixed(2)}  −{penalty.toFixed(1)}  E {ejScore.toFixed(1)}
+      </button>
+    </div>
+  )
+}
+
 // ─── phone view (two tabs) ────────────────────────────────────────────────────
 
 function PhoneView({ perf, lang, djMode, ejMode, elements, extraElements, flags, deductions, incorrectTs, onFlagChange, onLock, onOpenRetry, onAddElement, onLabelChange, onTypeChange, onToggleIncorrectTs, onSubmitDJ, onSubmitEJ }: {
@@ -1109,7 +1168,7 @@ export type DJEJViewProps = {
   elements: TsElement[]
   djMode?: 'elements' | 'keyboard'
   ejMode?: 'elements' | 'keyboard'
-  onSubmit?: (difficulty: number, djPenalty: number, ejScore: number) => void
+  onSubmit?: (difficulty: number, djPenalty: number, ejScore: number, detail: ScoreDetail) => void
   waitingForOtherScores?: boolean
   judgeScores?: JudgeScore[]
   panelJudges?: PanelJudge[]
@@ -1118,10 +1177,11 @@ export type DJEJViewProps = {
 
 export default function DJEJView({ currentPerf, lang, elements, djMode = 'elements', ejMode = 'elements', onSubmit, waitingForOtherScores, judgeScores, panelJudges, result }: DJEJViewProps) {
   const t = T[lang]
-  const [flags, setFlags] = useState<ElementFlags>({})
-  const [deductions, setDeductions] = useState<Deductions>({})
-  const [incorrectTs, setIncorrectTs] = useState(false)
-  const [extraElements, setExtraElements] = useState<TsElement[]>([])
+  const { flags, extraElements, incorrectTs, deductions,
+    handleFlagChange, handleLock, handleOpenRetry,
+    handleAddElement, handleLabelChange, handleTypeChange,
+    toggleIncorrectTs, clearCache } = useDJScoring(elements, currentPerf?.id ?? null)
+
   const [submitted, setSubmitted] = useState(false)
   const [submittedDifficulty, setSubmittedDifficulty] = useState<number | null>(null)
   const [submittedPenalty, setSubmittedPenalty] = useState<number | null>(null)
@@ -1130,73 +1190,23 @@ export default function DJEJView({ currentPerf, lang, elements, djMode = 'elemen
 
   useEffect(() => {
     if (currentPerf?.id !== prevPerfId.current) {
-      const initial: ElementFlags = {}
-      elements.forEach((el) => {
-        initial[`${el.id}:1`] = { ...DEFAULT_FLAG }
-      })
-      setFlags(initial)
-      setDeductions({})
-      setIncorrectTs(false)
-      setExtraElements([])
       setSubmitted(false)
       setSubmittedDifficulty(null)
       setSubmittedPenalty(null)
       setSubmittedEJ(null)
       prevPerfId.current = currentPerf?.id ?? null
     }
-  }, [currentPerf?.id, elements])
-
-  function handleFlagChange(elementId: string, attemptNumber: number, patch: Partial<ElementFlag>) {
-    const key = `${elementId}:${attemptNumber}`
-    const element = [...elements, ...extraElements].find((el) => el.id === elementId)
-    const config = element ? getElementConfig(element) : null
-    setFlags((prev) => {
-      const current = prev[key] ?? DEFAULT_FLAG
-      const updated = { ...current, ...patch }
-      if (config && patch.tfCount !== undefined) {
-        if (patch.tfCount >= config.autoNotDoneAt) updated.isDone = false
-        else if (patch.tfCount > 0) updated.isDone = true
-      }
-      return { ...prev, [key]: updated }
-    })
-  }
-
-  function handleLock(elementId: string, attemptNumber: number, value: number) {
-    const key = `${elementId}:${attemptNumber}`
-    setDeductions((prev) => ({ ...prev, [key]: { value, locked: true } }))
-  }
-
-  function handleOpenRetry(elementId: string, nextAttemptNumber: number) {
-    const key = `${elementId}:${nextAttemptNumber}`
-    // open both DJ flag slot and EJ deduction slot simultaneously
-    setFlags((prev) => ({ ...prev, [key]: { ...DEFAULT_FLAG } }))
-    setDeductions((prev) => ({ ...prev, [key]: { value: 0, locked: false } }))
-  }
-
-  function handleAddElement() {
-    const id = `extra-${Date.now()}`
-    setExtraElements((prev) => [...prev, { id, position: 0, label: '', difficultyValue: 0 }])
-    setFlags((prev) => ({ ...prev, [`${id}:1`]: { ...DEFAULT_FLAG } }))
-  }
-
-  function handleLabelChange(id: string, label: string) {
-    setExtraElements((prev) => prev.map((el) => el.id === id ? { ...el, label } : el))
-  }
-
-  function handleTypeChange(id: string, type: ElementType, isStatic?: boolean) {
-    setExtraElements((prev) =>
-      prev.map((el) => el.id === id ? { ...el, elementType: type, isStatic: isStatic ?? el.isStatic } : el)
-    )
-  }
+  }, [currentPerf?.id])
 
   function handleSubmitTablet() {
     const { difficulty, penalty } = calcDJTotals(elements, extraElements, flags, incorrectTs)
     const ejScore = calcEJScore(deductions)
+    clearCache()
     setSubmittedDifficulty(difficulty)
     setSubmittedPenalty(penalty)
     setSubmittedEJ(ejScore)
     setSubmitted(true)
-    onSubmit?.(difficulty, penalty, ejScore)
+    onSubmit?.(difficulty, penalty, ejScore, { djFlags: flags, djExtraElements: extraElements, djIncorrectTs: incorrectTs, ejDeductions: deductions, ejExtraElements: extraElements })
   }
 
   function handlePhoneDJ(difficulty: number, penalty: number) {
@@ -1207,9 +1217,10 @@ export default function DJEJView({ currentPerf, lang, elements, djMode = 'elemen
   function handlePhoneEJ(score: number) {
     const difficulty = submittedDifficulty ?? 0
     const penalty = submittedPenalty ?? 0
+    clearCache()
     setSubmittedEJ(score)
     setSubmitted(true)
-    onSubmit?.(difficulty, penalty, score)
+    onSubmit?.(difficulty, penalty, score, { djFlags: flags, djExtraElements: extraElements, djIncorrectTs: incorrectTs, ejDeductions: deductions, ejExtraElements: extraElements })
   }
 
   // ── waiting ──
@@ -1274,28 +1285,39 @@ export default function DJEJView({ currentPerf, lang, elements, djMode = 'elemen
 
   return (
     <>
-      {/* phone: two tabs */}
+      {/* phone: combined when both elements, else two tabs */}
       <div className="md:hidden">
-        <PhoneView
-          perf={currentPerf}
-          lang={lang}
-          djMode={djMode}
-          ejMode={ejMode}
-          elements={elements}
-          extraElements={extraElements}
-          flags={flags}
-          deductions={deductions}
-          incorrectTs={incorrectTs}
-          onFlagChange={handleFlagChange}
-          onLock={handleLock}
-          onOpenRetry={handleOpenRetry}
-          onAddElement={handleAddElement}
-          onLabelChange={handleLabelChange}
-          onTypeChange={handleTypeChange}
-          onToggleIncorrectTs={() => setIncorrectTs((v) => !v)}
-          onSubmitDJ={handlePhoneDJ}
-          onSubmitEJ={handlePhoneEJ}
-        />
+        {djMode === 'elements' && ejMode === 'elements' ? (
+          <PhoneCombinedElementsView
+            lang={lang} elements={elements} extraElements={extraElements}
+            flags={flags} deductions={deductions} incorrectTs={incorrectTs}
+            onFlagChange={handleFlagChange} onLock={handleLock} onOpenRetry={handleOpenRetry}
+            onAddElement={handleAddElement} onLabelChange={handleLabelChange} onTypeChange={handleTypeChange}
+            onToggleIncorrectTs={toggleIncorrectTs}
+            onSubmit={handleSubmitTablet}
+          />
+        ) : (
+          <PhoneView
+            perf={currentPerf}
+            lang={lang}
+            djMode={djMode}
+            ejMode={ejMode}
+            elements={elements}
+            extraElements={extraElements}
+            flags={flags}
+            deductions={deductions}
+            incorrectTs={incorrectTs}
+            onFlagChange={handleFlagChange}
+            onLock={handleLock}
+            onOpenRetry={handleOpenRetry}
+            onAddElement={handleAddElement}
+            onLabelChange={handleLabelChange}
+            onTypeChange={handleTypeChange}
+            onToggleIncorrectTs={toggleIncorrectTs}
+            onSubmitDJ={handlePhoneDJ}
+            onSubmitEJ={handlePhoneEJ}
+          />
+        )}
       </div>
       {/* tablet/desktop: combined element view */}
       <div className="hidden md:block h-full px-4 pb-4">
@@ -1313,7 +1335,7 @@ export default function DJEJView({ currentPerf, lang, elements, djMode = 'elemen
           onAddElement={handleAddElement}
           onLabelChange={handleLabelChange}
           onTypeChange={handleTypeChange}
-          onToggleIncorrectTs={() => setIncorrectTs((v) => !v)}
+          onToggleIncorrectTs={toggleIncorrectTs}
           onSubmit={handleSubmitTablet}
           tsUrl={currentPerf?.tsUrl}
         />

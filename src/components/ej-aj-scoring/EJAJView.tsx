@@ -3,13 +3,13 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Performance, Lang } from '../aj-scoring/types'
 import type { TsElement } from '../ej-scoring/types'
-import type { Deductions } from '../ej-scoring/types'
 import type { PanelJudge, JudgeScore, RoutineResult } from '../cjp/types'
 import { ScoreGrid } from '../shared/CJPTabletShell'
 import { categoryLabel } from '@/components/admin/types'
 import { calcEJScore, EJKeypad, EJElementRow } from '../shared/DJEJElementsShared'
 import AJScoringPanel from '../shared/AJScoringPanel'
 import CheckIcon from '../shared/CheckIcon'
+import { useEJScoring } from '@/hooks/useEJScoring'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -29,6 +29,7 @@ const T = {
     submit: 'Submit',
     noElements: 'No elements in tariff sheet',
     noElementsNote: 'You can submit immediately',
+    addElement: '+ Add unlisted element',
   },
   es: {
     waiting: 'Esperando actuación…',
@@ -45,6 +46,7 @@ const T = {
     submit: 'Enviar',
     noElements: 'No hay elementos en la hoja de tarifa',
     noElementsNote: 'Puedes enviar directamente',
+    addElement: '+ Añadir elemento no listado',
   },
 }
 
@@ -138,7 +140,10 @@ export default function EJAJView({
 }: EJAJViewProps) {
   const t = T[lang]
 
-  const [deductions, setDeductions] = useState<Deductions>({})
+  const { deductions, orderedAll, dragId, dropIdx, dragRef,
+    handleLock, handleAddElement, handleLabelChange, handleReorder,
+    setDragId, setDropIdx } = useEJScoring(elements, currentPerf?.id ?? null)
+
   const [ejSubmitted, setEjSubmitted] = useState<number | null>(null)
   const [ajSubmitted, setAjSubmitted] = useState<number | null>(null)
   const [tab, setTab] = useState<'ej' | 'aj'>('ej')
@@ -148,7 +153,6 @@ export default function EJAJView({
 
   useEffect(() => {
     if (currentPerf?.id !== prevPerfId.current) {
-      setDeductions({})
       setEjSubmitted(null)
       setAjSubmitted(null)
       setTab('ej')
@@ -156,10 +160,6 @@ export default function EJAJView({
       prevPerfId.current = currentPerf?.id ?? null
     }
   }, [currentPerf?.id])
-
-  function handleLock(elementId: string, attemptNumber: number, value: number) {
-    setDeductions((prev) => ({ ...prev, [`${elementId}:${attemptNumber}`]: { value, locked: true } }))
-  }
 
   function handleEJSubmit(score: number) {
     setEjSubmitted(score)
@@ -248,14 +248,33 @@ export default function EJAJView({
             <EJKeypad lang={lang} onSubmit={handleEJSubmit} />
           ) : (
             <div className="px-4 space-y-2 pb-4">
-              {elements.length === 0 ? (
+              {orderedAll.length === 0 ? (
                 <div className="text-center py-8 text-slate-400">
                   <p className="font-medium text-sm">{t.noElements}</p>
                   <p className="text-xs mt-1">{t.noElementsNote}</p>
                 </div>
-              ) : elements.map((el) => (
-                <EJElementRow key={el.id} element={el} deductions={deductions} lang={lang} onLock={handleLock} />
-              ))}
+              ) : orderedAll.map((el, idx) => {
+                const isExtra = el.id.startsWith('extra-')
+                const isDragging = dragId === el.id
+                const isDropTarget = dragId !== null && dragId !== el.id && dropIdx === idx
+                return (
+                  <div key={el.id}
+                    draggable={isExtra}
+                    onDragStart={isExtra ? (e) => { e.dataTransfer.effectAllowed = 'move'; dragRef.current = el.id; setDragId(el.id) } : undefined}
+                    onDragEnd={() => { dragRef.current = null; setDragId(null); setDropIdx(null) }}
+                    onDragOver={(e) => { e.preventDefault(); if (dragRef.current) setDropIdx(idx) }}
+                    onDrop={(e) => { e.preventDefault(); if (dragRef.current) handleReorder(dragRef.current, idx) }}
+                    className={[isExtra ? 'cursor-grab active:cursor-grabbing' : '', isDragging ? 'opacity-40' : '', isDropTarget ? 'ring-2 ring-blue-400 ring-offset-1 rounded-xl' : ''].join(' ')}
+                  >
+                    {isExtra && <div className="text-xs text-slate-300 text-right pr-1 mb-0.5 select-none">⠿ drag to reorder</div>}
+                    <EJElementRow element={el} deductions={deductions} lang={lang} onLock={handleLock}
+                      onLabelChange={isExtra ? handleLabelChange : undefined} />
+                  </div>
+                )
+              })}
+              <button onClick={handleAddElement} className="w-full py-2.5 rounded-xl text-sm text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 hover:border-slate-300 transition-all">
+                {t.addElement}
+              </button>
               <button onClick={handleTabletEJSubmit}
                 className="w-full py-4 rounded-2xl font-bold text-lg bg-sky-500 hover:bg-sky-600 active:scale-95 text-white transition-all">
                 {t.submit} · E {ejScoreVal.toFixed(1)}
@@ -338,14 +357,33 @@ export default function EJAJView({
               ) : (
                 <>
                   <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-0">
-                    {elements.length === 0 ? (
+                    {orderedAll.length === 0 ? (
                       <div className="text-center py-8 text-slate-400">
                         <p className="font-medium text-sm">{t.noElements}</p>
                         <p className="text-xs mt-1">{t.noElementsNote}</p>
                       </div>
-                    ) : elements.map((el) => (
-                      <EJElementRow key={el.id} element={el} deductions={deductions} lang={lang} onLock={handleLock} />
-                    ))}
+                    ) : orderedAll.map((el, idx) => {
+                      const isExtra = el.id.startsWith('extra-')
+                      const isDragging = dragId === el.id
+                      const isDropTarget = dragId !== null && dragId !== el.id && dropIdx === idx
+                      return (
+                        <div key={el.id}
+                          draggable={isExtra}
+                          onDragStart={isExtra ? (e) => { e.dataTransfer.effectAllowed = 'move'; setDragId(el.id) } : undefined}
+                          onDragEnd={() => { setDragId(null); setDropIdx(null) }}
+                          onDragOver={dragId ? (e) => { e.preventDefault(); setDropIdx(idx) } : undefined}
+                          onDrop={dragId ? (e) => { e.preventDefault(); handleReorder(dragId, idx) } : undefined}
+                          className={[isExtra ? 'cursor-grab active:cursor-grabbing' : '', isDragging ? 'opacity-40' : '', isDropTarget ? 'ring-2 ring-blue-400 ring-offset-1 rounded-xl' : ''].join(' ')}
+                        >
+                          {isExtra && <div className="text-xs text-slate-300 text-right pr-1 mb-0.5 select-none">⠿ drag to reorder</div>}
+                          <EJElementRow element={el} deductions={deductions} lang={lang} onLock={handleLock}
+                            onLabelChange={isExtra ? handleLabelChange : undefined} />
+                        </div>
+                      )
+                    })}
+                    <button onClick={handleAddElement} className="w-full py-2.5 rounded-xl text-sm text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 hover:border-slate-300 transition-all">
+                      {t.addElement}
+                    </button>
                   </div>
                   <button onClick={handleTabletEJSubmit} className="w-full py-4 rounded-2xl font-bold text-lg bg-sky-500 hover:bg-sky-600 active:scale-95 text-white transition-all">
                     {t.submit} · E {ejScoreVal.toFixed(1)}

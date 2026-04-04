@@ -395,6 +395,11 @@ export function useJudgeSession(): JudgeSessionData {
       section_panel_judge_id: score.panelJudgeId,
       ej_score: score.ejScore, aj_score: score.ajScore,
       dj_difficulty: score.djDifficulty, dj_penalty: score.djPenalty, cjp_penalty: score.cjpPenalty,
+      dj_flags: score.detail?.djFlags ?? null,
+      dj_extra_elements: score.detail?.djExtraElements ?? null,
+      dj_incorrect_ts: score.detail?.djIncorrectTs ?? null,
+      ej_deductions: score.detail?.ejDeductions ?? null,
+      ej_extra_elements: score.detail?.ejExtraElements ?? null,
     }, { onConflict: 'session_id,team_id,section_panel_judge_id' })
     setJudgeScores(prev => {
       const cur = prev[currentPerfId] ?? []

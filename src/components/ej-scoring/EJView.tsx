@@ -2,9 +2,18 @@
 
 import { useState, useEffect, useRef } from 'react'
 import type { Performance, Lang, Deductions, TsElement } from './types'
-import type { PanelJudge, JudgeScore, RoutineResult } from '../cjp/types'
+import type { PanelJudge, JudgeScore, RoutineResult, ScoreDetail } from '../cjp/types'
 import { categoryLabel } from '@/components/admin/types'
 import { ScoreGrid } from '../shared/CJPTabletShell'
+
+function safeRead<T>(key: string): T | null {
+  if (typeof window === 'undefined') return null
+  try { const s = localStorage.getItem(key); return s ? JSON.parse(s) as T : null } catch { return null }
+}
+function safeWrite(key: string, val: unknown) {
+  if (typeof window === 'undefined') return
+  try { localStorage.setItem(key, JSON.stringify(val)) } catch {}
+}
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -272,7 +281,7 @@ type EJViewProps = {
   lang: Lang
   elements: TsElement[]
   mode?: 'elements' | 'keyboard'   // default 'elements'; driven by admin config
-  onSubmit?: (score: number) => void
+  onSubmit?: (score: number, detail: ScoreDetail) => void
   waitingForOtherScores?: boolean
   judgeScores?: JudgeScore[]
   panelJudges?: PanelJudge[]
@@ -289,12 +298,20 @@ export default function EJView({ currentPerf, lang, elements, mode = 'elements',
   // drag-drop state for unlisted elements
   const [dragId, setDragId] = useState<string | null>(null)
   const [dropIdx, setDropIdx] = useState<number | null>(null)
+  const dragRef = useRef<string | null>(null)
   const prevPerfId = useRef<string | null>(null)
 
   useEffect(() => {
     if (currentPerf?.id !== prevPerfId.current) {
-      setDeductions({})
-      setOrderedAll([...elements])
+      const cacheKey = currentPerf?.id ? `scoring_ejview_${currentPerf.id}` : null
+      const cached = cacheKey ? safeRead<{ deductions: Deductions; orderedAll: TsElement[] }>(cacheKey) : null
+      if (cached) {
+        setDeductions(cached.deductions)
+        setOrderedAll(cached.orderedAll)
+      } else {
+        setDeductions({})
+        setOrderedAll([...elements])
+      }
       setSubmitted(false)
       setSubmittedScore(null)
       setDragId(null)
@@ -302,6 +319,11 @@ export default function EJView({ currentPerf, lang, elements, mode = 'elements',
       prevPerfId.current = currentPerf?.id ?? null
     }
   }, [currentPerf?.id, elements])
+
+  useEffect(() => {
+    if (!currentPerf?.id || submitted) return
+    safeWrite(`scoring_ejview_${currentPerf.id}`, { deductions, orderedAll })
+  }, [deductions, orderedAll, currentPerf?.id, submitted])
 
   function handleLock(elementId: string, attemptNumber: number, value: number) {
     setDeductions((prev) => ({ ...prev, [`${elementId}:${attemptNumber}`]: { value, locked: true } }))
@@ -334,15 +356,19 @@ export default function EJView({ currentPerf, lang, elements, mode = 'elements',
 
   function handleSubmitElements() {
     const score = calcScore(deductions)
+    const extraElements = orderedAll.filter(el => !elements.some(e => e.id === el.id))
     setSubmittedScore(score)
     setSubmitted(true)
-    onSubmit?.(score)
+    if (currentPerf?.id) localStorage.removeItem(`scoring_ejview_${currentPerf.id}`)
+    onSubmit?.(score, { ejDeductions: deductions, ejExtraElements: extraElements })
   }
 
   function handleSubmitPhone(score: number) {
+    const extraElements = orderedAll.filter(el => !elements.some(e => e.id === el.id))
     setSubmittedScore(score)
     setSubmitted(true)
-    onSubmit?.(score)
+    if (currentPerf?.id) localStorage.removeItem(`scoring_ejview_${currentPerf.id}`)
+    onSubmit?.(score, { ejDeductions: deductions, ejExtraElements: extraElements })
   }
 
   // ── waiting ──
@@ -441,10 +467,10 @@ export default function EJView({ currentPerf, lang, elements, mode = 'elements',
                   <div
                     key={el.id}
                     draggable={isExtra}
-                    onDragStart={isExtra ? (e) => { e.dataTransfer.effectAllowed = 'move'; setDragId(el.id) } : undefined}
-                    onDragEnd={() => { setDragId(null); setDropIdx(null) }}
-                    onDragOver={dragId ? (e) => { e.preventDefault(); setDropIdx(idx) } : undefined}
-                    onDrop={dragId ? (e) => { e.preventDefault(); handleReorder(dragId, idx) } : undefined}
+                    onDragStart={isExtra ? (e) => { e.dataTransfer.effectAllowed = 'move'; dragRef.current = el.id; setDragId(el.id) } : undefined}
+                    onDragEnd={() => { dragRef.current = null; setDragId(null); setDropIdx(null) }}
+                    onDragOver={(e) => { e.preventDefault(); if (dragRef.current) setDropIdx(idx) }}
+                    onDrop={(e) => { e.preventDefault(); if (dragRef.current) handleReorder(dragRef.current, idx) }}
                     className={[
                       isExtra ? 'cursor-grab active:cursor-grabbing' : '',
                       isDragging ? 'opacity-40' : '',
@@ -466,7 +492,7 @@ export default function EJView({ currentPerf, lang, elements, mode = 'elements',
               <div
                 className={['h-2 rounded-lg transition-all', dropIdx === orderedAll.length ? 'bg-blue-400' : ''].join(' ')}
                 onDragOver={(e) => { e.preventDefault(); setDropIdx(orderedAll.length) }}
-                onDrop={(e) => { e.preventDefault(); handleReorder(dragId, orderedAll.length) }}
+                onDrop={(e) => { e.preventDefault(); if (dragRef.current) handleReorder(dragRef.current, orderedAll.length) }}
               />
             )}
 

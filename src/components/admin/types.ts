@@ -97,6 +97,7 @@ export type Gymnast = {
   last_name_2: string | null  // second surname (optional)
   date_of_birth: string     // 'YYYY-MM-DD'
   photo_url: string | null
+  licencia_url?: string | null  // PDF competition licence
 }
 
 // How many gymnasts each category requires

@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination } from '@/components/admin/types'
+import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination, Gymnast } from '@/components/admin/types'
 import { NEXT_STATUS } from '@/components/admin/types'
 import StructureTab from './StructureTab'
 import JudgesTab, { type JudgesTabProps, type PanelLock } from './JudgesTab'
 import RegistrationsTab, { type RegistrationsTabProps } from './RegistrationsTab'
 import StartingOrderTab, { type StartingOrderTabProps } from './StartingOrderTab'
 import CompetitionDayTab from './CompetitionDayTab'
+import LicenciasTab from './LicenciasTab'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -22,6 +23,7 @@ const T = {
       registrations: 'Registrations',
       overview:      'Overview',
       day:           'Competition day',
+      licencias:     'Licencias',
     },
     soon: 'Coming soon',
     soonSub: 'This section is not built yet.',
@@ -79,6 +81,7 @@ const T = {
       registrations: 'Inscripciones',
       overview:      'Resumen',
       day:           'Día de competición',
+      licencias:     'Licencias',
     },
     soon: 'Próximamente',
     soonSub: 'Esta jornada aún no está construida.',
@@ -141,7 +144,7 @@ const ACTION_STYLE: Partial<Record<CompetitionStatus, string>> = {
   active:               'border-red-200 text-red-600 hover:bg-red-50',
 }
 
-type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day'
+type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias'
 
 function formatDateRange(start: string | null, end: string | null): string {
   const fmt = (d: string) =>
@@ -428,6 +431,8 @@ export type CompetitionDetailProps = {
   // competition day
   onStartSession: (sessionId: string) => void
   onFinishSession: (sessionId: string) => void
+  // licencias
+  competitionGymnasts: Gymnast[]
 }
 
 export default function CompetitionDetail({
@@ -440,6 +445,7 @@ export default function CompetitionDetail({
   globalTeams, clubs, entries, onToggleDropout, sessionOrders, lockedSessions, onReorder, onToggleLock, onReorderTimeline,
   availableAdmins, ageGroupRules, onUpdateCompetition,
   onSetDJReviewDeadline, onStartSession, onFinishSession,
+  competitionGymnasts,
 }: CompetitionDetailProps) {
   const t = T[lang]
   const [activeTab, setActiveTab] = useState<Tab>('structure')
@@ -454,6 +460,7 @@ export default function CompetitionDetail({
     { key: 'judges',        label: t.tabs.judges        },
     { key: 'startingOrder', label: t.tabs.startingOrder },
     { key: 'registrations', label: t.tabs.registrations },
+    { key: 'licencias',     label: t.tabs.licencias     },
     { key: 'day',           label: t.tabs.day, live: competition.status === 'active' },
     { key: 'overview',      label: t.tabs.overview      },
   ]
@@ -638,6 +645,15 @@ export default function CompetitionDetail({
           entries={entries}
           agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group} (${r.ruleset})`]))}
           onToggleDropout={onToggleDropout}
+        />
+      )}
+      {activeTab === 'licencias' && (
+        <LicenciasTab
+          lang={lang}
+          globalTeams={globalTeams}
+          clubs={clubs}
+          entries={entries}
+          competitionGymnasts={competitionGymnasts}
         />
       )}
       {activeTab === 'day' && (

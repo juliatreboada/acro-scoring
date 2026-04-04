@@ -5,7 +5,7 @@ import { useJudgeSession } from '@/hooks/useJudgeSession'
 import DJEJView from '@/components/dj-ej-scoring/DJEJView'
 import AuthBar from '@/components/shared/AuthBar'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { JudgeScore } from '@/components/cjp/types'
+import type { JudgeScore, ScoreDetail } from '@/components/cjp/types'
 
 export default function Page() {
   const [lang, setLang] = useState<Lang>('es')
@@ -36,10 +36,12 @@ export default function Page() {
   const currentResult = currentPerfId ? (results[currentPerfId] ?? null) : null
   const waitingForOtherScores = mySubmitted && !currentResult
 
-  function handleSubmit(difficulty: number, djPenalty: number, ejScore: number) {
+  function handleSubmit(difficulty: number, djPenalty: number, ejScore: number, detail: ScoreDetail) {
     const scores: JudgeScore[] = []
-    if (djRole) scores.push({ panelJudgeId: djRole.id, ejScore: null, ajScore: null, djDifficulty: difficulty, djPenalty, cjpPenalty: null })
-    if (ejRole) scores.push({ panelJudgeId: ejRole.id, ejScore, ajScore: null, djDifficulty: null, djPenalty: null, cjpPenalty: null })
+    if (djRole) scores.push({ panelJudgeId: djRole.id, ejScore: null, ajScore: null, djDifficulty: difficulty, djPenalty, cjpPenalty: null,
+      detail: { djFlags: detail.djFlags, djExtraElements: detail.djExtraElements, djIncorrectTs: detail.djIncorrectTs } })
+    if (ejRole) scores.push({ panelJudgeId: ejRole.id, ejScore, ajScore: null, djDifficulty: null, djPenalty: null, cjpPenalty: null,
+      detail: { ejDeductions: detail.ejDeductions, ejExtraElements: detail.ejExtraElements } })
     scores.forEach(s => handleJudgeScoreSubmit(s))
   }
 

@@ -9,7 +9,7 @@ import type { Lang } from '@/components/aj-scoring/types'
 import type {
   Competition, Panel, Section, Session, Judge, SectionPanelJudge,
   Role, Team, Club, CompetitionEntry, SessionOrder, AdminUser,
-  AgeGroupRule, CompetitionJudgeNomination,
+  AgeGroupRule, CompetitionJudgeNomination, Gymnast,
 } from '@/components/admin/types'
 import { ROLE_CONFIG, defaultSlots, NEXT_STATUS } from '@/components/admin/types'
 import type { PanelLock } from '@/components/admin/competition-detail/JudgesTab'
@@ -39,6 +39,7 @@ export default function Page() {
   const [panelLocks, setPanelLocks]           = useState<PanelLock[]>([])
   const [availableAdmins, setAvailableAdmins] = useState<AdminUser[]>([])
   const [ageGroupRules, setAgeGroupRules]     = useState<AgeGroupRule[]>([])
+  const [competitionGymnasts, setCompetitionGymnasts] = useState<Gymnast[]>([])
 
   // ── initial load ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -65,14 +66,22 @@ export default function Page() {
 
       if (!compRes.data) { setLoading(false); return }
 
+      type TeamRow = { id: string; club_id: string; category: string; age_group: string; gymnast_display: string; photo_url: string | null; gymnast_ids: string[] | null }
       const entryTeamIds = (entriesRes.data ?? []).map(e => e.team_id)
-      const { data: teamsData } = entryTeamIds.length > 0
-        ? await supabase.from('teams').select('id,club_id,category,age_group,gymnast_display,photo_url').in('id', entryTeamIds)
-        : { data: [] }
-      const clubIds = [...new Set((teamsData ?? []).map(t => t.club_id))]
+      const { data: teamsRaw } = entryTeamIds.length > 0
+        ? await (supabase as any).from('teams').select('id,club_id,category,age_group,gymnast_display,photo_url,gymnast_ids').in('id', entryTeamIds) as { data: TeamRow[] | null }
+        : { data: [] as TeamRow[] }
+      const teamsData = teamsRaw ?? []
+      const clubIds = [...new Set(teamsData.map(t => t.club_id))]
       const { data: clubsData } = clubIds.length > 0
         ? await supabase.from('clubs').select('id,club_name,contact_name,phone,avatar_url').in('id', clubIds)
         : { data: [] }
+
+      // fetch gymnasts for licencias tab
+      const allGymnastIds = [...new Set(teamsData.flatMap(t => t.gymnast_ids ?? []))]
+      const { data: gymnastsData } = allGymnastIds.length > 0
+        ? await (supabase as any).from('gymnasts').select('id,club_id,first_name,last_name_1,last_name_2,date_of_birth,photo_url,licencia_url').in('id', allGymnastIds) as { data: Gymnast[] | null }
+        : { data: [] as Gymnast[] }
 
       const rawSessions = sessionsRes.data ?? []
       const locked = rawSessions.filter(s => s.order_locked).map(s => s.id)
@@ -125,8 +134,9 @@ export default function Page() {
       setNominations(rawNoms)
       setJudgePool(rawNoms.map(n => n.judge_id))
       setAssignments(assignmentsRes.data ?? [])
-      setGlobalTeams(teamsData ?? [])
+      setGlobalTeams(teamsData as unknown as Team[])
       setClubs(clubsData ?? [])
+      setCompetitionGymnasts(gymnastsData ?? [])
       setEntries(entriesRes.data ?? [])
       setLockedSessions(locked)
       setPanelLocks(panelLocksData ?? [])
@@ -427,6 +437,7 @@ export default function Page() {
         onStartSession={handleStartSession}
         onFinishSession={handleFinishSession}
         onSetDJReviewDeadline={handleSetDJReviewDeadline}
+        competitionGymnasts={competitionGymnasts}
       />
     </div>
   )

@@ -15,6 +15,7 @@ function DJReviewPage() {
   const [lang, setLang] = useState<Lang>('es')
   const [sheets, setSheets] = useState<Sheet[]>([])
   const [loading, setLoading] = useState(true)
+  const [myJudgeId, setMyJudgeId] = useState<string>('')
 
   useEffect(() => {
     async function load() {
@@ -24,6 +25,7 @@ function DJReviewPage() {
       const { data: judge } = await supabase
         .from('judges').select('id').eq('id', user.id).single()
       if (!judge) { setLoading(false); return }
+      setMyJudgeId(judge.id)
 
       // 1. SPJs where this judge is assigned as DJ (role filter)
       const { data: spjs } = await supabase
@@ -150,7 +152,25 @@ function DJReviewPage() {
 
       const teamIds = [...new Set(sessionTeams.map(o => o.team_id))]
 
-      const [teamsRes, musicRes, rulesRes, elementsRes] = await Promise.all([
+      // Load all DJs for these section+panel pairs to detect 2-DJ panels
+      const { data: panelDJRows } = await supabase
+        .from('section_panel_judges')
+        .select('section_id, panel_id, judge_id')
+        .eq('role', 'DJ')
+        .in('section_id', validSectionIds)
+        .in('panel_id', validPanelIds)
+
+      const djsPerPanel: Record<string, string[]> = {}
+      for (const row of panelDJRows ?? []) {
+        // Instead of pushing directly, filter out nulls
+        const key = `${row.section_id}|${row.panel_id}`
+        if (!djsPerPanel[key]) djsPerPanel[key] = []
+        if (row.judge_id) {  // Only push if not null
+          djsPerPanel[key].push(row.judge_id)
+        }
+      }
+
+      const [teamsRes, musicRes, rulesRes, elementsRes, reviewRes] = await Promise.all([
         supabase.from('teams').select('id, gymnast_display, age_group, category').in('id', teamIds),
         supabase.from('routine_music')
           .select('team_id, competition_id, routine_type, ts_path')
@@ -160,6 +180,9 @@ function DJReviewPage() {
           .select('id, team_id, competition_id, routine_type, position, label, element_type, is_static, difficulty_value')
           .in('team_id', teamIds).in('competition_id', [...validCompIds])
           .order('position'),
+        supabase.from('ts_review_status')
+          .select('team_id, competition_id, routine_type, status, dj1_id, dj1_decision, dj1_comment, dj2_id, final_comment')
+          .in('team_id', teamIds).in('competition_id', [...validCompIds]),
       ])
 
       const agLabels: Record<string, string> = Object.fromEntries(
@@ -172,6 +195,9 @@ function DJReviewPage() {
 
       type RawElement = { id: string; team_id: string; competition_id: string; routine_type: string; position: number; label: string; element_type: string; is_static: boolean; difficulty_value: number }
       const rawElements = (elementsRes.data ?? []) as RawElement[]
+
+      type RawReview = { team_id: string; competition_id: string; routine_type: string; status: string; dj1_id: string | null; dj1_decision: string | null; dj1_comment: string | null; dj2_id: string | null; final_comment: string | null }
+      const rawReviews = (reviewRes.data ?? []) as RawReview[]
 
       // Build one sheet per (session × team), deduplicating
       const seenKeys = new Set<string>()
@@ -200,6 +226,12 @@ function DJReviewPage() {
             isStatic:        e.is_static,
             difficultyValue: e.difficulty_value,
           }))
+        const spjKey = `${session.section_id}|${session.panel_id}`
+        const hasTwoDJs = (djsPerPanel[spjKey]?.length ?? 0) >= 2
+
+        const reviewRow = rawReviews.find(
+          r => r.team_id === o.team_id && r.competition_id === session.competition_id && r.routine_type === session.routine_type
+        )
         return [{
           id:            key,
           teamId:        o.team_id,
@@ -209,8 +241,14 @@ function DJReviewPage() {
           category:      team.category,
           routineType:   session.routine_type,
           pdfUrl:        music?.ts_path ?? null,
-          reviewedAt:    null,
           elements:      sheetElements,
+          reviewStatus:  (reviewRow?.status ?? 'pending') as import('@/components/dj-review/types').TsReviewStatus,
+          dj1Id:         reviewRow?.dj1_id ?? null,
+          dj1Decision:   (reviewRow?.dj1_decision ?? null) as 'checked' | 'incorrect' | null,
+          dj1Comment:    reviewRow?.dj1_comment ?? null,
+          dj2Id:         reviewRow?.dj2_id ?? null,
+          finalComment:  reviewRow?.final_comment ?? null,
+          hasTwoDJs,
         }]
       })
 
@@ -230,7 +268,7 @@ function DJReviewPage() {
     <div className="min-h-screen bg-slate-100">
       <AuthBar lang={lang} onLangChange={setLang} />
       <div className="max-w-5xl mx-auto pt-4 pb-16">
-        <DJReview initialSheets={sheets} lang={lang} />
+        <DJReview initialSheets={sheets} myJudgeId={myJudgeId} lang={lang} />
       </div>
     </div>
   )

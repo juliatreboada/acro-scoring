@@ -4,14 +4,14 @@ import { useState, useEffect, useRef } from 'react'
 import type { Performance, Lang } from '../aj-scoring/types'
 import type { TsElement, ElementType, Deductions } from '../ej-scoring/types'
 import type { ElementFlag, ElementFlags } from '../dj-scoring/types'
-import { DEFAULT_FLAG } from '../dj-scoring/types'
-import type { PanelJudge, JudgeScore, RoutineResult } from '../cjp/types'
+import type { PanelJudge, JudgeScore, RoutineResult, ScoreDetail } from '../cjp/types'
 import { ScoreGrid } from '../shared/CJPTabletShell'
 import { categoryLabel } from '@/components/admin/types'
-import { getElementConfig, calcDJTotals, IncorrectTsToggle, DualKeypad, PhoneDJElementsList } from '../shared/DJElementsShared'
+import { calcDJTotals, IncorrectTsToggle, DualKeypad, PhoneDJElementsList } from '../shared/DJElementsShared'
 import { calcEJScore, EJKeypad, EJElementRow, CombinedElementRow } from '../shared/DJEJElementsShared'
 import AJScoringPanel from '../shared/AJScoringPanel'
 import CheckIcon from '../shared/CheckIcon'
+import { useDJScoring } from '@/hooks/useDJScoring'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -146,7 +146,7 @@ export type DJEJAJViewProps = {
   elements: TsElement[]
   djMode?: 'elements' | 'keyboard'
   ejMode?: 'elements' | 'keyboard'
-  onSubmit?: (djDifficulty: number, djPenalty: number, ejScore: number, ajScore: number) => void
+  onSubmit?: (djDifficulty: number, djPenalty: number, ejScore: number, ajScore: number, detail: ScoreDetail) => void
   panelJudges?: PanelJudge[]
   judgeScores?: JudgeScore[]
   waitingForOtherScores?: boolean
@@ -159,19 +159,20 @@ export default function DJEJAJView({
 }: DJEJAJViewProps) {
   const t = T[lang]
 
-  // DJ state
-  const [extraElements, setExtraElements] = useState<TsElement[]>([])
-  const [flags, setFlags] = useState<ElementFlags>({})
-  const [deductions, setDeductions] = useState<Deductions>({})
-  const [incorrectTs, setIncorrectTs] = useState(false)
+  const { flags, extraElements, incorrectTs, deductions,
+    handleFlagChange, handleLock, handleOpenRetry,
+    handleAddElement, handleLabelChange, handleTypeChange,
+    toggleIncorrectTs, clearCache } = useDJScoring(elements, currentPerf?.id ?? null)
 
   // submission
   const [djSubmitted, setDjSubmitted] = useState<{ difficulty: number; penalty: number } | null>(null)
   const [ejSubmitted, setEjSubmitted] = useState<number | null>(null)
   const [ajSubmitted, setAjSubmitted] = useState<number | null>(null)
 
-  // mobile tab
+  // mobile tab (3-tab mode when at least one is keyboard)
   const [tab, setTab] = useState<'dj' | 'ej' | 'aj'>('dj')
+  // mobile tab (2-tab combined mode when both are elements)
+  const [combinedTab, setCombinedTab] = useState<'djej' | 'aj'>('djej')
   // tablet tab
   const [tabletTab, setTabletTab] = useState<'djej' | 'aj'>('djej')
 
@@ -179,62 +180,23 @@ export default function DJEJAJView({
 
   useEffect(() => {
     if (currentPerf?.id !== prevPerfId.current) {
-      const initial: ElementFlags = {}
-      elements.forEach((el) => { initial[`${el.id}:1`] = { ...DEFAULT_FLAG } })
-      setFlags(initial)
-      setIncorrectTs(false)
-      setExtraElements([])
-      setDeductions({})
       setDjSubmitted(null)
       setEjSubmitted(null)
       setAjSubmitted(null)
       setTab('dj')
+      setCombinedTab('djej')
       setTabletTab('djej')
       prevPerfId.current = currentPerf?.id ?? null
     }
-  }, [currentPerf?.id, elements])
-
-  function handleFlagChange(elementId: string, attemptNumber: number, patch: Partial<ElementFlag>) {
-    const key = `${elementId}:${attemptNumber}`
-    const element = [...elements, ...extraElements].find((el) => el.id === elementId)
-    const config = element ? getElementConfig(element) : null
-    setFlags((prev) => {
-      const current = prev[key] ?? DEFAULT_FLAG
-      const updated = { ...current, ...patch }
-      if (config && patch.tfCount !== undefined) {
-        if (patch.tfCount >= config.autoNotDoneAt) updated.isDone = false
-        else if (patch.tfCount > 0) updated.isDone = true
-      }
-      return { ...prev, [key]: updated }
-    })
-  }
-
-  function handleOpenRetry(elementId: string, nextAttemptNumber: number) {
-    setFlags((prev) => ({ ...prev, [`${elementId}:${nextAttemptNumber}`]: { ...DEFAULT_FLAG } }))
-  }
-
-  function handleAddElement() {
-    const id = `extra-${Date.now()}`
-    setExtraElements((prev) => [...prev, { id, position: 0, label: '', difficultyValue: 0 }])
-    setFlags((prev) => ({ ...prev, [`${id}:1`]: { ...DEFAULT_FLAG } }))
-  }
-
-  function handleLabelChange(id: string, label: string) {
-    setExtraElements((prev) => prev.map((el) => el.id === id ? { ...el, label } : el))
-  }
-
-  function handleTypeChange(id: string, type: ElementType, isStatic?: boolean) {
-    setExtraElements((prev) => prev.map((el) => el.id === id ? { ...el, elementType: type, isStatic: isStatic ?? el.isStatic } : el))
-  }
+  }, [currentPerf?.id])
 
   function tryFireSubmit(
     dj: typeof djSubmitted, ej: typeof ejSubmitted, aj: typeof ajSubmitted
   ) {
-    if (dj && ej !== null && aj !== null) onSubmit?.(dj.difficulty, dj.penalty, ej, aj)
-  }
-
-  function handleLock(elementId: string, attemptNumber: number, value: number) {
-    setDeductions((prev) => ({ ...prev, [`${elementId}:${attemptNumber}`]: { value, locked: true } }))
+    if (dj && ej !== null && aj !== null) {
+      clearCache()
+      onSubmit?.(dj.difficulty, dj.penalty, ej, aj, { djFlags: flags, djExtraElements: extraElements, djIncorrectTs: incorrectTs, ejDeductions: deductions, ejExtraElements: extraElements })
+    }
   }
 
   function handleTabletDJEJSubmit() {
@@ -330,56 +292,111 @@ export default function DJEJAJView({
     <div className="h-full">
       <div className="md:hidden"><PerformanceHeader perf={currentPerf} lang={lang} /></div>
 
-      {/* ── mobile (< md): 3-tab bar + content ── */}
+      {/* ── mobile (< md) ── */}
       <div className="md:hidden">
-        <PhoneTabBar
-          tab={tab} setTab={setTab}
-          djSubmitted={djSubmitted !== null} ejSubmitted={ejSubmitted !== null} ajSubmitted={ajSubmitted !== null}
-          lang={lang}
-        />
-
-        {tab === 'dj' && (
-          djSubmitted ? (
-            <SubmittedDJCard dj={djSubmitted} lang={lang} />
-          ) : djMode === 'keyboard' ? (
-            <DualKeypad lang={lang} onSubmit={handleDJSubmit} />
-          ) : (
-            <PhoneDJElementsList
-              lang={lang} elements={elements} extraElements={extraElements}
-              flags={flags} incorrectTs={incorrectTs}
-              onFlagChange={handleFlagChange} onOpenRetry={handleOpenRetry}
-              onAddElement={handleAddElement} onLabelChange={handleLabelChange}
-              onTypeChange={handleTypeChange}
-              onToggleIncorrectTs={() => setIncorrectTs((v) => !v)}
-              onSubmit={handleDJSubmit}
-            />
-          )
-        )}
-
-        {tab === 'ej' && (
-          ejSubmitted !== null ? (
-            <SubmittedScoreCard label={t.ejScore} score={ejSubmitted} color="text-sky-600" lang={lang} />
-          ) : ejMode === 'keyboard' ? (
-            <EJKeypad lang={lang} onSubmit={handleEJSubmit} />
-          ) : (
-            <div className="px-4 space-y-2 pb-4">
-              {[...elements, ...extraElements].map((el) => (
-                <EJElementRow key={el.id} element={el} deductions={deductions} lang={lang} onLock={handleLock} />
+        {djMode === 'elements' && ejMode === 'elements' ? (
+          // 2-tab combined mode: DJ+EJ | AJ
+          <>
+            <div className="flex gap-0.5 bg-slate-100 rounded-xl p-1 mx-4 mb-4">
+              {(['djej', 'aj'] as const).map((tabId) => (
+                <button key={tabId} onClick={() => setCombinedTab(tabId)}
+                  className={['flex-1 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1',
+                    combinedTab === tabId ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'].join(' ')}>
+                  {tabId === 'djej' ? `${t.dj}+${t.ej}` : t.aj}
+                  {tabId === 'djej' && djSubmitted !== null && ejSubmitted !== null && <CheckIcon />}
+                  {tabId === 'aj' && ajSubmitted !== null && <CheckIcon />}
+                </button>
               ))}
-              <button onClick={() => handleEJSubmit(calcEJScore(deductions))}
-                className="w-full py-4 rounded-2xl font-bold text-lg bg-sky-500 hover:bg-sky-600 active:scale-95 text-white transition-all">
-                {t.submit} · {t.ejScore} {calcEJScore(deductions).toFixed(1)}
-              </button>
             </div>
-          )
-        )}
 
-        {tab === 'aj' && (
-          ajSubmitted !== null ? (
-            <SubmittedScoreCard label={t.ajScore} score={ajSubmitted} color="text-blue-600" lang={lang} />
-          ) : (
-            <AJScoringPanel lang={lang} perfId={currentPerf.id} onSubmit={handleAJSubmit} />
-          )
+            {combinedTab === 'djej' && (
+              djSubmitted !== null && ejSubmitted !== null ? (
+                <SubmittedDJCard dj={djSubmitted} lang={lang} />
+              ) : (
+                <div className="px-4 space-y-2 pb-4">
+                  <IncorrectTsToggle active={incorrectTs} onToggle={toggleIncorrectTs} lang={lang} />
+                  {allElements.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400">
+                      <p className="font-medium text-sm">{t.noElements}</p>
+                      <p className="text-xs mt-1">{t.noElementsNote}</p>
+                    </div>
+                  ) : allElements.map((el) => (
+                    <CombinedElementRow key={el.id} element={el} flags={flags} deductions={deductions} lang={lang}
+                      onFlagChange={handleFlagChange} onLock={handleLock} onOpenRetry={handleOpenRetry}
+                      isExtra={el.id.startsWith('extra-')} onLabelChange={handleLabelChange} onTypeChange={handleTypeChange} />
+                  ))}
+                  <button onClick={handleAddElement} className="w-full py-2.5 rounded-xl text-sm text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 hover:border-slate-300 transition-all">
+                    {t.addElement}
+                  </button>
+                  <button onClick={handleTabletDJEJSubmit} className="w-full py-4 rounded-2xl font-bold text-lg bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white transition-all">
+                    {t.submit} · D {djDifficulty.toFixed(2)}  −{djPenaltyVal.toFixed(1)}  E {ejScoreVal.toFixed(1)}
+                  </button>
+                </div>
+              )
+            )}
+
+            {combinedTab === 'aj' && (
+              ajSubmitted !== null ? (
+                <SubmittedScoreCard label={t.ajScore} score={ajSubmitted} color="text-blue-600" lang={lang} />
+              ) : (
+                <AJScoringPanel lang={lang} perfId={currentPerf.id} onSubmit={handleAJSubmit} />
+              )
+            )}
+          </>
+        ) : (
+          // 3-tab mode when at least one is keyboard: DJ | EJ | AJ
+          <>
+            <PhoneTabBar
+              tab={tab} setTab={setTab}
+              djSubmitted={djSubmitted !== null} ejSubmitted={ejSubmitted !== null} ajSubmitted={ajSubmitted !== null}
+              lang={lang}
+            />
+
+            {tab === 'dj' && (
+              djSubmitted ? (
+                <SubmittedDJCard dj={djSubmitted} lang={lang} />
+              ) : djMode === 'keyboard' ? (
+                <DualKeypad lang={lang} onSubmit={handleDJSubmit} />
+              ) : (
+                <PhoneDJElementsList
+                  lang={lang} elements={elements} extraElements={extraElements}
+                  flags={flags} incorrectTs={incorrectTs}
+                  onFlagChange={handleFlagChange} onOpenRetry={handleOpenRetry}
+                  onAddElement={handleAddElement} onLabelChange={handleLabelChange}
+                  onTypeChange={handleTypeChange}
+                  onToggleIncorrectTs={toggleIncorrectTs}
+                  onSubmit={handleDJSubmit}
+                />
+              )
+            )}
+
+            {tab === 'ej' && (
+              ejSubmitted !== null ? (
+                <SubmittedScoreCard label={t.ejScore} score={ejSubmitted} color="text-sky-600" lang={lang} />
+              ) : ejMode === 'keyboard' ? (
+                <EJKeypad lang={lang} onSubmit={handleEJSubmit} />
+              ) : (
+                <div className="px-4 space-y-2 pb-4">
+                  {allElements.map((el) => (
+                    <EJElementRow key={el.id} element={el} deductions={deductions} lang={lang} onLock={handleLock}
+                      onLabelChange={el.id.startsWith('extra-') ? handleLabelChange : undefined} />
+                  ))}
+                  <button onClick={() => handleEJSubmit(calcEJScore(deductions))}
+                    className="w-full py-4 rounded-2xl font-bold text-lg bg-sky-500 hover:bg-sky-600 active:scale-95 text-white transition-all">
+                    {t.submit} · {t.ejScore} {calcEJScore(deductions).toFixed(1)}
+                  </button>
+                </div>
+              )
+            )}
+
+            {tab === 'aj' && (
+              ajSubmitted !== null ? (
+                <SubmittedScoreCard label={t.ajScore} score={ajSubmitted} color="text-blue-600" lang={lang} />
+              ) : (
+                <AJScoringPanel lang={lang} perfId={currentPerf.id} onSubmit={handleAJSubmit} />
+              )
+            )}
+          </>
         )}
       </div>
 
@@ -448,7 +465,7 @@ export default function DJEJAJView({
                 </div>
               ) : (
                 <>
-                  <IncorrectTsToggle active={incorrectTs} onToggle={() => setIncorrectTs((v) => !v)} lang={lang} />
+                  <IncorrectTsToggle active={incorrectTs} onToggle={toggleIncorrectTs} lang={lang} />
                   <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-0">
                     {allElements.length === 0 ? (
                       <div className="text-center py-8 text-slate-400">

@@ -247,12 +247,14 @@ function MusicPlayerModal({ url, title, onClose }: { url: string; title: string;
 // ─── routine row ──────────────────────────────────────────────────────────────
 
 function RoutineRow({
-  lang, routineType, record, locked, onSet,
+  lang, routineType, record, locked, reviewStatus, reviewComment, onSet,
 }: {
   lang: Lang
   routineType: 'Balance' | 'Dynamic' | 'Combined'
   record: RoutineMusic | undefined
   locked: boolean
+  reviewStatus?: string
+  reviewComment?: string | null
   onSet: (field: 'music' | 'ts', file: File | null) => void
 }) {
   const t = T[lang]
@@ -260,15 +262,23 @@ function RoutineRow({
   const [musicPreviewUrl, setMusicPreviewUrl] = useState<string | null>(null)
   return (
     <>
-      <div className="flex items-center gap-3 py-2 border-t border-slate-100 first:border-0">
-        <span className="w-16 shrink-0 text-xs font-semibold text-slate-600">{routineType}</span>
+      <div className="py-2 border-t border-slate-100 first:border-0">
         <div className="flex items-center gap-3 flex-wrap">
+          <span className="w-16 shrink-0 text-xs font-semibold text-slate-600">{routineType}</span>
           <FileChip label={t.ts} filename={record?.ts_filename}
             accept=".pdf,application/pdf"
-            locked={locked}
+            locked={locked && reviewStatus !== 'incorrect'}
             onPreview={record?.ts_filename ? () => setTsPreviewUrl(record.ts_filename!) : undefined}
             onUpload={(file) => onSet('ts', file)}
             onRemove={() => onSet('ts', null)} />
+          {reviewStatus === 'checked' && (
+            <span className="text-xs font-medium text-emerald-600 flex items-center gap-0.5">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              {lang === 'es' ? 'Revisada' : 'Reviewed'}
+            </span>
+          )}
           <FileChip label={t.music} filename={record?.music_filename}
             accept="audio/*,.mp3,.wav,.aac,.m4a"
             locked={locked}
@@ -276,6 +286,24 @@ function RoutineRow({
             onUpload={(file) => onSet('music', file)}
             onRemove={() => onSet('music', null)} />
         </div>
+        {reviewStatus === 'incorrect' && (
+          <div className="mt-2 ml-16 px-3 py-2 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-xs font-semibold text-red-700 mb-0.5">
+              {lang === 'es' ? 'TS marcada como incorrecta por el juez DJ:' : 'TS marked as incorrect by DJ judge:'}
+            </p>
+            {reviewComment && (
+              <p className="text-xs text-red-600 leading-snug">{reviewComment}</p>
+            )}
+            <p className="text-xs text-red-400 mt-1">
+              {lang === 'es' ? 'Sube una nueva TS para corregirla.' : 'Upload a new TS to correct it.'}
+            </p>
+          </div>
+        )}
+        {reviewStatus === 'new_ts' && (
+          <p className="text-xs text-blue-500 ml-16 mt-1">
+            {lang === 'es' ? 'Nueva TS enviada — pendiente de revisión por el juez.' : 'New TS sent — pending DJ review.'}
+          </p>
+        )}
       </div>
       {tsPreviewUrl && (
         <PDFViewerModal
@@ -389,7 +417,8 @@ function routineTypesForTeam(team: Team, ageGroupRules: AgeGroupRule[]): (typeof
 }
 
 function CompetitionDetailView({
-  lang, competition, teams, entries, music, judges, nominations, agLabels, ageGroupRules, onBack,
+  lang, competition, teams, entries, music, judges, nominations, agLabels, ageGroupRules,
+  tsReviewStatuses, onBack,
   onRegister, onDropout, onSetFile, onNominate, onRemoveNomination, onInviteJudge,
 }: {
   lang: Lang
@@ -401,6 +430,7 @@ function CompetitionDetailView({
   nominations: CompetitionJudgeNomination[]
   agLabels: Record<string, string>
   ageGroupRules: AgeGroupRule[]
+  tsReviewStatuses: { team_id: string; competition_id: string; routine_type: string; status: string; final_comment: string | null }[]
   onBack: () => void
   onRegister: (teamId: string) => void
   onDropout: (entryId: string) => void
@@ -445,6 +475,11 @@ function CompetitionDetailView({
   }
   function recordFor(teamId: string, routineType: 'Balance' | 'Dynamic' | 'Combined') {
     return music.find((m) => m.team_id === teamId && m.competition_id === competition.id && m.routine_type === routineType)
+  }
+  function reviewFor(teamId: string, routineType: 'Balance' | 'Dynamic' | 'Combined') {
+    return tsReviewStatuses.find(
+      s => s.team_id === teamId && s.competition_id === competition.id && s.routine_type === routineType
+    )
   }
 
   return (
@@ -686,12 +721,17 @@ function CompetitionDetailView({
                       </p>
                     )}
                     <div className="bg-slate-50 rounded-xl px-4 py-1">
-                      {routineTypesForTeam(team, ageGroupRules).map((rt) => (
-                        <RoutineRow key={rt} lang={lang} routineType={rt}
-                          record={recordFor(team.id, rt)}
-                          locked={isFileEditLocked}
-                          onSet={(field, filename) => onSetFile(team.id, rt, field, filename)} />
-                      ))}
+                      {routineTypesForTeam(team, ageGroupRules).map((rt) => {
+                        const review = reviewFor(team.id, rt)
+                        return (
+                          <RoutineRow key={rt} lang={lang} routineType={rt}
+                            record={recordFor(team.id, rt)}
+                            locked={isFileEditLocked}
+                            reviewStatus={review?.status}
+                            reviewComment={review?.final_comment}
+                            onSet={(field, filename) => onSetFile(team.id, rt, field, filename)} />
+                        )
+                      })}
                     </div>
                   </div>
                 )}
@@ -778,6 +818,7 @@ function CompetitionListView({
 
 export default function CompetitionsTab({
   lang, competitions, teams, entries, music, judges, nominations, agLabels, ageGroupRules,
+  tsReviewStatuses,
   onRegister, onDropout, onSetFile, onNominate, onRemoveNomination, onInviteJudge,
 }: {
   lang: Lang
@@ -789,6 +830,7 @@ export default function CompetitionsTab({
   nominations: CompetitionJudgeNomination[]
   agLabels: Record<string, string>
   ageGroupRules: AgeGroupRule[]
+  tsReviewStatuses: { team_id: string; competition_id: string; routine_type: string; status: string; final_comment: string | null }[]
   onRegister: (competitionId: string, teamId: string) => void
   onDropout: (entryId: string) => void
   onSetFile: (teamId: string, competitionId: string, routineType: 'Balance' | 'Dynamic' | 'Combined', field: 'music' | 'ts', file: File | null) => void
@@ -811,6 +853,7 @@ export default function CompetitionsTab({
         nominations={nominations}
         agLabels={agLabels}
         ageGroupRules={ageGroupRules}
+        tsReviewStatuses={tsReviewStatuses}
         onBack={() => setSelectedId(null)}
         onRegister={(teamId) => onRegister(selected.id, teamId)}
         onDropout={onDropout}

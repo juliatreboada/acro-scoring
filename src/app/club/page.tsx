@@ -25,6 +25,7 @@ export default function Page() {
   const [clubId,       setClubId]       = useState<string>('')
   const [agLabels,     setAgLabels]     = useState<Record<string, string>>({})
   const [ageGroupRules, setAgeGroupRules] = useState<AgeGroupRule[]>([])
+  const [tsReviewStatuses, setTsReviewStatuses] = useState<{ team_id: string; competition_id: string; routine_type: string; status: string; final_comment: string | null }[]>([])
 
   useEffect(() => {
     async function load() {
@@ -55,7 +56,7 @@ export default function Page() {
       const teamIds  = rawTeams.map(t => t.id)
 
       // ── parallel: team_gymnasts + entries + music + all judges ───────────────
-      const [tgRes, entriesRes, musicRes, judgesRes] = await Promise.all([
+      const [tgRes, entriesRes, musicRes, judgesRes, reviewRes] = await Promise.all([
         teamIds.length > 0
           ? supabase.from('team_gymnasts').select('team_id,gymnast_id').in('team_id', teamIds)
           : Promise.resolve({ data: [] as { team_id: string; gymnast_id: string }[] }),
@@ -66,6 +67,11 @@ export default function Page() {
           ? supabase.from('routine_music').select('id,team_id,competition_id,routine_type,music_path,ts_path,uploaded_at').in('team_id', teamIds)
           : Promise.resolve({ data: [] }),
         supabase.from('judges').select('id,full_name,phone,licence,avatar_url'),
+        teamIds.length > 0
+          ? supabase.from('ts_review_status')
+              .select('team_id, competition_id, routine_type, status, final_comment')
+              .in('team_id', teamIds)
+          : Promise.resolve({ data: [] }),
       ])
 
       // attach gymnast_ids to each team
@@ -95,6 +101,7 @@ export default function Page() {
         : { data: [] }
       const judgeEmailMap = Object.fromEntries((judgeProfiles ?? []).map(p => [p.id, p.email ?? null]))
 
+      setTsReviewStatuses((reviewRes.data ?? []) as { team_id: string; competition_id: string; routine_type: string; status: string; final_comment: string | null }[])
       setClub(clubRes.data)
       setGymnasts((gymnastsRes.data ?? []) as unknown as Gymnast[])
       setTeams(teamsWithIds)
@@ -230,6 +237,17 @@ export default function Page() {
     setGymnasts(prev => prev.map(g => g.id === id ? { ...g, photo_url: url } : g))
   }
 
+  async function handleUploadLicencia(id: string, file: File) {
+    const ext = file.name.split('.').pop() ?? 'pdf'
+    const path = `${id}/licencia.${ext}`
+    const { error } = await supabase.storage.from('gymnast-licencias').upload(path, file, { upsert: true })
+    if (error) { console.error('Licencia upload failed:', error.message); return }
+    const { data } = supabase.storage.from('gymnast-licencias').getPublicUrl(path)
+    const url = data.publicUrl
+    await supabase.from('gymnasts').update({ licencia_url: url } as Record<string, string>).eq('id', id)
+    setGymnasts(prev => prev.map(g => g.id === id ? { ...g, licencia_url: url } : g))
+  }
+
   async function handleUploadTeamPhoto(id: string, file: File) {
     const ext = file.name.split('.').pop() ?? 'jpg'
     const path = `${id}/photo.${ext}`
@@ -294,6 +312,15 @@ export default function Page() {
     if (existing) {
       await supabase.from('routine_music').update({ [pathField]: storagePath }).eq('id', existing.id)
       setMusicState(prev => prev.map(m => m.id === existing.id ? { ...m, [frontendField]: storagePath } : m))
+      // DB trigger handles ts_review_status update; sync local state too
+      if (field === 'ts' && storagePath) {
+        setTsReviewStatuses(prev => prev.map(s =>
+          s.team_id === teamId && s.competition_id === competitionId && s.routine_type === routineType &&
+          ['incorrect', 'checked'].includes(s.status)
+            ? { ...s, status: 'new_ts', final_comment: null }
+            : s
+        ))
+      }
     } else {
       const { data } = await supabase.from('routine_music').insert({
         team_id: teamId, competition_id: competitionId, routine_type: routineType,
@@ -320,6 +347,7 @@ export default function Page() {
       <ClubPortal
         lang={lang}
         club={club}
+        tsReviewStatuses={tsReviewStatuses}
         gymnasts={gymnasts}
         teams={teams}
         competitions={competitions}
@@ -347,6 +375,7 @@ export default function Page() {
         onUpdateClub={handleUpdateClub}
         onUploadAvatar={handleUploadAvatar}
         onUploadGymnastPhoto={handleUploadGymnastPhoto}
+        onUploadLicencia={handleUploadLicencia}
         onUploadTeamPhoto={handleUploadTeamPhoto}
       />
     </div>

@@ -1,4 +1,15 @@
+import type { ElementFlags } from '@/components/dj-scoring/types'
+import type { TsElement, Deductions } from '@/components/ej-scoring/types'
+
 export type PanelJudgeRole = 'CJP' | 'EJ' | 'AJ' | 'DJ'
+
+export type ScoreDetail = {
+  djFlags?: ElementFlags
+  djExtraElements?: TsElement[]
+  djIncorrectTs?: boolean
+  ejDeductions?: Deductions
+  ejExtraElements?: TsElement[]
+}
 
 export type PanelJudge = {
   id: string
@@ -17,7 +28,7 @@ export type MockPerf = {
   routineType: string
   skipped: boolean
   tsUrl?: string | null
-  elements: import('../ej-scoring/types').TsElement[]
+  elements: TsElement[]
 }
 
 export type JudgeScore = {
@@ -27,6 +38,7 @@ export type JudgeScore = {
   djDifficulty: number | null
   djPenalty: number | null
   cjpPenalty: number | null
+  detail?: ScoreDetail
 }
 
 export type RoutineResult = {

@@ -3,9 +3,18 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Performance, Lang, TsElement, ElementType, ElementFlag, ElementFlags } from './types'
 import { DEFAULT_FLAG } from './types'
-import type { PanelJudge, JudgeScore, RoutineResult } from '../cjp/types'
+import type { PanelJudge, JudgeScore, RoutineResult, ScoreDetail } from '../cjp/types'
 import { categoryLabel } from '@/components/admin/types'
 import { ScoreGrid } from '../shared/CJPTabletShell'
+
+function safeRead<T>(key: string): T | null {
+  if (typeof window === 'undefined') return null
+  try { const s = localStorage.getItem(key); return s ? JSON.parse(s) as T : null } catch { return null }
+}
+function safeWrite(key: string, val: unknown) {
+  if (typeof window === 'undefined') return
+  try { localStorage.setItem(key, JSON.stringify(val)) } catch {}
+}
 
 const MAX_RETRIES = 3
 
@@ -418,7 +427,7 @@ type DJViewProps = {
   lang: Lang
   elements: TsElement[]
   mode?: 'elements' | 'keyboard'   // default 'elements'; driven by admin config
-  onSubmit?: (difficulty: number, penalty: number) => void
+  onSubmit?: (difficulty: number, penalty: number, detail: ScoreDetail) => void
   waitingForOtherScores?: boolean
   judgeScores?: JudgeScore[]
   panelJudges?: PanelJudge[]
@@ -437,15 +446,24 @@ export default function DJView({ currentPerf, lang, elements, mode = 'elements',
   // drag-drop state for unlisted elements
   const [dragId, setDragId] = useState<string | null>(null)
   const [dropIdx, setDropIdx] = useState<number | null>(null)
+  const dragRef = useRef<string | null>(null)
   const prevPerfId = useRef<string | null>(null)
 
   useEffect(() => {
     if (currentPerf?.id !== prevPerfId.current) {
-      const initial: ElementFlags = {}
-      elements.forEach((el) => { initial[`${el.id}:1`] = { ...DEFAULT_FLAG } })
-      setFlags(initial)
-      setIncorrectTs(false)
-      setOrderedAll([...elements])
+      const cacheKey = currentPerf?.id ? `scoring_djview_${currentPerf.id}` : null
+      const cached = cacheKey ? safeRead<{ flags: ElementFlags; incorrectTs: boolean; orderedAll: TsElement[] }>(cacheKey) : null
+      if (cached) {
+        setFlags(cached.flags)
+        setIncorrectTs(cached.incorrectTs)
+        setOrderedAll(cached.orderedAll)
+      } else {
+        const initial: ElementFlags = {}
+        elements.forEach((el) => { initial[`${el.id}:1`] = { ...DEFAULT_FLAG } })
+        setFlags(initial)
+        setIncorrectTs(false)
+        setOrderedAll([...elements])
+      }
       setSubmitted(false)
       setSubmittedDifficulty(null)
       setSubmittedPenalty(null)
@@ -454,6 +472,11 @@ export default function DJView({ currentPerf, lang, elements, mode = 'elements',
       prevPerfId.current = currentPerf?.id ?? null
     }
   }, [currentPerf?.id, elements])
+
+  useEffect(() => {
+    if (!currentPerf?.id || submitted) return
+    safeWrite(`scoring_djview_${currentPerf.id}`, { flags, incorrectTs, orderedAll })
+  }, [flags, incorrectTs, orderedAll, currentPerf?.id, submitted])
 
   function handleChange(elementId: string, attemptNumber: number, patch: Partial<ElementFlag>) {
     const key = `${elementId}:${attemptNumber}`
@@ -502,17 +525,21 @@ export default function DJView({ currentPerf, lang, elements, mode = 'elements',
 
   function handleSubmitElements() {
     const { difficulty, penalty } = calcTotals(orderedAll, flags, incorrectTs)
+    const extraElements = orderedAll.filter(el => !elements.some(e => e.id === el.id))
     setSubmittedDifficulty(difficulty)
     setSubmittedPenalty(penalty)
     setSubmitted(true)
-    onSubmit?.(difficulty, penalty)
+    if (currentPerf?.id) localStorage.removeItem(`scoring_djview_${currentPerf.id}`)
+    onSubmit?.(difficulty, penalty, { djFlags: flags, djExtraElements: extraElements, djIncorrectTs: incorrectTs })
   }
 
   function handleSubmitPhone(difficulty: number, penalty: number) {
+    const extraElements = orderedAll.filter(el => !elements.some(e => e.id === el.id))
     setSubmittedDifficulty(difficulty)
     setSubmittedPenalty(penalty)
     setSubmitted(true)
-    onSubmit?.(difficulty, penalty)
+    if (currentPerf?.id) localStorage.removeItem(`scoring_djview_${currentPerf.id}`)
+    onSubmit?.(difficulty, penalty, { djFlags: flags, djExtraElements: extraElements, djIncorrectTs: incorrectTs })
   }
 
   // ── waiting ──
@@ -634,10 +661,10 @@ export default function DJView({ currentPerf, lang, elements, mode = 'elements',
                   <div
                     key={el.id}
                     draggable={isExtra}
-                    onDragStart={isExtra ? (e) => { e.dataTransfer.effectAllowed = 'move'; setDragId(el.id) } : undefined}
-                    onDragEnd={() => { setDragId(null); setDropIdx(null) }}
-                    onDragOver={dragId ? (e) => { e.preventDefault(); setDropIdx(idx) } : undefined}
-                    onDrop={dragId ? (e) => { e.preventDefault(); handleReorder(dragId, idx) } : undefined}
+                    onDragStart={isExtra ? (e) => { e.dataTransfer.effectAllowed = 'move'; dragRef.current = el.id; setDragId(el.id) } : undefined}
+                    onDragEnd={() => { dragRef.current = null; setDragId(null); setDropIdx(null) }}
+                    onDragOver={(e) => { e.preventDefault(); if (dragRef.current) setDropIdx(idx) }}
+                    onDrop={(e) => { e.preventDefault(); if (dragRef.current) handleReorder(dragRef.current, idx) }}
                     className={[
                       isExtra ? 'cursor-grab active:cursor-grabbing' : '',
                       isDragging ? 'opacity-40' : '',
@@ -660,7 +687,7 @@ export default function DJView({ currentPerf, lang, elements, mode = 'elements',
               <div
                 className={['h-2 rounded-lg transition-all', dropIdx === orderedAll.length ? 'bg-blue-400' : ''].join(' ')}
                 onDragOver={(e) => { e.preventDefault(); setDropIdx(orderedAll.length) }}
-                onDrop={(e) => { e.preventDefault(); handleReorder(dragId, orderedAll.length) }}
+                onDrop={(e) => { e.preventDefault(); if (dragRef.current) handleReorder(dragRef.current, orderedAll.length) }}
               />
             )}
 

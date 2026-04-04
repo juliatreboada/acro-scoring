@@ -12,6 +12,7 @@ export default function Page() {
   const {
     loading, sessionId,
     assignedRoles, panelJudges, performances, currentPerfId, judgeScores, results,
+    djMethod, ejMethod,
     handleOpen, handleSkip, handleCJPSubmit, handleReopenScore, handleEditScore, handleJudgeScoreSubmit,
   } = useJudgeSession()
 
@@ -46,6 +47,8 @@ export default function Page() {
       <AuthBar lang={lang} onLangChange={setLang} />
       <CJPDJEJView
         lang={lang} elements={performances.find(p => p.id === currentPerfId)?.elements ?? []}
+        djMode={djMethod === 'keyboard' ? 'keyboard' : 'elements'}
+        ejMode={ejMethod === 'keyboard' ? 'keyboard' : 'elements'}
         panelJudges={panelJudges} performances={performances}
         currentPerfId={currentPerfId} judgeScores={judgeScores} results={results}
         onOpen={handleOpen} onSkip={handleSkip}

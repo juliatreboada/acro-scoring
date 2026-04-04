@@ -43,11 +43,13 @@ export type ClubPortalProps = {
   music: RoutineMusic[]
   agLabels: Record<string, string>
   ageGroupRules: AgeGroupRule[]
+  tsReviewStatuses: { team_id: string; competition_id: string; routine_type: string; status: string; final_comment: string | null }[]
   // gymnasts
   onAddGymnast: (g: Omit<Gymnast, 'id' | 'club_id'>) => void
   onUpdateGymnast: (id: string, g: Omit<Gymnast, 'id' | 'club_id'>) => void
   onDeleteGymnast: (id: string) => void
   onUploadGymnastPhoto: (id: string, file: File) => Promise<void>
+  onUploadLicencia: (id: string, file: File) => Promise<void>
   // teams
   onAddTeam: (t: Omit<Team, 'id' | 'club_id' | 'photo_url'>) => void
   onUpdateTeam: (id: string, t: Omit<Team, 'id' | 'club_id' | 'photo_url'>) => void
@@ -74,8 +76,8 @@ export type ClubPortalProps = {
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function ClubPortal({
-  lang, club, gymnasts, teams, judges, nominations, competitions, entries, music, agLabels, ageGroupRules,
-  onAddGymnast, onUpdateGymnast, onDeleteGymnast, onUploadGymnastPhoto,
+  lang, club, gymnasts, teams, judges, nominations, competitions, entries, music, agLabels, ageGroupRules, tsReviewStatuses,
+  onAddGymnast, onUpdateGymnast, onDeleteGymnast, onUploadGymnastPhoto, onUploadLicencia,
   onAddTeam, onUpdateTeam, onDeleteTeam, onUploadTeamPhoto,
   onInviteJudge, onUpdateJudge, onDeleteJudge, onUploadJudgePhoto,
   onRegister, onDropout, onSetFile,
@@ -155,7 +157,7 @@ export default function ClubPortal({
         {activeTab === 'gymnasts' && (
           <GymnastsTab lang={lang} gymnasts={gymnasts}
             onAdd={onAddGymnast} onUpdate={onUpdateGymnast} onDelete={onDeleteGymnast}
-            onUploadPhoto={onUploadGymnastPhoto} />
+            onUploadPhoto={onUploadGymnastPhoto} onUploadLicencia={onUploadLicencia} />
         )}
         {activeTab === 'teams' && (
           <TeamsTab lang={lang} gymnasts={gymnasts} teams={teams}
@@ -167,6 +169,7 @@ export default function ClubPortal({
           <CompetitionsTab lang={lang} competitions={competitions} teams={teams}
             entries={entries} music={music} judges={judges} nominations={nominations}
             agLabels={agLabels} ageGroupRules={ageGroupRules}
+            tsReviewStatuses={tsReviewStatuses}
             onRegister={onRegister} onDropout={onDropout} onSetFile={onSetFile}
             onNominate={onNominate} onRemoveNomination={onRemoveNomination}
             onInviteJudge={onInviteJudge} />

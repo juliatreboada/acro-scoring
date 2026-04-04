@@ -270,11 +270,12 @@ export function EJKeypad({ lang, onSubmit }: {
 
 // ─── EJ-only element row (tablet, for EJAJView) ──────────────────────────────
 
-export function EJElementRow({ element, deductions, lang, onLock }: {
+export function EJElementRow({ element, deductions, lang, onLock, onLabelChange }: {
   element: TsElement
   deductions: Deductions
   lang: Lang
   onLock: (elementId: string, attemptNumber: number, value: number) => void
+  onLabelChange?: (id: string, label: string) => void
 }) {
   const t = T[lang]
   const dedKey = `${element.id}:1`
@@ -285,7 +286,13 @@ export function EJElementRow({ element, deductions, lang, onLock }: {
     <div className={['border rounded-xl p-3 bg-white transition-colors', dedLocked ? 'border-slate-100' : 'border-slate-200'].join(' ')}>
       <div className="flex items-center gap-2 mb-2">
         <span className="text-xs text-slate-400 font-mono shrink-0">{element.position > 0 ? element.position : '✱'}</span>
-        <span className="text-sm font-medium text-slate-700 flex-1 leading-snug">{element.label || '—'}</span>
+        {onLabelChange ? (
+          <input type="text" value={element.label} onChange={(e) => onLabelChange(element.id, e.target.value)}
+            placeholder={t.elementLabel}
+            className="text-sm font-medium text-slate-700 flex-1 leading-snug border-b border-dashed border-slate-300 focus:outline-none focus:border-slate-500 bg-transparent placeholder:text-slate-300" />
+        ) : (
+          <span className="text-sm font-medium text-slate-700 flex-1 leading-snug">{element.label || '—'}</span>
+        )}
         {dedLocked && (
           <span className={['text-sm font-bold tabular-nums shrink-0', dedState!.value === 0 ? 'text-emerald-500' : 'text-red-500'].join(' ')}>
             {dedState!.value === 0 ? '0' : `−${dedState!.value.toFixed(1)}`}

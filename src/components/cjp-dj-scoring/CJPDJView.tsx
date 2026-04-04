@@ -1,19 +1,19 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import type { Performance, Lang } from '../aj-scoring/types'
 import type { TsElement, ElementType } from '../ej-scoring/types'
 import type { ElementFlag, ElementFlags } from '../dj-scoring/types'
-import { DEFAULT_FLAG } from '../dj-scoring/types'
 import type { PanelJudge, MockPerf, JudgeScore, RoutineResult, PenaltyState } from '../cjp/types'
 import { calcCjpPenalty, DEFAULT_PENALTY } from '../cjp/types'
-import DJModeSelector, { type DJPhoneMode } from '../shared/DJModeSelector'
 import CJPTabletShell from '../shared/CJPTabletShell'
 import { categoryLabel } from '@/components/admin/types'
 import { PenaltyPanel } from '../shared/CJPPenaltyPanel'
-import { getElementConfig, calcDJTotals, DualKeypad, PhoneDJElementsList } from '../shared/DJElementsShared'
+import { calcDJTotals, DualKeypad, PhoneDJElementsList } from '../shared/DJElementsShared'
 import { DJTabContent } from '../shared/DJEJElementsShared'
 import CheckIcon from '../shared/CheckIcon'
+import { useDJScoring } from '@/hooks/useDJScoring'
+import { usePenaltyStates } from '@/hooks/usePenaltyStates'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -173,10 +173,10 @@ function TabletLayout({
 
 // ─── phone view (two tabs) ────────────────────────────────────────────────────
 
-function PhoneView({ perf, lang, mode, elements, extraElements, flags, incorrectTs, penaltyState,
+function PhoneView({ perf, lang, djMode, elements, extraElements, flags, incorrectTs, penaltyState,
   onFlagChange, onOpenRetry, onAddElement, onLabelChange, onTypeChange,
   onToggleIncorrectTs, onPenaltyChange, onSubmit }: {
-  perf: Performance; lang: Lang; mode: DJPhoneMode
+  perf: Performance; lang: Lang; djMode: 'elements' | 'keyboard'
   elements: TsElement[]; extraElements: TsElement[]; flags: ElementFlags; incorrectTs: boolean
   penaltyState: PenaltyState
   onFlagChange: (elementId: string, attemptNumber: number, patch: Partial<ElementFlag>) => void
@@ -283,7 +283,7 @@ function PhoneView({ perf, lang, mode, elements, extraElements, flags, incorrect
               </button>
             )}
           </div>
-        ) : mode === 'keypad' ? (
+        ) : djMode === 'keyboard' ? (
           <DualKeypad lang={lang} onSubmit={handleDJSubmit} />
         ) : (
           <PhoneDJElementsList lang={lang} elements={elements} extraElements={extraElements}
@@ -307,6 +307,7 @@ export type CJPDJViewProps = {
   judgeScores: Record<string, JudgeScore[]>
   results: Record<string, RoutineResult>
   elements: TsElement[]
+  djMode?: 'elements' | 'keyboard'
   onOpen: (perfId: string) => void
   onSkip?: (perfId: string) => void
   onSubmitDJScore?: (perfId: string, difficulty: number, djPenalty: number) => void
@@ -318,64 +319,16 @@ export type CJPDJViewProps = {
 
 export default function CJPDJView({
   lang, performances, currentPerfId, panelJudges, judgeScores, results,
-  elements, onOpen, onSkip, onSubmitDJScore, onSubmit, onReopenScore, onEditScore, onPhoneSubmit,
+  elements, djMode = 'elements', onOpen, onSkip, onSubmitDJScore, onSubmit, onReopenScore, onEditScore, onPhoneSubmit,
 }: CJPDJViewProps) {
-  const [flags, setFlags] = useState<ElementFlags>({})
-  const [penaltyStates, setPenaltyStates] = useState<Record<string, PenaltyState>>({})
-  const [incorrectTs, setIncorrectTs] = useState(false)
-  const [extraElements, setExtraElements] = useState<TsElement[]>([])
-  const [djPhoneMode, setDjPhoneMode] = useState<DJPhoneMode | null>(null)
-  const prevPerfId = useRef<string | null>(null)
+  const { flags, extraElements, incorrectTs,
+    handleFlagChange, handleOpenRetry,
+    handleAddElement, handleLabelChange, handleTypeChange,
+    toggleIncorrectTs } = useDJScoring(elements, currentPerfId)
+
+  const { penaltyStates, getPenaltyState, setPenaltyState } = usePenaltyStates()
 
   const currentPerf = performances.find((p) => p.id === currentPerfId) ?? null
-
-  useEffect(() => {
-    if (currentPerfId !== prevPerfId.current) {
-      const initial: ElementFlags = {}
-      elements.forEach((el) => { initial[`${el.id}:1`] = { ...DEFAULT_FLAG } })
-      setFlags(initial)
-      setIncorrectTs(false)
-      setExtraElements([])
-      prevPerfId.current = currentPerfId ?? null
-    }
-  }, [currentPerfId, elements])
-
-  function getPenaltyState(perfId: string): PenaltyState { return penaltyStates[perfId] ?? DEFAULT_PENALTY }
-  function setPenaltyState(perfId: string, p: PenaltyState) { setPenaltyStates((prev) => ({ ...prev, [perfId]: p })) }
-
-  function handleFlagChange(elementId: string, attemptNumber: number, patch: Partial<ElementFlag>) {
-    const key = `${elementId}:${attemptNumber}`
-    const element = [...elements, ...extraElements].find((el) => el.id === elementId)
-    const config = element ? getElementConfig(element) : null
-    setFlags((prev) => {
-      const current = prev[key] ?? DEFAULT_FLAG
-      const updated = { ...current, ...patch }
-      if (config && patch.tfCount !== undefined) {
-        if (patch.tfCount >= config.autoNotDoneAt) updated.isDone = false
-        else if (patch.tfCount > 0) updated.isDone = true
-      }
-      return { ...prev, [key]: updated }
-    })
-  }
-
-  function handleOpenRetry(elementId: string, nextAttemptNumber: number) {
-    setFlags((prev) => ({ ...prev, [`${elementId}:${nextAttemptNumber}`]: { ...DEFAULT_FLAG } }))
-  }
-
-  function handleAddElement() {
-    const id = `extra-${Date.now()}`
-    setExtraElements((prev) => [...prev, { id, position: 0, label: '', difficultyValue: 0 }])
-    setFlags((prev) => ({ ...prev, [`${id}:1`]: { ...DEFAULT_FLAG } }))
-  }
-
-  function handleLabelChange(id: string, label: string) {
-    setExtraElements((prev) => prev.map((el) => el.id === id ? { ...el, label } : el))
-  }
-
-  function handleTypeChange(id: string, type: ElementType, isStatic?: boolean) {
-    setExtraElements((prev) => prev.map((el) => el.id === id ? { ...el, elementType: type, isStatic: isStatic ?? el.isStatic } : el))
-  }
-
   const currentPenaltyState = currentPerfId ? getPenaltyState(currentPerfId) : DEFAULT_PENALTY
 
   return (
@@ -391,15 +344,13 @@ export default function CJPDJView({
             <p className="text-xl font-semibold text-slate-700">{T[lang].waiting}</p>
             <p className="text-sm text-slate-400">{T[lang].waitingSub}</p>
           </div>
-        ) : djPhoneMode === null ? (
-          <DJModeSelector lang={lang} onSelect={setDjPhoneMode} />
         ) : (
-          <PhoneView perf={currentPerf as Performance} lang={lang} mode={djPhoneMode}
+          <PhoneView perf={currentPerf as Performance} lang={lang} djMode={djMode}
             elements={elements} extraElements={extraElements} flags={flags} incorrectTs={incorrectTs}
             penaltyState={currentPenaltyState} onFlagChange={handleFlagChange}
             onOpenRetry={handleOpenRetry} onAddElement={handleAddElement}
             onLabelChange={handleLabelChange} onTypeChange={handleTypeChange}
-            onToggleIncorrectTs={() => setIncorrectTs((v) => !v)}
+            onToggleIncorrectTs={toggleIncorrectTs}
             onPenaltyChange={(p) => currentPerfId && setPenaltyState(currentPerfId, p)}
             onSubmit={(d, dj, cjp) => onPhoneSubmit?.(d, dj, cjp)} />
         )}
@@ -412,7 +363,7 @@ export default function CJPDJView({
           penaltyStates={penaltyStates} incorrectTs={incorrectTs}
           onFlagChange={handleFlagChange} onOpenRetry={handleOpenRetry}
           onAddElement={handleAddElement} onLabelChange={handleLabelChange}
-          onTypeChange={handleTypeChange} onToggleIncorrectTs={() => setIncorrectTs((v) => !v)}
+          onTypeChange={handleTypeChange} onToggleIncorrectTs={toggleIncorrectTs}
           onPenaltyChange={setPenaltyState} onOpen={onOpen} onSkip={onSkip}
           onSubmitDJScore={onSubmitDJScore} onSubmit={onSubmit} onReopenScore={onReopenScore}
           onEditScore={onEditScore} />
