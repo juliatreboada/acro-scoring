@@ -17,6 +17,7 @@ export default function Page() {
   const [competitionName, setCompName]    = useState('')
   const [performances, setPerformances]   = useState<MockPerf[]>([])
   const [results, setResults]             = useState<Record<string, RoutineResult>>({})
+  const [clubAvatarByTeam, setClubAvatarByTeam] = useState<Record<string, string | null>>({})
   const [loading, setLoading]             = useState(true)
 
   useEffect(() => {
@@ -65,10 +66,23 @@ export default function Page() {
       // ── teams referenced by orders ─────────────────────────────────────────
       const teamIds = [...new Set(orders.map((o) => o.team_id))]
       const { data: teams } = teamIds.length > 0
-        ? await supabase.from('teams').select('id, gymnast_display').in('id', teamIds)
+        ? await supabase.from('teams').select('id, gymnast_display, club_id').in('id', teamIds)
         : { data: [] }
 
       const teamMap   = Object.fromEntries((teams ?? []).map((t) => [t.id, t.gymnast_display]))
+
+      // ── fetch clubs for avatars ────────────────────────────────────────────
+      const clubIds = [...new Set((teams ?? []).map(t => (t as any).club_id).filter(Boolean))]
+      const { data: clubs } = clubIds.length > 0
+        ? await supabase.from('clubs').select('id, avatar_url').in('id', clubIds)
+        : { data: [] }
+      const clubAvatarMap = Object.fromEntries((clubs ?? []).map(c => [c.id, c.avatar_url ?? null]))
+      const teamClubAvatars: Record<string, string | null> = {}
+      for (const t of teams ?? []) {
+        const clubId = (t as any).club_id
+        teamClubAvatars[t.id] = clubId ? (clubAvatarMap[clubId] ?? null) : null
+      }
+      setClubAvatarByTeam(teamClubAvatars)
       const sessionMap = Object.fromEntries(sessions.map((s) => [s.id, s]))
       const dropoutSet = new Set(entries.filter((e) => e.dropped_out).map((e) => e.team_id))
 
@@ -146,6 +160,7 @@ export default function Page() {
         performances={performances}
         results={results}
         lang={lang}
+        clubAvatarByTeam={clubAvatarByTeam}
       />
     </div>
   )

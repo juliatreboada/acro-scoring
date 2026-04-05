@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Section, Panel, Session, Team, Club, CompetitionEntry, SessionOrder, AgeGroupRule } from '@/components/admin/types'
+import { categoryLabel } from '@/components/admin/types'
 
 // ─── time helpers ─────────────────────────────────────────────────────────────
 
@@ -146,6 +147,19 @@ const PANEL_COLORS: Record<number, { badge: string; num: string }> = {
   2: { badge: 'bg-violet-100 text-violet-700',   num: 'bg-violet-50 text-violet-600 border border-violet-200'   },
 }
 
+// ─── club avatar ──────────────────────────────────────────────────────────────
+
+function ClubAvatar({ club }: { club: Club | null | undefined }) {
+  if (!club) return null
+  return club.avatar_url ? (
+    <img src={club.avatar_url} alt={club.club_name} className="w-5 h-5 rounded-full object-cover shrink-0" />
+  ) : (
+    <div className="w-5 h-5 rounded-full bg-slate-200 text-slate-500 text-[9px] font-semibold flex items-center justify-center shrink-0">
+      {club.club_name.charAt(0).toUpperCase()}
+    </div>
+  )
+}
+
 // ─── icons ────────────────────────────────────────────────────────────────────
 
 function ShuffleIcon() {
@@ -255,8 +269,8 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
       {/* header */}
       <div className={['px-3 py-2 border-b flex items-start justify-between gap-2', isLocked ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200'].join(' ')}>
         <div>
-          <p className="text-xs font-semibold text-slate-700">{session.category}</p>
-          <p className="text-xs text-slate-400">{agLabels[session.age_group] ?? session.age_group} · {session.routine_type}</p>
+          <p className="text-xs font-semibold text-slate-700">{agLabels[session.age_group] ?? session.age_group} · {categoryLabel(session.category, lang)}</p>
+          <p className="text-xs text-slate-400">{session.routine_type}</p>
         </div>
         {hasTeams && (
           <div className="flex items-center gap-1.5 shrink-0">
@@ -319,7 +333,8 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                     <p className={['text-xs font-medium truncate', isDropout ? 'text-slate-400 line-through' : 'text-slate-700'].join(' ')}>
                       {team.gymnast_display}
                     </p>
-                    <p className={['text-xs truncate', isDropout ? 'text-slate-300' : 'text-slate-400'].join(' ')}>
+                    <p className={['flex items-center gap-1 text-xs truncate', isDropout ? 'text-slate-300' : 'text-slate-400'].join(' ')}>
+                      <ClubAvatar club={club} />
                       {club?.club_name ?? '—'}
                     </p>
                   </div>
@@ -367,7 +382,10 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-slate-700 truncate">{team.gymnast_display}</p>
-                    <p className="text-xs text-slate-400 truncate">{club?.club_name ?? '—'}</p>
+                    <p className="flex items-center gap-1 text-xs text-slate-400 truncate">
+                      <ClubAvatar club={club} />
+                      {club?.club_name ?? '—'}
+                    </p>
                   </div>
                 </div>
               )
@@ -390,7 +408,10 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium text-slate-300 line-through truncate">{team.gymnast_display}</p>
-                        <p className="text-xs text-slate-300 truncate">{club?.club_name ?? '—'}</p>
+                        <p className="flex items-center gap-1 text-xs text-slate-300 truncate">
+                          <ClubAvatar club={club} />
+                          {club?.club_name ?? '—'}
+                        </p>
                       </div>
                       <span className="text-xs font-semibold text-red-300 shrink-0">{t.baja}</span>
                     </div>
@@ -687,7 +708,10 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
                 <p className={['text-sm font-medium text-slate-800 truncate', slot.isDropout ? 'line-through text-slate-400' : ''].join(' ')}>
                   {team?.gymnast_display ?? slot.teamId}
                 </p>
-                <p className="text-xs text-slate-400 truncate">{club?.club_name ?? ''} · {slot.sessionName}</p>
+                <p className="flex items-center gap-1 text-xs text-slate-400 truncate">
+                  <ClubAvatar club={club} />
+                  {club?.club_name ?? ''} · {slot.sessionName}
+                </p>
               </div>
               {slot.isDropout && (
                 <span className="shrink-0 text-xs font-semibold bg-red-50 text-red-400 px-2 py-0.5 rounded-full">

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Competition, Section, Panel, Session, SessionOrder, Team, Club, CompetitionEntry, AgeGroupRule } from '@/components/admin/types'
+import { categoryLabel } from '@/components/admin/types'
 import ClickableImg from '@/components/shared/ClickableImg'
 
 // ─── time helpers ─────────────────────────────────────────────────────────────
@@ -131,6 +132,19 @@ const T = {
   },
 }
 
+// ─── club avatar ──────────────────────────────────────────────────────────────
+
+function ClubAvatar({ club }: { club: Club | null | undefined }) {
+  if (!club) return null
+  return club.avatar_url ? (
+    <img src={club.avatar_url} alt={club.club_name} className="w-5 h-5 rounded-full object-cover shrink-0" />
+  ) : (
+    <div className="w-5 h-5 rounded-full bg-slate-200 text-slate-500 text-[9px] font-semibold flex items-center justify-center shrink-0">
+      {club.club_name.charAt(0).toUpperCase()}
+    </div>
+  )
+}
+
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function formatDateRange(start: string | null, end: string | null): string {
@@ -147,7 +161,7 @@ function formatDateRange(start: string | null, end: string | null): string {
 // ─── session order card ───────────────────────────────────────────────────────
 
 function SessionOrderCard({
-  session, sessionOrders, isLocked, entries, globalTeams, clubs, lang, timesMap,
+  session, sessionOrders, isLocked, entries, globalTeams, clubs, lang, timesMap, agLabels,
 }: {
   session: Session
   sessionOrders: SessionOrder[]
@@ -157,6 +171,7 @@ function SessionOrderCard({
   clubs: Club[]
   lang: Lang
   timesMap: Map<string, SlotTimes>
+  agLabels: Record<string, string>
 }) {
   const t = T[lang]
 
@@ -196,7 +211,7 @@ function SessionOrderCard({
     return (
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100">
-          <p className="text-sm font-semibold text-slate-700">{session.name}</p>
+          <p className="text-sm font-semibold text-slate-700">{agLabels[session.age_group] ?? session.age_group} · {categoryLabel(session.category, lang)}</p>
           <p className="text-xs text-slate-400 mt-0.5">{session.routine_type}</p>
         </div>
         <div className="px-4 py-8 flex flex-col items-center text-center gap-1.5">
@@ -219,7 +234,7 @@ function SessionOrderCard({
     return (
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100">
-          <p className="text-sm font-semibold text-slate-700">{session.name}</p>
+          <p className="text-sm font-semibold text-slate-700">{agLabels[session.age_group] ?? session.age_group} · {categoryLabel(session.category, lang)}</p>
           <p className="text-xs text-slate-400 mt-0.5">{session.routine_type}</p>
         </div>
         <p className="px-4 py-6 text-sm text-slate-300 text-center">{t.noSessions}</p>
@@ -231,7 +246,7 @@ function SessionOrderCard({
     <div className="bg-white rounded-2xl border-2 border-blue-200 overflow-hidden">
       <div className="px-4 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-slate-700">{session.name}</p>
+          <p className="text-sm font-semibold text-slate-700">{agLabels[session.age_group] ?? session.age_group} · {categoryLabel(session.category, lang)}</p>
           <p className="text-xs text-slate-400 mt-0.5">{session.routine_type}</p>
         </div>
         <span className="flex items-center gap-1.5 text-xs font-semibold text-blue-600">
@@ -248,7 +263,9 @@ function SessionOrderCard({
           if (typeof info === 'string') return null
           const times = timesMap.get(`${session.id}:${teamId}`)
           const dorsal = entries.find(e => e.team_id === teamId)?.dorsal
-          const photoUrl = globalTeams.find(t => t.id === teamId)?.photo_url
+          const team = globalTeams.find(t => t.id === teamId)
+          const photoUrl = team?.photo_url
+          const club = team ? clubs.find(c => c.id === team.club_id) : undefined
           return (
             <li key={teamId} className={['flex items-center gap-3 px-4 py-3', isDropout ? 'opacity-50' : ''].join(' ')}>
               {times && !isDropout ? (
@@ -282,7 +299,10 @@ function SessionOrderCard({
                 <p className={['text-sm font-medium text-slate-800 truncate', isDropout ? 'line-through text-slate-400' : ''].join(' ')}>
                   {info.gymnasts}
                 </p>
-                <p className="text-xs text-slate-400 truncate">{info.club}</p>
+                <p className="flex items-center gap-1 text-xs text-slate-400 truncate">
+                  <ClubAvatar club={club} />
+                  {info.club}
+                </p>
               </div>
               {isDropout && (
                 <span className="shrink-0 text-xs font-semibold bg-red-50 text-red-400 px-2 py-0.5 rounded-full">
@@ -512,7 +532,10 @@ function InterleavedTimeline({
                 <p className={['text-sm font-medium text-slate-800 truncate', slot.isDropout ? 'line-through text-slate-400' : ''].join(' ')}>
                   {team?.gymnast_display ?? slot.teamId}
                 </p>
-                <p className="text-xs text-slate-400 truncate">{club?.club_name ?? ''} · {slot.sessionName}</p>
+                <p className="flex items-center gap-1 text-xs text-slate-400 truncate">
+                  <ClubAvatar club={club} />
+                  {club?.club_name ?? ''} · {slot.sessionName}
+                </p>
               </div>
               {slot.isDropout && (
                 <span className="shrink-0 text-xs font-semibold bg-red-50 text-red-400 px-2 py-0.5 rounded-full">
@@ -549,6 +572,8 @@ export default function StartingOrderView({
 }: StartingOrderViewProps) {
   const t = T[lang]
   const [activeSection, setActiveSection] = useState<string>(sections[0]?.id ?? '')
+
+  const agLabels: Record<string, string> = Object.fromEntries(ageGroupRules.map(r => [r.id, r.age_group]))
 
   const dateStr = formatDateRange(competition.start_date, competition.end_date)
   const currentSection = sections.find((s) => s.id === activeSection)
@@ -640,6 +665,7 @@ export default function StartingOrderView({
                       clubs={clubs}
                       lang={lang}
                       timesMap={timesMap}
+                      agLabels={agLabels}
                     />
                   ))}
               </div>

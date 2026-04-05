@@ -16,6 +16,7 @@ type UserRow = {
   email: string
   role: Role
   detail: string | null  // licence (judge) or contact_name (club) or club_name (admin)
+  avatar_url: string | null
 }
 
 // ─── translations ──────────────────────────────────────────────────────────────
@@ -77,9 +78,9 @@ export default function Page() {
     async function load() {
       const [profilesRes, judgesRes, clubsRes, adminsRes] = await Promise.all([
         supabase.from('profiles').select('id, email, role').in('role', ['admin', 'judge', 'club']),
-        supabase.from('judges').select('id, full_name, licence'),
-        supabase.from('clubs').select('id, club_name, contact_name'),
-        supabase.from('admins').select('id, full_name, club_name'),
+        supabase.from('judges').select('id, full_name, licence, avatar_url'),
+        supabase.from('clubs').select('id, club_name, contact_name, avatar_url'),
+        supabase.from('admins').select('id, full_name, club_name, avatar_url'),
       ])
 
       const profiles = profilesRes.data ?? []
@@ -90,15 +91,15 @@ export default function Page() {
       const rows: UserRow[] = profiles.map(p => {
         if (p.role === 'judge') {
           const j = judgeMap[p.id]
-          return { id: p.id, name: j?.full_name ?? '—', email: p.email ?? '', role: 'judge', detail: j?.licence ?? null }
+          return { id: p.id, name: j?.full_name ?? '—', email: p.email ?? '', role: 'judge', detail: j?.licence ?? null, avatar_url: j?.avatar_url ?? null }
         }
         if (p.role === 'club') {
           const c = clubMap[p.id]
-          return { id: p.id, name: c?.club_name ?? '—', email: p.email ?? '', role: 'club', detail: c?.contact_name ?? null }
+          return { id: p.id, name: c?.club_name ?? '—', email: p.email ?? '', role: 'club', detail: c?.contact_name ?? null, avatar_url: c?.avatar_url ?? null }
         }
         // admin / super_admin both shown in 'admin' tab
         const a = adminMap[p.id]
-        return { id: p.id, name: a?.full_name ?? '—', email: p.email ?? '', role: 'admin', detail: a?.club_name ?? null }
+        return { id: p.id, name: a?.full_name ?? '—', email: p.email ?? '', role: 'admin', detail: a?.club_name ?? null, avatar_url: a?.avatar_url ?? null }
       })
 
       setUsers(rows)
@@ -209,10 +210,11 @@ export default function Page() {
           <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
             {tabUsers.map((u) => (
               <div key={u.id} className="flex items-center gap-4 px-5 py-3.5">
-                <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm font-semibold text-slate-500">
-                    {u.name.charAt(0).toUpperCase()}
-                  </span>
+                <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {u.avatar_url
+                    ? <img src={u.avatar_url} alt={u.name} className="w-full h-full object-cover" />
+                    : <span className="text-sm font-semibold text-slate-500">{u.name.charAt(0).toUpperCase()}</span>
+                  }
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-800 truncate">{u.name}</p>

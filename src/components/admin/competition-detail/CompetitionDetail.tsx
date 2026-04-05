@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination, Gymnast } from '@/components/admin/types'
 import { NEXT_STATUS } from '@/components/admin/types'
@@ -66,6 +66,9 @@ const T = {
       registration_closed:  'This will start the competition and enable scoring. Continue?',
       active:               'This will mark the competition as finished. Continue?',
     } as Partial<Record<CompetitionStatus, string>>,
+    posterUpload: 'Upload image',
+    posterReplace: 'Replace',
+    posterUploading: 'Uploading…',
     djReviewOpen: 'DJ Review open',
     djReviewClosed: 'DJ Review closed',
     openDJReview: 'Open DJ review',
@@ -121,6 +124,9 @@ const T = {
       registration_closed:  '¿Iniciar la competición y habilitar la puntuación?',
       active:               '¿Marcar la competición como finalizada?',
     } as Partial<Record<CompetitionStatus, string>>,
+    posterUpload: 'Subir imagen',
+    posterReplace: 'Reemplazar',
+    posterUploading: 'Subiendo…',
     djReviewOpen: 'Revisión DJ abierta',
     djReviewClosed: 'Revisión DJ cerrada',
     openDJReview: 'Abrir revisión DJ',
@@ -178,7 +184,7 @@ function PlaceholderTab({ lang }: { lang: Lang }) {
 
 type OverviewUpdate = Omit<Competition, 'id' | 'created_at' | 'status'>
 
-function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels, sessions, onUpdate, onSetPanelCount }: {
+function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels, sessions, onUpdate, onSetPanelCount, onUploadPoster }: {
   competition: Competition
   lang: Lang
   availableAdmins: AdminUser[]
@@ -187,10 +193,13 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
   sessions: Session[]
   onUpdate: (updates: OverviewUpdate) => void
   onSetPanelCount: (count: 1 | 2) => void
+  onUploadPoster: (file: File) => Promise<void>
 }) {
   const t = T[lang]
   const agLabels = Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group} (${r.ruleset})`]))
   const [editing, setEditing] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const posterInputRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState<{
     name: string; location: string; start_date: string; end_date: string
     registration_deadline: string; ts_music_deadline: string; poster_url: string; adminId: string
@@ -199,6 +208,11 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
     name: '', location: '', start_date: '', end_date: '',
     registration_deadline: '', ts_music_deadline: '', poster_url: '', adminId: '', age_groups: new Set(),
   })
+
+  // Sync form poster_url when parent updates competition.poster_url (e.g. after upload)
+  useEffect(() => {
+    if (editing) setForm(f => ({ ...f, poster_url: competition.poster_url ?? '' }))
+  }, [competition.poster_url]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function startEditing() {
     setForm({
@@ -230,6 +244,16 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
       age_groups: [...form.age_groups],
     })
     setEditing(false)
+  }
+
+  async function handlePosterFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try { await onUploadPoster(file) } finally {
+      setUploading(false)
+      if (posterInputRef.current) posterInputRef.current.value = ''
+    }
   }
 
   const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
@@ -301,7 +325,19 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
         {/* poster */}
         <div>
           <label className="block text-xs font-medium text-slate-500 mb-1.5">{t.poster}</label>
-          <input type="url" value={form.poster_url} onChange={(e) => setForm((f) => ({ ...f, poster_url: e.target.value }))} className={inputCls} placeholder="https://…" />
+          <div className="flex items-start gap-3">
+            {form.poster_url && (
+              <img src={form.poster_url} alt="poster" className="w-20 h-20 rounded-xl object-cover shrink-0 border border-slate-200" />
+            )}
+            <div className="flex-1 space-y-2">
+              <input type="url" value={form.poster_url} onChange={(e) => setForm((f) => ({ ...f, poster_url: e.target.value }))} className={inputCls} placeholder="https://…" />
+              <button type="button" disabled={uploading} onClick={() => posterInputRef.current?.click()}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-50 transition-all">
+                {uploading ? t.posterUploading : (form.poster_url ? t.posterReplace : t.posterUpload)}
+              </button>
+            </div>
+          </div>
+          <input ref={posterInputRef} type="file" accept="image/*" className="hidden" onChange={handlePosterFile} />
         </div>
         {/* actions */}
         <div className="flex justify-end gap-2 pt-2">
@@ -356,6 +392,20 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
             <dd className="text-sm text-slate-700">{value}</dd>
           </div>
         ))}
+        {/* poster */}
+        <div className="py-3 flex items-center gap-4">
+          <dt className="w-48 shrink-0 text-sm text-slate-400">{t.poster}</dt>
+          <dd className="flex items-center gap-3">
+            {competition.poster_url
+              ? <img src={competition.poster_url} alt="poster" className="w-16 h-16 rounded-xl object-cover border border-slate-200" />
+              : <span className="text-sm text-slate-300">—</span>
+            }
+            <button type="button" disabled={uploading} onClick={() => posterInputRef.current?.click()}
+              className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-50 transition-all">
+              {uploading ? t.posterUploading : (competition.poster_url ? t.posterReplace : t.posterUpload)}
+            </button>
+          </dd>
+        </div>
         {/* panel count — inline toggle */}
         <div className="py-3 flex items-center gap-4">
           <dt className="w-48 shrink-0 text-sm text-slate-400">{t.panels}</dt>
@@ -426,6 +476,7 @@ export type CompetitionDetailProps = {
   availableAdmins: AdminUser[]
   ageGroupRules: AgeGroupRule[]
   onUpdateCompetition: (updates: Omit<Competition, 'id' | 'created_at' | 'status'>) => void
+  onUploadPoster: (file: File) => Promise<void>
   // dj review
   onSetDJReviewDeadline: (date: string | null) => void
   // competition day
@@ -443,7 +494,7 @@ export default function CompetitionDetail({
   panelLocks, onAddToPool, onRemoveFromPool, onAssignJudge, onAddSlot, onRemoveSlot,
   onTogglePanelLock, onCreateJudge,
   globalTeams, clubs, entries, onToggleDropout, sessionOrders, lockedSessions, onReorder, onToggleLock, onReorderTimeline,
-  availableAdmins, ageGroupRules, onUpdateCompetition,
+  availableAdmins, ageGroupRules, onUpdateCompetition, onUploadPoster,
   onSetDJReviewDeadline, onStartSession, onFinishSession,
   competitionGymnasts,
 }: CompetitionDetailProps) {
@@ -596,6 +647,7 @@ export default function CompetitionDetail({
           panels={panels}
           sessions={sessions}
           onUpdate={onUpdateCompetition}
+          onUploadPoster={onUploadPoster}
           onSetPanelCount={onSetPanelCount}
         />
       )}

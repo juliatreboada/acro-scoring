@@ -27,6 +27,19 @@ const T = {
   },
 }
 
+// ─── club avatar ──────────────────────────────────────────────────────────────
+
+function ClubAvatar({ club }: { club: Club | undefined }) {
+  if (!club) return null
+  return club.avatar_url ? (
+    <img src={club.avatar_url} alt={club.club_name} className="w-6 h-6 rounded-full object-cover shrink-0 ring-2 ring-white" />
+  ) : (
+    <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-500 text-[10px] font-semibold flex items-center justify-center shrink-0 ring-2 ring-white">
+      {club.club_name.charAt(0).toUpperCase()}
+    </div>
+  )
+}
+
 // ─── team avatar ──────────────────────────────────────────────────────────────
 
 function TeamAvatar({ team }: { team: Team }) {
@@ -89,8 +102,11 @@ function RegistrationGroup({ age_group, category, items, lang, agLabels, onToggl
               entry.dropped_out ? 'bg-slate-50' : 'bg-white',
             ].join(' ')}
           >
-            <div className={entry.dropped_out ? 'opacity-40' : ''}>
+            <div className={['relative shrink-0', entry.dropped_out ? 'opacity-40' : ''].join(' ')}>
               <TeamAvatar team={team} />
+              <div className="absolute -bottom-1 -right-1">
+                <ClubAvatar club={club} />
+              </div>
             </div>
 
             {entry.dorsal != null && (

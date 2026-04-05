@@ -78,12 +78,20 @@ function RankCircle({ rank }: { rank: number }) {
   )
 }
 
+// ─── club avatar ──────────────────────────────────────────────────────────────
+
+function ClubAvatar({ url }: { url: string | null | undefined }) {
+  if (!url) return null
+  return <img src={url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+}
+
 // ─── individual routine ranking ───────────────────────────────────────────────
 
-function GroupRanking({ rows, results, t }: {
+function GroupRanking({ rows, results, t, clubAvatarByTeam }: {
   rows: MockPerf[]
   results: Record<string, RoutineResult>
   t: typeof T['en']
+  clubAvatarByTeam: Record<string, string | null>
 }) {
   return (
     <div className="px-2 sm:px-4 py-3">
@@ -114,7 +122,10 @@ function GroupRanking({ rows, results, t }: {
               ].join(' ')}>
                 <td className="px-3 py-3"><RankCircle rank={rank + 1} /></td>
                 <td className="px-3 py-3">
-                  <p className="font-semibold text-slate-800 text-base">{perf.gymnasts}</p>
+                  <div className="flex items-center gap-2">
+                    <ClubAvatar url={clubAvatarByTeam[perf.teamId]} />
+                    <p className="font-semibold text-slate-800 text-base">{perf.gymnasts}</p>
+                  </div>
                 </td>
                 <td className="px-3 py-3 text-right tabular-nums font-mono text-slate-600">{(r.eScore * 2).toFixed(3)}</td>
                 <td className="px-3 py-3 text-right tabular-nums font-mono text-slate-600">{r.aScore.toFixed(3)}</td>
@@ -152,6 +163,7 @@ function GroupRanking({ rows, results, t }: {
               medal ? medal.row : isProvisional ? 'bg-amber-50/60' : 'bg-slate-50',
             ].join(' ')}>
               <RankCircle rank={rank + 1} />
+              <ClubAvatar url={clubAvatarByTeam[perf.teamId]} />
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-slate-800 truncate">{perf.gymnasts}</p>
                 <p className="text-xs text-slate-400 mt-0.5 tabular-nums">
@@ -296,9 +308,10 @@ export type ResultsViewProps = {
   performances: MockPerf[]
   results: Record<string, RoutineResult>
   lang: Lang
+  clubAvatarByTeam?: Record<string, string | null>
 }
 
-export default function ResultsView({ performances, results, lang }: ResultsViewProps) {
+export default function ResultsView({ performances, results, lang, clubAvatarByTeam = {} }: ResultsViewProps) {
   const t = T[lang]
 
   const routineLabel = (rt: string) =>
@@ -455,7 +468,7 @@ export default function ResultsView({ performances, results, lang }: ResultsView
             onToggle={() => toggleSection(k)}
             t={t}
           >
-            <GroupRanking rows={rows} results={results} t={t} />
+            <GroupRanking rows={rows} results={results} t={t} clubAvatarByTeam={clubAvatarByTeam} />
           </AccordionSection>
         )
       })}
