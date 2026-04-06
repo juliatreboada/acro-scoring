@@ -167,6 +167,7 @@ export default function ClubPortal({
         )}
         {activeTab === 'competitions' && (
           <CompetitionsTab lang={lang} competitions={competitions} teams={teams}
+            gymnasts={gymnasts}
             entries={entries} music={music} judges={judges} nominations={nominations}
             agLabels={agLabels} ageGroupRules={ageGroupRules}
             tsReviewStatuses={tsReviewStatuses}

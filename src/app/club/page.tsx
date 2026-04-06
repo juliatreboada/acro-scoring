@@ -42,7 +42,7 @@ export default function Page() {
       // ── parallel: club + gymnasts + teams + competitions + nominations + rules ─
       const [clubRes, gymnastsRes, teamsRes, compsRes, nomsRes, rulesRes] = await Promise.all([
         supabase.from('clubs').select('id,club_name,contact_name,phone,avatar_url').eq('id', cid).single(),
-        supabase.from('gymnasts').select('id,club_id,first_name,last_name_1,last_name_2,date_of_birth,photo_url').eq('club_id', cid),
+        (supabase as any).from('gymnasts').select('id,club_id,first_name,last_name_1,last_name_2,date_of_birth,photo_url,licencia_url').eq('club_id', cid),
         supabase.from('teams').select('id,club_id,category,age_group,gymnast_display,photo_url').eq('club_id', cid),
         supabase.from('competitions')
           .select('id,name,status,location,start_date,end_date,registration_deadline,ts_music_deadline,age_groups,poster_url,created_at')

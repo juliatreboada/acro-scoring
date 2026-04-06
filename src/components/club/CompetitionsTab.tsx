@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Competition, Team, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule } from '@/components/admin/types'
+import type { Competition, Team, Gymnast, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule } from '@/components/admin/types'
 import { ROUTINE_TYPES } from '@/components/admin/types'
 
 // ─── translations ─────────────────────────────────────────────────────────────
@@ -57,6 +57,8 @@ const T = {
       finished: 'Finished',
     } as Record<string, string>,
     teamCount: (n: number) => n === 0 ? 'Not registered' : `${n} team${n !== 1 ? 's' : ''} registered`,
+    licenciaWarning: 'Missing licencia',
+    licenciaWarningFull: 'One or more gymnasts in this team have no licencia uploaded.',
   },
   es: {
     empty: 'Aún no hay competiciones disponibles.',
@@ -107,6 +109,8 @@ const T = {
       finished: 'Finalizada',
     } as Record<string, string>,
     teamCount: (n: number) => n === 0 ? 'Sin inscripción' : `${n} equipo${n !== 1 ? 's' : ''} inscrito${n !== 1 ? 's' : ''}`,
+    licenciaWarning: 'Licencia pendiente',
+    licenciaWarningFull: 'Uno o más gimnastas de este equipo no tienen la licencia subida.',
   },
 }
 
@@ -417,13 +421,14 @@ function routineTypesForTeam(team: Team, ageGroupRules: AgeGroupRule[]): (typeof
 }
 
 function CompetitionDetailView({
-  lang, competition, teams, entries, music, judges, nominations, agLabels, ageGroupRules,
+  lang, competition, teams, gymnasts, entries, music, judges, nominations, agLabels, ageGroupRules,
   tsReviewStatuses, onBack,
   onRegister, onDropout, onSetFile, onNominate, onRemoveNomination, onInviteJudge,
 }: {
   lang: Lang
   competition: Competition
   teams: Team[]
+  gymnasts: Gymnast[]
   entries: CompetitionEntry[]
   music: RoutineMusic[]
   judges: Judge[]
@@ -669,18 +674,27 @@ function CompetitionDetailView({
         <div className="space-y-3">
           {eligibleTeams.map((team) => {
             const entry = entryFor(team.id)
+            const missingLicencia = (team.gymnast_ids ?? []).some(gid => {
+              const g = gymnasts.find(x => x.id === gid)
+              return !g?.licencia_url
+            })
             return (
               <div key={team.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
                 {/* team row */}
                 <div className="flex items-center justify-between gap-3 px-4 py-3">
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {entry?.dorsal != null && (
                         <span className="text-xs font-bold px-2 py-0.5 bg-slate-800 text-white rounded-full">#{entry.dorsal}</span>
                       )}
                       <p className="text-sm font-semibold text-slate-800">{team.gymnast_display}</p>
                       {entry?.dropped_out && (
                         <span className="text-xs font-semibold px-2 py-0.5 bg-red-50 text-red-400 rounded-full">{t.dropout}</span>
+                      )}
+                      {missingLicencia && (
+                        <span title={t.licenciaWarningFull} className="text-xs font-semibold px-2 py-0.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-full">
+                          ⚠ {t.licenciaWarning}
+                        </span>
                       )}
                     </div>
                     <p className="text-xs text-slate-400 mt-0.5">{team.category} · {agLabels[team.age_group] ?? team.age_group}</p>
@@ -817,13 +831,14 @@ function CompetitionListView({
 // ─── main export ──────────────────────────────────────────────────────────────
 
 export default function CompetitionsTab({
-  lang, competitions, teams, entries, music, judges, nominations, agLabels, ageGroupRules,
+  lang, competitions, teams, gymnasts, entries, music, judges, nominations, agLabels, ageGroupRules,
   tsReviewStatuses,
   onRegister, onDropout, onSetFile, onNominate, onRemoveNomination, onInviteJudge,
 }: {
   lang: Lang
   competitions: Competition[]
   teams: Team[]
+  gymnasts: Gymnast[]
   entries: CompetitionEntry[]
   music: RoutineMusic[]
   judges: Judge[]
@@ -847,6 +862,7 @@ export default function CompetitionsTab({
         lang={lang}
         competition={selected}
         teams={teams}
+        gymnasts={gymnasts}
         entries={entries}
         music={music}
         judges={judges}

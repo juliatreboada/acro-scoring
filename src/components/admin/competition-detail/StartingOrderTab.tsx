@@ -269,7 +269,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
       {/* header */}
       <div className={['px-3 py-2 border-b flex items-start justify-between gap-2', isLocked ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200'].join(' ')}>
         <div>
-          <p className="text-xs font-semibold text-slate-700">{agLabels[session.age_group] ?? session.age_group} · {categoryLabel(session.category, lang)}</p>
+          <p className="text-xs font-semibold text-slate-700">{(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · {categoryLabel(session.category, lang)}</p>
           <p className="text-xs text-slate-400">{session.routine_type}</p>
         </div>
         {hasTeams && (
@@ -829,7 +829,7 @@ export default function StartingOrderTab({
                 )
               : calcPanelTimes(activeSection, sectionSessions, sessionOrders, ageGroupRules)
             return (
-              <div className={['grid gap-4', panels.length === 2 ? 'grid-cols-2' : 'grid-cols-1 max-w-sm'].join(' ')}>
+              <div className={['grid gap-4', panels.length === 2 ? 'grid-cols-2' : 'grid-cols-1'].join(' ')}>
                 {sortedPanels.map((panel) => (
                   <PanelColumn
                     key={panel.id}

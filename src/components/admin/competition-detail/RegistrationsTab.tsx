@@ -1,7 +1,7 @@
 'use client'
 
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Team, Club, CompetitionEntry } from '@/components/admin/types'
+import type { Team, Club, Gymnast, CompetitionEntry } from '@/components/admin/types'
 import ClickableImg from '@/components/shared/ClickableImg'
 
 // ─── translations ─────────────────────────────────────────────────────────────
@@ -15,6 +15,8 @@ const T = {
     markDropout: 'Mark as dropout',
     undoDropout: 'Undo dropout',
     baja: 'Dropout',
+    licenciaWarning: 'Missing licencia',
+    licenciaWarningFull: 'One or more gymnasts have no licencia uploaded.',
   },
   es: {
     noRegistrations: 'Sin equipos registrados todavía.',
@@ -24,6 +26,8 @@ const T = {
     markDropout: 'Declarar baja',
     undoDropout: 'Deshacer baja',
     baja: 'Baja',
+    licenciaWarning: 'Licencia pendiente',
+    licenciaWarningFull: 'Uno o más gimnastas no tienen la licencia subida.',
   },
 }
 
@@ -65,7 +69,7 @@ function TeamAvatar({ team }: { team: Team }) {
 
 // ─── group ────────────────────────────────────────────────────────────────────
 
-type GroupItem = { entry: CompetitionEntry; team: Team; club: Club | undefined }
+type GroupItem = { entry: CompetitionEntry; team: Team; club: Club | undefined; missingLicencia: boolean }
 
 function RegistrationGroup({ age_group, category, items, lang, agLabels, onToggleDropout }: {
   age_group: string
@@ -94,7 +98,7 @@ function RegistrationGroup({ age_group, category, items, lang, agLabels, onToggl
 
       {/* team rows */}
       <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden">
-        {items.map(({ entry, team, club }) => (
+        {items.map(({ entry, team, club, missingLicencia }) => (
           <div
             key={entry.id}
             className={[
@@ -117,12 +121,19 @@ function RegistrationGroup({ age_group, category, items, lang, agLabels, onToggl
             )}
 
             <div className="flex-1 min-w-0">
-              <p className={[
-                'text-sm font-medium text-slate-800 truncate',
-                entry.dropped_out ? 'line-through text-slate-400' : '',
-              ].join(' ')}>
-                {team.gymnast_display}
-              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className={[
+                  'text-sm font-medium text-slate-800 truncate',
+                  entry.dropped_out ? 'line-through text-slate-400' : '',
+                ].join(' ')}>
+                  {team.gymnast_display}
+                </p>
+                {missingLicencia && (
+                  <span title={t.licenciaWarningFull} className="text-xs font-semibold px-1.5 py-0.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-full shrink-0">
+                    ⚠ {t.licenciaWarning}
+                  </span>
+                )}
+              </div>
               <p className={[
                 'text-xs truncate',
                 entry.dropped_out ? 'text-slate-300' : 'text-slate-400',
@@ -161,13 +172,14 @@ export type RegistrationsTabProps = {
   lang: Lang
   globalTeams: Team[]
   clubs: Club[]
+  gymnasts: Gymnast[]
   entries: CompetitionEntry[]
   agLabels: Record<string, string>
   onToggleDropout: (entryId: string) => void
 }
 
 export default function RegistrationsTab({
-  lang, globalTeams, clubs, entries, agLabels, onToggleDropout,
+  lang, globalTeams, clubs, gymnasts, entries, agLabels, onToggleDropout,
 }: RegistrationsTabProps) {
   const t = T[lang]
 
@@ -187,11 +199,14 @@ export default function RegistrationsTab({
     const team = globalTeams.find((tm) => tm.id === entry.team_id)
     if (!team) continue
     const club = clubs.find((c) => c.id === team.club_id)
+    const missingLicencia = (team.gymnast_ids ?? []).some((gid) =>
+      !gymnasts.find((g) => g.id === gid)?.licencia_url
+    )
     const key = `${team.age_group}||${team.category}`
     if (!groupMap.has(key)) {
       groupMap.set(key, { age_group: team.age_group, category: team.category, items: [] })
     }
-    groupMap.get(key)!.items.push({ entry, team, club })
+    groupMap.get(key)!.items.push({ entry, team, club, missingLicencia })
   }
 
   const groups = [...groupMap.values()].sort((a, b) => {

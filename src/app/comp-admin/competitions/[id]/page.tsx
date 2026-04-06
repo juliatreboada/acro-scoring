@@ -72,10 +72,13 @@ export default function Page() {
       const rawSectionIds = (sectionsRes.data ?? []).map(s => s.id)
       const rawPanelIds   = (panelsRes.data ?? []).map(p => p.id)
 
-      const [teamsResult, ordersResult, adminEmailsResult, judgeProfilesResult, panelLocksResult, assignmentsResult] = await Promise.all([
+      const [teamsResult, teamGymnastsResult, ordersResult, adminEmailsResult, judgeProfilesResult, panelLocksResult, assignmentsResult] = await Promise.all([
         entryTeamIds.length > 0
-          ? (supabase as any).from('teams').select('id,club_id,category,age_group,gymnast_display,photo_url,gymnast_ids').in('id', entryTeamIds) as Promise<{ data: TeamRow[] | null }>
+          ? supabase.from('teams').select('id,club_id,category,age_group,gymnast_display,photo_url').in('id', entryTeamIds) as unknown as Promise<{ data: TeamRow[] | null }>
           : Promise.resolve({ data: [] as TeamRow[] }),
+        entryTeamIds.length > 0
+          ? supabase.from('team_gymnasts').select('team_id,gymnast_id').in('team_id', entryTeamIds)
+          : Promise.resolve({ data: [] as { team_id: string; gymnast_id: string }[] }),
         locked.length > 0
           ? supabase.from('session_orders').select('session_id,team_id,position').in('session_id', locked)
           : Promise.resolve({ data: [] }),
@@ -97,7 +100,14 @@ export default function Page() {
           : Promise.resolve({ data: [] }),
       ])
 
-      const teamsData = teamsResult.data ?? []
+      const rawTeamsData = teamsResult.data ?? []
+      const teamGymnastsMap = new Map<string, string[]>()
+      for (const row of (teamGymnastsResult.data ?? [])) {
+        const r = row as { team_id: string; gymnast_id: string }
+        if (!teamGymnastsMap.has(r.team_id)) teamGymnastsMap.set(r.team_id, [])
+        teamGymnastsMap.get(r.team_id)!.push(r.gymnast_id)
+      }
+      const teamsData = rawTeamsData.map(t => ({ ...t, gymnast_ids: teamGymnastsMap.get(t.id) ?? [] }))
       const ordersData = ordersResult.data
       const judgeEmailMap = Object.fromEntries(((judgeProfilesResult as any).data ?? []).map((p: any) => [p.id, p.email ?? null]))
       const panelLocksData = (panelLocksResult as any).data

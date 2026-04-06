@@ -211,7 +211,7 @@ function SessionOrderCard({
     return (
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100">
-          <p className="text-sm font-semibold text-slate-700">{agLabels[session.age_group] ?? session.age_group} · {categoryLabel(session.category, lang)}</p>
+          <p className="text-sm font-semibold text-slate-700">{(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · {categoryLabel(session.category, lang)}</p>
           <p className="text-xs text-slate-400 mt-0.5">{session.routine_type}</p>
         </div>
         <div className="px-4 py-8 flex flex-col items-center text-center gap-1.5">
@@ -234,7 +234,7 @@ function SessionOrderCard({
     return (
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100">
-          <p className="text-sm font-semibold text-slate-700">{agLabels[session.age_group] ?? session.age_group} · {categoryLabel(session.category, lang)}</p>
+          <p className="text-sm font-semibold text-slate-700">{(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · {categoryLabel(session.category, lang)}</p>
           <p className="text-xs text-slate-400 mt-0.5">{session.routine_type}</p>
         </div>
         <p className="px-4 py-6 text-sm text-slate-300 text-center">{t.noSessions}</p>
@@ -246,7 +246,7 @@ function SessionOrderCard({
     <div className="bg-white rounded-2xl border-2 border-blue-200 overflow-hidden">
       <div className="px-4 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-slate-700">{agLabels[session.age_group] ?? session.age_group} · {categoryLabel(session.category, lang)}</p>
+          <p className="text-sm font-semibold text-slate-700">{(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · {categoryLabel(session.category, lang)}</p>
           <p className="text-xs text-slate-400 mt-0.5">{session.routine_type}</p>
         </div>
         <span className="flex items-center gap-1.5 text-xs font-semibold text-blue-600">
