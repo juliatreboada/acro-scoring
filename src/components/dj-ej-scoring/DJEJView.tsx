@@ -1173,9 +1173,11 @@ export type DJEJViewProps = {
   judgeScores?: JudgeScore[]
   panelJudges?: PanelJudge[]
   result?: RoutineResult | null
+  myDJSubmittedScore?: { difficulty: number; penalty: number } | null
+  myEJSubmittedScore?: number | null
 }
 
-export default function DJEJView({ currentPerf, lang, elements, djMode = 'elements', ejMode = 'elements', onSubmit, waitingForOtherScores, judgeScores, panelJudges, result }: DJEJViewProps) {
+export default function DJEJView({ currentPerf, lang, elements, djMode = 'elements', ejMode = 'elements', onSubmit, waitingForOtherScores, judgeScores, panelJudges, result, myDJSubmittedScore, myEJSubmittedScore }: DJEJViewProps) {
   const t = T[lang]
   const { flags, extraElements, incorrectTs, deductions,
     handleFlagChange, handleLock, handleOpenRetry,
@@ -1197,6 +1199,16 @@ export default function DJEJView({ currentPerf, lang, elements, djMode = 'elemen
       prevPerfId.current = currentPerf?.id ?? null
     }
   }, [currentPerf?.id])
+
+  // Restore submitted state after page refresh
+  useEffect(() => {
+    if (myDJSubmittedScore != null && myEJSubmittedScore != null) {
+      setSubmitted(true)
+      setSubmittedDifficulty(myDJSubmittedScore.difficulty)
+      setSubmittedPenalty(myDJSubmittedScore.penalty)
+      setSubmittedEJ(myEJSubmittedScore)
+    }
+  }, [myDJSubmittedScore, myEJSubmittedScore]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleSubmitTablet() {
     const { difficulty, penalty } = calcDJTotals(elements, extraElements, flags, incorrectTs)

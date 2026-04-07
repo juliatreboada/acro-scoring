@@ -34,6 +34,7 @@ export default function Page() {
   const myScore = myRole ? currentScores.find(s => s.panelJudgeId === myRole.id) : null
   const currentResult = currentPerfId ? (results[currentPerfId] ?? null) : null
   const waitingForOtherScores = !!myScore && !currentResult
+  const mySubmittedScore = myScore?.ejScore ?? null
 
   function handleSubmit(ejScore: number, detail: ScoreDetail) {
     if (!myRole) return
@@ -42,17 +43,18 @@ export default function Page() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-slate-100">
+    <div className="flex flex-col md:h-[100dvh] md:overflow-hidden bg-slate-100">
       <AuthBar lang={lang} onLangChange={setLang} />
-      <div className="flex-1 min-h-0 px-0 md:px-4">
+      <div className="md:flex-1 md:min-h-0 px-0 md:px-4 md:flex md:flex-col">
         <EJView
           currentPerf={currentPerf}
           lang={lang}
           elements={currentPerf?.elements ?? []}
           mode={(ejMethod as 'elements' | 'keyboard') ?? 'elements'}
           onSubmit={handleSubmit}
-          panelJudges={panelJudges}
-          judgeScores={currentScores}
+          mySubmittedScore={mySubmittedScore}
+          panelJudges={myScore ? panelJudges : undefined}
+          judgeScores={myScore ? currentScores : undefined}
           waitingForOtherScores={waitingForOtherScores}
           result={currentResult ?? undefined}
         />

@@ -185,6 +185,37 @@ function CompetitionDetail({ comp, lang, onBack }: {
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [panels, setPanels] = useState<LobbyPanel[]>([])
+  const [sessionIds, setSessionIds] = useState<string[]>([])
+
+  // Real-time: update session statuses and auto-navigate when a session becomes active
+  useEffect(() => {
+    if (sessionIds.length === 0) return
+    const channels = sessionIds.map(sid =>
+      supabase.channel(`lobby-session-${sid}`)
+        .on('postgres_changes', {
+          event: 'UPDATE', schema: 'public', table: 'sessions',
+          filter: `id=eq.${sid}`,
+        }, (payload) => {
+          const row = payload.new as { id: string; status: SessionStatus }
+          setPanels(prev => prev.map(panel => ({
+            ...panel,
+            sessions: panel.sessions.map(s =>
+              s.id === row.id ? { ...s, status: row.status } : s
+            ),
+          })))
+          // Auto-navigate when a session becomes active
+          if (row.status === 'active') {
+            const panel = panels.find(p => p.sessions.some(s => s.id === row.id))
+            if (panel) {
+              const route = rolesToRoute(panel.roles.map(r => r.role))
+              router.push(route)
+            }
+          }
+        })
+        .subscribe()
+    )
+    return () => { channels.forEach(ch => supabase.removeChannel(ch)) }
+  }, [sessionIds]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     async function load() {
@@ -282,6 +313,7 @@ function CompetitionDetail({ comp, lang, onBack }: {
         (a, b) => a.sectionNumber - b.sectionNumber || a.panelNumber - b.panelNumber
       )
       setPanels(sorted)
+      setSessionIds(sorted.flatMap(p => p.sessions.map(s => s.id)))
       setLoading(false)
     }
     load()

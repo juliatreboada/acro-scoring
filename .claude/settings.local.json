@@ -12,7 +12,11 @@
       "Bash(npm run:*)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\(''''scripts'''',{}\\), indent=2\\)\\)\")",
       "Bash(find '/Users/juliavazquezperez/Documents/Web Treboada/acro-scoring-v3' -name *.ts -path */types/supabase* -o -name database.types.ts)",
-      "Bash(grep -r \"supabaseUrl\\\\|SUPABASE_URL\\\\|project_id\\\\|supabase.co\" '/Users/juliavazquezperez/Documents/Web Treboada/acro-scoring-v3/src' --include=*.ts --include=*.tsx --include=*.env* -l)"
+      "Bash(grep -r \"supabaseUrl\\\\|SUPABASE_URL\\\\|project_id\\\\|supabase.co\" '/Users/juliavazquezperez/Documents/Web Treboada/acro-scoring-v3/src' --include=*.ts --include=*.tsx --include=*.env* -l)",
+      "Bash(for f:*)",
+      "Bash(do)",
+      "Bash(sed -i '' 's/h-screen flex flex-col overflow-hidden/h-\\\\[100dvh\\\\] flex flex-col overflow-hidden/g' \"$f\")",
+      "Bash(done)"
     ]
   }
 }

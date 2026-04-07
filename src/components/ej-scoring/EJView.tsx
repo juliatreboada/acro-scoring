@@ -286,9 +286,10 @@ type EJViewProps = {
   judgeScores?: JudgeScore[]
   panelJudges?: PanelJudge[]
   result?: RoutineResult | null
+  mySubmittedScore?: number | null  // non-null when this judge already scored (e.g. after refresh)
 }
 
-export default function EJView({ currentPerf, lang, elements, mode = 'elements', onSubmit, waitingForOtherScores, judgeScores, panelJudges, result }: EJViewProps) {
+export default function EJView({ currentPerf, lang, elements, mode = 'elements', onSubmit, waitingForOtherScores, judgeScores, panelJudges, result, mySubmittedScore }: EJViewProps) {
   const t = T[lang]
   const [deductions, setDeductions] = useState<Deductions>({})
   // orderedAll = listed + added unlisted elements in display order
@@ -319,6 +320,14 @@ export default function EJView({ currentPerf, lang, elements, mode = 'elements',
       prevPerfId.current = currentPerf?.id ?? null
     }
   }, [currentPerf?.id, elements])
+
+  // Restore submitted state when judge already scored (e.g. after page refresh)
+  useEffect(() => {
+    if (mySubmittedScore != null && !submitted) {
+      setSubmitted(true)
+      setSubmittedScore(mySubmittedScore)
+    }
+  }, [mySubmittedScore]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!currentPerf?.id || submitted) return
@@ -374,7 +383,7 @@ export default function EJView({ currentPerf, lang, elements, mode = 'elements',
   // ── waiting ──
   if (!currentPerf) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6 gap-4">
+      <div className="flex flex-col items-center justify-center flex-1 text-center px-6 gap-4">
         <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center">
           <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z" />
@@ -389,7 +398,7 @@ export default function EJView({ currentPerf, lang, elements, mode = 'elements',
   // ── submitted ──
   if (submitted && submittedScore !== null) {
     return (
-      <div className="overflow-y-auto px-4 py-8 space-y-6 max-w-lg mx-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-8 space-y-6 max-w-lg mx-auto">
         <div className="flex flex-col items-center text-center gap-3">
           <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
             <svg className="w-8 h-8 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -421,13 +430,13 @@ export default function EJView({ currentPerf, lang, elements, mode = 'elements',
   // ── keyboard mode: keypad view, PDF alongside on wide screens ──
   if (mode === 'keyboard') {
     return (
-      <>
-        {/* narrow: keypad only */}
-        <div className="md:hidden">
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row">
+        {/* narrow: keypad scrolls naturally */}
+        <div className="md:hidden overflow-y-auto">
           <NumericKeypad lang={lang} perf={currentPerf} onSubmit={handleSubmitPhone} />
         </div>
         {/* wide: PDF + keypad side by side */}
-        <div className="hidden md:flex gap-4 h-full px-4 pb-4">
+        <div className="hidden md:flex gap-4 flex-1 min-h-0 px-4 pb-4">
           <div className="flex-1 min-h-0">
             <PdfPanel tsUrl={currentPerf.tsUrl} lang={lang} />
           </div>
@@ -435,24 +444,24 @@ export default function EJView({ currentPerf, lang, elements, mode = 'elements',
             <NumericKeypad lang={lang} perf={currentPerf} onSubmit={handleSubmitPhone} />
           </div>
         </div>
-      </>
+      </div>
     )
   }
 
   // ── elements mode: element list always visible, PDF alongside on wide screens ──
   return (
-    <div className="h-full px-4 pb-4">
-      <div className="flex gap-4 h-full">
+    <div className="px-4 pb-4 md:flex-1 md:min-h-0 md:flex md:flex-col">
+      <div className="md:flex md:gap-4 md:flex-1 md:min-h-0">
         {/* PDF: md+ only */}
         <div className="hidden md:flex flex-1 flex-col min-h-0">
           <PdfPanel tsUrl={currentPerf.tsUrl} lang={lang} />
         </div>
 
         {/* element list: always visible, full width on narrow */}
-        <div className="flex-1 md:flex-none md:w-96 flex flex-col gap-3 min-h-0">
+        <div className="md:flex-none md:w-96 md:flex md:flex-col md:gap-3 md:min-h-0 flex flex-col gap-3">
           <PerformanceHeader perf={currentPerf} lang={lang} score={score} totalDeductions={totalDed} />
 
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-0">
+          <div className="space-y-2 pr-1 md:flex-1 md:overflow-y-auto md:min-h-0">
             {orderedAll.length === 0 ? (
               <div className="text-center py-8 text-slate-400">
                 <p className="font-medium text-sm">{t.noElements}</p>

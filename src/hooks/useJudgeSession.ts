@@ -401,10 +401,26 @@ export function useJudgeSession(): JudgeSessionData {
       ej_deductions: score.detail?.ejDeductions ?? null,
       ej_extra_elements: score.detail?.ejExtraElements ?? null,
     }, { onConflict: 'session_id,team_id,section_panel_judge_id' })
-    setJudgeScores(prev => {
-      const cur = prev[currentPerfId] ?? []
-      return { ...prev, [currentPerfId]: [...cur.filter(s => s.panelJudgeId !== score.panelJudgeId), score] }
-    })
+    // Re-fetch all scores for this performance to catch any submitted in the
+    // race window between initial page load and real-time subscription setup
+    const { data: latest } = await supabase.from('scores')
+      .select('section_panel_judge_id,ej_score,aj_score,dj_difficulty,dj_penalty,cjp_penalty')
+      .eq('session_id', sessionId)
+      .eq('team_id', teamId)
+    if (latest) {
+      const perfId = currentPerfId
+      setJudgeScores(prev => ({
+        ...prev,
+        [perfId]: latest.map((s: any) => ({
+          panelJudgeId: s.section_panel_judge_id,
+          ejScore:      s.ej_score,
+          ajScore:      s.aj_score,
+          djDifficulty: s.dj_difficulty,
+          djPenalty:    s.dj_penalty,
+          cjpPenalty:   s.cjp_penalty,
+        })),
+      }))
+    }
   }
 
   function handleEditScore(

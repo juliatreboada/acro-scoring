@@ -151,11 +151,15 @@ export type DJEJAJViewProps = {
   judgeScores?: JudgeScore[]
   waitingForOtherScores?: boolean
   result?: RoutineResult | null
+  myDJSubmittedScore?: { difficulty: number; penalty: number } | null
+  myEJSubmittedScore?: number | null
+  myAJSubmittedScore?: number | null
 }
 
 export default function DJEJAJView({
   currentPerf, lang, elements, djMode = 'elements', ejMode = 'elements', onSubmit,
   panelJudges, judgeScores, waitingForOtherScores, result,
+  myDJSubmittedScore, myEJSubmittedScore, myAJSubmittedScore,
 }: DJEJAJViewProps) {
   const t = T[lang]
 
@@ -189,6 +193,17 @@ export default function DJEJAJView({
       prevPerfId.current = currentPerf?.id ?? null
     }
   }, [currentPerf?.id])
+
+  // Restore submitted state after page refresh
+  useEffect(() => {
+    if (myDJSubmittedScore != null) setDjSubmitted(myDJSubmittedScore)
+  }, [myDJSubmittedScore]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (myEJSubmittedScore != null) setEjSubmitted(myEJSubmittedScore)
+  }, [myEJSubmittedScore]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (myAJSubmittedScore != null) setAjSubmitted(myAJSubmittedScore)
+  }, [myAJSubmittedScore]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function tryFireSubmit(
     dj: typeof djSubmitted, ej: typeof ejSubmitted, aj: typeof ajSubmitted
@@ -289,7 +304,7 @@ export default function DJEJAJView({
   // ── scoring ──
   const ejScoreVal = calcEJScore(deductions)
   return (
-    <div className="h-full">
+    <div className="md:h-full">
       <div className="md:hidden"><PerformanceHeader perf={currentPerf} lang={lang} /></div>
 
       {/* ── mobile (< md) ── */}

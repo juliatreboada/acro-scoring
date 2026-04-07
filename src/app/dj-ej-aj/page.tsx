@@ -48,9 +48,9 @@ export default function Page() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-slate-100">
+    <div className="flex flex-col md:h-[100dvh] md:overflow-hidden bg-slate-100">
       <AuthBar lang={lang} onLangChange={setLang} />
-      <div className="flex-1 min-h-0">
+      <div className="md:flex-1 md:min-h-0 md:flex md:flex-col">
       <DJEJAJView
         currentPerf={currentPerf} lang={lang} elements={currentPerf?.elements ?? []}
         djMode={(djMethod as 'elements' | 'keyboard') ?? 'elements'}

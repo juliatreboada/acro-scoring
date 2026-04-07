@@ -42,9 +42,9 @@ export default function Page() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-slate-100">
+    <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-100">
       <AuthBar lang={lang} onLangChange={setLang} />
-      <div className="flex-1 min-h-0 px-0 md:px-4">
+      <div className="flex-1 min-h-0 px-0 md:px-4 flex flex-col">
         <DJView
           currentPerf={currentPerf}
           lang={lang}

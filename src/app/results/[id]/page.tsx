@@ -32,11 +32,15 @@ export default function Page() {
       if (!comp) { setLoading(false); return }
       setCompName(comp.name)
 
-      // ── sessions for this competition ──────────────────────────────────────
-      const { data: sessions } = await supabase
-        .from('sessions')
-        .select('id, age_group, category, routine_type')
-        .eq('competition_id', id)
+      // ── sessions + age group labels (parallel) ────────────────────────────
+      const [sessionsRes, ageGroupRulesRes] = await Promise.all([
+        supabase.from('sessions').select('id, age_group, category, routine_type').eq('competition_id', id),
+        supabase.from('age_group_rules').select('id, age_group'),
+      ])
+      const sessions = sessionsRes.data
+      const agLabelMap = Object.fromEntries(
+        (ageGroupRulesRes.data ?? []).map((r) => [r.id, r.age_group])
+      )
 
       if (!sessions?.length) { setLoading(false); return }
 
@@ -94,7 +98,7 @@ export default function Page() {
           teamId:      o.team_id,
           position:    o.position,
           gymnasts:    teamMap[o.team_id] ?? '',
-          ageGroup:    session?.age_group   ?? '',
+          ageGroup:    agLabelMap[session?.age_group ?? ''] ?? session?.age_group ?? '',
           category:    session?.category    ?? '',
           routineType: session?.routine_type ?? '',
           skipped:     dropoutSet.has(o.team_id),

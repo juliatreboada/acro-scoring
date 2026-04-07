@@ -32,6 +32,8 @@ export default function Page() {
   const djRole = assignedRoles.find(r => r.role === 'DJ')
   const ejRole = assignedRoles.find(r => r.role === 'EJ')
   const currentScores = currentPerfId ? (judgeScores[currentPerfId] ?? []) : []
+  const myDJScore = djRole ? currentScores.find(s => s.panelJudgeId === djRole.id) : null
+  const myEJScore = ejRole ? currentScores.find(s => s.panelJudgeId === ejRole.id) : null
   const mySubmitted = [djRole, ejRole].filter(Boolean).every(r => currentScores.some(s => s.panelJudgeId === r!.id))
   const currentResult = currentPerfId ? (results[currentPerfId] ?? null) : null
   const waitingForOtherScores = mySubmitted && !currentResult
@@ -46,9 +48,9 @@ export default function Page() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-slate-100">
+    <div className="flex flex-col md:h-[100dvh] md:overflow-hidden bg-slate-100">
       <AuthBar lang={lang} onLangChange={setLang} />
-      <div className="flex-1 min-h-0">
+      <div className="md:flex-1 md:min-h-0 md:flex md:flex-col">
       <DJEJView
         currentPerf={currentPerf} lang={lang} elements={currentPerf?.elements ?? []}
         djMode={(djMethod as 'elements' | 'keyboard') ?? 'elements'}
@@ -57,6 +59,8 @@ export default function Page() {
         panelJudges={panelJudges} judgeScores={currentScores}
         waitingForOtherScores={waitingForOtherScores}
         result={currentResult ?? undefined}
+        myDJSubmittedScore={myDJScore ? { difficulty: myDJScore.djDifficulty!, penalty: myDJScore.djPenalty! } : null}
+        myEJSubmittedScore={myEJScore?.ejScore ?? null}
       />
       </div>
     </div>

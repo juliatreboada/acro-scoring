@@ -132,11 +132,14 @@ export type EJAJViewProps = {
   judgeScores?: JudgeScore[]
   waitingForOtherScores?: boolean
   result?: RoutineResult | null
+  myEJSubmittedScore?: number | null
+  myAJSubmittedScore?: number | null
 }
 
 export default function EJAJView({
   currentPerf, lang, elements, ejMode = 'elements', onSubmit,
   panelJudges, judgeScores, waitingForOtherScores, result,
+  myEJSubmittedScore, myAJSubmittedScore,
 }: EJAJViewProps) {
   const t = T[lang]
 
@@ -160,6 +163,15 @@ export default function EJAJView({
       prevPerfId.current = currentPerf?.id ?? null
     }
   }, [currentPerf?.id])
+
+  // Restore submitted state after page refresh
+  useEffect(() => {
+    if (myEJSubmittedScore != null) setEjSubmitted(myEJSubmittedScore)
+  }, [myEJSubmittedScore]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (myAJSubmittedScore != null) setAjSubmitted(myAJSubmittedScore)
+  }, [myAJSubmittedScore]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleEJSubmit(score: number) {
     setEjSubmitted(score)
@@ -230,7 +242,7 @@ export default function EJAJView({
 
   // ── scoring ──
   return (
-    <div className="h-full">
+    <div className="md:h-full">
       <div className="md:hidden"><PerformanceHeader perf={currentPerf} lang={lang} /></div>
 
       {/* ── mobile (< md): tab bar + content ── */}

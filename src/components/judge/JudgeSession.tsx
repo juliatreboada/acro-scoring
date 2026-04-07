@@ -120,11 +120,18 @@ export default function JudgeSession({
   }, [currentPerfId])
 
   const nonCjpRoles = sortedRoles.filter((r) => r.role !== 'CJP')
-  const allNonCjpSubmitted = nonCjpRoles.length > 0 && nonCjpRoles.every((r) => submittedRoleIds.has(r.id))
 
-  // scoreboard data — only passed once all non-CJP roles have submitted
+  // Score data — available to each role as soon as that role submits
   const currentJudgeScores = currentPerfId ? (judgeScores[currentPerfId] ?? []) : []
-  const currentResult = currentPerfId ? (results[currentPerfId] ?? null) : null
+
+  // A role is considered submitted if it's in local state OR already in DB scores (survives refresh)
+  function roleHasSubmitted(role: PanelJudge): boolean {
+    return submittedRoleIds.has(role.id) || currentJudgeScores.some(s => s.panelJudgeId === role.id)
+  }
+
+  const allNonCjpSubmittedWithDB = nonCjpRoles.length > 0 && nonCjpRoles.every(roleHasSubmitted)
+  // Final result only passed when all non-CJP roles have submitted
+  const currentResult = allNonCjpSubmittedWithDB ? (currentPerfId ? (results[currentPerfId] ?? null) : null) : null
 
   function handleRoleSubmit(role: PanelJudge, score: JudgeScore) {
     setSubmittedRoleIds((prev) => new Set([...prev, role.id]))
@@ -134,7 +141,7 @@ export default function JudgeSession({
   // ── empty states ──
   if (sessionStatus !== 'active') {
     return (
-      <div className="h-[calc(100vh-48px)]">
+      <div className="h-[calc(100dvh-48px)]">
         <EmptyState
           icon={sessionStatus === 'waiting' ? 'clock' : 'check'}
           title={sessionStatus === 'waiting' ? t.waiting : t.finished}
@@ -146,7 +153,7 @@ export default function JudgeSession({
 
   if (sortedRoles.length === 0) {
     return (
-      <div className="h-[calc(100vh-48px)]">
+      <div className="h-[calc(100dvh-48px)]">
         <EmptyState icon="slash" title={t.noRoles} sub={t.noRolesSub} />
       </div>
     )
@@ -156,7 +163,7 @@ export default function JudgeSession({
     r.role === 'CJP' ? 'CJP' : `${r.role}${r.roleNumber}`
 
   return (
-    <div className="flex flex-col h-[calc(100vh-48px)]">
+    <div className="flex flex-col md:h-[calc(100dvh-48px)]">
       {/* tabs — only shown when more than one role */}
       {sortedRoles.length > 1 && (
         <div className="bg-white border-b border-slate-200 px-4 flex items-center gap-0 h-11 shrink-0">
@@ -178,13 +185,12 @@ export default function JudgeSession({
       )}
 
       {/* views — all rendered, inactive ones hidden to preserve state */}
-      <div className="flex-1 min-h-0">
+      <div className="md:flex-1 md:min-h-0 md:flex md:flex-col">
         {sortedRoles.map((role) => {
-          const waiting = submittedRoleIds.has(role.id) && !allNonCjpSubmitted
-          const scoreboardReady = allNonCjpSubmitted
-
+          const thisRoleSubmitted = roleHasSubmitted(role)
+          const waiting = thisRoleSubmitted && !allNonCjpSubmittedWithDB
           return (
-            <div key={role.id} className={['h-full', activeTabId === role.id ? '' : 'hidden'].join(' ')}>
+            <div key={role.id} className={['md:flex-1 md:min-h-0', activeTabId === role.id ? '' : 'hidden'].join(' ')}>
               {role.role === 'CJP' && (
                 <CJPView
                   isCJP={true}
@@ -206,9 +212,9 @@ export default function JudgeSession({
                   lang={lang}
                   elements={elements}
                   waitingForOtherScores={waiting}
-                  judgeScores={scoreboardReady ? currentJudgeScores : undefined}
-                  panelJudges={scoreboardReady ? panelJudges : undefined}
-                  result={scoreboardReady ? currentResult : undefined}
+                  judgeScores={thisRoleSubmitted ? currentJudgeScores : undefined}
+                  panelJudges={thisRoleSubmitted ? panelJudges : undefined}
+                  result={currentResult}
                   onSubmit={(difficulty, penalty) => handleRoleSubmit(role, {
                     panelJudgeId: role.id,
                     ejScore: null,
@@ -225,16 +231,18 @@ export default function JudgeSession({
                   lang={lang}
                   elements={elements}
                   waitingForOtherScores={waiting}
-                  judgeScores={scoreboardReady ? currentJudgeScores : undefined}
-                  panelJudges={scoreboardReady ? panelJudges : undefined}
-                  result={scoreboardReady ? currentResult : undefined}
-                  onSubmit={(score) => handleRoleSubmit(role, {
+                  judgeScores={thisRoleSubmitted ? currentJudgeScores : undefined}
+                  panelJudges={thisRoleSubmitted ? panelJudges : undefined}
+                  result={currentResult}
+                  mySubmittedScore={currentJudgeScores.find(s => s.panelJudgeId === role.id)?.ejScore ?? null}
+                  onSubmit={(score, detail) => handleRoleSubmit(role, {
                     panelJudgeId: role.id,
                     ejScore: score,
                     ajScore: null,
                     djDifficulty: null,
                     djPenalty: null,
                     cjpPenalty: null,
+                    detail,
                   })}
                 />
               )}
@@ -243,9 +251,9 @@ export default function JudgeSession({
                   currentPerf={currentPerf}
                   lang={lang}
                   waitingForOtherScores={waiting}
-                  judgeScores={scoreboardReady ? currentJudgeScores : undefined}
-                  panelJudges={scoreboardReady ? panelJudges : undefined}
-                  result={scoreboardReady ? currentResult : undefined}
+                  judgeScores={thisRoleSubmitted ? currentJudgeScores : undefined}
+                  panelJudges={thisRoleSubmitted ? panelJudges : undefined}
+                  result={currentResult}
                   onSubmit={(score) => handleRoleSubmit(role, {
                     panelJudgeId: role.id,
                     ejScore: null,
