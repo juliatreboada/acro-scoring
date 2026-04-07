@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { PanelJudge, MockPerf, JudgeScore, RoutineResult } from '@/components/cjp/types'
 import type { SessionStatus } from '@/components/judge/JudgeSession'
@@ -31,7 +31,7 @@ export type JudgeSessionData = {
 // ─── hook ─────────────────────────────────────────────────────────────────────
 
 export function useJudgeSession(): JudgeSessionData {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), []) // eslint-disable-line react-hooks/exhaustive-deps
   const [loading,       setLoading]       = useState(true)
   const [sessionId,     setSessionId]     = useState<string | null>(null)
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>('waiting')

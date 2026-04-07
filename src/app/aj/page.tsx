@@ -42,7 +42,7 @@ export default function Page() {
   }
 
   return (
-    <div className="h-[100dvh] flex flex-col overflow-hidden bg-slate-50">
+    <div className="min-h-[100dvh] flex flex-col md:h-[100dvh] md:overflow-hidden bg-slate-50">
       <AuthBar lang={lang} onLangChange={setLang} />
       <div className="flex-1 min-h-0 overflow-auto">
       <div className="max-w-lg mx-auto py-4">

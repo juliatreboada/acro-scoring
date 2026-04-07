@@ -43,7 +43,7 @@ export default function Page() {
   }
 
   return (
-    <div className="flex flex-col md:h-[100dvh] md:overflow-hidden bg-slate-100">
+    <div className="min-h-[100dvh] flex flex-col md:h-[100dvh] md:overflow-hidden bg-slate-100">
       <AuthBar lang={lang} onLangChange={setLang} />
       <div className="md:flex-1 md:min-h-0 px-0 md:px-4 md:flex md:flex-col">
         <EJView

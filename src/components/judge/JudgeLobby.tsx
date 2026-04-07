@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/aj-scoring/types'
@@ -182,7 +182,8 @@ function CompetitionDetail({ comp, lang, onBack }: {
 }) {
   const t = T[lang]
   const router = useRouter()
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
   const [loading, setLoading] = useState(true)
   const [panels, setPanels] = useState<LobbyPanel[]>([])
   const [sessionIds, setSessionIds] = useState<string[]>([])
@@ -440,7 +441,8 @@ function CompetitionDetail({ comp, lang, onBack }: {
 
 export default function JudgeLobby({ lang }: { lang: Lang }) {
   const t = T[lang]
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
   const [loading, setLoading] = useState(true)
   const [competitions, setCompetitions] = useState<LobbyCompetition[]>([])
   const [selectedComp, setSelectedComp] = useState<LobbyCompetition | null>(null)

@@ -10,7 +10,7 @@ import { PenaltyPanel } from '../shared/CJPPenaltyPanel'
 import AJScoringPanel from '../shared/AJScoringPanel'
 import CJPTabletShell from '../shared/CJPTabletShell'
 import { calcDJTotals, DualKeypad, PhoneDJElementsList } from '../shared/DJElementsShared'
-import { calcEJScore, DJEJTabContent, EJKeypad, EJElementRow } from '../shared/DJEJElementsShared'
+import { calcEJScore, DJEJTabContent, DJTabContent, EJKeypad, EJElementRow } from '../shared/DJEJElementsShared'
 import CheckIcon from '../shared/CheckIcon'
 import { useDJScoring } from '@/hooks/useDJScoring'
 import { usePenaltyStates } from '@/hooks/usePenaltyStates'
@@ -306,6 +306,7 @@ function PhoneView({ perf, lang, djMode, ejMode, elements, extraElements, flags,
 function TabletLayout({
   lang, performances, currentPerfId, panelJudges, judgeScores, results,
   elements, extraElements, flags, deductions, incorrectTs, penaltyStates,
+  djMode, ejMode,
   onFlagChange, onLock, onOpenRetry, onAddElement, onLabelChange, onTypeChange,
   onToggleIncorrectTs, onPenaltyChange, onOpen, onSkip,
   onSubmitDJScore, onSubmitEJScore, onSubmitAJScore, onSubmit, onReopenScore, onEditScore,
@@ -322,6 +323,8 @@ function TabletLayout({
   deductions: Deductions
   incorrectTs: boolean
   penaltyStates: Record<string, PenaltyState>
+  djMode: 'elements' | 'keyboard'
+  ejMode: 'elements' | 'keyboard'
   onFlagChange: (elementId: string, attemptNumber: number, patch: Partial<ElementFlag>) => void
   onLock: (elementId: string, attemptNumber: number, value: number) => void
   onOpenRetry: (elementId: string, nextAttemptNumber: number) => void
@@ -340,17 +343,38 @@ function TabletLayout({
   onEditScore?: (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
 }) {
   const t = T[lang]
-  const [rightTab, setRightTab] = useState<'cjp' | 'djej' | 'aj'>('cjp')
+  const bothElements = djMode === 'elements' && ejMode === 'elements'
+  const [rightTab, setRightTab] = useState<'cjp' | 'djej' | 'dj' | 'ej' | 'aj'>('cjp')
   const [djEjSubmitted, setDjEjSubmitted] = useState<Record<string, boolean>>({})
+  const [djSubmitted, setDjSubmitted] = useState<Record<string, { difficulty: number; penalty: number }>>({})
+  const [ejSubmitted, setEjSubmitted] = useState<Record<string, number>>({})
   const [ajSubmitted, setAjSubmitted] = useState<Record<string, boolean>>({})
 
   function handleDJEJSubmit(perfId: string) {
     const { difficulty, penalty } = calcDJTotals(elements, extraElements, flags, incorrectTs)
-    const ejScore = calcEJScore(deductions)
+    const ej = calcEJScore(deductions)
     setDjEjSubmitted((prev) => ({ ...prev, [perfId]: true }))
     onSubmitDJScore?.(perfId, difficulty, penalty)
-    onSubmitEJScore?.(perfId, ejScore)
+    onSubmitEJScore?.(perfId, ej)
   }
+
+  function handleDJSubmit(perfId: string, difficulty: number, penalty: number) {
+    setDjSubmitted((prev) => ({ ...prev, [perfId]: { difficulty, penalty } }))
+    onSubmitDJScore?.(perfId, difficulty, penalty)
+  }
+
+  function handleEJSubmit(perfId: string, score: number) {
+    setEjSubmitted((prev) => ({ ...prev, [perfId]: score }))
+    onSubmitEJScore?.(perfId, score)
+  }
+
+  const checkIcon = (
+    <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 flex items-center justify-center">
+      <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+    </span>
+  )
 
   return (
     <CJPTabletShell
@@ -362,82 +386,131 @@ function TabletLayout({
       renderRightPanel={(activePerfId, _isReviewMode) => {
         const penalty = activePerfId ? (penaltyStates[activePerfId] ?? DEFAULT_PENALTY) : DEFAULT_PENALTY
         const isDJEJSubmitted = activePerfId ? !!djEjSubmitted[activePerfId] : false
+        const isDJSubmitted = activePerfId ? !!djSubmitted[activePerfId] : false
+        const isEJSubmitted = activePerfId ? ejSubmitted[activePerfId] != null : false
         const isAJSubmitted = activePerfId ? !!ajSubmitted[activePerfId] : false
         const { difficulty: djDifficulty, penalty: djPenaltyVal } = calcDJTotals(elements, extraElements, flags, incorrectTs)
         const ejScore = calcEJScore(deductions)
+
+        const noPerf = <div className="flex items-center justify-center h-32 text-slate-300 text-sm">{t.waiting}</div>
+        const cjpContent = activePerfId
+          ? <PenaltyPanel state={penalty} onChange={(p) => onPenaltyChange(activePerfId, p)} lang={lang} />
+          : noPerf
+        const ajContent = !activePerfId ? noPerf : (
+          <div className="py-3">
+            <AJScoringPanel lang={lang} perfId={activePerfId}
+              onSubmit={(score) => {
+                setAjSubmitted((prev) => ({ ...prev, [activePerfId]: true }))
+                onSubmitAJScore?.(activePerfId, score)
+              }} />
+          </div>
+        )
 
         return (
           <>
             {/* tab header */}
             <div className="px-3 pt-2.5 pb-0 border-b border-slate-200 shrink-0">
               <div className="flex gap-0.5 bg-slate-100 rounded-xl p-1">
-                {(['cjp', 'djej', 'aj'] as const).map((tabId) => (
-                  <button key={tabId} onClick={() => setRightTab(tabId)}
-                    className={['flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1',
-                      rightTab === tabId ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'].join(' ')}>
-                    {tabId === 'cjp' ? t.cjpTab : tabId === 'djej' ? t.djEjTab : t.ajTab}
-                    {tabId === 'djej' && isDJEJSubmitted && (
-                      <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 flex items-center justify-center">
-                        <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                      </span>
-                    )}
-                    {tabId === 'aj' && isAJSubmitted && (
-                      <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 flex items-center justify-center">
-                        <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                      </span>
-                    )}
-                  </button>
-                ))}
+                {bothElements ? (
+                  // 3 tabs: CJP | DJ+EJ | AJ
+                  (['cjp', 'djej', 'aj'] as const).map((tabId) => (
+                    <button key={tabId} onClick={() => setRightTab(tabId)}
+                      className={['flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1',
+                        rightTab === tabId ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'].join(' ')}>
+                      {tabId === 'cjp' ? t.cjpTab : tabId === 'djej' ? t.djEjTab : t.ajTab}
+                      {tabId === 'djej' && isDJEJSubmitted && checkIcon}
+                      {tabId === 'aj' && isAJSubmitted && checkIcon}
+                    </button>
+                  ))
+                ) : (
+                  // 4 tabs: CJP | DJ | EJ | AJ
+                  (['cjp', 'dj', 'ej', 'aj'] as const).map((tabId) => (
+                    <button key={tabId} onClick={() => setRightTab(tabId)}
+                      className={['flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1',
+                        rightTab === tabId ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'].join(' ')}>
+                      {tabId === 'cjp' ? t.cjpTab : tabId === 'dj' ? t.djTab : tabId === 'ej' ? t.ejTab : t.ajTab}
+                      {tabId === 'dj' && isDJSubmitted && checkIcon}
+                      {tabId === 'ej' && isEJSubmitted && checkIcon}
+                      {tabId === 'aj' && isAJSubmitted && checkIcon}
+                    </button>
+                  ))
+                )}
               </div>
             </div>
 
             {/* tab content */}
             <div className="flex-1 min-h-0 overflow-y-auto">
-              {rightTab === 'cjp' ? (
-                activePerfId ? (
-                  <PenaltyPanel state={penalty} onChange={(p) => onPenaltyChange(activePerfId, p)} lang={lang} />
-                ) : (
-                  <div className="flex items-center justify-center h-32 text-slate-300 text-sm">{t.waiting}</div>
-                )
-              ) : rightTab === 'djej' ? (
-                !activePerfId ? (
-                  <div className="flex items-center justify-center h-32 text-slate-300 text-sm">{t.waiting}</div>
-                ) : (
+              {rightTab === 'cjp' && cjpContent}
+
+              {rightTab === 'djej' && (
+                !activePerfId ? noPerf : (
                   <DJEJTabContent
-                    lang={lang}
-                    elements={elements}
-                    extraElements={extraElements}
-                    flags={flags}
-                    deductions={deductions}
-                    incorrectTs={incorrectTs}
-                    onFlagChange={onFlagChange}
-                    onLock={onLock}
-                    onOpenRetry={onOpenRetry}
-                    onAddElement={onAddElement}
-                    onLabelChange={onLabelChange}
-                    onTypeChange={onTypeChange}
+                    lang={lang} elements={elements} extraElements={extraElements}
+                    flags={flags} deductions={deductions} incorrectTs={incorrectTs}
+                    onFlagChange={onFlagChange} onLock={onLock} onOpenRetry={onOpenRetry}
+                    onAddElement={onAddElement} onLabelChange={onLabelChange} onTypeChange={onTypeChange}
                     onToggleIncorrectTs={onToggleIncorrectTs}
                     onSubmit={() => handleDJEJSubmit(activePerfId)}
                     isSubmitted={isDJEJSubmitted}
-                    djDifficulty={djDifficulty}
-                    djPenalty={djPenaltyVal}
-                    ejScore={ejScore}
+                    djDifficulty={djDifficulty} djPenalty={djPenaltyVal} ejScore={ejScore}
                   />
                 )
-              ) : !activePerfId ? (
-                <div className="flex items-center justify-center h-32 text-slate-300 text-sm">{t.waiting}</div>
-              ) : (
-                <div className="py-3">
-                  <AJScoringPanel
-                    lang={lang}
-                    perfId={activePerfId}
-                    onSubmit={(score) => {
-                      setAjSubmitted((prev) => ({ ...prev, [activePerfId]: true }))
-                      onSubmitAJScore?.(activePerfId, score)
-                    }}
-                  />
-                </div>
               )}
+
+              {rightTab === 'dj' && (
+                !activePerfId ? noPerf :
+                isDJSubmitted ? (
+                  <div className="flex flex-col items-center gap-3 py-10 px-4">
+                    <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-center"><p className="text-xs text-slate-400 mb-1">{t.difficultyTotal}</p><p className="text-2xl font-bold text-slate-800 tabular-nums">{djSubmitted[activePerfId]!.difficulty.toFixed(2)}</p></div>
+                      <div className="w-px h-8 bg-slate-200" />
+                      <div className="text-center"><p className="text-xs text-slate-400 mb-1">{t.djPenalty}</p><p className="text-2xl font-bold text-red-500 tabular-nums">−{djSubmitted[activePerfId]!.penalty.toFixed(1)}</p></div>
+                    </div>
+                  </div>
+                ) : djMode === 'keyboard' ? (
+                  <DualKeypad lang={lang} onSubmit={(d, p) => handleDJSubmit(activePerfId, d, p)} />
+                ) : (
+                  <DJTabContent
+                    lang={lang} elements={elements} extraElements={extraElements}
+                    flags={flags} incorrectTs={incorrectTs}
+                    onFlagChange={onFlagChange} onOpenRetry={onOpenRetry}
+                    onAddElement={onAddElement} onLabelChange={onLabelChange} onTypeChange={onTypeChange}
+                    onToggleIncorrectTs={onToggleIncorrectTs}
+                    onSubmit={() => handleDJSubmit(activePerfId, djDifficulty, djPenaltyVal)}
+                    isSubmitted={false} djDifficulty={djDifficulty} djPenalty={djPenaltyVal}
+                  />
+                )
+              )}
+
+              {rightTab === 'ej' && (
+                !activePerfId ? noPerf :
+                isEJSubmitted ? (
+                  <div className="flex flex-col items-center gap-3 py-10 px-4">
+                    <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                      <svg className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    </div>
+                    <div className="text-center"><p className="text-xs text-slate-400 mb-1">{t.ejScore}</p><p className="text-2xl font-bold text-sky-600 tabular-nums">{ejSubmitted[activePerfId]!.toFixed(1)}</p></div>
+                  </div>
+                ) : ejMode === 'keyboard' ? (
+                  <EJKeypad lang={lang} onSubmit={(s) => handleEJSubmit(activePerfId, s)} />
+                ) : (
+                  <div className="p-3 space-y-2">
+                    {[...elements, ...extraElements].map((el) => (
+                      <EJElementRow key={el.id} element={el} deductions={deductions} lang={lang} onLock={onLock}
+                        onLabelChange={el.id.startsWith('extra-') ? onLabelChange : undefined} />
+                    ))}
+                    <button onClick={() => handleEJSubmit(activePerfId, ejScore)}
+                      className="w-full py-3 rounded-xl font-bold text-base bg-sky-500 hover:bg-sky-600 active:scale-95 text-white transition-all">
+                      {t.submit} · {t.ejScore} {ejScore.toFixed(1)}
+                    </button>
+                  </div>
+                )
+              )}
+
+              {rightTab === 'aj' && ajContent}
             </div>
           </>
         )
@@ -538,6 +611,8 @@ export default function CJPDJEJAJView({
           deductions={deductions}
           incorrectTs={incorrectTs}
           penaltyStates={penaltyStates}
+          djMode={djMode}
+          ejMode={ejMode}
           onFlagChange={handleFlagChange}
           onLock={handleLock}
           onOpenRetry={handleOpenRetry}
