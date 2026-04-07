@@ -30,7 +30,7 @@ const T = {
     dynamic: 'Dinámico',
     combined: 'Combinado',
     allRound: 'All-Around',
-    team: 'Pareja',
+    team: 'Equipo',
     eScore: 'E',
     aScore: 'A',
     dScore: 'D',
@@ -48,6 +48,7 @@ const T = {
 
 type AllRoundEntry = {
   gymnasts: string
+  teamId: string
   balanceScore: number
   dynamicScore: number
   total: number
@@ -78,14 +79,14 @@ function RankCircle({ rank }: { rank: number }) {
   )
 }
 
-// ─── club avatar ──────────────────────────────────────────────────────────────
-
 function ClubAvatar({ url }: { url: string | null | undefined }) {
   if (!url) return null
   return <img src={url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
 }
 
 // ─── individual routine ranking ───────────────────────────────────────────────
+// Uses table-fixed + explicit column widths to guarantee pixel-level alignment
+// across all sections on the page.
 
 function GroupRanking({ rows, results, t, clubAvatarByTeam }: {
   rows: MockPerf[]
@@ -95,17 +96,28 @@ function GroupRanking({ rows, results, t, clubAvatarByTeam }: {
 }) {
   return (
     <div className="px-2 sm:px-4 py-3">
-      <table className="w-full hidden sm:table">
+      {/* desktop */}
+      <table className="w-full table-fixed hidden sm:table">
+        <colgroup>
+          <col className="w-14" />        {/* # */}
+          <col />                          {/* team — fills remaining */}
+          <col className="w-20" />        {/* E */}
+          <col className="w-20" />        {/* A */}
+          <col className="w-20" />        {/* D */}
+          <col className="w-20" />        {/* Pen */}
+          <col className="w-24" />        {/* Total */}
+          <col className="w-16" />        {/* PROV badge */}
+        </colgroup>
         <thead>
           <tr className="border-b border-slate-100">
-            <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide w-14">#</th>
+            <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">#</th>
             <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.team}</th>
             <th className="px-3 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.eScore}</th>
             <th className="px-3 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.aScore}</th>
             <th className="px-3 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.dScore}</th>
             <th className="px-3 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.pen}</th>
             <th className="px-3 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.total}</th>
-            <th className="w-16"></th>
+            <th />
           </tr>
         </thead>
         <tbody>
@@ -122,9 +134,9 @@ function GroupRanking({ rows, results, t, clubAvatarByTeam }: {
               ].join(' ')}>
                 <td className="px-3 py-3"><RankCircle rank={rank + 1} /></td>
                 <td className="px-3 py-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     <ClubAvatar url={clubAvatarByTeam[perf.teamId]} />
-                    <p className="font-semibold text-slate-800 text-base">{perf.gymnasts}</p>
+                    <p className="font-semibold text-slate-800 text-base break-words">{perf.gymnasts}</p>
                   </div>
                 </td>
                 <td className="px-3 py-3 text-right tabular-nums font-mono text-slate-600">{(r.eScore * 2).toFixed(3)}</td>
@@ -136,7 +148,7 @@ function GroupRanking({ rows, results, t, clubAvatarByTeam }: {
                   </span>
                 </td>
                 <td className="px-3 py-3 text-right">
-                  <span className={['text-xl font-bold tabular-nums', isProvisional ? 'text-amber-600' : 'text-slate-800'].join(' ')}>
+                  <span className={['text-xl font-bold tabular-nums print:text-sm', isProvisional ? 'text-amber-600' : 'text-slate-800'].join(' ')}>
                     {r.finalScore.toFixed(3)}
                   </span>
                 </td>
@@ -151,6 +163,7 @@ function GroupRanking({ rows, results, t, clubAvatarByTeam }: {
         </tbody>
       </table>
 
+      {/* mobile */}
       <div className="sm:hidden space-y-2">
         {rows.map((perf, rank) => {
           const r = results[perf.id]!
@@ -165,14 +178,14 @@ function GroupRanking({ rows, results, t, clubAvatarByTeam }: {
               <RankCircle rank={rank + 1} />
               <ClubAvatar url={clubAvatarByTeam[perf.teamId]} />
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-slate-800 truncate">{perf.gymnasts}</p>
+                <p className="font-semibold text-slate-800 break-words">{perf.gymnasts}</p>
                 <p className="text-xs text-slate-400 mt-0.5 tabular-nums">
                   E {(r.eScore * 2).toFixed(3)} · A {r.aScore.toFixed(3)} · D {r.difScore.toFixed(2)}
                   {totalPen > 0 && <span className="text-red-400"> · −{totalPen.toFixed(1)}</span>}
                 </p>
               </div>
               <div className="text-right shrink-0">
-                <p className={['text-xl font-bold tabular-nums', isProvisional ? 'text-amber-600' : 'text-slate-800'].join(' ')}>
+                <p className={['text-xl font-bold tabular-nums print:text-sm', isProvisional ? 'text-amber-600' : 'text-slate-800'].join(' ')}>
                   {r.finalScore.toFixed(3)}
                 </p>
                 {isProvisional && <span className="text-xs font-bold text-amber-500">{t.prov}</span>}
@@ -187,21 +200,31 @@ function GroupRanking({ rows, results, t, clubAvatarByTeam }: {
 
 // ─── all-around ranking ───────────────────────────────────────────────────────
 
-function AllRoundRanking({ entries, t }: {
+function AllRoundRanking({ entries, t, clubAvatarByTeam }: {
   entries: AllRoundEntry[]
   t: typeof T['en']
+  clubAvatarByTeam: Record<string, string | null>
 }) {
   return (
     <div className="px-2 sm:px-4 py-3">
-      <table className="w-full hidden sm:table">
+      {/* desktop */}
+      <table className="w-full table-fixed hidden sm:table">
+        <colgroup>
+          <col className="w-14" />   {/* # */}
+          <col />                     {/* team */}
+          <col className="w-24" />   {/* Balance */}
+          <col className="w-24" />   {/* Dynamic */}
+          <col className="w-24" />   {/* Total */}
+          <col className="w-16" />   {/* PROV */}
+        </colgroup>
         <thead>
           <tr className="border-b border-slate-100">
-            <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide w-14">#</th>
+            <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">#</th>
             <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.team}</th>
             <th className="px-3 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.balance}</th>
             <th className="px-3 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.dynamic}</th>
             <th className="px-3 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.total}</th>
-            <th className="w-16"></th>
+            <th />
           </tr>
         </thead>
         <tbody>
@@ -215,12 +238,15 @@ function AllRoundRanking({ entries, t }: {
               ].join(' ')}>
                 <td className="px-3 py-3"><RankCircle rank={rank + 1} /></td>
                 <td className="px-3 py-3">
-                  <p className="font-semibold text-slate-800 text-base">{entry.gymnasts}</p>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <ClubAvatar url={clubAvatarByTeam[entry.teamId]} />
+                    <p className="font-semibold text-slate-800 text-base break-words">{entry.gymnasts}</p>
+                  </div>
                 </td>
                 <td className="px-3 py-3 text-right tabular-nums font-mono text-slate-600">{entry.balanceScore.toFixed(3)}</td>
                 <td className="px-3 py-3 text-right tabular-nums font-mono text-slate-600">{entry.dynamicScore.toFixed(3)}</td>
                 <td className="px-3 py-3 text-right">
-                  <span className={['text-xl font-bold tabular-nums', entry.isProvisional ? 'text-amber-600' : 'text-slate-800'].join(' ')}>
+                  <span className={['text-xl font-bold tabular-nums print:text-sm', entry.isProvisional ? 'text-amber-600' : 'text-slate-800'].join(' ')}>
                     {entry.total.toFixed(3)}
                   </span>
                 </td>
@@ -235,6 +261,7 @@ function AllRoundRanking({ entries, t }: {
         </tbody>
       </table>
 
+      {/* mobile */}
       <div className="sm:hidden space-y-2">
         {entries.map((entry, rank) => {
           const medal = rank < 3 ? MEDALS[rank] : null
@@ -244,14 +271,15 @@ function AllRoundRanking({ entries, t }: {
               medal ? medal.row : entry.isProvisional ? 'bg-amber-50/60' : 'bg-slate-50',
             ].join(' ')}>
               <RankCircle rank={rank + 1} />
+              <ClubAvatar url={clubAvatarByTeam[entry.teamId]} />
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-slate-800 truncate">{entry.gymnasts}</p>
+                <p className="font-semibold text-slate-800 break-words">{entry.gymnasts}</p>
                 <p className="text-xs text-slate-400 mt-0.5 tabular-nums">
                   {t.balance} {entry.balanceScore.toFixed(3)} · {t.dynamic} {entry.dynamicScore.toFixed(3)}
                 </p>
               </div>
               <div className="text-right shrink-0">
-                <p className={['text-xl font-bold tabular-nums', entry.isProvisional ? 'text-amber-600' : 'text-slate-800'].join(' ')}>
+                <p className={['text-xl font-bold tabular-nums print:text-sm', entry.isProvisional ? 'text-amber-600' : 'text-slate-800'].join(' ')}>
                   {entry.total.toFixed(3)}
                 </p>
                 {entry.isProvisional && <span className="text-xs font-bold text-amber-500">{t.prov}</span>}
@@ -260,6 +288,35 @@ function AllRoundRanking({ entries, t }: {
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// ─── tab bar within an accordion ─────────────────────────────────────────────
+
+const ROUTINE_ORDER = ['Balance', 'Dynamic', 'Combined']
+
+function RoutineTabs({ tabs, activeTab, onSelect }: {
+  tabs: string[]
+  activeTab: string
+  onSelect: (tab: string) => void
+}) {
+  return (
+    <div className="flex border-b border-slate-100 overflow-x-auto print:hidden">
+      {tabs.map(tab => (
+        <button
+          key={tab}
+          onClick={() => onSelect(tab)}
+          className={[
+            'px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-all shrink-0',
+            activeTab === tab
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-slate-400 hover:text-slate-600',
+          ].join(' ')}
+        >
+          {tab}
+        </button>
+      ))}
     </div>
   )
 }
@@ -279,7 +336,7 @@ function AccordionSection({ label, count, hasProvisional, isOpen, onToggle, chil
     <div className="bg-white">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors text-left"
+        className="w-full flex items-center justify-between px-4 sm:px-6 py-4 hover:bg-slate-50 transition-colors text-left print:hidden"
       >
         <div className="flex items-center gap-3 min-w-0">
           <span className="font-bold text-slate-800 text-base sm:text-lg truncate">{label}</span>
@@ -297,106 +354,65 @@ function AccordionSection({ label, count, hasProvisional, isOpen, onToggle, chil
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      {isOpen && children}
+      {/* Always in DOM so print can show all sections; hidden visually when closed */}
+      <div className={['print:block', isOpen ? '' : 'hidden'].join(' ')}>
+        {/* Section title shown only in print (replaces the hidden button) */}
+        <div className="hidden print:block px-4 pt-4 pb-1">
+          <span className="font-bold text-slate-800 text-base">{label}</span>
+          {hasProvisional && (
+            <span className="ml-2 text-xs font-semibold text-amber-600">({t.someProvisional})</span>
+          )}
+        </div>
+        {children}
+      </div>
     </div>
   )
 }
 
-// ─── main component ───────────────────────────────────────────────────────────
+// ─── category block with optional tabs ───────────────────────────────────────
 
-export type ResultsViewProps = {
+function CategoryBlock({
+  ageGroup, category, performances, results, t, clubAvatarByTeam,
+}: {
+  ageGroup: string
+  category: string
   performances: MockPerf[]
   results: Record<string, RoutineResult>
-  lang: Lang
-  clubAvatarByTeam?: Record<string, string | null>
-}
-
-export default function ResultsView({ performances, results, lang, clubAvatarByTeam = {} }: ResultsViewProps) {
-  const t = T[lang]
-
+  t: typeof T['en']
+  clubAvatarByTeam: Record<string, string | null>
+}) {
   const routineLabel = (rt: string) =>
     ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
 
-  const groupKey = (p: MockPerf) => `${p.ageGroup}||${p.category}||${p.routineType}`
-  const categoryKey = (p: MockPerf) => `${p.ageGroup}||${p.category}`
-  const allRoundKey = (p: MockPerf) => `${p.ageGroup}||${p.category}||ALL_ROUND`
-
-  // ── build section list ──
-  // Ordered as they appear in performance list, with all-around appended after
-  // each ageGroup+category block that qualifies
-
-  const routineGroups: string[] = []
-  for (const p of performances) {
-    const k = groupKey(p)
-    if (!routineGroups.includes(k) && results[p.id]) routineGroups.push(k)
-  }
-
-  // Detect ageGroup+category combos that have results for BOTH Balance AND Dynamic
-  const categoryHasBalance = new Set<string>()
-  const categoryHasDynamic = new Set<string>()
-  for (const p of performances) {
-    if (!results[p.id]) continue
-    const ck = categoryKey(p)
-    if (p.routineType === 'Balance') categoryHasBalance.add(ck)
-    if (p.routineType === 'Dynamic') categoryHasDynamic.add(ck)
-  }
-  const allRoundCategories = new Set(
-    [...categoryHasBalance].filter((ck) => categoryHasDynamic.has(ck))
+  // Routine types that have at least one result, in fixed order
+  const routineTypes = ROUTINE_ORDER.filter(rt =>
+    performances.some(p => p.routineType === rt && results[p.id])
   )
 
-  // Build ordered section keys: inject all-round key right after the last routine
-  // of its ageGroup+category block
-  const sectionKeys: string[] = []
-  const seenCategories = new Set<string>()
-  for (const k of routineGroups) {
-    sectionKeys.push(k)
-    const ck = k.split('||').slice(0, 2).join('||')
-    // If this is the last routine group for this category, add all-round after it
-    const remaining = routineGroups.slice(routineGroups.indexOf(k) + 1)
-    const hasMoreInCategory = remaining.some((rk) => rk.startsWith(ck + '||'))
-    if (!hasMoreInCategory && allRoundCategories.has(ck) && !seenCategories.has(ck)) {
-      seenCategories.add(ck)
-      sectionKeys.push(allRoundKey(performances.find((p) => categoryKey(p) === ck)!))
-    }
-  }
+  // All-round: Balance + Dynamic both present
+  const hasAllRound = routineTypes.includes('Balance') && routineTypes.includes('Dynamic')
 
-  const [openSections, setOpenSections] = useState<Set<string>>(new Set(sectionKeys))
+  // Tabs list: routines + all-round at end
+  const tabs = [...routineTypes.map(rt => routineLabel(rt))]
+  if (hasAllRound) tabs.push(t.allRound)
 
-  useEffect(() => {
-    setOpenSections((prev) => {
-      const newKeys = sectionKeys.filter((k) => !prev.has(k))
-      if (newKeys.length === 0) return prev
-      return new Set([...prev, ...newKeys])
-    })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sectionKeys.length])
+  const [activeTab, setActiveTab] = useState(tabs[0] ?? '')
 
-  function toggleSection(k: string) {
-    setOpenSections((prev) => {
-      const next = new Set(prev)
-      next.has(k) ? next.delete(k) : next.add(k)
-      return next
-    })
-  }
+  // If activeTab is no longer in tabs (shouldn't happen), reset
+  const resolvedTab = tabs.includes(activeTab) ? activeTab : (tabs[0] ?? '')
 
-  // ── compute all-round entries per qualifying category ──
-  function getAllRoundEntries(ck: string): AllRoundEntry[] {
-    const [ageGroup, category] = ck.split('||')
-    const balancePerfs = performances.filter(
-      (p) => p.ageGroup === ageGroup && p.category === category && p.routineType === 'Balance' && results[p.id]
-    )
-    const dynamicPerfs = performances.filter(
-      (p) => p.ageGroup === ageGroup && p.category === category && p.routineType === 'Dynamic' && results[p.id]
-    )
-
+  function getAllRoundEntries(): AllRoundEntry[] {
+    const balancePerfs = performances.filter(p => p.routineType === 'Balance' && results[p.id])
+    const dynamicPerfs = performances.filter(p => p.routineType === 'Dynamic' && results[p.id])
     const entries: AllRoundEntry[] = []
     for (const bp of balancePerfs) {
-      const dp = dynamicPerfs.find((d) => d.gymnasts === bp.gymnasts)
+      const dp = dynamicPerfs.find(d => d.gymnasts === bp.gymnasts)
       if (!dp) continue
       const br = results[bp.id]
       const dr = results[dp.id]
       entries.push({
         gymnasts: bp.gymnasts,
+        teamId: bp.teamId,
         balanceScore: br.finalScore,
         dynamicScore: dr.finalScore,
         total: parseFloat((br.finalScore + dr.finalScore).toFixed(3)),
@@ -406,8 +422,124 @@ export default function ResultsView({ performances, results, lang, clubAvatarByT
     return entries.sort((a, b) => b.total - a.total)
   }
 
-  // ── no results ──
-  if (sectionKeys.length === 0) {
+  // With only 1 routine and no all-round: render directly without tabs
+  if (tabs.length === 1) {
+    const rt = routineTypes[0]
+    const rows = performances
+      .filter(p => p.routineType === rt && results[p.id])
+      .sort((a, b) => (results[b.id]?.finalScore ?? 0) - (results[a.id]?.finalScore ?? 0))
+    return <GroupRanking rows={rows} results={results} t={t} clubAvatarByTeam={clubAvatarByTeam} />
+  }
+
+  // Multi-routine: show tab bar (hidden in print) + all panels always in DOM
+  return (
+    <>
+      <RoutineTabs tabs={tabs} activeTab={resolvedTab} onSelect={setActiveTab} />
+      {/* In print, show every tab panel one after another; on screen, show only active */}
+      {tabs.map(tab => {
+        const isActive = tab === resolvedTab
+        let content: React.ReactNode
+        if (tab === t.allRound) {
+          const entries = getAllRoundEntries()
+          content = <AllRoundRanking entries={entries} t={t} clubAvatarByTeam={clubAvatarByTeam} />
+        } else {
+          const rt = ROUTINE_ORDER.find(r => routineLabel(r) === tab) ?? routineTypes[0]
+          const rows = performances
+            .filter(p => p.routineType === rt && results[p.id])
+            .sort((a, b) => (results[b.id]?.finalScore ?? 0) - (results[a.id]?.finalScore ?? 0))
+          content = <GroupRanking rows={rows} results={results} t={t} clubAvatarByTeam={clubAvatarByTeam} />
+        }
+        return (
+          <div key={tab} className={['print:block', isActive ? '' : 'hidden'].join(' ')}>
+            {/* Tab label shown only in print */}
+            <p className="hidden print:block px-4 pt-3 pb-1 text-sm font-semibold text-slate-500">{tab}</p>
+            {content}
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
+// ─── ruleset tab order ────────────────────────────────────────────────────────
+
+const RULESET_ORDER = ['Escolar', 'Base', 'Nacional']
+
+// ─── main component ───────────────────────────────────────────────────────────
+
+function getRuleset(ageGroup: string): string {
+  if (ageGroup.includes('Escolar')) return 'Escolar'
+  if (ageGroup.includes('Base')) return 'Base'
+  return 'Nacional'
+}
+
+export type ResultsViewProps = {
+  performances: MockPerf[]
+  results: Record<string, RoutineResult>
+  lang: Lang
+  clubAvatarByTeam?: Record<string, string | null>
+  agSortOrder?: Record<string, number>  // ageGroup label → sort_order
+}
+
+export default function ResultsView({ performances, results, lang, clubAvatarByTeam = {}, agSortOrder = {} }: ResultsViewProps) {
+  const t = T[lang]
+
+  const routineLabel = (rt: string) =>
+    ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
+
+  // Build unique ageGroup+category keys with at least one result, sorted by sort_order desc
+  const allCategoryKeys: string[] = []
+  for (const p of performances) {
+    const ck = `${p.ageGroup}||${p.category}`
+    if (!allCategoryKeys.includes(ck) && performances.some(q => q.ageGroup === p.ageGroup && q.category === p.category && results[q.id])) {
+      allCategoryKeys.push(ck)
+    }
+  }
+  allCategoryKeys.sort((a, b) => {
+    const [agA] = a.split('||')
+    const [agB] = b.split('||')
+    return (agSortOrder[agB] ?? 0) - (agSortOrder[agA] ?? 0)
+  })
+
+  // Determine which rulesets have results (in fixed display order)
+  const activeRulesets = RULESET_ORDER.filter(rs =>
+    allCategoryKeys.some(ck => {
+      const [ag] = ck.split('||')
+      return getRuleset(ag) === rs
+    })
+  )
+
+  const [activeRuleset, setActiveRuleset] = useState<string>('')
+
+  // When activeRulesets changes (data loads), pick the first one
+  useEffect(() => {
+    if (activeRulesets.length > 0 && !activeRulesets.includes(activeRuleset)) {
+      setActiveRuleset(activeRulesets[0])
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeRulesets.join(',')])
+
+  const resolvedRuleset = activeRulesets.includes(activeRuleset) ? activeRuleset : (activeRulesets[0] ?? '')
+
+  // Filter category keys to the active ruleset tab
+  const categoryKeys = resolvedRuleset
+    ? allCategoryKeys.filter(ck => {
+        const [ag] = ck.split('||')
+        return getRuleset(ag) === resolvedRuleset
+      })
+    : allCategoryKeys
+
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set())
+
+  function toggleSection(k: string) {
+    setOpenSections(prev => {
+      const next = new Set(prev)
+      next.has(k) ? next.delete(k) : next.add(k)
+      return next
+    })
+  }
+
+  if (categoryKeys.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-3 px-6">
         <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center">
@@ -422,56 +554,67 @@ export default function ResultsView({ performances, results, lang, clubAvatarByT
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 divide-y divide-slate-200">
-      {sectionKeys.map((k) => {
-        const isAllRound = k.endsWith('||ALL_ROUND')
+    <div className="min-h-screen bg-slate-50">
+      {/* ruleset tabs */}
+      {activeRulesets.length > 1 && (
+        <div className="bg-white border-b border-slate-200 sticky top-[49px] z-10 print:hidden">
+          <div className="max-w-3xl mx-auto px-4 flex">
+            {activeRulesets.map(rs => (
+              <button
+                key={rs}
+                onClick={() => setActiveRuleset(rs)}
+                className={[
+                  'px-5 py-3 text-sm font-semibold border-b-2 transition-all',
+                  resolvedRuleset === rs
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-slate-400 hover:text-slate-600',
+                ].join(' ')}
+              >
+                {rs}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
-        if (isAllRound) {
-          const ck = k.replace('||ALL_ROUND', '')
-          const entries = getAllRoundEntries(ck)
-          if (entries.length === 0) return null
-          const [ageGroup, category] = ck.split('||')
-          const label = `${ageGroup} · ${category} · ${t.allRound}`
-          const hasProvisional = entries.some((e) => e.isProvisional)
+      <div className="divide-y divide-slate-200">
+      {categoryKeys.map(ck => {
+        const [ageGroup, category] = ck.split('||')
+        const catPerfs = performances.filter(p => p.ageGroup === ageGroup && p.category === category)
 
-          return (
-            <AccordionSection
-              key={k}
-              label={label}
-              count={entries.length}
-              hasProvisional={hasProvisional}
-              isOpen={openSections.has(k)}
-              onToggle={() => toggleSection(k)}
-              t={t}
-            >
-              <AllRoundRanking entries={entries} t={t} />
-            </AccordionSection>
-          )
-        }
+        // Routine types with at least one result
+        const routineTypes = ROUTINE_ORDER.filter(rt =>
+          catPerfs.some(p => p.routineType === rt && results[p.id])
+        )
+        const hasAllRound = routineTypes.includes('Balance') && routineTypes.includes('Dynamic')
 
-        // regular routine section
-        const rows = performances
-          .filter((p) => groupKey(p) === k && results[p.id])
-          .sort((a, b) => (results[b.id]?.finalScore ?? 0) - (results[a.id]?.finalScore ?? 0))
-
-        const perf = performances.find((p) => groupKey(p) === k)!
-        const label = `${perf.ageGroup} · ${categoryLabel(perf.category, lang)} · ${routineLabel(perf.routineType)}`
-        const hasProvisional = rows.some((p) => results[p.id]?.status === 'provisional')
+        // Count: total number of results in this category
+        const totalResults = catPerfs.filter(p => results[p.id]).length
+        const hasProvisional = catPerfs.some(p => results[p.id]?.status === 'provisional')
+        const label = `${ageGroup} · ${categoryLabel(category, lang)}`
 
         return (
           <AccordionSection
-            key={k}
+            key={ck}
             label={label}
-            count={rows.length}
+            count={totalResults}
             hasProvisional={hasProvisional}
-            isOpen={openSections.has(k)}
-            onToggle={() => toggleSection(k)}
+            isOpen={openSections.has(ck)}
+            onToggle={() => toggleSection(ck)}
             t={t}
           >
-            <GroupRanking rows={rows} results={results} t={t} clubAvatarByTeam={clubAvatarByTeam} />
+            <CategoryBlock
+              ageGroup={ageGroup}
+              category={category}
+              performances={catPerfs}
+              results={results}
+              t={t}
+              clubAvatarByTeam={clubAvatarByTeam}
+            />
           </AccordionSection>
         )
       })}
+      </div>
     </div>
   )
 }
