@@ -128,12 +128,13 @@ export function JudgeRow({ judge, value, dropped, roleLabel, reopenLabel, editLa
 
 // ─── score grid ────────────────────────────────────────────────────────────────
 
-export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, onReopen, onEditScore }: {
+export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, result, onReopen, onEditScore }: {
   scores: JudgeScore[]
   panelJudges: PanelJudge[]
   lang: Lang
   locked?: boolean
   hideLabelCol?: boolean
+  result?: RoutineResult | null
   onReopen: (panelJudgeId: string | 'all') => void
   onEditScore?: (panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
 }) {
@@ -439,6 +440,26 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, onR
           </tbody>
         </table>
       </div>
+
+      {/* result card — shown once CJP has submitted */}
+      {result && (
+        <div className="bg-slate-800 text-white px-4 py-3">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400 mb-2">
+            <span>E <span className="text-slate-200 font-mono tabular-nums">{(result.eScore * 2).toFixed(3)}</span></span>
+            <span>A <span className="text-slate-200 font-mono tabular-nums">{result.aScore.toFixed(3)}</span></span>
+            <span>D <span className="text-slate-200 font-mono tabular-nums">{result.difScore.toFixed(2)}</span></span>
+            {(result.difPenalty + result.cjpPenalty) > 0 && (
+              <span>{T[lang].scorePen} <span className="text-red-400 font-mono tabular-nums">−{(result.difPenalty + result.cjpPenalty).toFixed(1)}</span></span>
+            )}
+          </div>
+          <div className="flex items-center justify-between">
+            <span className={['text-xs font-semibold px-2 py-0.5 rounded-full', result.status === 'approved' ? 'bg-emerald-500 text-white' : 'bg-slate-600 text-slate-300'].join(' ')}>
+              {result.status === 'approved' ? T[lang].final : T[lang].prov}
+            </span>
+            <p className="text-4xl font-bold tabular-nums">{result.finalScore.toFixed(3)}</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

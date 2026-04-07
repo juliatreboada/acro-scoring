@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import type { PanelJudge, MockPerf, JudgeScore, RoutineResult } from '@/components/cjp/types'
 import type { SessionStatus } from '@/components/judge/JudgeSession'
@@ -32,6 +33,7 @@ export type JudgeSessionData = {
 
 export function useJudgeSession(): JudgeSessionData {
   const supabase = useMemo(() => createClient(), []) // eslint-disable-line react-hooks/exhaustive-deps
+  const router = useRouter()
   const [loading,       setLoading]       = useState(true)
   const [sessionId,     setSessionId]     = useState<string | null>(null)
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>('waiting')
@@ -274,6 +276,10 @@ export function useJudgeSession(): JudgeSessionData {
       }, (payload) => {
         const row = payload.new as { status: SessionStatus; current_team_id: string | null }
         setSessionStatus(row.status)
+        if (row.status === 'finished') {
+          router.push('/judge')
+          return
+        }
         const newPerfId = row.current_team_id ? `${sessionId}_${row.current_team_id}` : null
         setCurrentPerfId(newPerfId)
         if (newPerfId) setJudgeScores(prev => prev[newPerfId] ? prev : { ...prev, [newPerfId]: [] })

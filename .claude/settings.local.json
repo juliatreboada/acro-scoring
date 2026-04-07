@@ -17,7 +17,8 @@
       "Bash(do)",
       "Bash(sed -i '' 's/h-screen flex flex-col overflow-hidden/h-\\\\[100dvh\\\\] flex flex-col overflow-hidden/g' \"$f\")",
       "Bash(done)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(cd:*)"
     ]
   }
 }

@@ -1289,7 +1289,7 @@ export default function DJEJView({ currentPerf, lang, elements, djMode = 'elemen
         )}
 
         {judgeScores && panelJudges && (
-          <ScoreGrid scores={judgeScores} panelJudges={panelJudges} lang={lang} locked={true} onReopen={() => {}} />
+          <ScoreGrid scores={judgeScores} panelJudges={panelJudges} lang={lang} locked={true} result={result} onReopen={() => {}} />
         )}
       </div>
     )

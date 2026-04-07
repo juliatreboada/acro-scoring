@@ -589,7 +589,7 @@ export default function DJView({ currentPerf, lang, elements, mode = 'elements',
           </div>
         )}
         {judgeScores && panelJudges && (
-          <ScoreGrid scores={judgeScores} panelJudges={panelJudges} lang={lang} locked={true} onReopen={() => {}} />
+          <ScoreGrid scores={judgeScores} panelJudges={panelJudges} lang={lang} locked={true} result={result} onReopen={() => {}} />
         )}
       </div>
     )

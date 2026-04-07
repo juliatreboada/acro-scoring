@@ -275,7 +275,7 @@ export default function DJAJView({
         </div>
         {judgeScores && panelJudges && (
           <div className="px-4">
-            <ScoreGrid scores={judgeScores} panelJudges={panelJudges} lang={lang} locked={true} onReopen={() => {}} />
+            <ScoreGrid scores={judgeScores} panelJudges={panelJudges} lang={lang} locked={true} result={result} onReopen={() => {}} />
           </div>
         )}
       </div>
