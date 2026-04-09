@@ -215,6 +215,7 @@ export default function HomePage() {
               </svg>
             </div>
             <span className="text-base font-bold text-slate-800 tracking-tight">{t.appName}</span>
+            <p className="text-xs font-semibold text-slate-600">{t.appTagline}</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -241,13 +242,13 @@ export default function HomePage() {
       </header>
 
       {/* hero */}
-      <div className="bg-white border-b border-slate-100">
+      {/* <div className="bg-white border-b border-slate-100">
         <div className="max-w-4xl mx-auto px-4 py-10">
           <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">{t.appName}</p>
-          <h1 className="text-2xl font-bold text-slate-800 leading-snug max-w-lg">{t.appTagline}</h1>
+          <h1 className="text-2xl font-bold text-slate-800 leading-snug max-w-lg">{t.appTagline}</h1> */}
 
           {/* public access note */}
-          <div className="mt-5 inline-flex items-start gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 max-w-lg">
+          {/* <div className="mt-5 inline-flex items-start gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 max-w-lg">
             <svg className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
             </svg>
@@ -257,7 +258,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* competitions */}
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-10">

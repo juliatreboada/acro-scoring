@@ -92,12 +92,12 @@ function InviteJudgeForm({ lang, onSend, onCancel }: {
 
   return (
     <form onSubmit={handleSubmit} className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="sm:col-span-2">
           <label className="block text-xs font-medium text-slate-500 mb-1">{t.name} *</label>
           <input type="text" required value={form.full_name} onChange={(e) => set('full_name', e.target.value)} className={inputCls} autoFocus />
         </div>
-        <div className="col-span-2">
+        <div className="sm:col-span-2">
           <label className="block text-xs font-medium text-slate-500 mb-1">{t.email} *</label>
           <input type="email" required value={form.email} onChange={(e) => set('email', e.target.value)} className={inputCls} />
         </div>
@@ -237,8 +237,8 @@ export default function ClubJudgesTab({ lang, judges, onInvite, onUpdate, onDele
           {filtered.map((judge) =>
             editingId === judge.id ? (
               <div key={judge.id} className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="sm:col-span-2">
                     <label className="block text-xs font-medium text-slate-500 mb-1">{t.name}</label>
                     <input type="text" value={editForm.full_name} onChange={e => setEditForm(f => ({ ...f, full_name: e.target.value }))} className={inputCls} />
                   </div>

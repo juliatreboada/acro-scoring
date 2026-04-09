@@ -527,9 +527,9 @@ export default function CompetitionDetail({
           </svg>
           {t.back}
         </button>
-        <div className="flex items-center justify-between gap-4 mt-1">
+        <div className="flex flex-wrap items-start justify-between gap-3 mt-1">
           <h1 className="text-xl font-bold text-slate-800 leading-snug">{competition.name}</h1>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2">
             {/* public page links */}
             {(['registration_closed', 'active', 'finished'] as const).includes(competition.status as 'registration_closed' | 'active' | 'finished') && (
               <a href={`/starting-order/${competition.id}`} target="_blank" rel="noopener noreferrer"
