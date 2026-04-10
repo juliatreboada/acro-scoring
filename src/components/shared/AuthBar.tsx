@@ -34,20 +34,20 @@ export default function AuthBar({ lang, onLangChange }: {
       if (!user) return
 
       const { data: prof } = await supabase
-        .from('profiles').select('role').eq('id', user.id).single()
+        .from('profiles').select('id, role').eq('auth_id', user.id).single()
       if (!prof) return
 
       const role = prof.role as DbRole
       let name = user.email?.split('@')[0] ?? '—'
 
       if (role === 'judge') {
-        const { data } = await supabase.from('judges').select('full_name').eq('id', user.id).single()
+        const { data } = await supabase.from('judges').select('full_name').eq('id', prof.id).single()
         if (data) name = data.full_name
       } else if (role === 'club') {
-        const { data } = await supabase.from('clubs').select('club_name').eq('id', user.id).single()
+        const { data } = await supabase.from('clubs').select('club_name').eq('id', prof.id).single()
         if (data) name = data.club_name
       } else {
-        const { data } = await supabase.from('admins').select('full_name').eq('id', user.id).single()
+        const { data } = await supabase.from('admins').select('full_name').eq('id', prof.id).single()
         if (data) name = data.full_name
       }
 

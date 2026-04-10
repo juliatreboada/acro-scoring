@@ -242,11 +242,15 @@ function CompetitionDetail({ comp, lang, onBack }: {
 
       const lockedPairs = (locks as { section_id: string; panel_id: string }[]).map(l => `${l.section_id}|${l.panel_id}`)
 
+      const { data: judgeProf } = await supabase
+        .from('profiles').select('id').eq('auth_id', user.id).single()
+      if (!judgeProf) { setLoading(false); return }
+
       // 3. Get my assignments in these sections
       const { data: mySpjs } = await supabase
         .from('section_panel_judges')
         .select('id, section_id, panel_id, role, role_number')
-        .eq('judge_id', user.id)
+        .eq('judge_id', judgeProf.id)
         .in('section_id', sectionIds)
       if (!mySpjs?.length) { setLoading(false); return }
 
@@ -453,12 +457,16 @@ export default function JudgeLobby({ lang }: { lang: Lang }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
 
+      const { data: judgeProf } = await supabase
+        .from('profiles').select('id').eq('auth_id', user.id).single()
+      if (!judgeProf) { setLoading(false); return }
+
       // Derive competitions from actual panel assignments (section_panel_judges)
       // This is more reliable than nominations (avoids RLS / club_id nullability issues)
       const { data: spjs } = await supabase
         .from('section_panel_judges')
         .select('section_id')
-        .eq('judge_id', user.id)
+        .eq('judge_id', judgeProf.id)
       if (!spjs?.length) { setLoading(false); return }
 
       const sectionIds = [...new Set(spjs.map(s => s.section_id))]

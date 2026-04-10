@@ -103,7 +103,7 @@ export default function SetPasswordPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       const { data: profile } = await supabase
-        .from('profiles').select('role').eq('id', user.id).single()
+        .from('profiles').select('role').eq('auth_id', user.id).single()
       const role = profile?.role as DbRole | undefined
       router.push(role ? ROLE_REDIRECT[role] : '/')
     } else {

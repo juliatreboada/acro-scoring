@@ -66,16 +66,17 @@ export function useJudgeSession(): JudgeSessionData {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
 
-      // In the new schema, judges.id = profiles.id = auth.uid()
-      // Confirm this user is a judge
+      const { data: prof } = await supabase
+        .from('profiles').select('id').eq('auth_id', user.id).single()
+      if (!prof) { setLoading(false); return }
       const { data: judge } = await supabase
-        .from('judges').select('id').eq('id', user.id).single()
+        .from('judges').select('id').eq('id', prof.id).single()
       if (!judge) { setLoading(false); return }
 
       const { data: spjs } = await supabase
         .from('section_panel_judges')
         .select('id, section_id, panel_id, role, role_number')
-        .eq('judge_id', user.id)
+        .eq('judge_id', judge.id)
       if (!spjs?.length) { setLoading(false); return }
 
       const sectionIds = [...new Set(spjs.map(s => s.section_id))]

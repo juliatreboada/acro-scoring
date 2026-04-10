@@ -32,11 +32,10 @@ export default function Page() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
 
-      // In new schema, clubs.id = profiles.id = auth.uid()
       const { data: profile } = await supabase
-        .from('clubs').select('id').eq('id', user.id).single()
+        .from('profiles').select('id').eq('auth_id', user.id).single()
       if (!profile) { setLoading(false); return }
-      const cid = user.id
+      const cid = profile.id
       setClubId(cid)
 
       // ── parallel: club + gymnasts + teams + competitions + nominations + rules ─

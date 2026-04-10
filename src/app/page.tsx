@@ -8,7 +8,7 @@ import type { Database } from '@/lib/database.types'
 
 type Competition = Pick<
   Database['public']['Tables']['competitions']['Row'],
-  'id' | 'name' | 'status' | 'location' | 'start_date' | 'end_date' | 'age_groups'
+  'id' | 'name' | 'status' | 'location' | 'start_date' | 'end_date' | 'age_groups' | 'poster_url'
 >
 
 // ─── translations ─────────────────────────────────────────────────────────────
@@ -64,12 +64,11 @@ function formatDateRange(start: string | null, end: string | null): string {
 // ─── competition card ─────────────────────────────────────────────────────────
 
 function CompCard({
-  comp, lang, router, agLabel,
+  comp, lang, router,
 }: {
   comp: Competition
   lang: Lang
   router: ReturnType<typeof useRouter>
-  agLabel: Record<string, string>
 }) {
   const t = T[lang]
   const isActive = comp.status === 'active'
@@ -78,50 +77,51 @@ function CompCard({
 
   return (
     <div className={[
-      'bg-white border rounded-2xl overflow-hidden transition-all',
+      'bg-white border rounded-2xl overflow-hidden transition-all flex flex-col',
       isActive ? 'border-emerald-200 shadow-sm shadow-emerald-50' : 'border-slate-200',
     ].join(' ')}>
-      {/* card header */}
-      <div className={['px-5 py-4 border-b', isActive ? 'border-emerald-100 bg-emerald-50' : 'border-slate-100'].join(' ')}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            {isActive && (
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  {t.liveNow}
-                </span>
-              </div>
-            )}
-            {isUpcoming && (
-              <div className="mb-1.5">
-                <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                  {t.upcoming}
-                </span>
-              </div>
-            )}
-            <h3 className="text-sm font-semibold text-slate-800 leading-snug">{comp.name}</h3>
-            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
-              <span className="flex items-center gap-1 text-xs text-slate-400">
-                <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                </svg>
-                {comp.location}
-              </span>
-              <span className="flex items-center gap-1 text-xs text-slate-400">
-                <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
-                </svg>
-                {formatDateRange(comp.start_date, comp.end_date)}
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-1 mt-2">
-              {comp.age_groups.map((ag) => (
-                <span key={ag} className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{agLabel[ag] ?? ag}</span>
-              ))}
-            </div>
+      {/* poster */}
+      <div className="relative w-full aspect-[3/1] bg-slate-100 shrink-0">
+        {comp.poster_url ? (
+          <img src={comp.poster_url} alt={comp.name} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <svg className="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 21h18M3.75 3h16.5c.621 0 1.125.504 1.125 1.125v13.5c0 .621-.504 1.125-1.125 1.125H3.75A1.125 1.125 0 012.625 17.625V4.125C2.625 3.504 3.129 3 3.75 3z" />
+            </svg>
           </div>
+        )}
+        {/* status badge */}
+        {isActive && (
+          <span className="absolute top-2.5 left-2.5 flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-100/90 backdrop-blur-sm px-2 py-0.5 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            {t.liveNow}
+          </span>
+        )}
+        {isUpcoming && (
+          <span className="absolute top-2.5 left-2.5 text-xs font-semibold text-blue-600 bg-blue-50/90 backdrop-blur-sm px-2 py-0.5 rounded-full">
+            {t.upcoming}
+          </span>
+        )}
+      </div>
+
+      {/* card info */}
+      <div className="px-5 py-4 border-b border-slate-100">
+        <h3 className="text-sm font-semibold text-slate-800 leading-snug">{comp.name}</h3>
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+          <span className="flex items-center gap-1 text-xs text-slate-400">
+            <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+            </svg>
+            {comp.location}
+          </span>
+          <span className="flex items-center gap-1 text-xs text-slate-400">
+            <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
+            </svg>
+            {formatDateRange(comp.start_date, comp.end_date)}
+          </span>
         </div>
       </div>
 
@@ -186,7 +186,7 @@ export default function HomePage() {
       const [{ data }, { data: rulesData }] = await Promise.all([
         supabase
           .from('competitions')
-          .select('id, name, status, location, start_date, end_date, age_groups')
+          .select('id, name, status, location, start_date, end_date, age_groups, poster_url')
           .neq('status', 'draft')
           .order('start_date', { ascending: false }),
         supabase.from('age_group_rules').select('id, age_group, ruleset').order('sort_order'),
@@ -209,13 +209,11 @@ export default function HomePage() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-slate-800 flex items-center justify-center shrink-0">
-              <svg className="w-4.5 h-4.5 text-white w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-              </svg>
+            <img src="/logo-nobg.png" alt="Nosa Acro Suite" className="w-14 h-14 object-contain shrink-0" />
+            <div>
+              <span className="text-base font-bold text-slate-800 tracking-tight">{t.appName}</span>
+              <p className="text-xs font-semibold text-slate-600">{t.appTagline}</p>
             </div>
-            <span className="text-base font-bold text-slate-800 tracking-tight">{t.appName}</span>
-            <p className="text-xs font-semibold text-slate-600">{t.appTagline}</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -277,7 +275,7 @@ export default function HomePage() {
               <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wide">{t.liveNow}</h2>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              {active.map((c) => <CompCard key={c.id} comp={c} lang={lang} router={router} agLabel={agLabel} />)}
+              {active.map((c) => <CompCard key={c.id} comp={c} lang={lang} router={router} />)}
             </div>
           </section>
         )}
@@ -287,7 +285,7 @@ export default function HomePage() {
           <section>
             <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4">{t.upcoming}</h2>
             <div className="grid gap-3 sm:grid-cols-2">
-              {upcoming.map((c) => <CompCard key={c.id} comp={c} lang={lang} router={router} agLabel={agLabel} />)}
+              {upcoming.map((c) => <CompCard key={c.id} comp={c} lang={lang} router={router} />)}
             </div>
           </section>
         )}
@@ -306,7 +304,7 @@ export default function HomePage() {
               </button>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              {finished.map((c) => <CompCard key={c.id} comp={c} lang={lang} router={router} agLabel={agLabel} />)}
+              {finished.map((c) => <CompCard key={c.id} comp={c} lang={lang} router={router} />)}
             </div>
           </section>
         )}

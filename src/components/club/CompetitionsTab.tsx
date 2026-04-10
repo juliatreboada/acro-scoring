@@ -412,6 +412,34 @@ function InviteJudgeForm({ lang, onSend, onCancel }: {
 
 // ─── detail view ─────────────────────────────────────────────────────────────
 
+function getAgeAtJan1(dob: string, year: number): number {
+  const birth = new Date(dob + 'T00:00:00')
+  return year - birth.getFullYear() - (
+    new Date(year, birth.getMonth(), birth.getDate()) > new Date(year, 0, 1) ? 1 : 0
+  )
+}
+
+function validateTeamAges(
+  team: Team,
+  gymnasts: Gymnast[],
+  ageGroupRules: AgeGroupRule[],
+  competitionYear: number,
+): string[] {
+  const rule = ageGroupRules.find(r => r.id === team.age_group)
+  if (!rule) return []
+  const errors: string[] = []
+  for (const gid of team.gymnast_ids ?? []) {
+    const g = gymnasts.find(x => x.id === gid)
+    if (!g?.date_of_birth) continue
+    const age = getAgeAtJan1(g.date_of_birth, competitionYear)
+    if (age < rule.min_age || (rule.max_age !== null && age > rule.max_age)) {
+      const name = [g.first_name, g.last_name_1].filter(Boolean).join(' ')
+      errors.push(`${name} (${age}): debe tener entre ${rule.min_age} y ${rule.max_age ?? '∞'} años`)
+    }
+  }
+  return errors
+}
+
 function routineTypesForTeam(team: Team, ageGroupRules: AgeGroupRule[]): (typeof ROUTINE_TYPES[number])[] {
   const rule = ageGroupRules.find(r => r.id === team.age_group)
   const count = rule?.routine_count ?? 3
@@ -449,6 +477,10 @@ function CompetitionDetailView({
   const dateStr = formatDateRange(competition.start_date, competition.end_date)
   const today = new Date().toISOString().slice(0, 10)
   const isFileEditLocked = !!competition.ts_music_deadline && today > competition.ts_music_deadline
+  const competitionYear = competition.start_date
+    ? new Date(competition.start_date + 'T00:00:00').getFullYear()
+    : new Date().getFullYear()
+  const [ageError, setAgeError] = useState<{ teamId: string; messages: string[] } | null>(null)
 
   // Fix eligible teams filter: match by UUID (ag_group = rule.id) OR by label name (legacy)
   const eligibleTeams = teams.filter((team) =>
@@ -713,7 +745,15 @@ function CompetitionDetailView({
                         </button>
                       </div>
                     ) : isOpen ? (
-                      <button onClick={() => onRegister(team.id)}
+                      <button onClick={() => {
+                        const errs = validateTeamAges(team, gymnasts, ageGroupRules, competitionYear)
+                        if (errs.length > 0) { setAgeError({ teamId: team.id, messages: errs }); return }
+                        if (!competition.age_groups.some(ag => ag === team.age_group)) {
+                          setAgeError({ teamId: team.id, messages: [lang === 'es' ? 'El grupo de edad de este equipo no está incluido en esta competición.' : 'This team\'s age group is not part of this competition.'] })
+                          return
+                        }
+                        onRegister(team.id)
+                      }}
                         className="text-xs font-semibold px-3 py-1.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all">
                         {t.register}
                       </button>
@@ -755,6 +795,36 @@ function CompetitionDetailView({
         </div>
       )}
 
+      {/* age / age-group error modal */}
+      {ageError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-800 mb-2">
+                  {lang === 'es' ? 'No se puede inscribir este equipo' : 'Cannot register this team'}
+                </p>
+                <ul className="space-y-1">
+                  {ageError.messages.map((m, i) => (
+                    <li key={i} className="text-xs text-red-600">{m}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button onClick={() => setAgeError(null)}
+                className="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all">
+                {lang === 'es' ? 'Entendido' : 'Got it'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

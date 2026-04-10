@@ -10,6 +10,7 @@ import RegistrationsTab, { type RegistrationsTabProps } from './RegistrationsTab
 import StartingOrderTab, { type StartingOrderTabProps } from './StartingOrderTab'
 import CompetitionDayTab from './CompetitionDayTab'
 import LicenciasTab from './LicenciasTab'
+import ImportTab from './ImportTab'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -24,6 +25,7 @@ const T = {
       overview:      'Overview',
       day:           'Competition day',
       licencias:     'Licencias',
+      import:        'Import',
     },
     soon: 'Coming soon',
     soonSub: 'This section is not built yet.',
@@ -85,6 +87,7 @@ const T = {
       overview:      'Resumen',
       day:           'Día de competición',
       licencias:     'Licencias',
+      import:        'Importar',
     },
     soon: 'Próximamente',
     soonSub: 'Esta jornada aún no está construida.',
@@ -150,7 +153,7 @@ const ACTION_STYLE: Partial<Record<CompetitionStatus, string>> = {
   active:               'border-red-200 text-red-600 hover:bg-red-50',
 }
 
-type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias'
+type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias' | 'import'
 
 function formatDateRange(start: string | null, end: string | null): string {
   const fmt = (d: string) =>
@@ -512,6 +515,7 @@ export default function CompetitionDetail({
     { key: 'startingOrder', label: t.tabs.startingOrder },
     { key: 'registrations', label: t.tabs.registrations },
     { key: 'licencias',     label: t.tabs.licencias     },
+    { key: 'import',        label: t.tabs.import        },
     { key: 'day',           label: t.tabs.day, live: competition.status === 'active' },
     { key: 'overview',      label: t.tabs.overview      },
   ]
@@ -707,6 +711,15 @@ export default function CompetitionDetail({
           clubs={clubs}
           entries={entries}
           competitionGymnasts={competitionGymnasts}
+        />
+      )}
+      {activeTab === 'import' && (
+        <ImportTab
+          lang={lang}
+          competitionId={competition.id}
+          ageGroupRules={ageGroupRules}
+          competitionAgeGroups={competition.age_groups}
+          competitionYear={competition.start_date ? new Date(competition.start_date + 'T00:00:00').getFullYear() : new Date().getFullYear()}
         />
       )}
       {activeTab === 'day' && (

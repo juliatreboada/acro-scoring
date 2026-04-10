@@ -22,8 +22,11 @@ function DJReviewPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
 
+      const { data: prof } = await supabase
+        .from('profiles').select('id').eq('auth_id', user.id).single()
+      if (!prof) { setLoading(false); return }
       const { data: judge } = await supabase
-        .from('judges').select('id').eq('id', user.id).single()
+        .from('judges').select('id').eq('id', prof.id).single()
       if (!judge) { setLoading(false); return }
       setMyJudgeId(judge.id)
 

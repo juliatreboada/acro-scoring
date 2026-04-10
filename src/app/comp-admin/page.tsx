@@ -29,10 +29,14 @@ export default function Page() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
 
+      const { data: prof } = await supabase
+        .from('profiles').select('id').eq('auth_id', user.id).single()
+      if (!prof) { setLoading(false); return }
+
       const { data } = await supabase
         .from('competitions')
         .select('id,name,status,location,start_date,end_date,registration_deadline,ts_music_deadline,age_groups,poster_url,admin_id,created_at')
-        .eq('admin_id', user.id)
+        .eq('admin_id', prof.id)
         .order('created_at', { ascending: false })
 
       const mapped: Competition[] = (data ?? []).map(({ admin_id: _, ...c }) => ({

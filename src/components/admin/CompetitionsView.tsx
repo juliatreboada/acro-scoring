@@ -308,7 +308,7 @@ function CompetitionCard({ competition: c, lang, onManage }: CompetitionCardProp
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden flex flex-col hover:shadow-md transition-shadow">
       {/* poster */}
-      <div className="relative w-full aspect-[16/9] bg-slate-100 shrink-0">
+      <div className="relative w-full aspect-[3/1] bg-slate-100 shrink-0">
         {c.poster_url ? (
           <ClickableImg
             src={c.poster_url}

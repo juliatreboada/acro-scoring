@@ -69,7 +69,7 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
 
-      const { data: prof } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      const { data: prof } = await supabase.from('profiles').select('id, role').eq('auth_id', user.id).single()
       if (!prof) { setLoading(false); return }
 
       const role = prof.role as 'judge' | 'admin'
@@ -78,10 +78,10 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
         ? 'id,full_name,phone,licence,avatar_url'
         : 'id,full_name,phone,avatar_url'
 
-      const { data: row } = await supabase.from(table as 'judges').select(fields).eq('id', user.id).single()
+      const { data: row } = await supabase.from(table as 'judges').select(fields).eq('id', prof.id).single()
 
       setProfile({
-        id:         user.id,
+        id:         prof.id,
         full_name:  (row as any)?.full_name ?? '',
         email:      user.email ?? null,
         phone:      (row as any)?.phone ?? null,
