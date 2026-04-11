@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { useProfile } from '@/contexts/ProfileContext'
 import type { PanelJudge, MockPerf, JudgeScore, RoutineResult } from '@/components/cjp/types'
 import type { SessionStatus } from '@/components/judge/JudgeSession'
 
@@ -34,6 +35,7 @@ export type JudgeSessionData = {
 export function useJudgeSession(): JudgeSessionData {
   const supabase = useMemo(() => createClient(), []) // eslint-disable-line react-hooks/exhaustive-deps
   const router = useRouter()
+  const { activeProfile } = useProfile()
   const [loading,       setLoading]       = useState(true)
   const [sessionId,     setSessionId]     = useState<string | null>(null)
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>('waiting')
@@ -63,14 +65,9 @@ export function useJudgeSession(): JudgeSessionData {
   // ── initial load ─────────────────────────────────────────────────────────────
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setLoading(false); return }
-
-      const { data: prof } = await supabase
-        .from('profiles').select('id').eq('auth_id', user.id).single()
-      if (!prof) { setLoading(false); return }
+      if (!activeProfile) return
       const { data: judge } = await supabase
-        .from('judges').select('id').eq('id', prof.id).single()
+        .from('judges').select('id').eq('id', activeProfile.id).single()
       if (!judge) { setLoading(false); return }
 
       const { data: spjs } = await supabase
@@ -135,7 +132,7 @@ export function useJudgeSession(): JudgeSessionData {
 
       const builtAssignedRoles: PanelJudge[] = mySpjsForSession.map(s => ({
         id:         s.id,
-        name:       judgeNameMap[user.id] ?? '—',
+        name:       judgeNameMap[judge.id] ?? '—',
         role:       s.role as PanelJudge['role'],
         roleNumber: s.role_number,
       }))
@@ -263,7 +260,7 @@ export function useJudgeSession(): JudgeSessionData {
       setLoading(false)
     }
     load()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeProfile?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Realtime ─────────────────────────────────────────────────────────────────
   useEffect(() => {

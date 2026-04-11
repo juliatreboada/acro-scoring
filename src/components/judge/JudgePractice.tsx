@@ -5,6 +5,8 @@ import type { Lang } from '@/components/aj-scoring/types'
 import type { PanelJudge, MockPerf, JudgeScore, RoutineResult } from '@/components/cjp/types'
 import { computeResult } from '@/components/cjp/types'
 import type { TsElement } from '@/components/ej-scoring/types'
+import type { Sheet } from '@/components/dj-review/types'
+import DJReview from '@/components/dj-review/DJReview'
 import JudgeSession from './JudgeSession'
 
 // ─── mock data ────────────────────────────────────────────────────────────────
@@ -19,35 +21,54 @@ const MOCK_PANEL_JUDGES: PanelJudge[] = [
 ]
 
 const MOCK_ELEMENTS: TsElement[] = [
-  { id: 'e1', position: 1, label: 'Handstand pair 3s',    difficultyValue: 0.3, elementType: 'balance',    isStatic: true  },
-  { id: 'e2', position: 2, label: 'Forward roll pair',    difficultyValue: 0.2, elementType: 'dynamic'                     },
-  { id: 'e3', position: 3, label: 'Backwalkover',         difficultyValue: 0.4, elementType: 'individual'                  },
-  { id: 'e4', position: 4, label: 'Group balance',        difficultyValue: 0.5, elementType: 'balance'                     },
-  { id: 'e5', position: 5, label: 'Cartwheel sequence',   difficultyValue: 0.2, elementType: 'individual'                  },
-  { id: 'e6', position: 6, label: 'Fwd somersault',       difficultyValue: 0.6, elementType: 'dynamic'                     },
+  { id: 'e1', position: 1, label: 'Handstand pair 3s',  difficultyValue: 0.3, elementType: 'balance',    isStatic: true },
+  { id: 'e2', position: 2, label: 'Forward roll pair',  difficultyValue: 0.2, elementType: 'dynamic'                    },
+  { id: 'e3', position: 3, label: 'Backwalkover',       difficultyValue: 0.4, elementType: 'individual'                 },
+  { id: 'e4', position: 4, label: 'Group balance',      difficultyValue: 0.5, elementType: 'balance'                    },
+  { id: 'e5', position: 5, label: 'Cartwheel sequence', difficultyValue: 0.2, elementType: 'individual'                 },
+  { id: 'e6', position: 6, label: 'Fwd somersault',     difficultyValue: 0.6, elementType: 'dynamic'                    },
 ]
 
-function makeMockPerformances(): MockPerf[] {
-  return [
-    { id: 'perf-1', teamId: 't1', position: 1, gymnasts: 'García / López',         ageGroup: 'Junior', category: 'Mixed Pair',   routineType: 'Balance', skipped: false, elements: MOCK_ELEMENTS },
-    { id: 'perf-2', teamId: 't2', position: 2, gymnasts: 'Martínez / Rodríguez',   ageGroup: 'Junior', category: "Women's Pair",  routineType: 'Balance', skipped: false, elements: MOCK_ELEMENTS },
-    { id: 'perf-3', teamId: 't3', position: 3, gymnasts: 'Fernández / Sánchez',    ageGroup: 'Senior', category: "Men's Pair",    routineType: 'Balance', skipped: false, elements: MOCK_ELEMENTS },
-  ]
+const MOCK_SHEET: Sheet = {
+  id: 'mock-sheet-1',
+  teamId: 'mock-team-1',
+  competitionId: 'mock-comp-1',
+  gymnasts: 'García / López',
+  ageGroup: 'Junior',
+  category: 'Mixed Pair',
+  routineType: 'Balance',
+  pdfUrl: null,
+  elements: MOCK_ELEMENTS.map(e => ({
+    id: e.id,
+    position: e.position,
+    label: e.label,
+    elementType: (e.elementType ?? 'balance') as import('@/components/dj-review/types').ElementType,
+    isStatic: e.isStatic ?? false,
+    difficultyValue: e.difficultyValue,
+  })),
+  reviewStatus: 'pending',
+  dj1Id: null,
+  dj1Decision: null,
+  dj1Comment: null,
+  dj2Id: null,
+  finalComment: null,
+  hasTwoDJs: true,
+}
+
+function makeMockPerf(resetKey: number): MockPerf {
+  return {
+    id: `mock-practice-${resetKey}`, teamId: 't1', position: 1,
+    gymnasts: 'García / López',
+    ageGroup: 'Junior', category: 'Mixed Pair', routineType: 'Balance',
+    skipped: false, elements: MOCK_ELEMENTS,
+  }
 }
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
 const T = {
-  en: {
-    banner:  'Practice mode — scores are not saved',
-    reset:   'Reset',
-    back:    'Back',
-  },
-  es: {
-    banner:  'Modo práctica — las puntuaciones no se guardan',
-    reset:   'Reiniciar',
-    back:    'Volver',
-  },
+  en: { banner: 'Practice mode — scores are not saved', reset: 'Reset', back: 'Back', scoring: 'Scoring', djReview: 'TS Review' },
+  es: { banner: 'Modo práctica — las puntuaciones no se guardan', reset: 'Reiniciar', back: 'Volver', scoring: 'Puntuación', djReview: 'Revisión TS' },
 }
 
 // ─── component ────────────────────────────────────────────────────────────────
@@ -55,59 +76,34 @@ const T = {
 export default function JudgePractice({ lang, onBack }: { lang: Lang; onBack: () => void }) {
   const t = T[lang]
 
-  const [performances, setPerformances] = useState<MockPerf[]>(makeMockPerformances)
-  const [currentPerfId, setCurrentPerfId] = useState<string | null>(null)
-  const [judgeScores, setJudgeScores] = useState<Record<string, JudgeScore[]>>({})
-  const [results, setResults] = useState<Record<string, RoutineResult>>({})
+  const [practiceView, setPracticeView] = useState<'scoring' | 'dj-review'>('scoring')
+  const [resetKey, setResetKey]         = useState(0)
+  const [judgeScores, setJudgeScores]   = useState<Record<string, JudgeScore[]>>({})
+  const [results, setResults]           = useState<Record<string, RoutineResult>>({})
 
-  const currentPerf = performances.find(p => p.id === currentPerfId) ?? null
-  const elements = currentPerf?.elements ?? []
+  const mockPerf = makeMockPerf(resetKey)
 
   function reset() {
-    setPerformances(makeMockPerformances())
-    setCurrentPerfId(null)
     setJudgeScores({})
     setResults({})
-  }
-
-  function handleOpen(perfId: string) {
-    setCurrentPerfId(perfId)
-  }
-
-  function handleSkip(perfId: string) {
-    setPerformances(prev => prev.map(p => p.id === perfId ? { ...p, skipped: true } : p))
-    const current = performances.find(p => p.id === perfId)
-    const next = current
-      ? performances.find(p => p.position > current.position && !p.skipped && p.id !== perfId)
-      : null
-    setCurrentPerfId(next?.id ?? null)
+    setResetKey(k => k + 1)   // forces JudgeSession to fully remount, clearing each view's submitted state
   }
 
   function handleJudgeScoreSubmit(score: JudgeScore) {
-    if (!currentPerfId) return
+    const perfId = mockPerf.id
     setJudgeScores(prev => {
-      const existing = prev[currentPerfId] ?? []
+      const existing = prev[perfId] ?? []
       const next = [...existing.filter(s => s.panelJudgeId !== score.panelJudgeId), score]
 
-      // Once all non-CJP judges have submitted, compute a provisional result
       const nonCjp = MOCK_PANEL_JUDGES.filter(j => j.role !== 'CJP')
-      const allIn  = nonCjp.every(j => next.some(s => s.panelJudgeId === j.id))
+      const allIn = nonCjp.every(j => next.some(s => s.panelJudgeId === j.id))
       if (allIn) {
-        const result = computeResult(currentPerfId, next, MOCK_PANEL_JUDGES, 0, 'provisional')
-        setResults(r => ({ ...r, [currentPerfId]: result }))
+        const result = computeResult(perfId, next, MOCK_PANEL_JUDGES, 0, 'provisional')
+        setResults(r => ({ ...r, [perfId]: result }))
       }
 
-      return { ...prev, [currentPerfId]: next }
+      return { ...prev, [perfId]: next }
     })
-  }
-
-  function handleCJPSubmit(status: 'provisional' | 'approved', result: RoutineResult) {
-    setResults(prev => ({ ...prev, [result.performanceId]: { ...result, status } }))
-    const current = performances.find(p => p.id === currentPerfId)
-    const next = current
-      ? performances.find(p => p.position > current.position && !p.skipped)
-      : null
-    setCurrentPerfId(next?.id ?? null)
   }
 
   function handleReopenScore(perfId: string, panelJudgeId: string | 'all') {
@@ -124,7 +120,7 @@ export default function JudgePractice({ lang, onBack }: { lang: Lang; onBack: ()
 
   return (
     <div className="flex flex-col h-dvh">
-      {/* practice banner */}
+      {/* banner */}
       <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between shrink-0 gap-3">
         <div className="flex items-center gap-2 min-w-0">
           <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -133,41 +129,69 @@ export default function JudgePractice({ lang, onBack }: { lang: Lang; onBack: ()
           <span className="text-sm font-semibold truncate">{t.banner}</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={reset}
-            className="text-xs font-semibold bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition-all"
-          >
+          <button onClick={reset} className="text-xs font-semibold bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition-all">
             {t.reset}
           </button>
-          <button
-            onClick={onBack}
-            className="text-xs font-semibold bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition-all"
-          >
+          <button onClick={onBack} className="text-xs font-semibold bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition-all">
             {t.back}
           </button>
         </div>
       </div>
 
-      {/* full scoring session — session always "active", all roles available */}
-      <div className="flex-1 min-h-0">
+      {/* top-level tabs */}
+      <div className="bg-white border-b border-slate-200 px-4 flex items-center gap-0 h-11 shrink-0">
+        {(['scoring', 'dj-review'] as const).map(v => (
+          <button
+            key={v}
+            onClick={() => setPracticeView(v)}
+            className={[
+              'px-5 h-full text-sm font-semibold border-b-2 transition-all',
+              practiceView === v
+                ? 'border-amber-500 text-amber-700'
+                : 'border-transparent text-slate-400 hover:text-slate-600',
+            ].join(' ')}
+          >
+            {v === 'scoring' ? t.scoring : t.djReview}
+          </button>
+        ))}
+      </div>
+
+      {/* scoring session */}
+      <div className={['flex-1 min-h-0', practiceView === 'scoring' ? '' : 'hidden'].join(' ')}>
         <JudgeSession
+          key={resetKey}
           lang={lang}
           sessionStatus="active"
           assignedRoles={MOCK_PANEL_JUDGES}
-          currentPerf={currentPerf}
-          elements={elements}
+          currentPerf={mockPerf}
+          elements={MOCK_ELEMENTS}
           panelJudges={MOCK_PANEL_JUDGES}
-          performances={performances}
-          currentPerfId={currentPerfId}
+          performances={[mockPerf]}
+          currentPerfId={mockPerf.id}
           judgeScores={judgeScores}
           results={results}
-          onOpen={handleOpen}
-          onSkip={handleSkip}
-          onCJPSubmit={handleCJPSubmit}
+          onOpen={() => {}}
+          onSkip={() => {}}
+          onCJPSubmit={() => {}}
           onReopenScore={handleReopenScore}
           onJudgeScoreSubmit={handleJudgeScoreSubmit}
         />
       </div>
+
+      {/* dj review */}
+      {practiceView === 'dj-review' && (
+        <div className="flex-1 min-h-0 overflow-y-auto bg-slate-50">
+          <div className="max-w-5xl mx-auto pt-4 pb-16">
+            <DJReview
+              key={resetKey}
+              initialSheets={[MOCK_SHEET]}
+              myJudgeId="mock-dj-1"
+              lang={lang}
+              practiceMode
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

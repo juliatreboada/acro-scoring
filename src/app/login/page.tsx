@@ -73,14 +73,17 @@ const ROLE_STYLES: Record<DbRole, { card: string; badge: string }> = {
 }
 
 // ─── dev accounts ─────────────────────────────────────────────────────────────
-// Create these in Supabase Dashboard → Authentication → Users
+// Only defined in development — not included in production bundle.
 
-const DEV_ACCOUNTS: { role: DbRole; email: string; password: string; name: string }[] = [
-  { role: 'super_admin', email: 'admin@acro.es',  password: 'admin123',  name: 'Laura González' },
-  { role: 'admin',       email: 'comp@acro.es',   password: 'comp123',   name: 'Marcos Ruiz'    },
-  { role: 'judge',       email: 'judge@acro.es',  password: 'judge123',  name: 'García López'   },
-  { role: 'club',        email: 'club@acro.es',   password: 'club123',   name: 'RC Olimpia'     },
-]
+const DEV_ACCOUNTS: { role: DbRole; email: string; password: string; name: string }[] =
+  process.env.NODE_ENV === 'development'
+    ? [
+        { role: 'super_admin', email: 'admin@acro.es',  password: 'admin123',  name: 'Laura González' },
+        { role: 'admin',       email: 'comp@acro.es',   password: 'comp123',   name: 'Marcos Ruiz'    },
+        { role: 'judge',       email: 'judge@acro.es',  password: 'judge123',  name: 'García López'   },
+        { role: 'club',        email: 'club@acro.es',   password: 'club123',   name: 'RC Olimpia'     },
+      ]
+    : []
 
 // ─── role icons ───────────────────────────────────────────────────────────────
 
@@ -128,10 +131,12 @@ export default function LoginPage() {
     async function checkSession() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { data: profile } = await supabase
-          .from('profiles').select('role').eq('auth_id', user.id).single()
-        if (profile) {
-          setSession({ name: user.email?.split('@')[0] ?? '—', role: profile.role as DbRole })
+        const { data: profiles } = await supabase
+          .from('profiles').select('role').eq('auth_id', user.id)
+        const PRIORITY: DbRole[] = ['super_admin', 'admin', 'club', 'judge']
+        const role = PRIORITY.find(r => profiles?.some(p => p.role === r))
+        if (role) {
+          setSession({ name: user.email?.split('@')[0] ?? '—', role })
         }
       }
       setCheckingSession(false)
@@ -152,13 +157,13 @@ export default function LoginPage() {
       return
     }
 
-    const { data: profile } = await supabase
+    const { data: loginProfiles } = await supabase
       .from('profiles')
       .select('role')
-      .eq('id', data.user.id)
-      .single()
+      .eq('auth_id', data.user.id)
 
-    const role = profile?.role as DbRole | undefined
+    const PRIORITY: DbRole[] = ['super_admin', 'admin', 'club', 'judge']
+    const role = PRIORITY.find(r => loginProfiles?.some(p => p.role === r))
     router.push(role ? ROLE_REDIRECT[role] : '/')
   }
 

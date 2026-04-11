@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { useProfile } from '@/contexts/ProfileContext'
 import type { Lang } from '@/components/aj-scoring/types'
 import ProfileEditor from '@/components/shared/ProfileEditor'
 import JudgePractice from './JudgePractice'
@@ -193,6 +194,7 @@ function CompetitionDetail({ comp, lang, onBack }: {
   const router = useRouter()
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
+  const { activeProfile } = useProfile()
   const [loading, setLoading] = useState(true)
   const [panels, setPanels] = useState<LobbyPanel[]>([])
   const [sessionIds, setSessionIds] = useState<string[]>([])
@@ -229,9 +231,7 @@ function CompetitionDetail({ comp, lang, onBack }: {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setLoading(false); return }
-
+      if (!activeProfile) return
       // 1. Get my SPJ entries for this competition's sections
       const { data: sections } = await supabase
         .from('sections')
@@ -251,15 +251,11 @@ function CompetitionDetail({ comp, lang, onBack }: {
 
       const lockedPairs = (locks as { section_id: string; panel_id: string }[]).map(l => `${l.section_id}|${l.panel_id}`)
 
-      const { data: judgeProf } = await supabase
-        .from('profiles').select('id').eq('auth_id', user.id).single()
-      if (!judgeProf) { setLoading(false); return }
-
       // 3. Get my assignments in these sections
       const { data: mySpjs } = await supabase
         .from('section_panel_judges')
         .select('id, section_id, panel_id, role, role_number')
-        .eq('judge_id', judgeProf.id)
+        .eq('judge_id', activeProfile.id)
         .in('section_id', sectionIds)
       if (!mySpjs?.length) { setLoading(false); return }
 
@@ -331,7 +327,7 @@ function CompetitionDetail({ comp, lang, onBack }: {
       setLoading(false)
     }
     load()
-  }, [comp.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [comp.id, activeProfile?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
@@ -456,6 +452,7 @@ export default function JudgeLobby({ lang }: { lang: Lang }) {
   const t = T[lang]
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
+  const { activeProfile } = useProfile()
   const [loading, setLoading] = useState(true)
   const [competitions, setCompetitions] = useState<LobbyCompetition[]>([])
   const [selectedComp, setSelectedComp] = useState<LobbyCompetition | null>(null)
@@ -464,19 +461,12 @@ export default function JudgeLobby({ lang }: { lang: Lang }) {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setLoading(false); return }
-
-      const { data: judgeProf } = await supabase
-        .from('profiles').select('id').eq('auth_id', user.id).single()
-      if (!judgeProf) { setLoading(false); return }
-
+      if (!activeProfile) return
       // Derive competitions from actual panel assignments (section_panel_judges)
-      // This is more reliable than nominations (avoids RLS / club_id nullability issues)
       const { data: spjs } = await supabase
         .from('section_panel_judges')
         .select('section_id')
-        .eq('judge_id', judgeProf.id)
+        .eq('judge_id', activeProfile.id)
       if (!spjs?.length) { setLoading(false); return }
 
       const sectionIds = [...new Set(spjs.map(s => s.section_id))]
@@ -497,7 +487,7 @@ export default function JudgeLobby({ lang }: { lang: Lang }) {
       setLoading(false)
     }
     load()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeProfile?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return (
     <div className="flex items-center justify-center py-24">

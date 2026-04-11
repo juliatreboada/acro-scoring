@@ -44,6 +44,7 @@ export default function Page() {
   // ── initial load ─────────────────────────────────────────────────────────────
   useEffect(() => {
     async function load() {
+      try {
       const [compRes, panelsRes, sectionsRes, sessionsRes, judgesRes,
              nominationsRes, entriesRes, rulesRes, adminsRes] = await Promise.all([
         supabase.from('competitions')
@@ -159,7 +160,9 @@ export default function Page() {
       setSessionOrders(ordersData ?? [])
       setAvailableAdmins(adminsWithEmail)
       setAgeGroupRules((rulesRes.data ?? []) as unknown as AgeGroupRule[])
-      setLoading(false)
+      } finally {
+        setLoading(false)
+      }
     }
     load()
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps

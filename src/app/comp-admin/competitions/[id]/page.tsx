@@ -40,10 +40,12 @@ export default function Page() {
   const [availableAdmins, setAvailableAdmins] = useState<AdminUser[]>([])
   const [ageGroupRules, setAgeGroupRules]     = useState<AgeGroupRule[]>([])
   const [competitionGymnasts, setCompetitionGymnasts] = useState<Gymnast[]>([])
+  const [actionError, setActionError] = useState<string | null>(null)
 
   // ── initial load ─────────────────────────────────────────────────────────────
   useEffect(() => {
     async function load() {
+      try {
       const [compRes, panelsRes, sectionsRes, sessionsRes, judgesRes,
              nominationsRes, entriesRes, rulesRes, adminsRes] = await Promise.all([
         supabase.from('competitions')
@@ -159,7 +161,9 @@ export default function Page() {
       setSessionOrders(ordersData ?? [])
       setAvailableAdmins(adminsWithEmail)
       setAgeGroupRules((rulesRes.data ?? []) as unknown as AgeGroupRule[])
-      setLoading(false)
+      } finally {
+        setLoading(false)
+      }
     }
     load()
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -282,7 +286,7 @@ export default function Page() {
     const { data: nom, error } = await supabase.from('competition_judge_nominations')
       .insert({ competition_id: id, judge_id: judgeId, club_id: null })
       .select().single()
-    if (error) { console.error('handleAddToPool:', error.message); return }
+    if (error) { setActionError(error.message); return }
     if (nom) setNominations(prev => [...prev, nom as CompetitionJudgeNomination])
     setJudgePool(prev => [...prev, judgeId])
   }
@@ -462,6 +466,13 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-slate-50">
       <AuthBar lang={lang} onLangChange={setLang} />
+
+      {actionError && (
+        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-red-600 text-white text-sm px-4 py-3 rounded-xl shadow-lg">
+          <span>{actionError}</span>
+          <button onClick={() => setActionError(null)} className="text-white/70 hover:text-white">✕</button>
+        </div>
+      )}
 
       <CompetitionDetail
         lang={lang}

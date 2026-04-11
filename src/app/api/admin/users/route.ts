@@ -21,9 +21,9 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: profile } = await supabase
-    .from('profiles').select('role').eq('auth_id', user.id).single()
-  if (!profile || !['super_admin', 'admin'].includes(profile.role)) {
+  const { data: profiles } = await supabase
+    .from('profiles').select('role').eq('auth_id', user.id)
+  if (!profiles?.some(p => ['super_admin', 'admin'].includes(p.role))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { useProfile } from '@/contexts/ProfileContext'
 import type { Lang } from '@/components/aj-scoring/types'
 import ClickableImg from '@/components/shared/ClickableImg'
 
@@ -56,6 +57,7 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
   const t = T[lang]
   const supabase = createClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { activeProfile } = useProfile()
 
   const [loading, setLoading]     = useState(true)
   const [profile, setProfile]     = useState<ProfileData | null>(null)
@@ -66,24 +68,21 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
 
   useEffect(() => {
     async function load() {
+      if (!activeProfile) return
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setLoading(false); return }
 
-      const { data: prof } = await supabase.from('profiles').select('id, role').eq('auth_id', user.id).single()
-      if (!prof) { setLoading(false); return }
-
-      const role = prof.role as 'judge' | 'admin'
+      const role = activeProfile.role as 'judge' | 'admin'
       const table = role === 'judge' ? 'judges' : 'admins'
       const fields = role === 'judge'
         ? 'id,full_name,phone,licence,avatar_url'
         : 'id,full_name,phone,avatar_url'
 
-      const { data: row } = await supabase.from(table as 'judges').select(fields).eq('id', prof.id).single()
+      const { data: row } = await supabase.from(table as 'judges').select(fields).eq('id', activeProfile.id).single()
 
       setProfile({
-        id:         prof.id,
+        id:         activeProfile.id,
         full_name:  (row as any)?.full_name ?? '',
-        email:      user.email ?? null,
+        email:      user?.email ?? null,
         phone:      (row as any)?.phone ?? null,
         licence:    role === 'judge' ? ((row as any)?.licence ?? null) : undefined,
         avatar_url: (row as any)?.avatar_url ?? null,
@@ -92,7 +91,7 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
       setLoading(false)
     }
     load()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeProfile?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function startEdit() {
     if (!profile) return
@@ -116,7 +115,8 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
     }
     if (profile.role === 'judge') updates.licence = form.licence.trim() || null
 
-    await supabase.from(table as 'judges').update(updates as any).eq('id', profile.id)
+    const { error } = await supabase.from(table as 'judges').update(updates as any).eq('id', profile.id)
+    if (error) return
 
     setProfile(prev => prev ? {
       ...prev,

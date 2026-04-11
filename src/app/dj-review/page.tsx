@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { useProfile } from '@/contexts/ProfileContext'
 import DJReview from '@/components/dj-review/DJReview'
 import AuthBar from '@/components/shared/AuthBar'
 import type { Lang } from '@/components/aj-scoring/types'
@@ -16,25 +17,18 @@ function DJReviewPage() {
   const [sheets, setSheets] = useState<Sheet[]>([])
   const [loading, setLoading] = useState(true)
   const [myJudgeId, setMyJudgeId] = useState<string>('')
+  const { activeProfile } = useProfile()
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setLoading(false); return }
-
-      const { data: prof } = await supabase
-        .from('profiles').select('id').eq('auth_id', user.id).single()
-      if (!prof) { setLoading(false); return }
-      const { data: judge } = await supabase
-        .from('judges').select('id').eq('id', prof.id).single()
-      if (!judge) { setLoading(false); return }
-      setMyJudgeId(judge.id)
+      if (!activeProfile) return
+      setMyJudgeId(activeProfile.id)
 
       // 1. SPJs where this judge is assigned as DJ (role filter)
       const { data: spjs } = await supabase
         .from('section_panel_judges')
         .select('section_id, panel_id')
-        .eq('judge_id', judge.id)
+        .eq('judge_id', activeProfile.id)
         .eq('role', 'DJ')
       if (!spjs?.length) { setLoading(false); return }
 
@@ -259,7 +253,7 @@ function DJReviewPage() {
       setLoading(false)
     }
     load()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeProfile?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">

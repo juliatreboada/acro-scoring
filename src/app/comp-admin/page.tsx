@@ -8,6 +8,7 @@ import AuthBar from '@/components/shared/AuthBar'
 import ProfileEditor from '@/components/shared/ProfileEditor'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Competition } from '@/components/admin/types'
+import { useProfile } from '@/contexts/ProfileContext'
 
 // ─── page ─────────────────────────────────────────────────────────────────────
 
@@ -18,6 +19,7 @@ export default function Page() {
   const [view, setView]             = useState<'competitions' | 'profile'>('competitions')
   const router   = useRouter()
   const supabase = createClient()
+  const { activeProfile } = useProfile()
 
   const TAB_LABELS = {
     en: { competitions: 'Competitions', profile: 'Profile' },
@@ -26,17 +28,11 @@ export default function Page() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setLoading(false); return }
-
-      const { data: prof } = await supabase
-        .from('profiles').select('id').eq('auth_id', user.id).single()
-      if (!prof) { setLoading(false); return }
-
+      if (!activeProfile) return
       const { data } = await supabase
         .from('competitions')
         .select('id,name,status,location,start_date,end_date,registration_deadline,ts_music_deadline,age_groups,poster_url,admin_id,created_at')
-        .eq('admin_id', prof.id)
+        .eq('admin_id', activeProfile.id)
         .order('created_at', { ascending: false })
 
       const mapped: Competition[] = (data ?? []).map(({ admin_id: _, ...c }) => ({
@@ -48,7 +44,7 @@ export default function Page() {
       setLoading(false)
     }
     load()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeProfile?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const tabs = TAB_LABELS[lang]
 

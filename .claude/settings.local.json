@@ -20,7 +20,8 @@
       "Bash(npx next:*)",
       "Bash(cd:*)",
       "Bash(npm install:*)",
-      "Bash(npm audit:*)"
+      "Bash(npm audit:*)",
+      "Bash(ls -la .env*)"
     ]
   }
 }

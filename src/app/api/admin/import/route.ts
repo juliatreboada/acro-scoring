@@ -17,9 +17,9 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: callerProfile } = await supabase
-    .from('profiles').select('role').eq('auth_id', user.id).single()
-  if (!callerProfile || !['super_admin', 'admin'].includes(callerProfile.role)) {
+  const { data: callerProfiles } = await supabase
+    .from('profiles').select('role').eq('auth_id', user.id)
+  if (!callerProfiles?.some(p => ['super_admin', 'admin'].includes(p.role))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -49,18 +49,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'New club requires club_name and email' }, { status: 400 })
     }
 
+    const newClubId   = crypto.randomUUID()
+    const { error: clubErr } = await supabaseAdmin
+      .from('clubs')
+      .insert({ id: newClubId, club_name: nc.club_name, contact_name: nc.contact_name ?? null })
+    if (clubErr) return NextResponse.json({ error: `Club: ${clubErr.message}` }, { status: 500 })
+
     const profileId = crypto.randomUUID()
     const { error: profErr } = await supabaseAdmin
       .from('profiles')
-      .insert({ id: profileId, email: nc.email, role: 'club' })
+      .insert({ id: profileId, email: nc.email, role: 'club', club_id: newClubId })
     if (profErr) return NextResponse.json({ error: `Profile: ${profErr.message}` }, { status: 500 })
 
-    const { error: clubErr } = await supabaseAdmin
-      .from('clubs')
-      .insert({ id: profileId, club_name: nc.club_name, contact_name: nc.contact_name ?? null })
-    if (clubErr) return NextResponse.json({ error: `Club: ${clubErr.message}` }, { status: 500 })
-
-    clubId = profileId
+    clubId = newClubId
 
     const origin = req.nextUrl.origin
     const { error: inviteErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(nc.email, {

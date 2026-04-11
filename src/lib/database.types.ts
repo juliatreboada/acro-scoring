@@ -98,15 +98,7 @@ export type Database = {
           id?: string
           phone?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "clubs_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       competition_entries: {
         Row: {
@@ -360,6 +352,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          auth_id: string | null
+          club_id: string | null
           created_at: string
           email: string | null
           id: string
@@ -367,20 +361,32 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auth_id?: string | null
+          club_id?: string | null
           created_at?: string
           email?: string | null
-          id: string
+          id?: string
           role: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Update: {
+          auth_id?: string | null
+          club_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       routine_music: {
         Row: {

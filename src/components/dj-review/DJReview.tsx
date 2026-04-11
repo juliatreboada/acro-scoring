@@ -674,9 +674,10 @@ type DJReviewProps = {
   initialSheets: Sheet[]
   myJudgeId: string
   lang: Lang
+  practiceMode?: boolean
 }
 
-export default function DJReview({ initialSheets, myJudgeId, lang }: DJReviewProps) {
+export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode = false }: DJReviewProps) {
   const supabase = createClient()
   const t = T[lang]
   const [sheets, setSheets] = useState<Sheet[]>(initialSheets)
@@ -697,34 +698,36 @@ export default function DJReview({ initialSheets, myJudgeId, lang }: DJReviewPro
       return { ...s, elements: [...s.elements, { ...el, id: tempId, position }] }
     }))
 
-    const { data } = await supabase
-      .from('ts_elements')
-      .insert({
-        team_id: sheet.teamId,
-        competition_id: sheet.competitionId,
-        routine_type: sheet.routineType as 'Balance' | 'Dynamic' | 'Combined',
-        position,
-        label: el.label,
-        element_type: el.elementType,
-        is_static: el.isStatic,
-        difficulty_value: el.difficultyValue,
-      })
-      .select('id')
-      .single()
+    if (!practiceMode) {
+      const { data } = await supabase
+        .from('ts_elements')
+        .insert({
+          team_id: sheet.teamId,
+          competition_id: sheet.competitionId,
+          routine_type: sheet.routineType as 'Balance' | 'Dynamic' | 'Combined',
+          position,
+          label: el.label,
+          element_type: el.elementType,
+          is_static: el.isStatic,
+          difficulty_value: el.difficultyValue,
+        })
+        .select('id')
+        .single()
 
-    if (data) {
-      setSheets((prev) => prev.map((s) => {
-        if (s.id !== sheetId) return s
-        return {
-          ...s,
-          elements: s.elements.map((e) => e.id === tempId ? { ...e, id: data.id } : e),
-        }
-      }))
+      if (data) {
+        setSheets((prev) => prev.map((s) => {
+          if (s.id !== sheetId) return s
+          return {
+            ...s,
+            elements: s.elements.map((e) => e.id === tempId ? { ...e, id: data.id } : e),
+          }
+        }))
+      }
     }
   }
 
   async function handleDeleteElement(sheetId: string, elementId: string) {
-    await supabase.from('ts_elements').delete().eq('id', elementId)
+    if (!practiceMode) await supabase.from('ts_elements').delete().eq('id', elementId)
 
     setSheets((prev) => prev.map((s) => {
       if (s.id !== sheetId) return s
@@ -744,15 +747,17 @@ export default function DJReview({ initialSheets, myJudgeId, lang }: DJReviewPro
       }
     }))
 
-    await supabase
-      .from('ts_elements')
-      .update({
-        label: el.label,
-        element_type: el.elementType,
-        is_static: el.isStatic,
-        difficulty_value: el.difficultyValue,
-      })
-      .eq('id', elementId)
+    if (!practiceMode) {
+      await supabase
+        .from('ts_elements')
+        .update({
+          label: el.label,
+          element_type: el.elementType,
+          is_static: el.isStatic,
+          difficulty_value: el.difficultyValue,
+        })
+        .eq('id', elementId)
+    }
   }
 
   // ── review status handlers ────────────────────────────────────────────────
@@ -768,19 +773,21 @@ export default function DJReview({ initialSheets, myJudgeId, lang }: DJReviewPro
     const isSecondDJ = sheet.hasTwoDJs && sheet.dj1Id !== null && sheet.dj1Id !== myJudgeId
     const newStatus: TsReviewStatus = (!sheet.hasTwoDJs || isSecondDJ) ? 'checked' : 'awaiting_dj2'
 
-    if (isSecondDJ) {
-      await supabase.from('ts_review_status')
-        .update({ status: newStatus, dj2_id: myJudgeId, dj2_decision: 'checked', dj2_comment: null, dj2_at: now })
-        .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', sheet.routineType as "Balance" | "Dynamic" | "Combined")
-    } else {
-      await supabase.from('ts_review_status').upsert({
-        team_id: sheet.teamId, competition_id: sheet.competitionId,
-        routine_type: sheet.routineType as 'Balance' | 'Dynamic' | 'Combined',
-        status: newStatus,
-        dj1_id: myJudgeId, dj1_decision: 'checked', dj1_comment: null, dj1_at: now,
-        dj2_id: null, dj2_decision: null, dj2_comment: null, dj2_at: null,
-        final_comment: null, notified_at: null,
-      }, { onConflict: 'team_id,competition_id,routine_type' })
+    if (!practiceMode) {
+      if (isSecondDJ) {
+        await supabase.from('ts_review_status')
+          .update({ status: newStatus, dj2_id: myJudgeId, dj2_decision: 'checked', dj2_comment: null, dj2_at: now })
+          .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', sheet.routineType as "Balance" | "Dynamic" | "Combined")
+      } else {
+        await supabase.from('ts_review_status').upsert({
+          team_id: sheet.teamId, competition_id: sheet.competitionId,
+          routine_type: sheet.routineType as 'Balance' | 'Dynamic' | 'Combined',
+          status: newStatus,
+          dj1_id: myJudgeId, dj1_decision: 'checked', dj1_comment: null, dj1_at: now,
+          dj2_id: null, dj2_decision: null, dj2_comment: null, dj2_at: null,
+          final_comment: null, notified_at: null,
+        }, { onConflict: 'team_id,competition_id,routine_type' })
+      }
     }
 
     updateSheetReview(sheetId, {
@@ -799,23 +806,25 @@ export default function DJReview({ initialSheets, myJudgeId, lang }: DJReviewPro
     const newStatus: TsReviewStatus = (!sheet.hasTwoDJs || isSecondDJ) ? 'incorrect' : 'awaiting_dj2'
     const isFinal = newStatus === 'incorrect'
 
-    if (isSecondDJ) {
-      await supabase.from('ts_review_status')
-        .update({
-          status: newStatus, dj2_id: myJudgeId, dj2_decision: 'incorrect',
-          dj2_comment: comment, dj2_at: now,
-          ...(isFinal ? { final_comment: comment, notified_at: now } : {}),
-        })
-        .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', sheet.routineType as "Balance" | "Dynamic" | "Combined")
-    } else {
-      await supabase.from('ts_review_status').upsert({
-        team_id: sheet.teamId, competition_id: sheet.competitionId,
-        routine_type: sheet.routineType as 'Balance' | 'Dynamic' | 'Combined',
-        status: newStatus,
-        dj1_id: myJudgeId, dj1_decision: 'incorrect', dj1_comment: comment, dj1_at: now,
-        dj2_id: null, dj2_decision: null, dj2_comment: null, dj2_at: null,
-        ...(isFinal ? { final_comment: comment, notified_at: now } : { final_comment: null, notified_at: null }),
-      }, { onConflict: 'team_id,competition_id,routine_type' })
+    if (!practiceMode) {
+      if (isSecondDJ) {
+        await supabase.from('ts_review_status')
+          .update({
+            status: newStatus, dj2_id: myJudgeId, dj2_decision: 'incorrect',
+            dj2_comment: comment, dj2_at: now,
+            ...(isFinal ? { final_comment: comment, notified_at: now } : {}),
+          })
+          .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', sheet.routineType as "Balance" | "Dynamic" | "Combined")
+      } else {
+        await supabase.from('ts_review_status').upsert({
+          team_id: sheet.teamId, competition_id: sheet.competitionId,
+          routine_type: sheet.routineType as 'Balance' | 'Dynamic' | 'Combined',
+          status: newStatus,
+          dj1_id: myJudgeId, dj1_decision: 'incorrect', dj1_comment: comment, dj1_at: now,
+          dj2_id: null, dj2_decision: null, dj2_comment: null, dj2_at: null,
+          ...(isFinal ? { final_comment: comment, notified_at: now } : { final_comment: null, notified_at: null }),
+        }, { onConflict: 'team_id,competition_id,routine_type' })
+      }
     }
 
     updateSheetReview(sheetId, {
@@ -835,14 +844,16 @@ export default function DJReview({ initialSheets, myJudgeId, lang }: DJReviewPro
     const newStatus: TsReviewStatus = decision === 'checked' ? 'checked' : 'incorrect'
     const isFinalComment = decision === 'incorrect' ? comment : null
 
-    await supabase.from('ts_review_status')
-      .update({
-        status: newStatus,
-        dj2_id: myJudgeId, dj2_decision: decision,
-        dj2_comment: comment || null, dj2_at: now,
-        ...(decision === 'incorrect' ? { final_comment: isFinalComment, notified_at: now } : { final_comment: null }),
-      })
-      .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', sheet.routineType as "Balance" | "Dynamic" | "Combined")
+    if (!practiceMode) {
+      await supabase.from('ts_review_status')
+        .update({
+          status: newStatus,
+          dj2_id: myJudgeId, dj2_decision: decision,
+          dj2_comment: comment || null, dj2_at: now,
+          ...(decision === 'incorrect' ? { final_comment: isFinalComment, notified_at: now } : { final_comment: null }),
+        })
+        .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', sheet.routineType as "Balance" | "Dynamic" | "Combined")
+    }
 
     updateSheetReview(sheetId, {
       reviewStatus: newStatus,
@@ -855,14 +866,16 @@ export default function DJReview({ initialSheets, myJudgeId, lang }: DJReviewPro
     const sheet = sheets.find((s) => s.id === sheetId)
     if (!sheet) return
 
-    await supabase.from('ts_review_status')
-      .update({
-        status: 'pending',
-        dj1_id: null, dj1_decision: null, dj1_comment: null, dj1_at: null,
-        dj2_id: null, dj2_decision: null, dj2_comment: null, dj2_at: null,
-        final_comment: null, notified_at: null,
-      })
-      .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', sheet.routineType as "Balance" | "Dynamic" | "Combined")
+    if (!practiceMode) {
+      await supabase.from('ts_review_status')
+        .update({
+          status: 'pending',
+          dj1_id: null, dj1_decision: null, dj1_comment: null, dj1_at: null,
+          dj2_id: null, dj2_decision: null, dj2_comment: null, dj2_at: null,
+          final_comment: null, notified_at: null,
+        })
+        .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', sheet.routineType as "Balance" | "Dynamic" | "Combined")
+    }
 
     updateSheetReview(sheetId, {
       reviewStatus: 'pending',

@@ -268,9 +268,6 @@ function parseFile(buffer: ArrayBuffer, ruleset: Ruleset, ageGroupRules: AgeGrou
       // If name column is empty, skip this row — it's not a real team entry
       if (!fullName) { current = null; continue }
 
-      // Debug: verify column reading (remove once columns confirmed)
-      console.log('[import row]', { fullName, dobRaw, categoria, coach, allCols: row.slice(0, 8).map(String) })
-
       // Match age group against ruleset-filtered rules (accent-insensitive)
       const catNorm = normalizeStr(categoria)
       const rulesetPool = filterRulesByRuleset(ageGroupRules, ruleset)
@@ -493,7 +490,6 @@ export default function ImportTab({
     }
 
     const data = await res.json()
-    if (data.errors?.length) console.error('[import errors]', data.errors)
     setResult({ teamsCreated: data.teamsCreated, inviteSent: data.inviteSent, errors: data.errors ?? [] })
     setStep('done')
   }

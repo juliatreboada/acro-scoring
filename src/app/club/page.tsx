@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
+import { useProfile } from '@/contexts/ProfileContext'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Club, Gymnast, Team, Competition, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule } from '@/components/admin/types'
 import ClubPortal from '@/components/club/ClubPortal'
@@ -11,6 +12,7 @@ import AuthBar from '@/components/shared/AuthBar'
 
 export default function Page() {
   const supabase = createClient()
+  const { activeProfile } = useProfile()
   const [lang, setLang]       = useState<Lang>('es')
   const [loading, setLoading] = useState(true)
 
@@ -26,16 +28,14 @@ export default function Page() {
   const [agLabels,     setAgLabels]     = useState<Record<string, string>>({})
   const [ageGroupRules, setAgeGroupRules] = useState<AgeGroupRule[]>([])
   const [tsReviewStatuses, setTsReviewStatuses] = useState<{ team_id: string; competition_id: string; routine_type: string; status: string; final_comment: string | null }[]>([])
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setLoading(false); return }
-
-      const { data: profile } = await supabase
-        .from('profiles').select('id').eq('auth_id', user.id).single()
-      if (!profile) { setLoading(false); return }
-      const cid = profile.id
+      if (!activeProfile) return
+      try {
+      const cid = activeProfile.club_id
+      if (!cid) { setLoading(false); return }
       setClubId(cid)
 
       // ── parallel: club + gymnasts + teams + competitions + nominations + rules ─
@@ -110,10 +110,12 @@ export default function Page() {
       setJudges(rawJudges.map((j: { id: string; full_name: string; phone: string | null; licence: string | null; avatar_url: string | null }) => ({ ...j, email: judgeEmailMap[j.id] ?? null })))
       setNominations(nomsRes.data ?? [])
       setAgLabels(agLabelsMap)
-      setLoading(false)
+      } finally {
+        setLoading(false)
+      }
     }
     load()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeProfile?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── gymnasts ──────────────────────────────────────────────────────────────────
   async function handleAddGymnast(g: Omit<Gymnast, 'id' | 'club_id'>) {
@@ -238,7 +240,7 @@ export default function Page() {
     const ext = file.name.split('.').pop() ?? 'jpg'
     const path = `${id}/photo.${ext}`
     const { error } = await supabase.storage.from('gymnasts-photos').upload(path, file, { upsert: true })
-    if (error) { console.error('Gymnast photo upload failed:', error.message); return }
+    if (error) { setUploadError(error.message); return }
     const { data } = supabase.storage.from('gymnasts-photos').getPublicUrl(path)
     const url = data.publicUrl
     await supabase.from('gymnasts').update({ photo_url: url } as Record<string, string>).eq('id', id)
@@ -249,7 +251,7 @@ export default function Page() {
     const ext = file.name.split('.').pop() ?? 'pdf'
     const path = `${id}/licencia.${ext}`
     const { error } = await supabase.storage.from('gymnast-licencias').upload(path, file, { upsert: true })
-    if (error) { console.error('Licencia upload failed:', error.message); return }
+    if (error) { setUploadError(error.message); return }
     const { data } = supabase.storage.from('gymnast-licencias').getPublicUrl(path)
     const url = data.publicUrl
     await supabase.from('gymnasts').update({ licencia_url: url } as Record<string, string>).eq('id', id)
@@ -260,7 +262,7 @@ export default function Page() {
     const ext = file.name.split('.').pop() ?? 'jpg'
     const path = `${id}/photo.${ext}`
     const { error } = await supabase.storage.from('team-photos').upload(path, file, { upsert: true })
-    if (error) { console.error('Team photo upload failed:', error.message); return }
+    if (error) { setUploadError(error.message); return }
     const { data } = supabase.storage.from('team-photos').getPublicUrl(path)
     const url = data.publicUrl
     await supabase.from('teams').update({ photo_url: url }).eq('id', id)
@@ -271,7 +273,7 @@ export default function Page() {
     const ext = file.name.split('.').pop() ?? 'jpg'
     const path = `${clubId}/avatar.${ext}`
     const { error } = await supabase.storage.from('club-logos').upload(path, file, { upsert: true })
-    if (error) { console.error('Avatar upload failed:', error.message); return }
+    if (error) { setUploadError(error.message); return }
     const { data } = supabase.storage.from('club-logos').getPublicUrl(path)
     const url = data.publicUrl
     await supabase.from('clubs').update({ avatar_url: url }).eq('id', clubId)
@@ -282,7 +284,7 @@ export default function Page() {
     const ext = file.name.split('.').pop() ?? 'jpg'
     const path = `${id}/photo.${ext}`
     const { error } = await supabase.storage.from('judge-photos').upload(path, file, { upsert: true })
-    if (error) { console.error('Judge photo upload failed:', error.message); return }
+    if (error) { setUploadError(error.message); return }
     const { data } = supabase.storage.from('judge-photos').getPublicUrl(path)
     const url = data.publicUrl
     await supabase.from('judges').update({ avatar_url: url }).eq('id', id)
@@ -310,7 +312,7 @@ export default function Page() {
       const clubSlug = club?.club_name.replace(/\s+/g, '-') ?? 'club'
       const path = `${competitionId}/${dorsal}-${ageGroup}-${routineType}-${clubSlug}.${ext}`
       const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
-      if (error) { console.error(`${field} upload failed:`, error.message); return }
+      if (error) { setUploadError(error.message); return }
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path)
       storagePath = urlData.publicUrl
     }
@@ -351,6 +353,13 @@ export default function Page() {
   return (
     <div>
       <AuthBar lang={lang} onLangChange={setLang} />
+
+      {uploadError && (
+        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-red-600 text-white text-sm px-4 py-3 rounded-xl shadow-lg">
+          <span>{uploadError}</span>
+          <button onClick={() => setUploadError(null)} className="text-white/70 hover:text-white">✕</button>
+        </div>
+      )}
 
       <ClubPortal
         lang={lang}
