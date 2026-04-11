@@ -109,6 +109,8 @@ export default function Page() {
   const [invPhone,   setInvPhone]           = useState('')
   const [sending, setSending]               = useState(false)
   const [invError, setInvError]             = useState('')
+  const [invClubMode, setInvClubMode]       = useState<'existing' | 'new'>('existing')
+  const [invSelectedClubId, setInvSelectedClubId] = useState<string>('')
 
   // ── add-profile modal (existing user) ────────────────────────────────────────
   const [showAdd, setShowAdd]               = useState(false)
@@ -183,12 +185,17 @@ export default function Page() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── invite (new user) ─────────────────────────────────────────────────────────
-  function openInvite(role: Role) {
+  async function openInvite(role: Role) {
     setInviteRole(role)
     setInvEmail(''); setInvFullName(''); setInvClubName('')
     setInvContactName(''); setInvLicence(''); setInvPhone('')
-    setInvError('')
+    setInvError(''); setInvClubMode('existing'); setInvSelectedClubId('')
     setShowInvite(true)
+
+    if (role === 'club' && clubOptions.length === 0) {
+      const res = await fetch('/api/admin/clubs')
+      if (res.ok) setClubOptions(await res.json())
+    }
   }
 
   async function handleSendInvite() {
@@ -196,8 +203,13 @@ export default function Page() {
     if ((inviteRole === 'admin' || inviteRole === 'judge') && !invFullName) {
       setInvError('Full name is required'); return
     }
-    if (inviteRole === 'club' && !invClubName) {
-      setInvError('Club name is required'); return
+    if (inviteRole === 'club') {
+      if (invClubMode === 'existing' && !invSelectedClubId) {
+        setInvError('Select a club'); return
+      }
+      if (invClubMode === 'new' && !invClubName) {
+        setInvError('Club name is required'); return
+      }
     }
 
     setSending(true); setInvError('')
@@ -208,8 +220,12 @@ export default function Page() {
       if (inviteRole === 'judge' && invLicence) body.licence = invLicence
     }
     if (inviteRole === 'club') {
-      body.club_name = invClubName
-      if (invContactName) body.contact_name = invContactName
+      if (invClubMode === 'existing') {
+        body.club_id = invSelectedClubId
+      } else {
+        body.club_name = invClubName
+        if (invContactName) body.contact_name = invContactName
+      }
     }
     if (invPhone) body.phone = invPhone
 
@@ -484,16 +500,42 @@ export default function Page() {
               )}
               {inviteRole === 'club' && (
                 <>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-1">{t.clubName}</label>
-                    <input type="text" value={invClubName} onChange={e => setInvClubName(e.target.value)}
-                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                  <div className="flex gap-2">
+                    {(['existing', 'new'] as const).map(m => (
+                      <button key={m} type="button" onClick={() => setInvClubMode(m)}
+                        className={['flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-colors',
+                          invClubMode === m
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'].join(' ')}>
+                        {m === 'existing' ? (lang === 'es' ? 'Club existente' : 'Existing club') : (lang === 'es' ? 'Nuevo club' : 'New club')}
+                      </button>
+                    ))}
                   </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-1">{t.contactName}</label>
-                    <input type="text" value={invContactName} onChange={e => setInvContactName(e.target.value)}
-                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                  </div>
+                  {invClubMode === 'existing' ? (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t.clubName}</label>
+                      <select value={invSelectedClubId} onChange={e => setInvSelectedClubId(e.target.value)}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
+                        <option value="">{lang === 'es' ? '— Seleccionar club —' : '— Select club —'}</option>
+                        {clubOptions.map(c => (
+                          <option key={c.id} value={c.id}>{c.club_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">{t.clubName}</label>
+                        <input type="text" value={invClubName} onChange={e => setInvClubName(e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">{t.contactName}</label>
+                        <input type="text" value={invContactName} onChange={e => setInvContactName(e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                      </div>
+                    </>
+                  )}
                 </>
               )}
               <div>
