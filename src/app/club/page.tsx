@@ -121,6 +121,15 @@ export default function Page() {
     if (data) setGymnasts(prev => [...prev, data as unknown as Gymnast])
   }
 
+  async function handleAddGymnastsBulk(list: Array<Omit<Gymnast, 'id' | 'club_id'>>) {
+    if (!list.length) return
+    const { data } = await supabase
+      .from('gymnasts')
+      .insert(list.map(g => ({ ...g, club_id: clubId })))
+      .select()
+    if (data) setGymnasts(prev => [...prev, ...(data as unknown as Gymnast[])])
+  }
+
   async function handleUpdateGymnast(id: string, g: Omit<Gymnast, 'id' | 'club_id'>) {
     await supabase.from('gymnasts').update(g).eq('id', id)
     setGymnasts(prev => prev.map(x => x.id === id ? { ...x, ...g } : x))
@@ -357,6 +366,7 @@ export default function Page() {
         agLabels={agLabels}
         ageGroupRules={ageGroupRules}
         onAddGymnast={handleAddGymnast}
+        onAddGymnastsBulk={handleAddGymnastsBulk}
         onUpdateGymnast={handleUpdateGymnast}
         onDeleteGymnast={handleDeleteGymnast}
         onAddTeam={handleAddTeam}

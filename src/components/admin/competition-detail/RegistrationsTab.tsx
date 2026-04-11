@@ -1,14 +1,18 @@
 'use client'
 
+import { useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Team, Club, Gymnast, CompetitionEntry } from '@/components/admin/types'
+import type { Team, Club, Gymnast, CompetitionEntry, AgeGroupRule } from '@/components/admin/types'
 import ClickableImg from '@/components/shared/ClickableImg'
+import ImportTab from './ImportTab'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
 const T = {
   en: {
     noRegistrations: 'No teams registered yet.',
+    import: 'Import',
+    backToList: 'Back to registrations',
     registered: (n: number) => `${n} registered`,
     dropout: (n: number) => `${n} dropout`,
     dropouts: (n: number) => `${n} dropouts`,
@@ -20,6 +24,8 @@ const T = {
   },
   es: {
     noRegistrations: 'Sin equipos registrados todavía.',
+    import: 'Importar',
+    backToList: 'Volver a inscripciones',
     registered: (n: number) => `${n} inscrito${n === 1 ? '' : 's'}`,
     dropout: (n: number) => `${n} baja`,
     dropouts: (n: number) => `${n} bajas`,
@@ -176,18 +182,37 @@ export type RegistrationsTabProps = {
   entries: CompetitionEntry[]
   agLabels: Record<string, string>
   onToggleDropout: (entryId: string) => void
+  competitionId: string
+  ageGroupRules: AgeGroupRule[]
+  competitionAgeGroups: string[]
+  competitionYear: number
 }
 
 export default function RegistrationsTab({
   lang, globalTeams, clubs, gymnasts, entries, agLabels, onToggleDropout,
+  competitionId, ageGroupRules, competitionAgeGroups, competitionYear,
 }: RegistrationsTabProps) {
   const t = T[lang]
+  const [showImport, setShowImport] = useState(false)
 
-  if (entries.length === 0) {
+  if (showImport) {
     return (
-      <p className="text-sm text-slate-400 text-center py-12 border border-dashed border-slate-200 rounded-xl">
-        {t.noRegistrations}
-      </p>
+      <div>
+        <button onClick={() => setShowImport(false)}
+          className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-600 mb-5 transition-colors">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+          </svg>
+          {t.backToList}
+        </button>
+        <ImportTab
+          lang={lang}
+          competitionId={competitionId}
+          ageGroupRules={ageGroupRules}
+          competitionAgeGroups={competitionAgeGroups}
+          competitionYear={competitionYear}
+        />
+      </div>
     )
   }
 
@@ -215,18 +240,36 @@ export default function RegistrationsTab({
   })
 
   return (
-    <div className="space-y-8">
-      {groups.map((g) => (
-        <RegistrationGroup
-          key={`${g.age_group}||${g.category}`}
-          age_group={g.age_group}
-          category={g.category}
-          items={g.items}
-          lang={lang}
-          agLabels={agLabels}
-          onToggleDropout={onToggleDropout}
-        />
-      ))}
+    <div>
+      <div className="flex justify-end mb-5">
+        <button onClick={() => setShowImport(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+          </svg>
+          {t.import}
+        </button>
+      </div>
+
+      {entries.length === 0 ? (
+        <p className="text-sm text-slate-400 text-center py-12 border border-dashed border-slate-200 rounded-xl">
+          {t.noRegistrations}
+        </p>
+      ) : (
+        <div className="space-y-8">
+          {groups.map((g) => (
+            <RegistrationGroup
+              key={`${g.age_group}||${g.category}`}
+              age_group={g.age_group}
+              category={g.category}
+              items={g.items}
+              lang={lang}
+              agLabels={agLabels}
+              onToggleDropout={onToggleDropout}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

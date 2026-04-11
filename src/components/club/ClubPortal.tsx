@@ -46,6 +46,7 @@ export type ClubPortalProps = {
   tsReviewStatuses: { team_id: string; competition_id: string; routine_type: string; status: string; final_comment: string | null }[]
   // gymnasts
   onAddGymnast: (g: Omit<Gymnast, 'id' | 'club_id'>) => void
+  onAddGymnastsBulk: (gymnasts: Array<Omit<Gymnast, 'id' | 'club_id'>>) => Promise<void>
   onUpdateGymnast: (id: string, g: Omit<Gymnast, 'id' | 'club_id'>) => void
   onDeleteGymnast: (id: string) => void
   onUploadGymnastPhoto: (id: string, file: File) => Promise<void>
@@ -77,7 +78,7 @@ export type ClubPortalProps = {
 
 export default function ClubPortal({
   lang, club, gymnasts, teams, judges, nominations, competitions, entries, music, agLabels, ageGroupRules, tsReviewStatuses,
-  onAddGymnast, onUpdateGymnast, onDeleteGymnast, onUploadGymnastPhoto, onUploadLicencia,
+  onAddGymnast, onAddGymnastsBulk, onUpdateGymnast, onDeleteGymnast, onUploadGymnastPhoto, onUploadLicencia,
   onAddTeam, onUpdateTeam, onDeleteTeam, onUploadTeamPhoto,
   onInviteJudge, onUpdateJudge, onDeleteJudge, onUploadJudgePhoto,
   onRegister, onDropout, onSetFile,
@@ -156,7 +157,8 @@ export default function ClubPortal({
       <div className="max-w-3xl mx-auto px-4 py-6">
         {activeTab === 'gymnasts' && (
           <GymnastsTab lang={lang} gymnasts={gymnasts}
-            onAdd={onAddGymnast} onUpdate={onUpdateGymnast} onDelete={onDeleteGymnast}
+            onAdd={onAddGymnast} onAddBulk={onAddGymnastsBulk}
+            onUpdate={onUpdateGymnast} onDelete={onDeleteGymnast}
             onUploadPhoto={onUploadGymnastPhoto} onUploadLicencia={onUploadLicencia} />
         )}
         {activeTab === 'teams' && (

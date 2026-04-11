@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/aj-scoring/types'
 import ProfileEditor from '@/components/shared/ProfileEditor'
+import JudgePractice from './JudgePractice'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -72,6 +73,10 @@ const T = {
     loadingDetail: 'Loading…',
     profile: 'Profile',
     competitions: 'Competitions',
+    practice: 'Practice',
+    practiceTitle: 'Practice mode',
+    practiceSub: 'Try all judge roles with mock data. Nothing is saved.',
+    practiceButton: 'Start practice',
   },
   es: {
     title: 'Mis competiciones',
@@ -102,6 +107,10 @@ const T = {
     loadingDetail: 'Cargando…',
     profile: 'Perfil',
     competitions: 'Competiciones',
+    practice: 'Práctica',
+    practiceTitle: 'Modo práctica',
+    practiceSub: 'Prueba todos los roles de juez con datos ficticios. Nada se guarda.',
+    practiceButton: 'Iniciar práctica',
   },
 }
 
@@ -450,6 +459,7 @@ export default function JudgeLobby({ lang }: { lang: Lang }) {
   const [loading, setLoading] = useState(true)
   const [competitions, setCompetitions] = useState<LobbyCompetition[]>([])
   const [selectedComp, setSelectedComp] = useState<LobbyCompetition | null>(null)
+  const [showPractice, setShowPractice] = useState(false)
   const [view, setView] = useState<'competitions' | 'profile'>('competitions')
 
   useEffect(() => {
@@ -495,6 +505,10 @@ export default function JudgeLobby({ lang }: { lang: Lang }) {
     </div>
   )
 
+  if (showPractice) {
+    return <JudgePractice lang={lang} onBack={() => setShowPractice(false)} />
+  }
+
   if (selectedComp) {
     return (
       <CompetitionDetail
@@ -527,29 +541,50 @@ export default function JudgeLobby({ lang }: { lang: Lang }) {
           <div className="flex items-center justify-center py-24">
             <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
           </div>
-        ) : competitions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-              <svg className="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0" />
+        ) : <>
+          {/* practice card — always visible */}
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 00-.491 6.347A48.62 48.62 0 0112 20.904a48.62 48.62 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.636 50.636 0 00-2.658-.813A59.906 59.906 0 0112 3.493a59.903 59.903 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" />
               </svg>
             </div>
-            <p className="text-base font-semibold text-slate-600">{t.noCompetitions}</p>
-            <p className="text-sm text-slate-400 mt-1">{t.noCompetitionsSub}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-800">{t.practiceTitle}</p>
+              <p className="text-xs text-amber-600 mt-0.5">{t.practiceSub}</p>
+            </div>
+            <button
+              onClick={() => setShowPractice(true)}
+              className="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold bg-amber-500 text-white hover:bg-amber-600 transition-all"
+            >
+              {t.practiceButton}
+            </button>
           </div>
-        ) : (
-          <div className="space-y-4">
-            <h1 className="text-lg font-bold text-slate-800">{t.title}</h1>
-            {competitions.map(comp => (
-              <CompetitionCard
-                key={comp.id}
-                comp={comp}
-                lang={lang}
-                onEnter={() => setSelectedComp(comp)}
-              />
-            ))}
-          </div>
-        )
+
+          {competitions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                <svg className="w-7 h-7 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0" />
+                </svg>
+              </div>
+              <p className="text-base font-semibold text-slate-600">{t.noCompetitions}</p>
+              <p className="text-sm text-slate-400 mt-1">{t.noCompetitionsSub}</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <h1 className="text-lg font-bold text-slate-800">{t.title}</h1>
+              {competitions.map(comp => (
+                <CompetitionCard
+                  key={comp.id}
+                  comp={comp}
+                  lang={lang}
+                  onEnter={() => setSelectedComp(comp)}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

@@ -211,6 +211,7 @@ export default function JudgeSession({
                   currentPerf={currentPerf}
                   lang={lang}
                   elements={elements}
+                  mode={role.roleNumber === 1 ? 'elements' : 'keyboard'}
                   waitingForOtherScores={waiting}
                   judgeScores={thisRoleSubmitted ? currentJudgeScores : undefined}
                   panelJudges={thisRoleSubmitted ? panelJudges : undefined}
@@ -230,6 +231,7 @@ export default function JudgeSession({
                   currentPerf={currentPerf}
                   lang={lang}
                   elements={elements}
+                  mode={role.roleNumber === 1 ? 'elements' : 'keyboard'}
                   waitingForOtherScores={waiting}
                   judgeScores={thisRoleSubmitted ? currentJudgeScores : undefined}
                   panelJudges={thisRoleSubmitted ? panelJudges : undefined}
