@@ -179,23 +179,19 @@ export default function Page() {
       })
 
       setUsers(rows)
+      setClubOptions((clubsRes.data ?? []).map(c => ({ id: c.id, club_name: c.club_name ?? '' })))
       setLoading(false)
     }
     load()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── invite (new user) ─────────────────────────────────────────────────────────
-  async function openInvite(role: Role) {
+  function openInvite(role: Role) {
     setInviteRole(role)
     setInvEmail(''); setInvFullName(''); setInvClubName('')
     setInvContactName(''); setInvLicence(''); setInvPhone('')
     setInvError(''); setInvClubMode('existing'); setInvSelectedClubId('')
     setShowInvite(true)
-
-    if (role === 'club' && clubOptions.length === 0) {
-      const res = await fetch('/api/admin/clubs')
-      if (res.ok) setClubOptions(await res.json())
-    }
   }
 
   async function handleSendInvite() {
@@ -241,17 +237,12 @@ export default function Page() {
   }
 
   // ── add profile (existing user) ───────────────────────────────────────────────
-  async function openAdd(role: Role) {
+  function openAdd(role: Role) {
     setAddRole(role)
     setAddEmail(''); setAddLookupDone(false); setAddFoundName(''); setAddFoundProfiles([])
     setAddFullName(''); setAddClubName(''); setAddContactName(''); setAddLicence(''); setAddPhone('')
     setAddError(''); setSelectedClubId(''); setClubMode('existing')
     setShowAdd(true)
-
-    if (role === 'club' && clubOptions.length === 0) {
-      const res = await fetch('/api/admin/clubs')
-      if (res.ok) setClubOptions(await res.json())
-    }
   }
 
   async function handleLookup() {
