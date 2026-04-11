@@ -231,7 +231,7 @@ export default function Page() {
       body: JSON.stringify(body),
     })
     setSending(false)
-    if (!res.ok) { setInvError((await res.json()).error ?? 'Something went wrong'); return }
+    if (!res.ok) { const j = await res.json().catch(() => ({})); setInvError(j.error ?? 'Something went wrong'); return }
     setShowInvite(false)
     window.location.reload()
   }

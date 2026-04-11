@@ -14,6 +14,7 @@ import type { Database } from '@/lib/database.types'
 // The handle_new_user trigger auto-creates the entity row from metadata.
 
 export async function POST(req: NextRequest) {
+  try {
   // verify caller is super_admin
   const cookieStore = await cookies()
   const supabase = createServerClient<Database>(
@@ -79,4 +80,8 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   return NextResponse.json({ id: data.user.id })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Unexpected server error'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }
