@@ -92,6 +92,11 @@ const roleBadgeClass: Record<Role, string> = {
 export default function Page() {
   const supabase = createClient()
   const router   = useRouter()
+
+  async function getToken(): Promise<string | undefined> {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token
+  }
   const [lang, setLang] = useState<Lang>('es')
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Role>('admin')
@@ -225,9 +230,10 @@ export default function Page() {
     }
     if (invPhone) body.phone = invPhone
 
+    const token = await getToken()
     const res = await fetch('/api/admin/invite', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify(body),
     })
     setSending(false)
@@ -312,9 +318,10 @@ export default function Page() {
       }
     }
 
+    const token = await getToken()
     const res = await fetch('/api/admin/profiles', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify(body),
     })
     setAdding(false)
@@ -351,9 +358,10 @@ export default function Page() {
       body.phone        = editPhone
     }
 
+    const token = await getToken()
     const res = await fetch('/api/admin/profiles', {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify(body),
     })
     setSaving(false)
@@ -365,7 +373,11 @@ export default function Page() {
   // ── delete ────────────────────────────────────────────────────────────────────
   async function handleDelete(u: UserRow) {
     if (!confirm(t.confirmRemove)) return
-    await fetch(`/api/admin/profiles?profileId=${u.id}`, { method: 'DELETE' })
+    const token = await getToken()
+    await fetch(`/api/admin/profiles?profileId=${u.id}`, {
+      method: 'DELETE',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
     setUsers(prev => prev.filter(x => x.id !== u.id))
   }
 

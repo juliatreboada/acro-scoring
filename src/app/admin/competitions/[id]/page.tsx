@@ -73,6 +73,9 @@ export default function Page() {
       const rawSectionIds = (sectionsRes.data ?? []).map(s => s.id)
       const rawPanelIds   = (panelsRes.data ?? []).map(p => p.id)
 
+      const { data: { session: authSession } } = await supabase.auth.getSession()
+      const authToken = authSession?.access_token
+
       const [teamsResult, teamGymnastsResult, ordersResult, adminEmailsResult, judgeProfilesResult, panelLocksResult, assignmentsResult] = await Promise.all([
         entryTeamIds.length > 0
           ? supabase.from('teams').select('id,club_id,category,age_group,gymnast_display,photo_url').in('id', entryTeamIds) as unknown as Promise<{ data: TeamRow[] | null }>
@@ -86,7 +89,7 @@ export default function Page() {
         adminProfiles.length > 0
           ? fetch('/api/admin/users', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
               body: JSON.stringify({ ids: adminProfiles.map(p => p.id) }),
             })
           : Promise.resolve(null),

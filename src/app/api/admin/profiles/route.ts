@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-import type { Database } from '@/lib/database.types'
 
 async function requireSuperAdmin(userId: string): Promise<boolean> {
   const { data } = await supabaseAdmin
@@ -10,13 +7,11 @@ async function requireSuperAdmin(userId: string): Promise<boolean> {
   return data?.some(p => p.role === 'super_admin') ?? false
 }
 
-async function makeSupabase() {
-  const cookieStore = await cookies()
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll: () => cookieStore.getAll() } }
-  )
+async function getAuthUserId(req: NextRequest): Promise<string | null> {
+  const token = req.headers.get('Authorization')?.replace('Bearer ', '') ?? null
+  if (!token) return null
+  const { data: { user } } = await supabaseAdmin.auth.getUser(token)
+  return user?.id ?? null
 }
 
 // POST /api/admin/profiles
@@ -27,10 +22,10 @@ async function makeSupabase() {
 //   { email, role: 'club', club_id: string }           ← assign to existing club
 //   { email, role: 'club', club_name, contact_name?, phone? } ← create new club
 export async function POST(req: NextRequest) {
-  const supabase = await makeSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!await requireSuperAdmin(user.id)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!supabaseAdmin) return NextResponse.json({ error: 'Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY is not set' }, { status: 500 })
+  const userId = await getAuthUserId(req)
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!await requireSuperAdmin(userId)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json() as {
     email: string
@@ -126,10 +121,10 @@ export async function POST(req: NextRequest) {
 // Edit entity data for a profile.
 // Body: { profileId, full_name?, phone?, licence?, club_name?, contact_name? }
 export async function PATCH(req: NextRequest) {
-  const supabase = await makeSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!await requireSuperAdmin(user.id)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!supabaseAdmin) return NextResponse.json({ error: 'Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY is not set' }, { status: 500 })
+  const userId = await getAuthUserId(req)
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!await requireSuperAdmin(userId)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { profileId, full_name, phone, licence, club_name, contact_name } = await req.json() as {
     profileId: string
@@ -171,10 +166,10 @@ export async function PATCH(req: NextRequest) {
 // Remove a profile (and its entity row for judge/admin).
 // For club: only removes the profile — the club entity is kept (other users may share it).
 export async function DELETE(req: NextRequest) {
-  const supabase = await makeSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if (!await requireSuperAdmin(user.id)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!supabaseAdmin) return NextResponse.json({ error: 'Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY is not set' }, { status: 500 })
+  const userId = await getAuthUserId(req)
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!await requireSuperAdmin(userId)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const profileId = new URL(req.url).searchParams.get('profileId')
   if (!profileId) return NextResponse.json({ error: 'profileId required' }, { status: 400 })

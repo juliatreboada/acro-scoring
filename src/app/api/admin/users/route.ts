@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-import type { Database } from '@/lib/database.types'
 
 // POST /api/admin/users
 // Body: { ids: string[] }
@@ -12,17 +9,15 @@ import type { Database } from '@/lib/database.types'
 
 export async function POST(req: NextRequest) {
   try {
-  const cookieStore = await cookies()
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { getAll: () => cookieStore.getAll() } }
-  )
+  if (!supabaseAdmin) return NextResponse.json({ error: 'Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY is not set' }, { status: 500 })
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const token = req.headers.get('Authorization')?.replace('Bearer ', '') ?? null
+  if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: profiles } = await supabase
+  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+  if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { data: profiles } = await supabaseAdmin
     .from('profiles').select('role').eq('auth_id', user.id)
   if (!profiles?.some(p => ['super_admin', 'admin'].includes(p.role))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

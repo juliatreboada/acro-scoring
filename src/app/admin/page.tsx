@@ -38,9 +38,11 @@ export default function Page() {
       const adminProfiles = adminsRes.data ?? []
       let adminsWithEmail: AdminUser[] = []
       if (adminProfiles.length > 0) {
+        const { data: { session } } = await supabase.auth.getSession()
+        const token = session?.access_token
         const res = await fetch('/api/admin/users', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
           body: JSON.stringify({ ids: adminProfiles.map((p) => p.id) }),
         })
         if (res.ok) {
