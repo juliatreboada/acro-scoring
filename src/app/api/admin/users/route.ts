@@ -11,6 +11,7 @@ import type { Database } from '@/lib/database.types'
 // In the new schema profiles.email is stored directly, no auth.admin lookup needed.
 
 export async function POST(req: NextRequest) {
+  try {
   const cookieStore = await cookies()
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -46,4 +47,8 @@ export async function POST(req: NextRequest) {
   }))
 
   return NextResponse.json(result)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Unexpected server error'
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }
