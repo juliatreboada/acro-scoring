@@ -41,11 +41,17 @@ export async function POST(req: NextRequest) {
   const { role, email } = body
   if (!role || !email) return NextResponse.json({ error: 'Missing role or email' }, { status: 400 })
 
+  // Build the redirect origin — req.nextUrl.origin is unreliable in Amplify Lambda
+  // (returns bare hostname without protocol). Use forwarded headers instead.
+  const proto = req.headers.get('x-forwarded-proto') ?? 'https'
+  const host  = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? req.nextUrl.host
+  const siteOrigin = `${proto}://${host}`
+
   // ── existing club: invite without metadata so the trigger doesn't create a new club,
   //    then create the profile row manually pointing to the existing club.
   if (role === 'club' && body.club_id) {
     const { data, error } = await db.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${req.nextUrl.origin}/auth/set-password`,
+      redirectTo: `${siteOrigin}/auth/set-password`,
     })
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
@@ -71,7 +77,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await db.auth.admin.inviteUserByEmail(email, {
     data: metadata,
-    redirectTo: `${req.nextUrl.origin}/auth/set-password`,
+    redirectTo: `${siteOrigin}/auth/set-password`,
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })

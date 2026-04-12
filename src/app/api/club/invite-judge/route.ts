@@ -41,9 +41,11 @@ export async function POST(req: NextRequest) {
   if (body.phone)   metadata.phone   = body.phone
   if (body.licence) metadata.licence = body.licence
 
+  const proto = req.headers.get('x-forwarded-proto') ?? 'https'
+  const host  = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? req.nextUrl.host
   const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(body.email, {
     data: metadata,
-    redirectTo: `${req.nextUrl.origin}/auth/set-password`,
+    redirectTo: `${proto}://${host}/auth/set-password`,
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
