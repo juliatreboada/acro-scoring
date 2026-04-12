@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 
 // POST /api/admin/users
 // Body: { ids: string[] }
@@ -9,15 +9,15 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function POST(req: NextRequest) {
   try {
-  if (!supabaseAdmin) return NextResponse.json({ error: 'Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY is not set' }, { status: 500 })
+  const db = getSupabaseAdmin()
 
   const token = req.headers.get('Authorization')?.replace('Bearer ', '') ?? null
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+  const { data: { user }, error: authError } = await db.auth.getUser(token)
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: profiles } = await supabaseAdmin
+  const { data: profiles } = await db
     .from('profiles').select('role').eq('auth_id', user.id)
   if (!profiles?.some(p => ['super_admin', 'admin'].includes(p.role))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -27,8 +27,8 @@ export async function POST(req: NextRequest) {
   if (!ids?.length) return NextResponse.json([])
 
   const [profilesRes, adminsRes] = await Promise.all([
-    supabaseAdmin.from('profiles').select('id, email').in('id', ids),
-    supabaseAdmin.from('admins').select('id, full_name').in('id', ids),
+    db.from('profiles').select('id, email').in('id', ids),
+    db.from('admins').select('id, full_name').in('id', ids),
   ])
 
   const nameMap = Object.fromEntries(

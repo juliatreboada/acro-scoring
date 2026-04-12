@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabaseAdmin'
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin'
 
 // POST /api/admin/invite
 // Body (one of):
@@ -12,16 +12,16 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function POST(req: NextRequest) {
   try {
-  if (!supabaseAdmin) return NextResponse.json({ error: 'Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY is not set' }, { status: 500 })
+  const db = getSupabaseAdmin()
 
   // verify caller is super_admin
   const token = req.headers.get('Authorization')?.replace('Bearer ', '') ?? null
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+  const { data: { user }, error: authError } = await db.auth.getUser(token)
   if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: profiles } = await supabaseAdmin
+  const { data: profiles } = await db
     .from('profiles').select('role').eq('auth_id', user.id)
   if (!profiles?.some(p => p.role === 'super_admin')) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -44,12 +44,12 @@ export async function POST(req: NextRequest) {
   // ── existing club: invite without metadata so the trigger doesn't create a new club,
   //    then create the profile row manually pointing to the existing club.
   if (role === 'club' && body.club_id) {
-    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+    const { data, error } = await db.auth.admin.inviteUserByEmail(email, {
       redirectTo: `${req.nextUrl.origin}/auth/set-password`,
     })
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
-    const { error: profileError } = await supabaseAdmin.from('profiles').insert({
+    const { error: profileError } = await db.from('profiles').insert({
       id:      crypto.randomUUID(),
       auth_id: data.user.id,
       email,
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   if (body.licence)      metadata.licence      = body.licence
   if (body.phone)        metadata.phone        = body.phone
 
-  const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+  const { data, error } = await db.auth.admin.inviteUserByEmail(email, {
     data: metadata,
     redirectTo: `${req.nextUrl.origin}/auth/set-password`,
   })
