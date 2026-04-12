@@ -141,7 +141,7 @@ export default function JudgeSession({
   // ── empty states ──
   if (sessionStatus !== 'active') {
     return (
-      <div className="h-[calc(100dvh-48px)]">
+      <div className="h-full">
         <EmptyState
           icon={sessionStatus === 'waiting' ? 'clock' : 'check'}
           title={sessionStatus === 'waiting' ? t.waiting : t.finished}
@@ -153,7 +153,7 @@ export default function JudgeSession({
 
   if (sortedRoles.length === 0) {
     return (
-      <div className="h-[calc(100dvh-48px)]">
+      <div className="h-full">
         <EmptyState icon="slash" title={t.noRoles} sub={t.noRolesSub} />
       </div>
     )
@@ -163,7 +163,7 @@ export default function JudgeSession({
     r.role === 'CJP' ? 'CJP' : `${r.role}${r.roleNumber}`
 
   return (
-    <div className="flex flex-col md:h-[calc(100dvh-48px)]">
+    <div className="flex flex-col h-full">
       {/* tabs — only shown when more than one role */}
       {sortedRoles.length > 1 && (
         <div className="bg-white border-b border-slate-200 px-4 flex items-center gap-0 h-11 shrink-0">
@@ -185,12 +185,12 @@ export default function JudgeSession({
       )}
 
       {/* views — all rendered, inactive ones hidden to preserve state */}
-      <div className="md:flex-1 md:min-h-0 md:flex md:flex-col">
+      <div className="flex-1 min-h-0 flex flex-col">
         {sortedRoles.map((role) => {
           const thisRoleSubmitted = roleHasSubmitted(role)
           const waiting = thisRoleSubmitted && !allNonCjpSubmittedWithDB
           return (
-            <div key={role.id} className={['md:flex-1 md:min-h-0', activeTabId === role.id ? '' : 'hidden'].join(' ')}>
+            <div key={role.id} className={['flex-1 min-h-0', activeTabId === role.id ? '' : 'hidden'].join(' ')}>
               {role.role === 'CJP' && (
                 <CJPView
                   isCJP={true}

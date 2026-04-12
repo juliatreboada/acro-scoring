@@ -192,7 +192,7 @@ function TfCounter({ value, onChange, max }: { value: number; onChange: (v: numb
     <div className="flex gap-1">
       {Array.from({ length: max + 1 }, (_, n) => n).map((n) => (
         <button key={n} onClick={() => onChange(n)}
-          className={['w-8 h-7 rounded-lg text-xs font-bold border transition-all',
+          className={['w-10 h-10 rounded-lg text-xs font-bold border transition-all',
             value === n ? n === 0 ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-red-500 text-white border-red-500'
               : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'].join(' ')}>
           {n}
@@ -545,7 +545,7 @@ export default function DJView({ currentPerf, lang, elements, mode = 'elements',
   // ── waiting ──
   if (!currentPerf) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6 gap-4">
+      <div className="flex flex-col items-center justify-center min-h-[40vh] text-center px-6 gap-4">
         <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center">
           <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z" />

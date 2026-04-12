@@ -161,12 +161,12 @@ function Counter({ value, onChange, min = 0 }: { value: number; onChange: (v: nu
     <div className="flex items-center gap-1">
       <button
         onClick={() => onChange(Math.max(min, value - 1))}
-        className="w-7 h-7 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-sm font-bold flex items-center justify-center"
+        className="w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-sm font-bold flex items-center justify-center"
       >−</button>
       <span className="w-6 text-center text-sm font-bold tabular-nums text-slate-700">{value}</span>
       <button
         onClick={() => onChange(value + 1)}
-        className="w-7 h-7 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-sm font-bold flex items-center justify-center"
+        className="w-9 h-9 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 text-sm font-bold flex items-center justify-center"
       >+</button>
     </div>
   )
@@ -476,9 +476,14 @@ function RankingTable({ performances, results, lang, selectedPerfId, onSelectPer
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-slate-100">
-            {[t.rankCol, t.teamCol, t.scoreE, t.scoreA, t.scoreD, t.scorePen, t.scoreTotal, ''].map((h, i) => (
-              <th key={i} className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">{h}</th>
-            ))}
+            <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.rankCol}</th>
+            <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.teamCol}</th>
+            <th className="hidden md:table-cell px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.scoreE}</th>
+            <th className="hidden md:table-cell px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.scoreA}</th>
+            <th className="hidden md:table-cell px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.scoreD}</th>
+            <th className="hidden md:table-cell px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.scorePen}</th>
+            <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.scoreTotal}</th>
+            <th className="px-3 py-2"></th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-50">
@@ -497,11 +502,11 @@ function RankingTable({ performances, results, lang, selectedPerfId, onSelectPer
                 ].join(' ')}
               >
                 <td className="px-3 py-2 font-bold text-slate-500">{rank + 1}</td>
-                <td className="px-3 py-2 font-medium text-slate-800 max-w-[160px] truncate">{perf.gymnasts}</td>
-                <td className="px-3 py-2 tabular-nums font-mono text-slate-700">{(r.eScore * 2).toFixed(3)}</td>
-                <td className="px-3 py-2 tabular-nums font-mono text-slate-700">{r.aScore.toFixed(3)}</td>
-                <td className="px-3 py-2 tabular-nums font-mono text-slate-700">{r.difScore.toFixed(2)}</td>
-                <td className="px-3 py-2 tabular-nums font-mono">
+                <td className="px-3 py-2 font-medium text-slate-800 max-w-[120px] truncate">{perf.gymnasts}</td>
+                <td className="hidden md:table-cell px-3 py-2 tabular-nums font-mono text-slate-700">{(r.eScore * 2).toFixed(3)}</td>
+                <td className="hidden md:table-cell px-3 py-2 tabular-nums font-mono text-slate-700">{r.aScore.toFixed(3)}</td>
+                <td className="hidden md:table-cell px-3 py-2 tabular-nums font-mono text-slate-700">{r.difScore.toFixed(2)}</td>
+                <td className="hidden md:table-cell px-3 py-2 tabular-nums font-mono">
                   <span className={totalPen > 0 ? 'text-red-500' : 'text-slate-300'}>
                     {totalPen > 0 ? `−${totalPen.toFixed(1)}` : '—'}
                   </span>
@@ -548,6 +553,7 @@ export default function CJPView({
   const [reviewPerfId, setReviewPerfId] = useState<string | null>(null)
   const [leftOpen, setLeftOpen] = useState(true)
   const [viewTab, setViewTab] = useState<'scores' | 'ts'>('scores')
+  const [showMobilePerfs, setShowMobilePerfs] = useState(false)
 
   const routineLabel = (rt: string) =>
     ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
@@ -607,9 +613,77 @@ export default function CJPView({
   const isReviewMode = reviewPerfId !== null && reviewPerfId !== currentPerfId
 
   return (
-    <div className="flex gap-0 h-[calc(100vh-60px)]">
-      {/* ── left panel: performance list ── */}
-      <div className={['border-r border-slate-200 bg-white flex flex-col min-h-0 transition-all duration-200', leftOpen ? 'w-64' : 'w-9'].join(' ')}>
+    <div className="flex flex-col md:flex-row gap-0 h-full">
+
+      {/* ── mobile: performance list drawer ── */}
+      {showMobilePerfs && (
+        <div className="md:hidden fixed inset-0 z-50 flex flex-col bg-white">
+          <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between shrink-0">
+            <p className="text-sm font-bold text-slate-700">Performances</p>
+            <button onClick={() => setShowMobilePerfs(false)}
+              className="w-9 h-9 flex items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {performances.map((perf) => {
+              const result = results[perf.id]
+              const isCurrent = perf.id === currentPerfId
+              const canOpen = isCJP && !perf.skipped && !result && !isCurrent
+              const canSkip = isCJP && !perf.skipped && !result
+              return (
+                <div key={perf.id}
+                  className={['group px-4 py-3 border-b border-slate-100 transition-colors', isCurrent ? 'bg-blue-50 border-l-4 border-l-blue-500' : 'hover:bg-slate-50'].join(' ')}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        {isCurrent && (
+                          <span className="relative flex h-2 w-2 shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                            <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                          </span>
+                        )}
+                        <span className="text-xs text-slate-400 font-mono">{perf.position}</span>
+                        <span className="text-sm font-medium text-slate-800 truncate">{perf.gymnasts}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs text-slate-400">{routineLabel(perf.routineType)}</span>
+                        {perf.skipped && <span className="text-xs bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded-full">{t.skipped}</span>}
+                        {result && (
+                          <span className={['text-xs px-1.5 py-0.5 rounded-full font-medium', result.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'border border-slate-300 text-slate-500'].join(' ')}>
+                            {result.status === 'approved' ? t.final : t.prov} {result.finalScore.toFixed(3)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {isCJP && (
+                      <div className="flex gap-2 shrink-0">
+                        {canOpen && (
+                          <button onClick={() => { onOpen(perf.id); setShowMobilePerfs(false) }}
+                            className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center transition-colors">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                          </button>
+                        )}
+                        {canSkip && (
+                          <button onClick={() => { onSkip(perf.id); setShowMobilePerfs(false) }}
+                            className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── left panel: performance list (desktop only) ── */}
+      <div className={['hidden md:flex border-r border-slate-200 bg-white flex-col min-h-0 transition-all duration-200', leftOpen ? 'md:w-64' : 'md:w-9'].join(' ')}>
         <div className="px-2 py-2.5 border-b border-slate-200 flex items-center justify-between shrink-0">
           {leftOpen && <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">Performances</p>}
           <button
@@ -690,6 +764,20 @@ export default function CJPView({
 
       {/* ── center panel ── */}
       <div className="flex-1 flex flex-col min-h-0">
+
+        {/* ── mobile: performances button ── */}
+        <div className="md:hidden border-b border-slate-200 bg-white shrink-0 px-4 py-2">
+          <button onClick={() => setShowMobilePerfs(true)}
+            className="flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-blue-600 transition-colors">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+            Performances ({performances.length})
+            {currentPerf && (
+              <span className="ml-1 text-xs text-blue-600 font-medium">· #{currentPerf.position} live</span>
+            )}
+          </button>
+        </div>
 
         {/* ── tab bar (only when a perf is active or in review) ── */}
         {(currentPerf || isReviewMode) && (
@@ -777,6 +865,16 @@ export default function CJPView({
                   lang={lang}
                 />
 
+                {/* mobile: inline CJP penalties (review mode) */}
+                <div className="md:hidden">
+                  <PenaltyTable
+                    state={reviewPenalty}
+                    onChange={(p) => setPenalty(reviewPerfId!, p)}
+                    lang={lang}
+                    readonly={reviewResult?.status === 'approved' || !isCJP}
+                  />
+                </div>
+
                 {isCJP && reviewResult?.status === 'provisional' && (
                   <div className="flex gap-2">
                     <button onClick={handleUpdateProvisional}
@@ -833,6 +931,16 @@ export default function CJPView({
                     cjpPenalty={cjpPenalty}
                     lang={lang}
                   />
+
+                  {/* mobile: inline CJP penalties */}
+                  <div className="md:hidden">
+                    <PenaltyTable
+                      state={currentPenalty}
+                      onChange={(p) => setPenalty(currentPerfId!, p)}
+                      lang={lang}
+                      readonly={!isCJP || currentResult?.status === 'approved'}
+                    />
+                  </div>
 
                   {isCJP && (
                     <div className="space-y-2">
@@ -891,8 +999,8 @@ export default function CJPView({
         )}
       </div>
 
-      {/* ── right panel: CJP penalties ── */}
-      <div className="w-72 border-l border-slate-200 bg-white flex flex-col min-h-0">
+      {/* ── right panel: CJP penalties (desktop only) ── */}
+      <div className="hidden md:flex flex-col w-72 border-l border-slate-200 bg-white min-h-0">
         <div className="px-3 py-2.5 border-b border-slate-200 shrink-0">
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">{t.penalties}</p>
         </div>
