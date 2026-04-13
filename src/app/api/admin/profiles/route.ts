@@ -59,36 +59,36 @@ export async function POST(req: NextRequest) {
   const newProfileId = crypto.randomUUID()
 
   if (role === 'judge') {
+    const { error: profErr } = await db.from('profiles').insert({
+      id: newProfileId, auth_id, email, role,
+    })
+    if (profErr) return NextResponse.json({ error: profErr.message }, { status: 500 })
+
     const { error } = await db.from('judges').insert({
       id: newProfileId,
       full_name: body.full_name ?? '',
       licence:   body.licence   ?? null,
       phone:     body.phone     ?? null,
     })
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-    const { error: profErr } = await db.from('profiles').insert({
-      id: newProfileId, auth_id, email, role,
-    })
-    if (profErr) {
-      await db.from('judges').delete().eq('id', newProfileId)
-      return NextResponse.json({ error: profErr.message }, { status: 500 })
+    if (error) {
+      await db.from('profiles').delete().eq('id', newProfileId)
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
   } else if (role === 'admin') {
+    const { error: profErr } = await db.from('profiles').insert({
+      id: newProfileId, auth_id, email, role,
+    })
+    if (profErr) return NextResponse.json({ error: profErr.message }, { status: 500 })
+
     const { error } = await db.from('admins').insert({
       id: newProfileId,
       full_name: body.full_name ?? '',
       phone:     body.phone     ?? null,
     })
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-    const { error: profErr } = await db.from('profiles').insert({
-      id: newProfileId, auth_id, email, role,
-    })
-    if (profErr) {
-      await db.from('admins').delete().eq('id', newProfileId)
-      return NextResponse.json({ error: profErr.message }, { status: 500 })
+    if (error) {
+      await db.from('profiles').delete().eq('id', newProfileId)
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
   } else if (role === 'club') {
