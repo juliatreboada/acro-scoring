@@ -9,7 +9,7 @@ import type { Lang } from '@/components/aj-scoring/types'
 import type {
   Competition, Panel, Section, Session, Judge, SectionPanelJudge,
   Role, Team, Club, CompetitionEntry, SessionOrder, AdminUser,
-  AgeGroupRule, CompetitionJudgeNomination, Gymnast,
+  AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach,
 } from '@/components/admin/types'
 import { ROLE_CONFIG, defaultSlots, NEXT_STATUS } from '@/components/admin/types'
 import type { PanelLock } from '@/components/admin/competition-detail/JudgesTab'
@@ -40,6 +40,8 @@ export default function Page() {
   const [availableAdmins, setAvailableAdmins] = useState<AdminUser[]>([])
   const [ageGroupRules, setAgeGroupRules]     = useState<AgeGroupRule[]>([])
   const [competitionGymnasts, setCompetitionGymnasts] = useState<Gymnast[]>([])
+  const [globalCoaches,       setGlobalCoaches]       = useState<Coach[]>([])
+  const [competitionCoaches,  setCompetitionCoaches]  = useState<Coach[]>([])
 
   // ── initial load ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -130,17 +132,25 @@ export default function Page() {
       const clubIds       = [...new Set(teamsData.map(t => t.club_id))]
       const allGymnastIds = [...new Set(teamsData.flatMap(t => t.gymnast_ids ?? []))]
 
-      const [clubsResult, gymnastsResult] = await Promise.all([
+      const [clubsResult, gymnastsResult, compCoachesResult] = await Promise.all([
         clubIds.length > 0
           ? supabase.from('clubs').select('id,club_name,contact_name,phone,avatar_url').in('id', clubIds)
           : Promise.resolve({ data: [] }),
         allGymnastIds.length > 0
           ? (supabase as any).from('gymnasts').select('id,club_id,first_name,last_name_1,last_name_2,date_of_birth,photo_url,licencia_url').in('id', allGymnastIds) as Promise<{ data: Gymnast[] | null }>
           : Promise.resolve({ data: [] as Gymnast[] }),
+        (supabase as any).from('competition_coaches').select('coach_id').eq('competition_id', id),
       ])
 
       const clubsData    = clubsResult.data
       const gymnastsData = gymnastsResult.data
+      const registeredCoachIds = ((compCoachesResult as any).data ?? []).map((r: { coach_id: string }) => r.coach_id) as string[]
+
+      // load the coach rows for those ids
+      const coachesResult = registeredCoachIds.length > 0
+        ? await (supabase as any).from('coaches').select('id,club_id,full_name,licence,photo_url,licencia_url').in('id', registeredCoachIds)
+        : { data: [] }
+      const coachesData = (coachesResult as any).data as Coach[] ?? []
 
       const adminMap  = Object.fromEntries(adminsWithEmail.map(a => [a.id, a]))
       const { admin_id, ...compRest } = compRes.data
@@ -157,6 +167,8 @@ export default function Page() {
       setGlobalTeams(teamsData as unknown as Team[])
       setClubs(clubsData ?? [])
       setCompetitionGymnasts(gymnastsData ?? [])
+      setGlobalCoaches(coachesData)
+      setCompetitionCoaches(coachesData)
       setEntries(entriesRes.data ?? [])
       setLockedSessions(locked)
       setPanelLocks(panelLocksData ?? [])
@@ -529,6 +541,8 @@ export default function Page() {
         onStartSession={handleStartSession}
         onFinishSession={handleFinishSession}
         competitionGymnasts={competitionGymnasts}
+        globalCoaches={globalCoaches}
+        competitionCoaches={competitionCoaches}
       />
     </div>
   )

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination, Gymnast } from '@/components/admin/types'
+import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach } from '@/components/admin/types'
 import { NEXT_STATUS } from '@/components/admin/types'
 import StructureTab from './StructureTab'
 import JudgesTab, { type JudgesTabProps, type PanelLock } from './JudgesTab'
@@ -484,6 +484,8 @@ export type CompetitionDetailProps = {
   onFinishSession: (sessionId: string) => void
   // licencias
   competitionGymnasts: Gymnast[]
+  competitionCoaches: Coach[]
+  globalCoaches: Coach[]
 }
 
 export default function CompetitionDetail({
@@ -496,7 +498,7 @@ export default function CompetitionDetail({
   globalTeams, clubs, entries, onToggleDropout, sessionOrders, lockedSessions, onReorder, onToggleLock, onReorderTimeline,
   availableAdmins, ageGroupRules, onUpdateCompetition, onUploadPoster,
   onSetDJReviewDeadline, onStartSession, onFinishSession,
-  competitionGymnasts,
+  competitionGymnasts, competitionCoaches, globalCoaches,
 }: CompetitionDetailProps) {
   const t = T[lang]
   const [activeTab, setActiveTab] = useState<Tab>('structure')
@@ -711,6 +713,8 @@ export default function CompetitionDetail({
           clubs={clubs}
           entries={entries}
           competitionGymnasts={competitionGymnasts}
+          competitionCoaches={competitionCoaches}
+          globalCoaches={globalCoaches}
         />
       )}
       {activeTab === 'day' && (

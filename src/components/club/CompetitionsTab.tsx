@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Competition, Team, Gymnast, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule } from '@/components/admin/types'
+import type { Competition, Team, Gymnast, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule, Coach, CompetitionCoach } from '@/components/admin/types'
 import { ROUTINE_TYPES } from '@/components/admin/types'
 
 // ─── translations ─────────────────────────────────────────────────────────────
@@ -29,6 +29,11 @@ const T = {
     noFile: 'No file',
     replace: 'Replace',
     upload: 'Upload',
+    coachesTitle: 'Coaches',
+    registerCoach: 'Register',
+    unregisterCoach: 'Remove',
+    noCoaches: 'No coaches registered for this competition.',
+    noCoachesInClub: 'Add coaches in the Coaches tab first.',
     judgesTitle: 'Judges',
     nominate: 'Nominate',
     nominated: 'Nominated',
@@ -81,6 +86,11 @@ const T = {
     noFile: 'Sin archivo',
     replace: 'Reemplazar',
     upload: 'Subir',
+    coachesTitle: 'Entrenadores',
+    registerCoach: 'Inscribir',
+    unregisterCoach: 'Quitar',
+    noCoaches: 'Ningún entrenador inscrito en esta competición.',
+    noCoachesInClub: 'Añade entrenadores en la pestaña Entrenadores primero.',
     judgesTitle: 'Jueces',
     nominate: 'Nominar',
     nominated: 'Nominado',
@@ -449,14 +459,17 @@ function routineTypesForTeam(team: Team, ageGroupRules: AgeGroupRule[]): (typeof
 }
 
 function CompetitionDetailView({
-  lang, competition, teams, gymnasts, entries, music, judges, nominations, agLabels, ageGroupRules,
+  lang, competition, teams, gymnasts, coaches, competitionCoaches, entries, music, judges, nominations, agLabels, ageGroupRules,
   tsReviewStatuses, onBack,
   onRegister, onDropout, onSetFile, onNominate, onRemoveNomination, onInviteJudge,
+  onRegisterCoach, onUnregisterCoach,
 }: {
   lang: Lang
   competition: Competition
   teams: Team[]
   gymnasts: Gymnast[]
+  coaches: Coach[]
+  competitionCoaches: CompetitionCoach[]
   entries: CompetitionEntry[]
   music: RoutineMusic[]
   judges: Judge[]
@@ -471,6 +484,8 @@ function CompetitionDetailView({
   onNominate: (judgeId: string) => void
   onRemoveNomination: (nominationId: string) => void
   onInviteJudge: (f: { full_name: string; email: string; phone?: string; licence?: string }) => Promise<void>
+  onRegisterCoach: (coachId: string) => void
+  onUnregisterCoach: (coachId: string) => void
 }) {
   const t = T[lang]
   const isOpen = competition.status === 'registration_open'
@@ -494,6 +509,13 @@ function CompetitionDetailView({
   const nominatedIds = new Set(compNominations.map((n) => n.judge_id))
   const hasJudgeWarning = compNominations.length === 0 && isOpen
   const [judgesOpen, setJudgesOpen] = useState(hasJudgeWarning)
+
+  const registeredCoachIds = new Set(
+    competitionCoaches.filter(cc => cc.competition_id === competition.id).map(cc => cc.coach_id)
+  )
+  const registeredCoaches = coaches.filter(c => registeredCoachIds.has(c.id))
+  const unregisteredCoaches = coaches.filter(c => !registeredCoachIds.has(c.id))
+  const [coachesOpen, setCoachesOpen] = useState(false)
   const [showPoolPicker, setShowPoolPicker] = useState(false)
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [poolSearch, setPoolSearch] = useState('')
@@ -567,6 +589,68 @@ function CompetitionDetailView({
         </div>
 
         {/* judges collapsible */}
+        {/* ── coaches section ── */}
+        <button onClick={() => setCoachesOpen(o => !o)}
+          className="w-full flex items-center justify-between px-5 py-2.5 border-t border-slate-100 bg-slate-50 hover:bg-slate-100 text-left transition-colors">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">{t.coachesTitle}</span>
+            {registeredCoaches.length > 0 && (
+              <span className="text-xs font-semibold px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded-full">{registeredCoaches.length}</span>
+            )}
+          </div>
+          <svg className={['w-4 h-4 text-slate-300 transition-transform', coachesOpen ? 'rotate-180' : ''].join(' ')}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+
+        {coachesOpen && (
+          <div className="px-5 py-4 border-t border-slate-100 space-y-2">
+            {coaches.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-2">{t.noCoachesInClub}</p>
+            ) : (
+              <>
+                {registeredCoaches.map(c => (
+                  <div key={c.id} className="flex items-center gap-3 py-1.5">
+                    <div className="w-7 h-7 rounded-full bg-slate-100 shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold text-slate-400">
+                      {c.photo_url ? <img src={c.photo_url} alt={c.full_name} className="w-full h-full object-cover" /> : c.full_name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-slate-800 font-medium truncate">{c.full_name}</p>
+                      {c.licence && <p className="text-xs text-slate-400">{c.licence}</p>}
+                    </div>
+                    {isOpen && (
+                      <button onClick={() => onUnregisterCoach(c.id)}
+                        className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all shrink-0">
+                        {t.unregisterCoach}
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {isOpen && unregisteredCoaches.map(c => (
+                  <div key={c.id} className="flex items-center gap-3 py-1.5 opacity-50">
+                    <div className="w-7 h-7 rounded-full bg-slate-100 shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold text-slate-400">
+                      {c.photo_url ? <img src={c.photo_url} alt={c.full_name} className="w-full h-full object-cover" /> : c.full_name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-slate-800 font-medium truncate">{c.full_name}</p>
+                      {c.licence && <p className="text-xs text-slate-400">{c.licence}</p>}
+                    </div>
+                    <button onClick={() => onRegisterCoach(c.id)}
+                      className="text-xs px-2.5 py-1 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all shrink-0">
+                      {t.registerCoach}
+                    </button>
+                  </div>
+                ))}
+                {registeredCoaches.length === 0 && !isOpen && (
+                  <p className="text-sm text-slate-400 text-center py-2">{t.noCoaches}</p>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── judges section ── */}
         <button
           onClick={() => setJudgesOpen((o) => !o)}
           className={[
@@ -901,14 +985,17 @@ function CompetitionListView({
 // ─── main export ──────────────────────────────────────────────────────────────
 
 export default function CompetitionsTab({
-  lang, competitions, teams, gymnasts, entries, music, judges, nominations, agLabels, ageGroupRules,
+  lang, competitions, teams, gymnasts, coaches, competitionCoaches, entries, music, judges, nominations, agLabels, ageGroupRules,
   tsReviewStatuses,
   onRegister, onDropout, onSetFile, onNominate, onRemoveNomination, onInviteJudge,
+  onRegisterCoach, onUnregisterCoach,
 }: {
   lang: Lang
   competitions: Competition[]
   teams: Team[]
   gymnasts: Gymnast[]
+  coaches: Coach[]
+  competitionCoaches: CompetitionCoach[]
   entries: CompetitionEntry[]
   music: RoutineMusic[]
   judges: Judge[]
@@ -922,6 +1009,8 @@ export default function CompetitionsTab({
   onNominate: (competitionId: string, judgeId: string) => void
   onRemoveNomination: (nominationId: string) => void
   onInviteJudge: (f: { full_name: string; email: string; phone?: string; licence?: string }) => Promise<void>
+  onRegisterCoach: (competitionId: string, coachId: string) => void
+  onUnregisterCoach: (competitionId: string, coachId: string) => void
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selected = competitions.find((c) => c.id === selectedId) ?? null
@@ -933,6 +1022,8 @@ export default function CompetitionsTab({
         competition={selected}
         teams={teams}
         gymnasts={gymnasts}
+        coaches={coaches}
+        competitionCoaches={competitionCoaches.filter(cc => cc.competition_id === selected.id)}
         entries={entries}
         music={music}
         judges={judges}
@@ -947,6 +1038,8 @@ export default function CompetitionsTab({
         onNominate={(judgeId) => onNominate(selected.id, judgeId)}
         onRemoveNomination={onRemoveNomination}
         onInviteJudge={onInviteJudge}
+        onRegisterCoach={(coachId) => onRegisterCoach(selected.id, coachId)}
+        onUnregisterCoach={(coachId) => onUnregisterCoach(selected.id, coachId)}
       />
     )
   }

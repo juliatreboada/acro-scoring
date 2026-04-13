@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Club, Gymnast, Team, Competition, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination } from '@/components/admin/types'
+import type { Club, Gymnast, Coach, CompetitionCoach, Team, Competition, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination } from '@/components/admin/types'
 import ClickableImg from '@/components/shared/ClickableImg'
 import type { AgeGroupRule } from '@/components/admin/types'
 import GymnastsTab from './GymnastsTab'
+import CoachesTab from './CoachesTab'
 import TeamsTab from './TeamsTab'
 import CompetitionsTab from './CompetitionsTab'
 import ClubProfileTab from './ClubProfileTab'
@@ -14,20 +15,22 @@ import ClubProfileTab from './ClubProfileTab'
 
 const T = {
   en: {
-    tabs: { gymnasts: 'Gymnasts', teams: 'Teams', competitions: 'Competitions', judges: 'Judges', profile: 'Profile' },
+    tabs: { gymnasts: 'Gymnasts', coaches: 'Coaches', teams: 'Teams', competitions: 'Competitions', judges: 'Judges', profile: 'Profile' },
     gymnasts: 'gymnasts',
+    coaches: 'coaches',
     teams: 'teams',
     registrations: 'registrations',
   },
   es: {
-    tabs: { gymnasts: 'Gimnastas', teams: 'Equipos', competitions: 'Competiciones', judges: 'Jueces', profile: 'Perfil' },
+    tabs: { gymnasts: 'Gimnastas', coaches: 'Entrenadores', teams: 'Equipos', competitions: 'Competiciones', judges: 'Jueces', profile: 'Perfil' },
     gymnasts: 'gimnastas',
+    coaches: 'entrenadores',
     teams: 'equipos',
     registrations: 'inscripciones',
   },
 }
 
-type Tab = 'gymnasts' | 'teams' | 'competitions' | 'profile'
+type Tab = 'gymnasts' | 'coaches' | 'teams' | 'competitions' | 'profile'
 
 // ─── props ────────────────────────────────────────────────────────────────────
 
@@ -35,6 +38,8 @@ export type ClubPortalProps = {
   lang: Lang
   club: Club
   gymnasts: Gymnast[]
+  coaches: Coach[]
+  competitionCoaches: CompetitionCoach[]
   teams: Team[]
   judges: Judge[]
   nominations: CompetitionJudgeNomination[]
@@ -51,6 +56,14 @@ export type ClubPortalProps = {
   onDeleteGymnast: (id: string) => void
   onUploadGymnastPhoto: (id: string, file: File) => Promise<void>
   onUploadLicencia: (id: string, file: File) => Promise<void>
+  // coaches
+  onAddCoach: (c: Omit<Coach, 'id' | 'club_id'>) => void
+  onUpdateCoach: (id: string, c: Omit<Coach, 'id' | 'club_id'>) => void
+  onDeleteCoach: (id: string) => void
+  onUploadCoachPhoto: (id: string, file: File) => Promise<void>
+  onUploadCoachLicencia: (id: string, file: File) => Promise<void>
+  onRegisterCoach: (competitionId: string, coachId: string) => void
+  onUnregisterCoach: (competitionId: string, coachId: string) => void
   // teams
   onAddTeam: (t: Omit<Team, 'id' | 'club_id' | 'photo_url'>) => void
   onUpdateTeam: (id: string, t: Omit<Team, 'id' | 'club_id' | 'photo_url'>) => void
@@ -77,8 +90,9 @@ export type ClubPortalProps = {
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function ClubPortal({
-  lang, club, gymnasts, teams, judges, nominations, competitions, entries, music, agLabels, ageGroupRules, tsReviewStatuses,
+  lang, club, gymnasts, coaches, competitionCoaches, teams, judges, nominations, competitions, entries, music, agLabels, ageGroupRules, tsReviewStatuses,
   onAddGymnast, onAddGymnastsBulk, onUpdateGymnast, onDeleteGymnast, onUploadGymnastPhoto, onUploadLicencia,
+  onAddCoach, onUpdateCoach, onDeleteCoach, onUploadCoachPhoto, onUploadCoachLicencia, onRegisterCoach, onUnregisterCoach,
   onAddTeam, onUpdateTeam, onDeleteTeam, onUploadTeamPhoto,
   onInviteJudge, onUpdateJudge, onDeleteJudge, onUploadJudgePhoto,
   onRegister, onDropout, onSetFile,
@@ -93,6 +107,7 @@ export default function ClubPortal({
 
   const TABS: { key: Tab; label: string; count?: number }[] = [
     { key: 'gymnasts',     label: t.tabs.gymnasts,     count: gymnasts.length },
+    { key: 'coaches',      label: t.tabs.coaches,      count: coaches.length },
     { key: 'teams',        label: t.tabs.teams,        count: teams.length },
     { key: 'competitions', label: t.tabs.competitions, count: uniqueCompIds.size },
     { key: 'profile',      label: t.tabs.profile },
@@ -122,6 +137,7 @@ export default function ClubPortal({
           <div className="flex gap-4 mt-4">
             {[
               { n: gymnasts.length,    label: t.gymnasts },
+              { n: coaches.length,     label: t.coaches },
               { n: teams.length,       label: t.teams },
               { n: uniqueCompIds.size, label: t.registrations },
             ].map(({ n, label }) => (
@@ -161,6 +177,11 @@ export default function ClubPortal({
             onUpdate={onUpdateGymnast} onDelete={onDeleteGymnast}
             onUploadPhoto={onUploadGymnastPhoto} onUploadLicencia={onUploadLicencia} />
         )}
+        {activeTab === 'coaches' && (
+          <CoachesTab lang={lang} coaches={coaches}
+            onAdd={onAddCoach} onUpdate={onUpdateCoach} onDelete={onDeleteCoach}
+            onUploadPhoto={onUploadCoachPhoto} onUploadLicencia={onUploadCoachLicencia} />
+        )}
         {activeTab === 'teams' && (
           <TeamsTab lang={lang} gymnasts={gymnasts} teams={teams}
             ageGroupRules={ageGroupRules} agLabels={agLabels}
@@ -169,13 +190,14 @@ export default function ClubPortal({
         )}
         {activeTab === 'competitions' && (
           <CompetitionsTab lang={lang} competitions={competitions} teams={teams}
-            gymnasts={gymnasts}
+            gymnasts={gymnasts} coaches={coaches} competitionCoaches={competitionCoaches}
             entries={entries} music={music} judges={judges} nominations={nominations}
             agLabels={agLabels} ageGroupRules={ageGroupRules}
             tsReviewStatuses={tsReviewStatuses}
             onRegister={onRegister} onDropout={onDropout} onSetFile={onSetFile}
             onNominate={onNominate} onRemoveNomination={onRemoveNomination}
-            onInviteJudge={onInviteJudge} />
+            onInviteJudge={onInviteJudge}
+            onRegisterCoach={onRegisterCoach} onUnregisterCoach={onUnregisterCoach} />
         )}
         {activeTab === 'profile' && (
           <ClubProfileTab lang={lang} club={club} onUpdate={onUpdateClub} onUploadAvatar={onUploadAvatar} />

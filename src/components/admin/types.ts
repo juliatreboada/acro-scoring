@@ -100,6 +100,22 @@ export type Gymnast = {
   licencia_url?: string | null  // PDF competition licence
 }
 
+export type Coach = {
+  id: string
+  club_id: string
+  full_name: string
+  licence: string | null
+  photo_url: string | null
+  licencia_url?: string | null  // PDF licence (stored as licencia_url for UI consistency)
+}
+
+// Links a coach to a competition (registered by the club)
+export type CompetitionCoach = {
+  id: string
+  competition_id: string
+  coach_id: string
+}
+
 // How many gymnasts each category requires
 export const CATEGORY_SIZE: Record<string, number> = {
   "Women's Pair":  2,

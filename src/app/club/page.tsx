@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useProfile } from '@/contexts/ProfileContext'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Club, Gymnast, Team, Competition, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule } from '@/components/admin/types'
+import type { Club, Gymnast, Coach, CompetitionCoach, Team, Competition, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule } from '@/components/admin/types'
 import ClubPortal from '@/components/club/ClubPortal'
 import AuthBar from '@/components/shared/AuthBar'
 
@@ -16,9 +16,11 @@ export default function Page() {
   const [lang, setLang]       = useState<Lang>('es')
   const [loading, setLoading] = useState(true)
 
-  const [club,         setClub]         = useState<Club | null>(null)
-  const [gymnasts,     setGymnasts]     = useState<Gymnast[]>([])
-  const [teams,        setTeams]        = useState<Team[]>([])
+  const [club,              setClub]              = useState<Club | null>(null)
+  const [gymnasts,          setGymnasts]          = useState<Gymnast[]>([])
+  const [coaches,           setCoaches]           = useState<Coach[]>([])
+  const [competitionCoaches, setCompetitionCoaches] = useState<CompetitionCoach[]>([])
+  const [teams,             setTeams]             = useState<Team[]>([])
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [entries,      setEntries]      = useState<CompetitionEntry[]>([])
   const [music,        setMusicState]   = useState<RoutineMusic[]>([])
@@ -38,10 +40,11 @@ export default function Page() {
       if (!cid) { setLoading(false); return }
       setClubId(cid)
 
-      // ── parallel: club + gymnasts + teams + competitions + nominations + rules ─
-      const [clubRes, gymnastsRes, teamsRes, compsRes, nomsRes, rulesRes] = await Promise.all([
+      // ── parallel: club + gymnasts + coaches + teams + competitions + nominations + rules ─
+      const [clubRes, gymnastsRes, coachesRes, teamsRes, compsRes, nomsRes, rulesRes] = await Promise.all([
         supabase.from('clubs').select('id,club_name,contact_name,phone,avatar_url').eq('id', cid).single(),
         (supabase as any).from('gymnasts').select('id,club_id,first_name,last_name_1,last_name_2,date_of_birth,photo_url,licencia_url').eq('club_id', cid),
+        (supabase as any).from('coaches').select('id,club_id,full_name,licence,photo_url,licencia_url').eq('club_id', cid),
         supabase.from('teams').select('id,club_id,category,age_group,gymnast_display,photo_url').eq('club_id', cid),
         supabase.from('competitions')
           .select('id,name,status,location,start_date,end_date,registration_deadline,ts_music_deadline,age_groups,poster_url,created_at')
@@ -54,8 +57,8 @@ export default function Page() {
       const rawTeams = teamsRes.data ?? []
       const teamIds  = rawTeams.map(t => t.id)
 
-      // ── parallel: team_gymnasts + entries + music + all judges ───────────────
-      const [tgRes, entriesRes, musicRes, judgesRes, reviewRes] = await Promise.all([
+      // ── parallel: team_gymnasts + entries + music + judges + competition_coaches ─
+      const [tgRes, entriesRes, musicRes, judgesRes, reviewRes, compCoachesRes] = await Promise.all([
         teamIds.length > 0
           ? supabase.from('team_gymnasts').select('team_id,gymnast_id').in('team_id', teamIds)
           : Promise.resolve({ data: [] as { team_id: string; gymnast_id: string }[] }),
@@ -71,6 +74,8 @@ export default function Page() {
               .select('team_id, competition_id, routine_type, status, final_comment')
               .in('team_id', teamIds)
           : Promise.resolve({ data: [] }),
+        (supabase as any).from('competition_coaches').select('id,competition_id,coach_id')
+          .in('coach_id', (coachesRes.data ?? []).map((c: { id: string }) => c.id)),
       ])
 
       // attach gymnast_ids to each team
@@ -103,6 +108,8 @@ export default function Page() {
       setTsReviewStatuses((reviewRes.data ?? []) as { team_id: string; competition_id: string; routine_type: string; status: string; final_comment: string | null }[])
       setClub(clubRes.data)
       setGymnasts((gymnastsRes.data ?? []) as unknown as Gymnast[])
+      setCoaches((coachesRes.data ?? []) as unknown as Coach[])
+      setCompetitionCoaches((compCoachesRes.data ?? []) as unknown as CompetitionCoach[])
       setTeams(teamsWithIds)
       setCompetitions(mappedComps)
       setEntries(entriesRes.data ?? [])
@@ -141,6 +148,59 @@ export default function Page() {
     await supabase.from('gymnasts').delete().eq('id', id)
     setGymnasts(prev => prev.filter(x => x.id !== id))
     setTeams(prev => prev.map(t => ({ ...t, gymnast_ids: (t.gymnast_ids ?? []).filter(gid => gid !== id) })))
+  }
+
+  // ── coaches ───────────────────────────────────────────────────────────────────
+  async function handleAddCoach(c: Omit<Coach, 'id' | 'club_id'>) {
+    const { data } = await (supabase as any).from('coaches').insert({ ...c, club_id: clubId }).select().single()
+    if (data) setCoaches(prev => [...prev, data as Coach])
+  }
+
+  async function handleUpdateCoach(id: string, c: Omit<Coach, 'id' | 'club_id'>) {
+    await (supabase as any).from('coaches').update(c).eq('id', id)
+    setCoaches(prev => prev.map(x => x.id === id ? { ...x, ...c } : x))
+  }
+
+  async function handleDeleteCoach(id: string) {
+    await (supabase as any).from('coaches').delete().eq('id', id)
+    setCoaches(prev => prev.filter(x => x.id !== id))
+    setCompetitionCoaches(prev => prev.filter(cc => cc.coach_id !== id))
+  }
+
+  async function handleUploadCoachPhoto(id: string, file: File) {
+    const ext = file.name.split('.').pop() ?? 'jpg'
+    const path = `${id}/photo.${ext}`
+    const { error } = await supabase.storage.from('coaches-photos').upload(path, file, { upsert: true })
+    if (error) { setUploadError(error.message); return }
+    const { data } = supabase.storage.from('coaches-photos').getPublicUrl(path)
+    const url = data.publicUrl
+    await (supabase as any).from('coaches').update({ photo_url: url }).eq('id', id)
+    setCoaches(prev => prev.map(c => c.id === id ? { ...c, photo_url: url } : c))
+  }
+
+  async function handleUploadCoachLicencia(id: string, file: File) {
+    const ext = file.name.split('.').pop() ?? 'pdf'
+    const path = `${id}/licencia.${ext}`
+    const { error } = await supabase.storage.from('coach-licencias').upload(path, file, { upsert: true })
+    if (error) { setUploadError(error.message); return }
+    const { data } = supabase.storage.from('coach-licencias').getPublicUrl(path)
+    const url = data.publicUrl
+    await (supabase as any).from('coaches').update({ licencia_url: url }).eq('id', id)
+    setCoaches(prev => prev.map(c => c.id === id ? { ...c, licencia_url: url } : c))
+  }
+
+  async function handleRegisterCoach(competitionId: string, coachId: string) {
+    if (competitionCoaches.some(cc => cc.competition_id === competitionId && cc.coach_id === coachId)) return
+    const { data } = await (supabase as any).from('competition_coaches')
+      .insert({ competition_id: competitionId, coach_id: coachId }).select().single()
+    if (data) setCompetitionCoaches(prev => [...prev, data as CompetitionCoach])
+  }
+
+  async function handleUnregisterCoach(competitionId: string, coachId: string) {
+    const cc = competitionCoaches.find(x => x.competition_id === competitionId && x.coach_id === coachId)
+    if (!cc) return
+    await (supabase as any).from('competition_coaches').delete().eq('id', cc.id)
+    setCompetitionCoaches(prev => prev.filter(x => x.id !== cc.id))
   }
 
   // ── teams ─────────────────────────────────────────────────────────────────────
@@ -366,6 +426,8 @@ export default function Page() {
         club={club}
         tsReviewStatuses={tsReviewStatuses}
         gymnasts={gymnasts}
+        coaches={coaches}
+        competitionCoaches={competitionCoaches}
         teams={teams}
         competitions={competitions}
         entries={entries}
@@ -378,9 +440,19 @@ export default function Page() {
         onAddGymnastsBulk={handleAddGymnastsBulk}
         onUpdateGymnast={handleUpdateGymnast}
         onDeleteGymnast={handleDeleteGymnast}
+        onUploadGymnastPhoto={handleUploadGymnastPhoto}
+        onUploadLicencia={handleUploadLicencia}
+        onAddCoach={handleAddCoach}
+        onUpdateCoach={handleUpdateCoach}
+        onDeleteCoach={handleDeleteCoach}
+        onUploadCoachPhoto={handleUploadCoachPhoto}
+        onUploadCoachLicencia={handleUploadCoachLicencia}
+        onRegisterCoach={handleRegisterCoach}
+        onUnregisterCoach={handleUnregisterCoach}
         onAddTeam={handleAddTeam}
         onUpdateTeam={handleUpdateTeam}
         onDeleteTeam={handleDeleteTeam}
+        onUploadTeamPhoto={handleUploadTeamPhoto}
         onRegister={handleRegister}
         onDropout={handleDropout}
         onSetFile={handleSetFile}
@@ -392,9 +464,6 @@ export default function Page() {
         onRemoveNomination={handleRemoveNomination}
         onUpdateClub={handleUpdateClub}
         onUploadAvatar={handleUploadAvatar}
-        onUploadGymnastPhoto={handleUploadGymnastPhoto}
-        onUploadLicencia={handleUploadLicencia}
-        onUploadTeamPhoto={handleUploadTeamPhoto}
       />
     </div>
   )
