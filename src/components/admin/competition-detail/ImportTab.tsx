@@ -222,14 +222,10 @@ function computeWarnings(
     // Age validation against age group rule
     const rule = ageGroupRules.find(r => r.id === team.ageGroupId)
     if (rule) {
-      const refDate = `${competitionYear}-01-01`
       for (const g of team.gymnasts) {
         if (!g.dob_valid) continue
-        const birth = new Date(g.date_of_birth + 'T00:00:00')
-        const ref = new Date(refDate + 'T00:00:00')
-        let age = ref.getFullYear() - birth.getFullYear()
-        const md = ref.getMonth() - birth.getMonth()
-        if (md < 0 || (md === 0 && ref.getDate() < birth.getDate())) age--
+        const birthYear = new Date(g.date_of_birth + 'T00:00:00').getFullYear()
+        const age = competitionYear - birthYear
         const name = [g.first_name, g.last_name_1].filter(Boolean).join(' ')
         if (age < rule.min_age || (rule.max_age !== null && age > rule.max_age)) {
           w.push(t.ageOutOfRange(name, age, rule.min_age, rule.max_age))

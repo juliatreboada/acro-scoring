@@ -422,11 +422,8 @@ function InviteJudgeForm({ lang, onSend, onCancel }: {
 
 // ─── detail view ─────────────────────────────────────────────────────────────
 
-function getAgeAtJan1(dob: string, year: number): number {
-  const birth = new Date(dob + 'T00:00:00')
-  return year - birth.getFullYear() - (
-    new Date(year, birth.getMonth(), birth.getDate()) > new Date(year, 0, 1) ? 1 : 0
-  )
+function getAgeInYear(dob: string, year: number): number {
+  return year - new Date(dob + 'T00:00:00').getFullYear()
 }
 
 function validateTeamAges(
@@ -441,7 +438,7 @@ function validateTeamAges(
   for (const gid of team.gymnast_ids ?? []) {
     const g = gymnasts.find(x => x.id === gid)
     if (!g?.date_of_birth) continue
-    const age = getAgeAtJan1(g.date_of_birth, competitionYear)
+    const age = getAgeInYear(g.date_of_birth, competitionYear)
     if (age < rule.min_age || (rule.max_age !== null && age > rule.max_age)) {
       const name = [g.first_name, g.last_name_1].filter(Boolean).join(' ')
       errors.push(`${name} (${age}): debe tener entre ${rule.min_age} y ${rule.max_age ?? '∞'} años`)
