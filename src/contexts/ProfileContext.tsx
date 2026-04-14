@@ -57,15 +57,11 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const [activeProfileId,  setActiveProfileId]  = useState<string | null>(null)
 
   useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setProfileLoading(false); return }
-      setAuthId(user.id)
-
+    async function load(userId: string, userEmail: string | undefined) {
       const { data: rows } = await supabase
         .from('profiles')
         .select('id, role, club_id')
-        .eq('auth_id', user.id)
+        .eq('auth_id', userId)
 
       if (!rows?.length) { setProfileLoading(false); return }
 
@@ -74,7 +70,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         rows.map(async (p) => {
           const role       = p.role as DbRole
           const club_id    = p.club_id ?? null
-          let name         = user.email?.split('@')[0] ?? '—'
+          let name         = userEmail?.split('@')[0] ?? '—'
           let avatar_url: string | null = null
 
           if (role === 'judge') {
@@ -95,14 +91,30 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       setAllProfiles(entries)
 
       // Restore from localStorage, fall back to highest-priority role
-      const stored    = localStorage.getItem(storageKey(user.id))
+      const stored    = localStorage.getItem(storageKey(userId))
       const validId   = stored && entries.find(e => e.id === stored) ? stored : null
       const defaultId = [...entries].sort((a, b) => ROLE_PRIORITY[b.role] - ROLE_PRIORITY[a.role])[0]?.id ?? null
       setActiveProfileId(validId ?? defaultId)
 
       setProfileLoading(false)
     }
-    load()
+
+    // Subscribe to auth changes so sign-out / sign-in reload profiles correctly
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setAuthId(session.user.id)
+        setProfileLoading(true)
+        load(session.user.id, session.user.email)
+      } else {
+        // Signed out — clear everything
+        setAuthId(null)
+        setAllProfiles([])
+        setActiveProfileId(null)
+        setProfileLoading(false)
+      }
+    })
+
+    return () => { subscription.unsubscribe() }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const switchProfile = useCallback((id: string) => {
