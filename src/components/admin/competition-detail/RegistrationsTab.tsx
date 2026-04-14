@@ -214,10 +214,10 @@ const PAIR_ORDER: Record<string, number> = {
   "Men's Pair":   2,
 }
 
-function sortGroups(
-  groups: { age_group: string; category: string }[],
+function sortGroups<T extends { age_group: string; category: string }>(
+  groups: T[],
   rules: AgeGroupRule[],
-): typeof groups {
+): T[] {
   return [...groups].sort((a, b) => {
     const ruleA = rules.find(r => r.id === a.age_group)
     const ruleB = rules.find(r => r.id === b.age_group)
