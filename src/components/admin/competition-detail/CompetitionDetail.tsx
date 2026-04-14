@@ -715,6 +715,7 @@ export default function CompetitionDetail({
           competitionGymnasts={competitionGymnasts}
           competitionCoaches={competitionCoaches}
           globalCoaches={globalCoaches}
+          ageGroupRules={ageGroupRules}
         />
       )}
       {activeTab === 'day' && (

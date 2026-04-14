@@ -56,6 +56,7 @@ export type ClubPortalProps = {
   onDeleteGymnast: (id: string) => void
   onUploadGymnastPhoto: (id: string, file: File) => Promise<void>
   onUploadLicencia: (id: string, file: File) => Promise<void>
+  onRemoveLicencia: (id: string) => Promise<void>
   // coaches
   onAddCoach: (c: Omit<Coach, 'id' | 'club_id'>) => void
   onUpdateCoach: (id: string, c: Omit<Coach, 'id' | 'club_id'>) => void
@@ -91,7 +92,7 @@ export type ClubPortalProps = {
 
 export default function ClubPortal({
   lang, club, gymnasts, coaches, competitionCoaches, teams, judges, nominations, competitions, entries, music, agLabels, ageGroupRules, tsReviewStatuses,
-  onAddGymnast, onAddGymnastsBulk, onUpdateGymnast, onDeleteGymnast, onUploadGymnastPhoto, onUploadLicencia,
+  onAddGymnast, onAddGymnastsBulk, onUpdateGymnast, onDeleteGymnast, onUploadGymnastPhoto, onUploadLicencia, onRemoveLicencia,
   onAddCoach, onUpdateCoach, onDeleteCoach, onUploadCoachPhoto, onUploadCoachLicencia, onRegisterCoach, onUnregisterCoach,
   onAddTeam, onUpdateTeam, onDeleteTeam, onUploadTeamPhoto,
   onInviteJudge, onUpdateJudge, onDeleteJudge, onUploadJudgePhoto,
@@ -175,7 +176,7 @@ export default function ClubPortal({
           <GymnastsTab lang={lang} gymnasts={gymnasts}
             onAdd={onAddGymnast} onAddBulk={onAddGymnastsBulk}
             onUpdate={onUpdateGymnast} onDelete={onDeleteGymnast}
-            onUploadPhoto={onUploadGymnastPhoto} onUploadLicencia={onUploadLicencia} />
+            onUploadPhoto={onUploadGymnastPhoto} onUploadLicencia={onUploadLicencia} onRemoveLicencia={onRemoveLicencia} />
         )}
         {activeTab === 'coaches' && (
           <CoachesTab lang={lang} coaches={coaches}

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Team, Club, Gymnast, CompetitionEntry, AgeGroupRule } from '@/components/admin/types'
-import { categoryLabel } from '@/components/admin/types'
+import { categoryLabel, sortByAgeGroupAndCategory } from '@/components/admin/types'
 import ClickableImg from '@/components/shared/ClickableImg'
 import ImportTab from './ImportTab'
 
@@ -200,37 +200,6 @@ function getLevel(ageGroupId: string, rules: AgeGroupRule[]): Level {
   return 'Nacional'
 }
 
-// Category type: pairs=0, groups3=1, groups4=2
-const CATEGORY_TYPE_ORDER: Record<string, number> = {
-  "Women's Pair": 0, "Mixed Pair": 0, "Men's Pair": 0, 'Pairs': 0,
-  "Women's Group": 1, 'Groups 3': 1,
-  "Mixed Group": 2, 'Groups 4': 2,
-}
-
-// Within pairs: Women's=0, Mixed=1, Men's=2
-const PAIR_ORDER: Record<string, number> = {
-  "Women's Pair": 0, 'Pairs': 0,
-  "Mixed Pair":   1,
-  "Men's Pair":   2,
-}
-
-function sortGroups<T extends { age_group: string; category: string }>(
-  groups: T[],
-  rules: AgeGroupRule[],
-): T[] {
-  return [...groups].sort((a, b) => {
-    const ruleA = rules.find(r => r.id === a.age_group)
-    const ruleB = rules.find(r => r.id === b.age_group)
-    // 1. age group: descending sort_order
-    const sortDiff = (ruleB?.sort_order ?? 0) - (ruleA?.sort_order ?? 0)
-    if (sortDiff !== 0) return sortDiff
-    // 2. category type: pairs → groups3 → groups4
-    const typeDiff = (CATEGORY_TYPE_ORDER[a.category] ?? 99) - (CATEGORY_TYPE_ORDER[b.category] ?? 99)
-    if (typeDiff !== 0) return typeDiff
-    // 3. within pairs: women → mixed → men
-    return (PAIR_ORDER[a.category] ?? 99) - (PAIR_ORDER[b.category] ?? 99)
-  })
-}
 
 // ─── main component ───────────────────────────────────────────────────────────
 
@@ -297,7 +266,7 @@ export default function RegistrationsTab({
     groupMap.get(key)!.items.push({ entry, team, club, missingLicencia })
   }
 
-  const groups = sortGroups([...groupMap.values()], ageGroupRules)
+  const groups = sortByAgeGroupAndCategory([...groupMap.values()], ageGroupRules)
 
   // ── Group by level ──────────────────────────────────────────────────────────
   const byLevel = new Map<Level, Group[]>()
