@@ -1,0 +1,15 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/cjp-dj/layout,_N_T_/cjp-dj/page,_N_T_/cjp-dj"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/cjp-dj/__PAGE__",
+    "/cjp-dj",
+    "/_index",
+    "/_head"
+  ]
+}
