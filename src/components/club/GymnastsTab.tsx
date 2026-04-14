@@ -33,6 +33,7 @@ const T = {
     licencia: 'Licence',
     uploadLicencia: 'Upload licence',
     replaceLicencia: 'Replace',
+    removeLicencia: 'Remove licence',
   },
   es: {
     addGymnast: 'Añadir gimnasta',
@@ -61,6 +62,7 @@ const T = {
     licencia: 'Licencia',
     uploadLicencia: 'Subir licencia',
     replaceLicencia: 'Reemplazar',
+    removeLicencia: 'Eliminar licencia',
   },
 }
 
@@ -301,11 +303,12 @@ export { PhotoAvatar }
 
 // ─── licencia chip ────────────────────────────────────────────────────────────
 
-type LicenciaLabels = { view: string; upload: string; replace: string }
+type LicenciaLabels = { view: string; upload: string; replace: string; remove: string }
 
-function LicenciaChip({ url, onUpload, labels }: {
+function LicenciaChip({ url, onUpload, onRemove, labels }: {
   url: string | null | undefined
   onUpload: (file: File) => void
+  onRemove: () => void
   labels: LicenciaLabels
 }) {
   const ref = useRef<HTMLInputElement>(null)
@@ -327,12 +330,20 @@ function LicenciaChip({ url, onUpload, labels }: {
         {url ? labels.view : labels.upload}
       </button>
       {url && (
-        <button type="button" onClick={() => ref.current?.click()} title={labels.replace}
-          className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-          </svg>
-        </button>
+        <>
+          <button type="button" onClick={() => ref.current?.click()} title={labels.replace}
+            className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+          </button>
+          <button type="button" onClick={onRemove} title={labels.remove}
+            className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </>
       )}
       <input ref={ref} type="file" accept=".pdf,application/pdf" className="hidden"
         onChange={e => { const f = e.target.files?.[0]; if (f) { onUpload(f); e.target.value = '' } }} />
@@ -398,7 +409,7 @@ function GymnastForm({ lang, initial, onSave, onCancel }: {
 // ─── tab ─────────────────────────────────────────────────────────────────────
 
 export default function GymnastsTab({
-  lang, gymnasts, onAdd, onAddBulk, onUpdate, onDelete, onUploadPhoto, onUploadLicencia,
+  lang, gymnasts, onAdd, onAddBulk, onUpdate, onDelete, onUploadPhoto, onUploadLicencia, onRemoveLicencia,
 }: {
   lang: Lang
   gymnasts: Gymnast[]
@@ -408,9 +419,10 @@ export default function GymnastsTab({
   onDelete: (id: string) => void
   onUploadPhoto: (id: string, file: File) => Promise<void>
   onUploadLicencia: (id: string, file: File) => Promise<void>
+  onRemoveLicencia: (id: string) => Promise<void>
 }) {
   const t = T[lang]
-  const licenciaLabels = { view: t.licencia, upload: t.uploadLicencia, replace: t.replaceLicencia }
+  const licenciaLabels = { view: t.licencia, upload: t.uploadLicencia, replace: t.replaceLicencia, remove: t.removeLicencia }
   const [showAdd, setShowAdd] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [importRows, setImportRows] = useState<ImportRow[] | null>(null)
@@ -523,6 +535,7 @@ export default function GymnastsTab({
                 <LicenciaChip
                   url={g.licencia_url}
                   onUpload={(file) => onUploadLicencia(g.id, file)}
+                  onRemove={() => onRemoveLicencia(g.id)}
                   labels={licenciaLabels}
                 />
                 <div className="flex items-center gap-1 shrink-0">

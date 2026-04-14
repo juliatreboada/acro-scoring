@@ -307,6 +307,11 @@ export default function Page() {
     setGymnasts(prev => prev.map(g => g.id === id ? { ...g, photo_url: url } : g))
   }
 
+  async function handleRemoveLicencia(id: string) {
+    await supabase.from('gymnasts').update({ licencia_url: null } as Record<string, null>).eq('id', id)
+    setGymnasts(prev => prev.map(g => g.id === id ? { ...g, licencia_url: null } : g))
+  }
+
   async function handleUploadLicencia(id: string, file: File) {
     const ext = file.name.split('.').pop() ?? 'pdf'
     const path = `${id}/licencia.${ext}`
@@ -442,6 +447,7 @@ export default function Page() {
         onDeleteGymnast={handleDeleteGymnast}
         onUploadGymnastPhoto={handleUploadGymnastPhoto}
         onUploadLicencia={handleUploadLicencia}
+        onRemoveLicencia={handleRemoveLicencia}
         onAddCoach={handleAddCoach}
         onUpdateCoach={handleUpdateCoach}
         onDeleteCoach={handleDeleteCoach}
