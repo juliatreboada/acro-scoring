@@ -7,6 +7,7 @@ export type AgeGroupRule = {
   min_age: number
   max_age: number | null   // null = no upper limit (e.g. Senior)
   routine_count: number    // 1=Combined only, 2=Balance+Dynamic, 3=all three
+  sort_order: number
 }
 
 export type AdminUser = {
