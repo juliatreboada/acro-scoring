@@ -227,6 +227,37 @@ export function categoryLabel(category: string, lang: string): string {
   return CATEGORY_LABELS[lang]?.[category] ?? category
 }
 
+// ─── registration sort helpers ────────────────────────────────────────────────
+
+// Category type order: pairs=0, groups3=1, groups4=2
+const CATEGORY_TYPE_ORDER: Record<string, number> = {
+  "Women's Pair": 0, "Mixed Pair": 0, "Men's Pair": 0, 'Pairs': 0,
+  "Women's Group": 1, 'Groups 3': 1,
+  "Mixed Group": 2, 'Groups 4': 2,
+}
+
+// Within pairs: Women's=0, Mixed=1, Men's=2
+const PAIR_ORDER: Record<string, number> = {
+  "Women's Pair": 0, 'Pairs': 0,
+  "Mixed Pair":   1,
+  "Men's Pair":   2,
+}
+
+export function sortByAgeGroupAndCategory<T extends { age_group: string; category: string }>(
+  items: T[],
+  rules: AgeGroupRule[],
+): T[] {
+  return [...items].sort((a, b) => {
+    const ruleA = rules.find(r => r.id === a.age_group)
+    const ruleB = rules.find(r => r.id === b.age_group)
+    const sortDiff = (ruleB?.sort_order ?? 0) - (ruleA?.sort_order ?? 0)
+    if (sortDiff !== 0) return sortDiff
+    const typeDiff = (CATEGORY_TYPE_ORDER[a.category] ?? 99) - (CATEGORY_TYPE_ORDER[b.category] ?? 99)
+    if (typeDiff !== 0) return typeDiff
+    return (PAIR_ORDER[a.category] ?? 99) - (PAIR_ORDER[b.category] ?? 99)
+  })
+}
+
 export const ROUTINE_TYPES = ['Balance', 'Dynamic', 'Combined'] as const
 
 export type CompetitionStatus = 'draft' | 'registration_open' | 'registration_closed' | 'active' | 'finished'
