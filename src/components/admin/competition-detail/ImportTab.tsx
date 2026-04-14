@@ -55,7 +55,7 @@ const T = {
     done: 'Import complete',
     doneDesc: (teams: number, invite: boolean) =>
       `${teams} team${teams !== 1 ? 's' : ''} registered.${invite ? ' Invite email sent to the new club.' : ''}`,
-    inviteNote: '⚠️ New club invite requires a trigger update — see developer notes.',
+    inviteError: 'Invite email failed',
     importAnother: 'Import another file',
     gymnast: (n: number) => `Gymnast ${n}`,
   },
@@ -105,7 +105,7 @@ const T = {
     done: 'Importación completada',
     doneDesc: (teams: number, invite: boolean) =>
       `${teams} equipo${teams !== 1 ? 's' : ''} registrado${teams !== 1 ? 's' : ''}.${invite ? ' Email de invitación enviado al nuevo club.' : ''}`,
-    inviteNote: '⚠️ La invitación a nuevo club requiere una actualización del trigger — ver notas de desarrollo.',
+    inviteError: 'Fallo al enviar la invitación',
     importAnother: 'Importar otro archivo',
     gymnast: (n: number) => `Gimnasta ${n}`,
   },
@@ -363,7 +363,7 @@ export default function ImportTab({
   const [teams, setTeams] = useState<ParsedTeam[]>([])
 
   // ── done step ────────────────────────────────────────────────────────────────
-  const [result, setResult] = useState<{ teamsCreated: number; inviteSent: boolean; errors: string[] } | null>(null)
+  const [result, setResult] = useState<{ teamsCreated: number; inviteSent: boolean; inviteError: string | null; errors: string[] } | null>(null)
 
   // ── fetch clubs ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -486,7 +486,7 @@ export default function ImportTab({
     }
 
     const data = await res.json()
-    setResult({ teamsCreated: data.teamsCreated, inviteSent: data.inviteSent, errors: data.errors ?? [] })
+    setResult({ teamsCreated: data.teamsCreated, inviteSent: data.inviteSent, inviteError: data.inviteError ?? null, errors: data.errors ?? [] })
     setStep('done')
   }
 
@@ -516,8 +516,10 @@ export default function ImportTab({
         </div>
         <h2 className="text-lg font-bold text-slate-800">{t.done}</h2>
         <p className="text-sm text-slate-500">{t.doneDesc(result.teamsCreated, result.inviteSent)}</p>
-        {isNewClub && (
-          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2">{t.inviteNote}</p>
+        {isNewClub && result.inviteError && (
+          <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2">
+            ⚠ {t.inviteError}: {result.inviteError}
+          </p>
         )}
         {result.errors.length > 0 && (
           <div className="text-left bg-red-50 border border-red-200 rounded-xl px-4 py-3 space-y-1">

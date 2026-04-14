@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
   // ── 1. Resolve club ──────────────────────────────────────────────────────────
   let clubId = body.clubId
   let inviteSent = false
+  let inviteError: string | null = null
 
   if (!clubId) {
     const nc = body.newClub
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
       data: { role: 'club', club_name: nc.club_name, contact_name: nc.contact_name ?? '', pending_profile_id: profileId },
       redirectTo: `${proto}://${host}/auth/set-password`,
     })
-    if (!inviteErr) inviteSent = true
+    if (inviteErr) { inviteError = inviteErr.message } else { inviteSent = true }
   }
 
   // ── 2. Create gymnasts + teams + entries (with deduplication) ─────────────
@@ -204,5 +205,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ clubId, teamsCreated, inviteSent, errors })
+  return NextResponse.json({ clubId, teamsCreated, inviteSent, inviteError, errors })
 }

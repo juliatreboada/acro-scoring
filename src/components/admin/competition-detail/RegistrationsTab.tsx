@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Team, Club, Gymnast, CompetitionEntry, AgeGroupRule } from '@/components/admin/types'
+import { categoryLabel } from '@/components/admin/types'
 import ClickableImg from '@/components/shared/ClickableImg'
 import ImportTab from './ImportTab'
 
@@ -21,6 +22,8 @@ const T = {
     baja: 'Dropout',
     licenciaWarning: 'Missing licencia',
     licenciaWarningFull: 'One or more gymnasts have no licencia uploaded.',
+    expandAll: 'Expand all',
+    collapseAll: 'Collapse all',
   },
   es: {
     noRegistrations: 'Sin equipos registrados todavía.',
@@ -34,6 +37,8 @@ const T = {
     baja: 'Baja',
     licenciaWarning: 'Licencia pendiente',
     licenciaWarningFull: 'Uno o más gimnastas no tienen la licencia subida.',
+    expandAll: 'Expandir todo',
+    collapseAll: 'Contraer todo',
   },
 }
 
@@ -77,12 +82,14 @@ function TeamAvatar({ team }: { team: Team }) {
 
 type GroupItem = { entry: CompetitionEntry; team: Team; club: Club | undefined; missingLicencia: boolean }
 
-function RegistrationGroup({ age_group, category, items, lang, agLabels, onToggleDropout }: {
+function RegistrationGroup({ age_group, category, items, lang, agLabels, open, onToggle, onToggleDropout }: {
   age_group: string
   category: string
   items: GroupItem[]
   lang: Lang
   agLabels: Record<string, string>
+  open: boolean
+  onToggle: () => void
   onToggleDropout: (entryId: string) => void
 }) {
   const t = T[lang]
@@ -92,18 +99,27 @@ function RegistrationGroup({ age_group, category, items, lang, agLabels, onToggl
   return (
     <div>
       {/* group header */}
-      <div className="flex items-baseline gap-3 mb-3">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 mb-3 text-left group"
+      >
+        <svg
+          className={['w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform', open ? 'rotate-90' : ''].join(' ')}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+        </svg>
         <h3 className="text-sm font-semibold text-slate-700">
-          {agLabels[age_group] ?? age_group} · {category}
+          {agLabels[age_group] ?? age_group} · {categoryLabel(category, lang)}
         </h3>
         <span className="text-xs text-slate-400">{t.registered(activeCount)}</span>
         {dropoutCount > 0 && (
           <span className="text-xs text-red-400">· {dropoutCount === 1 ? t.dropout(1) : t.dropouts(dropoutCount)}</span>
         )}
-      </div>
+      </button>
 
       {/* team rows */}
-      <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden">
+      {open && <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden">
         {items.map(({ entry, team, club, missingLicencia }) => (
           <div
             key={entry.id}
@@ -167,9 +183,53 @@ function RegistrationGroup({ age_group, category, items, lang, agLabels, onToggl
             </button>
           </div>
         ))}
-      </div>
+      </div>}
     </div>
   )
+}
+
+// ─── level + sort helpers ─────────────────────────────────────────────────────
+
+type Level = 'Escolar' | 'Base' | 'Nacional'
+const LEVEL_ORDER: Level[] = ['Escolar', 'Base', 'Nacional']
+
+function getLevel(ageGroupId: string, rules: AgeGroupRule[]): Level {
+  const ag = rules.find(r => r.id === ageGroupId)?.age_group ?? ''
+  if (ag.includes('Escolar')) return 'Escolar'
+  if (ag.includes('Base'))    return 'Base'
+  return 'Nacional'
+}
+
+// Category type: pairs=0, groups3=1, groups4=2
+const CATEGORY_TYPE_ORDER: Record<string, number> = {
+  "Women's Pair": 0, "Mixed Pair": 0, "Men's Pair": 0, 'Pairs': 0,
+  "Women's Group": 1, 'Groups 3': 1,
+  "Mixed Group": 2, 'Groups 4': 2,
+}
+
+// Within pairs: Women's=0, Mixed=1, Men's=2
+const PAIR_ORDER: Record<string, number> = {
+  "Women's Pair": 0, 'Pairs': 0,
+  "Mixed Pair":   1,
+  "Men's Pair":   2,
+}
+
+function sortGroups<T extends { age_group: string; category: string }>(
+  groups: T[],
+  rules: AgeGroupRule[],
+): T[] {
+  return [...groups].sort((a, b) => {
+    const ruleA = rules.find(r => r.id === a.age_group)
+    const ruleB = rules.find(r => r.id === b.age_group)
+    // 1. age group: descending sort_order
+    const sortDiff = (ruleB?.sort_order ?? 0) - (ruleA?.sort_order ?? 0)
+    if (sortDiff !== 0) return sortDiff
+    // 2. category type: pairs → groups3 → groups4
+    const typeDiff = (CATEGORY_TYPE_ORDER[a.category] ?? 99) - (CATEGORY_TYPE_ORDER[b.category] ?? 99)
+    if (typeDiff !== 0) return typeDiff
+    // 3. within pairs: women → mixed → men
+    return (PAIR_ORDER[a.category] ?? 99) - (PAIR_ORDER[b.category] ?? 99)
+  })
 }
 
 // ─── main component ───────────────────────────────────────────────────────────
@@ -194,6 +254,9 @@ export default function RegistrationsTab({
 }: RegistrationsTabProps) {
   const t = T[lang]
   const [showImport, setShowImport] = useState(false)
+  // empty Set = all open sentinel for both levels and groups
+  const [openLevels,  setOpenLevels]  = useState<Set<string>>(new Set())
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
 
   if (showImport) {
     return (
@@ -216,7 +279,7 @@ export default function RegistrationsTab({
     )
   }
 
-  // Build groups: { age_group, category, items[] }
+  // ── Build groups ────────────────────────────────────────────────────────────
   type Group = { age_group: string; category: string; items: GroupItem[] }
   const groupMap = new Map<string, Group>()
 
@@ -234,14 +297,57 @@ export default function RegistrationsTab({
     groupMap.get(key)!.items.push({ entry, team, club, missingLicencia })
   }
 
-  const groups = [...groupMap.values()].sort((a, b) => {
-    const ag = a.age_group.localeCompare(b.age_group)
-    return ag !== 0 ? ag : a.category.localeCompare(b.category)
-  })
+  const groups = sortGroups([...groupMap.values()], ageGroupRules)
+
+  // ── Group by level ──────────────────────────────────────────────────────────
+  const byLevel = new Map<Level, Group[]>()
+  for (const g of groups) {
+    const level = getLevel(g.age_group, ageGroupRules)
+    if (!byLevel.has(level)) byLevel.set(level, [])
+    byLevel.get(level)!.push(g)
+  }
+  const presentLevels = LEVEL_ORDER.filter(l => byLevel.has(l))
+
+  // ── Open/close helpers ──────────────────────────────────────────────────────
+  const allGroupKeys = groups.map(g => `${g.age_group}||${g.category}`)
+
+  const isLevelOpen = (level: string) => openLevels.size === 0 || openLevels.has(level)
+  const toggleLevel = (level: string) => {
+    setOpenLevels(prev => {
+      const next = prev.size === 0 ? new Set<string>(presentLevels) : new Set(prev)
+      if (next.has(level)) next.delete(level); else next.add(level)
+      return next
+    })
+  }
+
+  const isGroupOpen = (key: string) => openGroups.size === 0 || openGroups.has(key)
+  const toggleGroup = (key: string) => {
+    setOpenGroups(prev => {
+      const next = prev.size === 0 ? new Set(allGroupKeys) : new Set(prev)
+      if (next.has(key)) next.delete(key); else next.add(key)
+      return next
+    })
+  }
+
+  const expandAll  = () => { setOpenLevels(new Set()); setOpenGroups(new Set()) }
+  const collapseAll = () => { setOpenLevels(new Set(['__none__'])); setOpenGroups(new Set(['__none__'])) }
 
   return (
     <div>
-      <div className="flex justify-end mb-5">
+      <div className="flex items-center justify-end gap-2 mb-5">
+        {entries.length > 0 && (
+          <>
+            <button onClick={expandAll}
+              className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+              {t.expandAll}
+            </button>
+            <span className="text-slate-200">|</span>
+            <button onClick={collapseAll}
+              className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+              {t.collapseAll}
+            </button>
+          </>
+        )}
         <button onClick={() => setShowImport(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -256,18 +362,52 @@ export default function RegistrationsTab({
           {t.noRegistrations}
         </p>
       ) : (
-        <div className="space-y-8">
-          {groups.map((g) => (
-            <RegistrationGroup
-              key={`${g.age_group}||${g.category}`}
-              age_group={g.age_group}
-              category={g.category}
-              items={g.items}
-              lang={lang}
-              agLabels={agLabels}
-              onToggleDropout={onToggleDropout}
-            />
-          ))}
+        <div className="space-y-4">
+          {presentLevels.map(level => {
+            const levelGroups = byLevel.get(level)!
+            const levelOpen = isLevelOpen(level)
+            const totalActive = levelGroups.reduce((sum, g) => sum + g.items.filter(i => !i.entry.dropped_out).length, 0)
+            return (
+              <div key={level} className="border border-slate-200 rounded-2xl overflow-hidden">
+                {/* level header */}
+                <button
+                  onClick={() => toggleLevel(level)}
+                  className="w-full flex items-center gap-3 px-5 py-3.5 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+                >
+                  <svg
+                    className={['w-4 h-4 text-slate-400 shrink-0 transition-transform', levelOpen ? 'rotate-90' : ''].join(' ')}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                  <span className="text-sm font-bold text-slate-700">{level}</span>
+                  <span className="text-xs text-slate-400">{t.registered(totalActive)}</span>
+                </button>
+
+                {/* level body */}
+                {levelOpen && (
+                  <div className="px-5 py-4 space-y-6">
+                    {levelGroups.map(g => {
+                      const key = `${g.age_group}||${g.category}`
+                      return (
+                        <RegistrationGroup
+                          key={key}
+                          age_group={g.age_group}
+                          category={g.category}
+                          items={g.items}
+                          lang={lang}
+                          agLabels={agLabels}
+                          open={isGroupOpen(key)}
+                          onToggle={() => toggleGroup(key)}
+                          onToggleDropout={onToggleDropout}
+                        />
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

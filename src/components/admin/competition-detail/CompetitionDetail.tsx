@@ -684,7 +684,7 @@ export default function CompetitionDetail({
           sessions={sessions}
           sessionOrders={sessionOrders}
           lockedSessions={lockedSessions}
-          agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group} (${r.ruleset})`]))}
+          agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group}`]))}
           ageGroupRules={ageGroupRules}
           onReorder={onReorder}
           onToggleLock={onToggleLock}
@@ -698,7 +698,7 @@ export default function CompetitionDetail({
           clubs={clubs}
           gymnasts={competitionGymnasts}
           entries={entries}
-          agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group} (${r.ruleset})`]))}
+          agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group}`]))}
           onToggleDropout={onToggleDropout}
           competitionId={competition.id}
           ageGroupRules={ageGroupRules}
