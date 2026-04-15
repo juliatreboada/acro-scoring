@@ -29,7 +29,9 @@ const T = {
     fieldPhone: 'Phone (optional)',
     fieldLicence: 'Licence',
     cancel: 'Cancel',
-    create: 'Create & add',
+    create: 'Send invite',
+    inviteSent: (email: string) => `Invite sent to ${email}`,
+    inviteError: 'Failed to send invite',
     lock: 'Lock assignments',
     unlock: 'Unlock',
   },
@@ -53,7 +55,9 @@ const T = {
     fieldPhone: 'Teléfono (opcional)',
     fieldLicence: 'Licencia',
     cancel: 'Cancelar',
-    create: 'Crear y añadir',
+    create: 'Enviar invitación',
+    inviteSent: (email: string) => `Invitación enviada a ${email}`,
+    inviteError: 'Error al enviar la invitación',
     lock: 'Bloquear asignación',
     unlock: 'Desbloquear',
   },
@@ -93,13 +97,14 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
   clubs: Club[]
   onAdd: (judgeId: string) => void
   onRemove: (judgeId: string) => void
-  onCreateJudge?: (data: Omit<Judge, 'id' | 'avatar_url'>) => void
+  onCreateJudge?: (data: Omit<Judge, 'id' | 'avatar_url'>) => Promise<void>
 }) {
   const t = T[lang]
   const [collapsed, setCollapsed] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
+  const [inviteState, setInviteState] = useState<{ ok: boolean; email: string } | null>(null)
   const poolIds = new Set(judges.map((j) => j.id))
   const available = globalJudges.filter((j) => !poolIds.has(j.id))
   const clubById = Object.fromEntries(clubs.map((c) => [c.id, c]))
@@ -110,12 +115,18 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
     onRemove(judgeId)
   }
 
-  function handleCreate(e: React.FormEvent) {
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     if (!form.full_name.trim() || !form.email.trim()) return
-    onCreateJudge?.({ full_name: form.full_name.trim(), email: form.email.trim(), phone: form.phone.trim() || null, licence: form.licence.trim() || null })
-    setForm(EMPTY_FORM)
-    setShowCreateForm(false)
+    const email = form.email.trim()
+    try {
+      await onCreateJudge?.({ full_name: form.full_name.trim(), email, phone: form.phone.trim() || null, licence: form.licence.trim() || null })
+      setForm(EMPTY_FORM)
+      setInviteState({ ok: true, email })
+      setShowCreateForm(false)
+    } catch {
+      setInviteState({ ok: false, email })
+    }
   }
 
   return (
@@ -232,6 +243,12 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
             </button>
           </div>
         </form>
+      )}
+
+      {!collapsed && inviteState && (
+        <div className={['mb-3 px-4 py-2.5 rounded-xl text-sm', inviteState.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'].join(' ')}>
+          {inviteState.ok ? t.inviteSent(inviteState.email) : t.inviteError}
+        </div>
       )}
 
       {!collapsed && (judges.length === 0 ? (
@@ -520,7 +537,7 @@ export type JudgesTabProps = {
   onAddSlot: (sectionId: string, panelId: string, role: Role) => void
   onRemoveSlot: (sectionId: string, panelId: string, role: Role) => void
   onTogglePanelLock: (sectionId: string, panelId: string) => Promise<void>
-  onCreateJudge?: (data: Omit<Judge, 'id' | 'avatar_url'>) => void
+  onCreateJudge?: (data: Omit<Judge, 'id' | 'avatar_url'>) => Promise<void>
 }
 
 export default function JudgesTab({
