@@ -63,7 +63,7 @@ export default function SetPasswordPage() {
     const code = searchParams.get('code')
 
     if (code) {
-      // PKCE flow: exchange the code for a session (default with @supabase/ssr)
+      // PKCE code flow
       supabase.auth.exchangeCodeForSession(code)
         .then(({ data, error }) => {
           if (data.session && !error) {
@@ -92,12 +92,15 @@ export default function SetPasswordPage() {
             setStatus('no_session')
           }
         })
-    } else {
-      // No code or hash — check for an existing session (e.g. user refreshed the page)
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        setStatus(user ? 'ready' : 'no_session')
-      })
+      return
     }
+
+    // No tokens in URL — check for an existing session.
+    // This covers: (a) user refreshed the page, (b) arrived from /auth/confirm which
+    // already exchanged the token and set the session.
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setStatus(user ? 'ready' : 'no_session')
+    })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleSubmit(e: React.FormEvent) {

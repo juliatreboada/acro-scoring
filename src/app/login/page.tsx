@@ -31,6 +31,14 @@ const T = {
     alreadyLogged: 'Already signed in as',
     goToDashboard: 'Go to dashboard',
     logOut: 'Sign in with a different account',
+    forgotPassword: 'Forgot password?',
+    backToLogin: '← Back to sign in',
+    forgotTitle: 'Reset your password',
+    forgotSubtitle: 'Enter your email and we will send you a reset link.',
+    sendLink: 'Send reset link',
+    sendingLink: 'Sending…',
+    forgotSuccess: 'Check your email for the reset link.',
+    forgotError: 'Could not send reset email. Please try again.',
     devTitle: 'Dev quick-access',
     devHint: 'Click to pre-fill credentials',
     roles: {
@@ -52,6 +60,14 @@ const T = {
     alreadyLogged: 'Ya has iniciado sesión como',
     goToDashboard: 'Ir al panel',
     logOut: 'Iniciar sesión con otra cuenta',
+    forgotPassword: '¿Olvidaste tu contraseña?',
+    backToLogin: '← Volver al inicio de sesión',
+    forgotTitle: 'Restablecer contraseña',
+    forgotSubtitle: 'Introduce tu email y te enviaremos un enlace para restablecer tu contraseña.',
+    sendLink: 'Enviar enlace',
+    sendingLink: 'Enviando…',
+    forgotSuccess: 'Revisa tu email para encontrar el enlace de restablecimiento.',
+    forgotError: 'No se pudo enviar el email. Inténtalo de nuevo.',
     devTitle: 'Acceso rápido (dev)',
     devHint: 'Haz clic para rellenar las credenciales',
     roles: {
@@ -123,6 +139,9 @@ export default function LoginPage() {
   const [loading, setLoading]   = useState(false)
   const [session, setSession]   = useState<{ name: string; role: DbRole } | null>(null)
   const [checkingSession, setCheckingSession] = useState(true)
+  const [forgotMode, setForgotMode]   = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotState, setForgotState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
 
   const t = T[lang]
 
@@ -170,6 +189,14 @@ export default function LoginPage() {
   async function handleSignOut() {
     await supabase.auth.signOut()
     setSession(null)
+  }
+
+  async function handleForgot(e: React.FormEvent) {
+    e.preventDefault()
+    setForgotState('sending')
+    const redirectTo = `${window.location.origin}/auth/confirm`
+    const { error: resetErr } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), { redirectTo })
+    setForgotState(resetErr ? 'error' : 'sent')
   }
 
   if (checkingSession) return null
@@ -221,7 +248,7 @@ export default function LoginPage() {
           )}
 
           {/* login form */}
-          {!session && (
+          {!session && !forgotMode && (
             <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
               <div className="space-y-1">
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">{t.email}</label>
@@ -250,7 +277,54 @@ export default function LoginPage() {
                 className="w-full px-4 py-2.5 bg-slate-800 text-white text-sm font-semibold rounded-xl hover:bg-slate-700 active:scale-[0.98] transition-all mt-2 disabled:opacity-60 disabled:cursor-not-allowed">
                 {loading ? t.signingIn : t.signIn}
               </button>
+
+              <button type="button" onClick={() => { setForgotMode(true); setForgotEmail(email); setForgotState('idle') }}
+                className="w-full text-xs text-slate-400 hover:text-slate-600 transition-colors pt-1">
+                {t.forgotPassword}
+              </button>
             </form>
+          )}
+
+          {/* forgot password form */}
+          {!session && forgotMode && (
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">{t.forgotTitle}</h2>
+                <p className="text-sm text-slate-500 mt-1">{t.forgotSubtitle}</p>
+              </div>
+
+              {forgotState === 'sent' ? (
+                <p className="text-sm text-green-600 bg-green-50 border border-green-100 rounded-xl px-4 py-3">
+                  {t.forgotSuccess}
+                </p>
+              ) : (
+                <form onSubmit={handleForgot} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide">{t.email}</label>
+                    <input
+                      type="email" required autoFocus
+                      value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)}
+                      className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
+                      placeholder="you@acro.es"
+                    />
+                  </div>
+
+                  {forgotState === 'error' && (
+                    <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{t.forgotError}</p>
+                  )}
+
+                  <button type="submit" disabled={forgotState === 'sending'}
+                    className="w-full px-4 py-2.5 bg-slate-800 text-white text-sm font-semibold rounded-xl hover:bg-slate-700 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed">
+                    {forgotState === 'sending' ? t.sendingLink : t.sendLink}
+                  </button>
+                </form>
+              )}
+
+              <button type="button" onClick={() => setForgotMode(false)}
+                className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+                {t.backToLogin}
+              </button>
+            </div>
           )}
 
           {/* dev quick-access — local only, stripped from production builds */}

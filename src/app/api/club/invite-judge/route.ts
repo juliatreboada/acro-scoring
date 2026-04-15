@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   const host  = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? req.nextUrl.host
   const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(body.email, {
     data: metadata,
-    redirectTo: `${proto}://${host}/auth/set-password`,
+    redirectTo: `${proto}://${host}/auth/confirm`,
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })

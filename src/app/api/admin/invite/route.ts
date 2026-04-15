@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   //    then create the profile row manually pointing to the existing club.
   if (role === 'club' && body.club_id) {
     const { data, error } = await db.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${siteOrigin}/auth/set-password`,
+      redirectTo: `${siteOrigin}/auth/confirm`,
     })
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await db.auth.admin.inviteUserByEmail(email, {
     data: metadata,
-    redirectTo: `${siteOrigin}/auth/set-password`,
+    redirectTo: `${siteOrigin}/auth/confirm`,
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
