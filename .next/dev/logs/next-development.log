@@ -1,4 +1,39 @@
-[00:00:00.990] Server  LOG     ✓ Ready in 772ms
-[00:00:04.584] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:05.255] Browser ERROR   {"__isAuthError":true,"code":"refresh_token_not_found","name":"AuthApiError","status":400}
-[00:00:50.693] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:01.084] Server  LOG     ✓ Ready in 848ms
+[00:01:01.527] Browser ERROR   In HTML, %s cannot be a descendant of <%s>.
+This will cause a hydration error.%s <div> p 
+
+  ...
+    <div className="max-w-4xl ...">
+      <div>
+      <div>
+      <StartingOrderTab lang="es" globalTeams={[...]} clubs={[...]} entries={[...]} sections={[...]} panels={[...]} ...>
+        <div className="space-y-6">
+          <div>
+          <div className="so-print-area">
+            <div>
+            <div className="grid gap-4...">
+              <PanelColumn lang="es" panel={{id:"5a8ebd...", ...}} sessions={[...]} globalTeams={[...]} clubs={[...]} ...>
+                <div className="border bor...">
+                  <div>
+                  <div className="p-3 space-y-3">
+                    <SessionOrderCard session={{id:"b0f735...", ...}} globalTeams={[...]} clubs={[...]} entries={[...]} ...>
+                      <div className="border rou...">
+                        <div>
+                        <div className="p-3">
+                          <div className="space-y-0.5">
+                            <div ref={null} draggable={true} onDragStart={function onDragStart} ...>
+                              <svg>
+                              <span>
+                              <span>
+                              <div className="flex-1 min...">
+                                <p>
+>                               <p className="flex items-center gap-1 text-xs text-slate-400 truncate">
+                                  <ClubAvatar club={{id:"cc530e...", ...}}>
+>                                   <div
+>                                     className="w-5 h-5 rounded-full bg-slate-200 text-slate-500 text-[9px] font-semi..."
+>                                   >
+                                  ...
+                    ...
+
+[00:01:01.528] Browser ERROR   <%s> cannot contain a nested %s.
+See this log for the ancestor stack trace. p <div>

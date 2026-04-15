@@ -4560,7 +4560,8 @@ const T = {
         warmup: 'W',
         compete: 'C',
         viewSessions: 'Sessions',
-        viewTimeline: 'Timeline'
+        viewTimeline: 'Timeline',
+        print: 'Print'
     },
     es: {
         hint: 'Establece el orden de actuación en cada sesión.',
@@ -4576,7 +4577,8 @@ const T = {
         warmup: 'C',
         compete: 'A',
         viewSessions: 'Sesiones',
-        viewTimeline: 'Línea de tiempo'
+        viewTimeline: 'Línea de tiempo',
+        print: 'Imprimir'
     }
 };
 const PANEL_HEADER = {
@@ -4602,14 +4604,14 @@ function ClubAvatar({ club }) {
         className: "w-5 h-5 rounded-full object-cover shrink-0"
     }, void 0, false, {
         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-        lineNumber: 155,
+        lineNumber: 157,
         columnNumber: 5
     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
         className: "w-5 h-5 rounded-full bg-slate-200 text-slate-500 text-[9px] font-semibold flex items-center justify-center shrink-0",
         children: club.club_name.charAt(0).toUpperCase()
     }, void 0, false, {
         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-        lineNumber: 157,
+        lineNumber: 159,
         columnNumber: 5
     }, this);
 }
@@ -4628,12 +4630,12 @@ function ShuffleIcon() {
             d: "M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
         }, void 0, false, {
             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-            lineNumber: 168,
+            lineNumber: 170,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-        lineNumber: 167,
+        lineNumber: 169,
         columnNumber: 5
     }, this);
 }
@@ -4651,12 +4653,12 @@ function LockIcon({ locked }) {
             d: "M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
         }, void 0, false, {
             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-            lineNumber: 176,
+            lineNumber: 178,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-        lineNumber: 175,
+        lineNumber: 177,
         columnNumber: 5
     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
         className: "w-3.5 h-3.5",
@@ -4670,12 +4672,12 @@ function LockIcon({ locked }) {
             d: "M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v3.75M3.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
         }, void 0, false, {
             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-            lineNumber: 180,
+            lineNumber: 182,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-        lineNumber: 179,
+        lineNumber: 181,
         columnNumber: 5
     }, this);
 }
@@ -4777,7 +4779,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                lineNumber: 272,
+                                lineNumber: 274,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -4785,13 +4787,13 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                 children: session.routine_type
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                lineNumber: 273,
+                                lineNumber: 275,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                        lineNumber: 271,
+                        lineNumber: 273,
                         columnNumber: 9
                     }, this),
                     hasTeams && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4803,14 +4805,14 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                 children: [
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(ShuffleIcon, {}, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                        lineNumber: 282,
+                                        lineNumber: 284,
                                         columnNumber: 17
                                     }, this),
                                     t.shuffle
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                lineNumber: 278,
+                                lineNumber: 280,
                                 columnNumber: 15
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4824,26 +4826,26 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                         locked: isLocked
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                        lineNumber: 295,
+                                        lineNumber: 297,
                                         columnNumber: 15
                                     }, this),
                                     isLocked ? t.unlock : t.lock
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                lineNumber: 286,
+                                lineNumber: 288,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                        lineNumber: 276,
+                        lineNumber: 278,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                lineNumber: 270,
+                lineNumber: 272,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4853,7 +4855,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                     children: t.noTeams
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                    lineNumber: 305,
+                    lineNumber: 307,
                     columnNumber: 11
                 }, this) : isLocked ? // ── locked view: full order, dropouts in position, crossed ─────────────
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4880,7 +4882,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                            lineNumber: 317,
+                                            lineNumber: 319,
                                             columnNumber: 23
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4892,19 +4894,19 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                            lineNumber: 318,
+                                            lineNumber: 320,
                                             columnNumber: 23
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                    lineNumber: 316,
+                                    lineNumber: 318,
                                     columnNumber: 21
                                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                     className: "w-14 shrink-0"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                    lineNumber: 321,
+                                    lineNumber: 323,
                                     columnNumber: 21
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4918,7 +4920,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                    lineNumber: 323,
+                                    lineNumber: 325,
                                     columnNumber: 19
                                 }, this),
                                 dorsal != null && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4932,7 +4934,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                    lineNumber: 327,
+                                    lineNumber: 329,
                                     columnNumber: 21
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4946,7 +4948,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                             children: team.gymnast_display
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                            lineNumber: 333,
+                                            lineNumber: 335,
                                             columnNumber: 21
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -4959,20 +4961,20 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                                     club: club
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                                    lineNumber: 337,
+                                                    lineNumber: 339,
                                                     columnNumber: 23
                                                 }, this),
                                                 club?.club_name ?? '—'
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                            lineNumber: 336,
+                                            lineNumber: 338,
                                             columnNumber: 21
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                    lineNumber: 332,
+                                    lineNumber: 334,
                                     columnNumber: 19
                                 }, this),
                                 isDropout && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4980,19 +4982,19 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                     children: t.baja
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                    lineNumber: 342,
+                                    lineNumber: 344,
                                     columnNumber: 21
                                 }, this)
                             ]
                         }, team.id, true, {
                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                            lineNumber: 314,
+                            lineNumber: 316,
                             columnNumber: 17
                         }, this);
                     })
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                    lineNumber: 308,
+                    lineNumber: 310,
                     columnNumber: 11
                 }, this) : // ── unlocked view: drag-and-drop active teams, dropouts below divider ──
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -5041,12 +5043,12 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                             d: "M8.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                            lineNumber: 377,
+                                            lineNumber: 379,
                                             columnNumber: 21
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                        lineNumber: 376,
+                                        lineNumber: 378,
                                         columnNumber: 19
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -5057,7 +5059,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                        lineNumber: 379,
+                                        lineNumber: 381,
                                         columnNumber: 19
                                     }, this),
                                     dorsal != null && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -5068,7 +5070,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                        lineNumber: 381,
+                                        lineNumber: 383,
                                         columnNumber: 21
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -5079,7 +5081,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                                 children: team.gymnast_display
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                                lineNumber: 384,
+                                                lineNumber: 386,
                                                 columnNumber: 21
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -5089,26 +5091,26 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                                         club: club
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                                        lineNumber: 386,
+                                                        lineNumber: 388,
                                                         columnNumber: 23
                                                     }, this),
                                                     club?.club_name ?? '—'
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                                lineNumber: 385,
+                                                lineNumber: 387,
                                                 columnNumber: 21
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                        lineNumber: 383,
+                                        lineNumber: 385,
                                         columnNumber: 19
                                     }, this)
                                 ]
                             }, team.id, true, {
                                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                lineNumber: 359,
+                                lineNumber: 361,
                                 columnNumber: 17
                             }, this);
                         }),
@@ -5121,7 +5123,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                             className: "flex-1 h-px bg-slate-100"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                            lineNumber: 396,
+                                            lineNumber: 398,
                                             columnNumber: 19
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -5129,20 +5131,20 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                             children: t.notCompeting
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                            lineNumber: 397,
+                                            lineNumber: 399,
                                             columnNumber: 19
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                             className: "flex-1 h-px bg-slate-100"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                            lineNumber: 398,
+                                            lineNumber: 400,
                                             columnNumber: 19
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                    lineNumber: 395,
+                                    lineNumber: 397,
                                     columnNumber: 17
                                 }, this),
                                 dropoutTeams.map((team)=>{
@@ -5155,7 +5157,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                                 className: "w-5 shrink-0"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                                lineNumber: 405,
+                                                lineNumber: 407,
                                                 columnNumber: 23
                                             }, this),
                                             dorsal != null && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -5166,7 +5168,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                                lineNumber: 407,
+                                                lineNumber: 409,
                                                 columnNumber: 25
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -5177,7 +5179,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                                         children: team.gymnast_display
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                                        lineNumber: 410,
+                                                        lineNumber: 412,
                                                         columnNumber: 25
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -5187,20 +5189,20 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                                                 club: club
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                                                lineNumber: 412,
+                                                                lineNumber: 414,
                                                                 columnNumber: 27
                                                             }, this),
                                                             club?.club_name ?? '—'
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                                        lineNumber: 411,
+                                                        lineNumber: 413,
                                                         columnNumber: 25
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                                lineNumber: 409,
+                                                lineNumber: 411,
                                                 columnNumber: 23
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -5208,13 +5210,13 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                                                 children: t.baja
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                                lineNumber: 416,
+                                                lineNumber: 418,
                                                 columnNumber: 23
                                             }, this)
                                         ]
                                     }, team.id, true, {
                                         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                        lineNumber: 404,
+                                        lineNumber: 406,
                                         columnNumber: 21
                                     }, this);
                                 })
@@ -5223,18 +5225,18 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                    lineNumber: 350,
+                    lineNumber: 352,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                lineNumber: 303,
+                lineNumber: 305,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-        lineNumber: 268,
+        lineNumber: 270,
         columnNumber: 5
     }, this);
 }
@@ -5255,7 +5257,7 @@ function PanelColumn({ lang, panel, sessions, globalTeams, clubs, entries, sessi
                 children: t.panelN(panel.panel_number)
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                lineNumber: 450,
+                lineNumber: 452,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -5265,7 +5267,7 @@ function PanelColumn({ lang, panel, sessions, globalTeams, clubs, entries, sessi
                     children: "—"
                 }, void 0, false, {
                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                    lineNumber: 455,
+                    lineNumber: 457,
                     columnNumber: 11
                 }, this) : sessions.map((session)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(SessionOrderCard, {
                         session: session,
@@ -5281,18 +5283,18 @@ function PanelColumn({ lang, panel, sessions, globalTeams, clubs, entries, sessi
                         onToggleLock: onToggleLock
                     }, session.id, false, {
                         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                        lineNumber: 458,
+                        lineNumber: 460,
                         columnNumber: 13
                     }, this))
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                lineNumber: 453,
+                lineNumber: 455,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-        lineNumber: 449,
+        lineNumber: 451,
         columnNumber: 5
     }, this);
 }
@@ -5463,7 +5465,7 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
             children: t.noTeams
         }, void 0, false, {
             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-            lineNumber: 631,
+            lineNumber: 633,
             columnNumber: 12
         }, this);
     }
@@ -5524,12 +5526,12 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
                                 d: "M8.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                lineNumber: 668,
+                                lineNumber: 670,
                                 columnNumber: 17
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                            lineNumber: 667,
+                            lineNumber: 669,
                             columnNumber: 15
                         }, this),
                         slotTimes && !slot.isDropout ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -5543,7 +5545,7 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                    lineNumber: 673,
+                                    lineNumber: 675,
                                     columnNumber: 19
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -5554,19 +5556,19 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                    lineNumber: 674,
+                                    lineNumber: 676,
                                     columnNumber: 19
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                            lineNumber: 672,
+                            lineNumber: 674,
                             columnNumber: 17
                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                             className: "w-14 shrink-0"
                         }, void 0, false, {
                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                            lineNumber: 677,
+                            lineNumber: 679,
                             columnNumber: 17
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -5577,7 +5579,7 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
                             children: positions[idx]
                         }, void 0, false, {
                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                            lineNumber: 680,
+                            lineNumber: 682,
                             columnNumber: 15
                         }, this),
                         sortedPanels.length > 1 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -5591,7 +5593,7 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                            lineNumber: 686,
+                            lineNumber: 688,
                             columnNumber: 17
                         }, this),
                         dorsal != null && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -5605,7 +5607,7 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                            lineNumber: 692,
+                            lineNumber: 694,
                             columnNumber: 17
                         }, this),
                         team?.photo_url ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("img", {
@@ -5614,7 +5616,7 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
                             className: "w-9 h-9 rounded-full object-cover shrink-0"
                         }, void 0, false, {
                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                            lineNumber: 699,
+                            lineNumber: 701,
                             columnNumber: 17
                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                             className: "w-9 h-9 rounded-full bg-slate-100 shrink-0 flex items-center justify-center",
@@ -5626,17 +5628,17 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
                                     d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                    lineNumber: 703,
+                                    lineNumber: 705,
                                     columnNumber: 21
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                lineNumber: 702,
+                                lineNumber: 704,
                                 columnNumber: 19
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                            lineNumber: 701,
+                            lineNumber: 703,
                             columnNumber: 17
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -5650,7 +5652,7 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
                                     children: team?.gymnast_display ?? slot.teamId
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                    lineNumber: 708,
+                                    lineNumber: 710,
                                     columnNumber: 17
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -5660,7 +5662,7 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
                                             club: club
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                            lineNumber: 712,
+                                            lineNumber: 714,
                                             columnNumber: 19
                                         }, this),
                                         club?.club_name ?? '',
@@ -5669,13 +5671,13 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                    lineNumber: 711,
+                                    lineNumber: 713,
                                     columnNumber: 17
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                            lineNumber: 707,
+                            lineNumber: 709,
                             columnNumber: 15
                         }, this),
                         slot.isDropout && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -5683,24 +5685,24 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
                             children: t.baja
                         }, void 0, false, {
                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                            lineNumber: 717,
+                            lineNumber: 719,
                             columnNumber: 17
                         }, this)
                     ]
                 }, `${slot.panelNumber}-${slot.teamId}-${idx}`, true, {
                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                    lineNumber: 650,
+                    lineNumber: 652,
                     columnNumber: 13
                 }, this);
             })
         }, void 0, false, {
             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-            lineNumber: 636,
+            lineNumber: 638,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-        lineNumber: 635,
+        lineNumber: 637,
         columnNumber: 5
     }, this);
 }
@@ -5722,42 +5724,82 @@ function StartingOrderTab({ lang, globalTeams, clubs, entries, sections, panels,
         className: "space-y-6",
         children: [
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                className: "flex items-center justify-between gap-4",
+                className: "flex items-center justify-between gap-4 print:hidden",
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                         className: "text-xs text-slate-400",
                         children: t.hint
                     }, void 0, false, {
                         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                        lineNumber: 766,
+                        lineNumber: 768,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "flex rounded-lg border border-slate-200 overflow-hidden shrink-0 text-xs font-semibold",
+                        className: "flex items-center gap-2",
                         children: [
-                            'sessions',
-                            'timeline'
-                        ].map((v)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
-                                onClick: ()=>setView(v),
-                                className: [
-                                    'px-3 py-1.5 transition-colors',
-                                    view === v ? 'bg-blue-600 text-white' : 'bg-white text-slate-400 hover:text-slate-600'
-                                ].join(' '),
-                                children: v === 'sessions' ? t.viewSessions : t.viewTimeline
-                            }, v, false, {
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                onClick: ()=>window.print(),
+                                className: "flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
+                                        className: "w-3.5 h-3.5",
+                                        fill: "none",
+                                        viewBox: "0 0 24 24",
+                                        stroke: "currentColor",
+                                        strokeWidth: 2,
+                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
+                                            strokeLinecap: "round",
+                                            strokeLinejoin: "round",
+                                            d: "M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
+                                            lineNumber: 775,
+                                            columnNumber: 15
+                                        }, this)
+                                    }, void 0, false, {
+                                        fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
+                                        lineNumber: 774,
+                                        columnNumber: 13
+                                    }, this),
+                                    t.print
+                                ]
+                            }, void 0, true, {
                                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                lineNumber: 769,
-                                columnNumber: 13
-                            }, this))
-                    }, void 0, false, {
+                                lineNumber: 770,
+                                columnNumber: 11
+                            }, this),
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "flex rounded-lg border border-slate-200 overflow-hidden shrink-0 text-xs font-semibold",
+                                children: [
+                                    'sessions',
+                                    'timeline'
+                                ].map((v)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                        onClick: ()=>setView(v),
+                                        className: [
+                                            'px-3 py-1.5 transition-colors',
+                                            view === v ? 'bg-blue-600 text-white' : 'bg-white text-slate-400 hover:text-slate-600'
+                                        ].join(' '),
+                                        children: v === 'sessions' ? t.viewSessions : t.viewTimeline
+                                    }, v, false, {
+                                        fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
+                                        lineNumber: 781,
+                                        columnNumber: 15
+                                    }, this))
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
+                                lineNumber: 779,
+                                columnNumber: 11
+                            }, this)
+                        ]
+                    }, void 0, true, {
                         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                        lineNumber: 767,
+                        lineNumber: 769,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                lineNumber: 765,
+                lineNumber: 767,
                 columnNumber: 7
             }, this),
             sortedSections.length === 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -5765,12 +5807,13 @@ function StartingOrderTab({ lang, globalTeams, clubs, entries, sections, panels,
                 children: t.noSections
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                lineNumber: 779,
+                lineNumber: 792,
                 columnNumber: 9
-            }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
+            }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: "so-print-area",
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "flex border-b border-slate-200 gap-0",
+                        className: "flex border-b border-slate-200 gap-0 print:hidden",
                         children: sortedSections.map((sec)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                                 onClick: ()=>setActiveSectionId(sec.id),
                                 className: [
@@ -5780,12 +5823,12 @@ function StartingOrderTab({ lang, globalTeams, clubs, entries, sections, panels,
                                 children: tabLabel(sec)
                             }, sec.id, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                lineNumber: 786,
+                                lineNumber: 799,
                                 columnNumber: 15
                             }, this))
                     }, void 0, false, {
                         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                        lineNumber: 784,
+                        lineNumber: 797,
                         columnNumber: 11
                     }, this),
                     activeSection && (()=>{
@@ -5807,7 +5850,7 @@ function StartingOrderTab({ lang, globalTeams, clubs, entries, sections, panels,
                                 onReorderTimeline: onReorderTimeline
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                lineNumber: 807,
+                                lineNumber: 820,
                                 columnNumber: 17
                             }, this);
                         }
@@ -5832,21 +5875,25 @@ function StartingOrderTab({ lang, globalTeams, clubs, entries, sections, panels,
                                     onToggleLock: onToggleLock
                                 }, panel.id, false, {
                                     fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                                    lineNumber: 834,
+                                    lineNumber: 847,
                                     columnNumber: 19
                                 }, this))
                         }, void 0, false, {
                             fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-                            lineNumber: 832,
+                            lineNumber: 845,
                             columnNumber: 15
                         }, this);
                     })()
                 ]
-            }, void 0, true)
+            }, void 0, true, {
+                fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
+                lineNumber: 796,
+                columnNumber: 9
+            }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/admin/competition-detail/StartingOrderTab.tsx",
-        lineNumber: 764,
+        lineNumber: 766,
         columnNumber: 5
     }, this);
 }

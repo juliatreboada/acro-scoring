@@ -6559,8 +6559,16 @@ function Page() {
                 } : g));
     }
     async function handleUploadLicencia(id, file) {
+        const gymnast = gymnasts.find((g)=>g.id === id);
+        if (!gymnast) return;
         const ext = file.name.split('.').pop() ?? 'pdf';
-        const path = `${id}/licencia.${ext}`;
+        const normalize = (s)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase();
+        const nameParts = [
+            gymnast.first_name,
+            gymnast.last_name_1,
+            gymnast.last_name_2
+        ].filter(Boolean).map((s)=>normalize(s));
+        const path = `${gymnast.club_id}/${nameParts.join('_')}.${ext}`;
         const { error } = await supabase.storage.from('gymnast-licencias').upload(path, file, {
             upsert: true
         });
@@ -6710,12 +6718,12 @@ function Page() {
             className: "w-6 h-6 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin"
         }, void 0, false, {
             fileName: "[project]/src/app/club/page.tsx",
-            lineNumber: 414,
+            lineNumber: 419,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/app/club/page.tsx",
-        lineNumber: 413,
+        lineNumber: 418,
         columnNumber: 5
     }, this);
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6725,7 +6733,7 @@ function Page() {
                 onLangChange: setLang
             }, void 0, false, {
                 fileName: "[project]/src/app/club/page.tsx",
-                lineNumber: 420,
+                lineNumber: 425,
                 columnNumber: 7
             }, this),
             uploadError && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6735,7 +6743,7 @@ function Page() {
                         children: uploadError
                     }, void 0, false, {
                         fileName: "[project]/src/app/club/page.tsx",
-                        lineNumber: 424,
+                        lineNumber: 429,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -6744,13 +6752,13 @@ function Page() {
                         children: "✕"
                     }, void 0, false, {
                         fileName: "[project]/src/app/club/page.tsx",
-                        lineNumber: 425,
+                        lineNumber: 430,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/club/page.tsx",
-                lineNumber: 423,
+                lineNumber: 428,
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$club$2f$ClubPortal$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -6799,13 +6807,13 @@ function Page() {
                 onUploadAvatar: handleUploadAvatar
             }, void 0, false, {
                 fileName: "[project]/src/app/club/page.tsx",
-                lineNumber: 429,
+                lineNumber: 434,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/club/page.tsx",
-        lineNumber: 419,
+        lineNumber: 424,
         columnNumber: 5
     }, this);
 }

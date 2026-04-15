@@ -34,7 +34,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$supabase$2
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$supabase$2f$ssr$2f$dist$2f$module$2f$createBrowserClient$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/@supabase/ssr/dist/module/createBrowserClient.js [app-ssr] (ecmascript)");
 ;
 function createClient() {
-    return (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$supabase$2f$ssr$2f$dist$2f$module$2f$createBrowserClient$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["createBrowserClient"])(("TURBOPACK compile-time value", "https://lhvqstibxmuvphiixqof.supabase.co"), ("TURBOPACK compile-time value", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxodnFzdGlieG11dnBoaWl4cW9mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MTc3ODUsImV4cCI6MjA5MDA5Mzc4NX0.VWR0irkf2eTZwLlmUbbphRjKUYk6J3gF0ZUedLEaWS4"));
+    return (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$supabase$2f$ssr$2f$dist$2f$module$2f$createBrowserClient$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["createBrowserClient"])(("TURBOPACK compile-time value", "https://lhvqstibxmuvphiixqof.supabase.co"), ("TURBOPACK compile-time value", "sb_publishable_qZDJfqtH_JwfQ0PEMVlPzA_K1TN6bnX"));
 }
 }),
 "[project]/src/contexts/ProfileContext.tsx [app-ssr] (ecmascript)", ((__turbopack_context__) => {

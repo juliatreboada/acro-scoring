@@ -3693,6 +3693,21 @@ body {
   overflow-x: hidden;
 }
 
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .so-print-area, .so-print-area * {
+    visibility: visible;
+  }
+
+  .so-print-area {
+    position: absolute;
+    inset: 0;
+  }
+}
+
 @property --tw-translate-x {
   syntax: "*";
   inherits: false;
