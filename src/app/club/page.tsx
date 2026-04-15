@@ -313,8 +313,13 @@ export default function Page() {
   }
 
   async function handleUploadLicencia(id: string, file: File) {
+    const gymnast = gymnasts.find(g => g.id === id)
+    if (!gymnast) return
     const ext = file.name.split('.').pop() ?? 'pdf'
-    const path = `${id}/licencia.${ext}`
+    const normalize = (s: string) =>
+      s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase()
+    const nameParts = [gymnast.first_name, gymnast.last_name_1, gymnast.last_name_2].filter(Boolean).map(s => normalize(s!))
+    const path = `${gymnast.club_id}/${nameParts.join('_')}.${ext}`
     const { error } = await supabase.storage.from('gymnast-licencias').upload(path, file, { upsert: true })
     if (error) { setUploadError(error.message); return }
     const { data } = supabase.storage.from('gymnast-licencias').getPublicUrl(path)
