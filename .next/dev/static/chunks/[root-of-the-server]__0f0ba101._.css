@@ -1652,6 +1652,10 @@
     border-color: var(--color-emerald-500);
   }
 
+  .border-green-100 {
+    border-color: var(--color-green-100);
+  }
+
   .border-green-200 {
     border-color: var(--color-green-200);
   }

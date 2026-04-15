@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     const host  = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? req.nextUrl.host
     const { error: inviteErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(nc.email, {
       data: { role: 'club', club_name: nc.club_name, contact_name: nc.contact_name ?? '', pending_profile_id: profileId },
-      redirectTo: `${proto}://${host}/auth/set-password`,
+      redirectTo: `${proto}://${host}/auth/confirm`,
     })
     if (inviteErr) { inviteError = inviteErr.message } else { inviteSent = true }
   }
