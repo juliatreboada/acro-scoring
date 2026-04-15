@@ -1,39 +1,48 @@
-[00:00:01.084] Server  LOG     ✓ Ready in 848ms
-[00:01:01.527] Browser ERROR   In HTML, %s cannot be a descendant of <%s>.
+[00:00:01.287] Server  LOG     ✓ Ready in 1050ms
+[00:06:48.637] Server  LOG     ✓ Compiled in 615ms
+[00:09:26.528] Server  LOG     ✓ Compiled in 256ms
+[00:09:36.792] Server  LOG     ✓ Compiled in 64ms
+[00:10:00.209] Server  LOG     ✓ Compiled in 62ms
+[00:10:02.862] Server  LOG     ✓ Compiled in 48ms
+[00:10:12.697] Server  LOG     ✓ Compiled in 82ms
+[00:10:18.952] Server  LOG     ✓ Compiled in 48ms
+[00:10:43.168] Server  LOG     ✓ Compiled in 64ms
+[00:13:07.144] Browser ERROR   In HTML, %s cannot be a descendant of <%s>.
 This will cause a hydration error.%s <div> p 
 
   ...
-    <div className="max-w-4xl ...">
-      <div>
-      <div>
-      <StartingOrderTab lang="es" globalTeams={[...]} clubs={[...]} entries={[...]} sections={[...]} panels={[...]} ...>
-        <div className="space-y-6">
-          <div>
-          <div className="so-print-area">
+    <CompetitionDetail lang="es" competition={{id:"5da1f8...", ...}} panels={[...]} sections={[...]} sessions={[...]} ...>
+      <div className="max-w-4xl ...">
+        <div>
+        <div>
+        <StartingOrderTab lang="es" globalTeams={[...]} clubs={[...]} entries={[...]} sections={[...]} panels={[...]} ...>
+          <div className="space-y-6">
             <div>
-            <div className="grid gap-4...">
-              <PanelColumn lang="es" panel={{id:"5a8ebd...", ...}} sessions={[...]} globalTeams={[...]} clubs={[...]} ...>
-                <div className="border bor...">
-                  <div>
-                  <div className="p-3 space-y-3">
-                    <SessionOrderCard session={{id:"b0f735...", ...}} globalTeams={[...]} clubs={[...]} entries={[...]} ...>
-                      <div className="border rou...">
-                        <div>
-                        <div className="p-3">
-                          <div className="space-y-0.5">
-                            <div ref={null} draggable={true} onDragStart={function onDragStart} ...>
-                              <svg>
-                              <span>
-                              <span>
-                              <div className="flex-1 min...">
-                                <p>
->                               <p className="flex items-center gap-1 text-xs text-slate-400 truncate">
-                                  <ClubAvatar club={{id:"cc530e...", ...}}>
->                                   <div
->                                     className="w-5 h-5 rounded-full bg-slate-200 text-slate-500 text-[9px] font-semi..."
->                                   >
-                                  ...
-                    ...
+            <div className="so-print-area">
+              <div>
+              <div className="grid gap-4...">
+                <PanelColumn lang="es" panel={{id:"5a8ebd...", ...}} sessions={[...]} globalTeams={[...]} clubs={[...]} ...>
+                  <div className="border bor...">
+                    <div>
+                    <div className="p-3 space-y-3">
+                      <SessionOrderCard session={{id:"b0f735...", ...}} globalTeams={[...]} clubs={[...]} entries={[...]} ...>
+                        <div className="border rou...">
+                          <div>
+                          <div className="p-3">
+                            <div className="space-y-0.5">
+                              <div className={"flex ite..."}>
+                                <div>
+                                <span>
+                                <span>
+                                <div className="flex-1 min...">
+                                  <p>
+>                                 <p className="flex items-center gap-1 text-xs truncate text-slate-400">
+                                    <ClubAvatar club={{id:"cc530e...", ...}}>
+>                                     <div
+>                                       className="w-5 h-5 rounded-full bg-slate-200 text-slate-500 text-[9px] font-se..."
+>                                     >
+                                    ...
+                      ...
 
-[00:01:01.528] Browser ERROR   <%s> cannot contain a nested %s.
+[00:13:07.144] Browser ERROR   <%s> cannot contain a nested %s.
 See this log for the ancestor stack trace. p <div>

@@ -315,13 +315,23 @@ export default function Page() {
   }
 
   async function handleCreateJudge(data: Omit<Judge, 'id' | 'avatar_url'>) {
-    const { full_name, phone, licence } = data
-    const { data: newJudge } = await supabase.from('judges')
-      .insert({ full_name, phone, licence, avatar_url: null } as any)
-      .select().single()
-    if (!newJudge) return
-    setGlobalJudges(prev => [...prev, { ...newJudge, email: data.email } as unknown as Judge])
-    await handleAddToPool(newJudge.id)
+    const { full_name, email, phone, licence } = data
+    if (!email) return
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    const body: Record<string, string> = { role: 'judge', email, full_name }
+    if (phone)   body.phone   = phone
+    if (licence) body.licence = licence
+    const res = await fetch('/api/admin/invite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(body),
+    })
+    if (!res.ok) {
+      const { error } = await res.json()
+      throw new Error(error ?? 'Failed to send invite')
+    }
+    // Judge will appear in the pool once they accept the invite and their profile is created
   }
 
   async function handleAssignJudge(slotId: string, judgeId: string | null) {

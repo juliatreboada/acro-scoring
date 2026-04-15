@@ -460,7 +460,7 @@ export type CompetitionDetailProps = {
   onAddSlot: (sectionId: string, panelId: string, role: Role) => void
   onRemoveSlot: (sectionId: string, panelId: string, role: Role) => void
   onTogglePanelLock: (sectionId: string, panelId: string) => Promise<void>
-  onCreateJudge?: (data: Omit<Judge, 'id' | 'avatar_url'>) => void
+  onCreateJudge?: (data: Omit<Judge, 'id' | 'avatar_url'>) => Promise<void>
   // registrations
   globalTeams: Team[]
   clubs: Club[]

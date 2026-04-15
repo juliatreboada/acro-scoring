@@ -1175,7 +1175,9 @@ const T = {
         fieldPhone: 'Phone (optional)',
         fieldLicence: 'Licence',
         cancel: 'Cancel',
-        create: 'Create & add',
+        create: 'Send invite',
+        inviteSent: (email)=>`Invite sent to ${email}`,
+        inviteError: 'Failed to send invite',
         lock: 'Lock assignments',
         unlock: 'Unlock'
     },
@@ -1199,7 +1201,9 @@ const T = {
         fieldPhone: 'Teléfono (opcional)',
         fieldLicence: 'Licencia',
         cancel: 'Cancelar',
-        create: 'Crear y añadir',
+        create: 'Enviar invitación',
+        inviteSent: (email)=>`Invitación enviada a ${email}`,
+        inviteError: 'Error al enviar la invitación',
         lock: 'Bloquear asignación',
         unlock: 'Desbloquear'
     }
@@ -1227,7 +1231,7 @@ function Avatar({ judge, size = 'md' }) {
         ].join(' ')
     }, void 0, false, {
         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-        lineNumber: 75,
+        lineNumber: 79,
         columnNumber: 5
     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
         className: [
@@ -1237,7 +1241,7 @@ function Avatar({ judge, size = 'md' }) {
         children: initials
     }, void 0, false, {
         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-        lineNumber: 77,
+        lineNumber: 81,
         columnNumber: 5
     }, this);
 }
@@ -1256,6 +1260,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
     const [showPicker, setShowPicker] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const [showCreateForm, setShowCreateForm] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const [form, setForm] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(EMPTY_FORM);
+    const [inviteState, setInviteState] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const poolIds = new Set(judges.map((j)=>j.id));
     const available = globalJudges.filter((j)=>!poolIds.has(j.id));
     const clubById = Object.fromEntries(clubs.map((c)=>[
@@ -1267,17 +1272,29 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
         if (isAssigned && !confirm(t.warningRemove)) return;
         onRemove(judgeId);
     }
-    function handleCreate(e) {
+    async function handleCreate(e) {
         e.preventDefault();
         if (!form.full_name.trim() || !form.email.trim()) return;
-        onCreateJudge?.({
-            full_name: form.full_name.trim(),
-            email: form.email.trim(),
-            phone: form.phone.trim() || null,
-            licence: form.licence.trim() || null
-        });
-        setForm(EMPTY_FORM);
-        setShowCreateForm(false);
+        const email = form.email.trim();
+        try {
+            await onCreateJudge?.({
+                full_name: form.full_name.trim(),
+                email,
+                phone: form.phone.trim() || null,
+                licence: form.licence.trim() || null
+            });
+            setForm(EMPTY_FORM);
+            setInviteState({
+                ok: true,
+                email
+            });
+            setShowCreateForm(false);
+        } catch  {
+            setInviteState({
+                ok: false,
+                email
+            });
+        }
     }
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
         children: [
@@ -1303,12 +1320,12 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                     d: "M19 9l-7 7-7-7"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                    lineNumber: 131,
+                                    lineNumber: 142,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 128,
+                                lineNumber: 139,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1326,13 +1343,13 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                                lineNumber: 137,
+                                                lineNumber: 148,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 134,
+                                        lineNumber: 145,
                                         columnNumber: 13
                                     }, this),
                                     collapsed && judges.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1343,7 +1360,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                                     size: "sm"
                                                 }, j.id, false, {
                                                     fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                                    lineNumber: 142,
+                                                    lineNumber: 153,
                                                     columnNumber: 46
                                                 }, this)),
                                             judges.length > 5 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -1354,25 +1371,25 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                                lineNumber: 143,
+                                                lineNumber: 154,
                                                 columnNumber: 39
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 141,
+                                        lineNumber: 152,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 133,
+                                lineNumber: 144,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                        lineNumber: 124,
+                        lineNumber: 135,
                         columnNumber: 9
                     }, this),
                     !collapsed && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1397,19 +1414,19 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                             d: "M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                            lineNumber: 154,
+                                            lineNumber: 165,
                                             columnNumber: 19
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 153,
+                                        lineNumber: 164,
                                         columnNumber: 17
                                     }, this),
                                     t.newJudge
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 151,
+                                lineNumber: 162,
                                 columnNumber: 15
                             }, this),
                             available.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1434,19 +1451,19 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                                     d: "M12 4.5v15m7.5-7.5h-15"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                                    lineNumber: 164,
+                                                    lineNumber: 175,
                                                     columnNumber: 21
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                                lineNumber: 163,
+                                                lineNumber: 174,
                                                 columnNumber: 19
                                             }, this),
                                             t.addJudge
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 161,
+                                        lineNumber: 172,
                                         columnNumber: 17
                                     }, this),
                                     showPicker && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1463,7 +1480,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                                         size: "sm"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                                        lineNumber: 173,
+                                                        lineNumber: 184,
                                                         columnNumber: 25
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1474,7 +1491,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                                                 children: j.full_name
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                                                lineNumber: 175,
+                                                                lineNumber: 186,
                                                                 columnNumber: 27
                                                             }, this),
                                                             j.email && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1482,42 +1499,42 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                                                 children: j.email
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                                                lineNumber: 176,
+                                                                lineNumber: 187,
                                                                 columnNumber: 39
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                                        lineNumber: 174,
+                                                        lineNumber: 185,
                                                         columnNumber: 25
                                                     }, this)
                                                 ]
                                             }, j.id, true, {
                                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                                lineNumber: 171,
+                                                lineNumber: 182,
                                                 columnNumber: 23
                                             }, this))
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 169,
+                                        lineNumber: 180,
                                         columnNumber: 19
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 160,
+                                lineNumber: 171,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                        lineNumber: 149,
+                        lineNumber: 160,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                lineNumber: 123,
+                lineNumber: 134,
                 columnNumber: 7
             }, this),
             !collapsed && showCreateForm && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("form", {
@@ -1538,7 +1555,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 192,
+                                        lineNumber: 203,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1552,13 +1569,13 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                         className: "w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 193,
+                                        lineNumber: 204,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 191,
+                                lineNumber: 202,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1571,7 +1588,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 200,
+                                        lineNumber: 211,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1585,13 +1602,13 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                         className: "w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 201,
+                                        lineNumber: 212,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 199,
+                                lineNumber: 210,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1604,7 +1621,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 208,
+                                        lineNumber: 219,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1618,13 +1635,13 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                         className: "w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 209,
+                                        lineNumber: 220,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 207,
+                                lineNumber: 218,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1635,7 +1652,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                         children: t.fieldPhone
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 216,
+                                        lineNumber: 227,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -1648,19 +1665,19 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                         className: "w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 217,
+                                        lineNumber: 228,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 215,
+                                lineNumber: 226,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                        lineNumber: 190,
+                        lineNumber: 201,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1676,7 +1693,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                 children: t.cancel
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 225,
+                                lineNumber: 236,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -1685,19 +1702,30 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                 children: t.create
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 229,
+                                lineNumber: 240,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                        lineNumber: 224,
+                        lineNumber: 235,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                lineNumber: 189,
+                lineNumber: 200,
+                columnNumber: 9
+            }, this),
+            !collapsed && inviteState && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                className: [
+                    'mb-3 px-4 py-2.5 rounded-xl text-sm',
+                    inviteState.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                ].join(' '),
+                children: inviteState.ok ? t.inviteSent(inviteState.email) : t.inviteError
+            }, void 0, false, {
+                fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
+                lineNumber: 249,
                 columnNumber: 9
             }, this),
             !collapsed && (judges.length === 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1705,7 +1733,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                 children: t.noPool
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                lineNumber: 238,
+                lineNumber: 255,
                 columnNumber: 9
             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "flex flex-wrap gap-2",
@@ -1720,7 +1748,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                 size: "sm"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 248,
+                                lineNumber: 265,
                                 columnNumber: 17
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1731,7 +1759,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                         children: j.full_name
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 250,
+                                        lineNumber: 267,
                                         columnNumber: 19
                                     }, this),
                                     nominatingClub && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1739,13 +1767,13 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                         children: nominatingClub.club_name
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 252,
+                                        lineNumber: 269,
                                         columnNumber: 21
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 249,
+                                lineNumber: 266,
                                 columnNumber: 17
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -1763,39 +1791,39 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                                         d: "M6 18L18 6M6 6l12 12"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 258,
+                                        lineNumber: 275,
                                         columnNumber: 21
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                    lineNumber: 257,
+                                    lineNumber: 274,
                                     columnNumber: 19
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 255,
+                                lineNumber: 272,
                                 columnNumber: 17
                             }, this)
                         ]
                     }, j.id, true, {
                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                        lineNumber: 247,
+                        lineNumber: 264,
                         columnNumber: 15
                     }, this);
                 })
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                lineNumber: 242,
+                lineNumber: 259,
                 columnNumber: 9
             }, this))
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-        lineNumber: 122,
+        lineNumber: 133,
         columnNumber: 5
     }, this);
 }
-_s(JudgePool, "tYbxkWHzib3/8ssRJBk9m9PbLMw=");
+_s(JudgePool, "yuMjkFzc1tmQS1Adu3OCORtO3Dc=");
 _c1 = JudgePool;
 // ─── slot cell ────────────────────────────────────────────────────────────────
 function SlotCell({ label, slot, poolJudges, locked, selectPlaceholder, onAssign }) {
@@ -1808,7 +1836,7 @@ function SlotCell({ label, slot, poolJudges, locked, selectPlaceholder, onAssign
                 children: label
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                lineNumber: 283,
+                lineNumber: 300,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1819,13 +1847,13 @@ function SlotCell({ label, slot, poolJudges, locked, selectPlaceholder, onAssign
                         size: "sm"
                     }, void 0, false, {
                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                        lineNumber: 286,
+                        lineNumber: 303,
                         columnNumber: 13
                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "w-7 h-7 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 shrink-0"
                     }, void 0, false, {
                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                        lineNumber: 287,
+                        lineNumber: 304,
                         columnNumber: 13
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
@@ -1839,7 +1867,7 @@ function SlotCell({ label, slot, poolJudges, locked, selectPlaceholder, onAssign
                                 children: selectPlaceholder
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 295,
+                                lineNumber: 312,
                                 columnNumber: 11
                             }, this),
                             poolJudges.map((j)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1847,25 +1875,25 @@ function SlotCell({ label, slot, poolJudges, locked, selectPlaceholder, onAssign
                                     children: j.full_name
                                 }, j.id, false, {
                                     fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                    lineNumber: 297,
+                                    lineNumber: 314,
                                     columnNumber: 13
                                 }, this))
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                        lineNumber: 289,
+                        lineNumber: 306,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                lineNumber: 284,
+                lineNumber: 301,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-        lineNumber: 282,
+        lineNumber: 299,
         columnNumber: 5
     }, this);
 }
@@ -1900,7 +1928,7 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
                         children: t.panelN(panel.panel_number)
                     }, void 0, false, {
                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                        lineNumber: 342,
+                        lineNumber: 359,
                         columnNumber: 9
                     }, this),
                     cjpSlots[0] && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1911,7 +1939,7 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
                                 children: "CJP"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 346,
+                                lineNumber: 363,
                                 columnNumber: 13
                             }, this),
                             (()=>{
@@ -1921,13 +1949,13 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
                                     size: "sm"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                    lineNumber: 347,
+                                    lineNumber: 364,
                                     columnNumber: 111
                                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                     className: "w-7 h-7 rounded-full bg-white/50 border-2 border-dashed border-current opacity-40 shrink-0"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                    lineNumber: 347,
+                                    lineNumber: 364,
                                     columnNumber: 151
                                 }, this);
                             })(),
@@ -1945,7 +1973,7 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
                                         children: t.selectJudge
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 354,
+                                        lineNumber: 371,
                                         columnNumber: 15
                                     }, this),
                                     poolJudges.map((j)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -1953,19 +1981,19 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
                                             children: j.full_name
                                         }, j.id, false, {
                                             fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                            lineNumber: 355,
+                                            lineNumber: 372,
                                             columnNumber: 36
                                         }, this))
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 348,
+                                lineNumber: 365,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                        lineNumber: 345,
+                        lineNumber: 362,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -1977,13 +2005,13 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
                         children: locked ? `🔒 ${t.unlock}` : `🔓 ${t.lock}`
                     }, void 0, false, {
                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                        lineNumber: 359,
+                        lineNumber: 376,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                lineNumber: 341,
+                lineNumber: 358,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2005,11 +2033,11 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
                                 onAssign: onAssign
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 374,
+                                lineNumber: 391,
                                 columnNumber: 13
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {}, void 0, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 382,
+                                lineNumber: 399,
                                 columnNumber: 15
                             }, this),
                             ejSlots.map((slot)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(SlotCell, {
@@ -2021,7 +2049,7 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
                                     onAssign: onAssign
                                 }, slot.id, false, {
                                     fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                    lineNumber: 384,
+                                    lineNumber: 401,
                                     columnNumber: 13
                                 }, this)),
                             djSlots[1] ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(SlotCell, {
@@ -2033,11 +2061,11 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
                                 onAssign: onAssign
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 397,
+                                lineNumber: 414,
                                 columnNumber: 13
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {}, void 0, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 405,
+                                lineNumber: 422,
                                 columnNumber: 15
                             }, this),
                             ajSlots.map((slot)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(SlotCell, {
@@ -2049,13 +2077,13 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
                                     onAssign: onAssign
                                 }, slot.id, false, {
                                     fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                    lineNumber: 407,
+                                    lineNumber: 424,
                                     columnNumber: 13
                                 }, this))
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                        lineNumber: 369,
+                        lineNumber: 386,
                         columnNumber: 9
                     }, this),
                     !locked && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2069,7 +2097,7 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
                                         children: "EJ / AJ"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 423,
+                                        lineNumber: 440,
                                         columnNumber: 15
                                     }, this),
                                     canRemoveEjAj && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2081,7 +2109,7 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
                                         children: "−"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 425,
+                                        lineNumber: 442,
                                         columnNumber: 17
                                     }, this),
                                     canAddEjAj && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2093,13 +2121,13 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
                                         children: "+"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 431,
+                                        lineNumber: 448,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 422,
+                                lineNumber: 439,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2110,7 +2138,7 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
                                         children: "DJ"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 438,
+                                        lineNumber: 455,
                                         columnNumber: 15
                                     }, this),
                                     canRemoveDj && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2119,7 +2147,7 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
                                         children: "−"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 440,
+                                        lineNumber: 457,
                                         columnNumber: 17
                                     }, this),
                                     canAddDj && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2128,31 +2156,31 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
                                         children: "+"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 446,
+                                        lineNumber: 463,
                                         columnNumber: 17
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 437,
+                                lineNumber: 454,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                        lineNumber: 421,
+                        lineNumber: 438,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                lineNumber: 367,
+                lineNumber: 384,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-        lineNumber: 340,
+        lineNumber: 357,
         columnNumber: 5
     }, this);
 }
@@ -2169,7 +2197,7 @@ function SectionAssignmentBlock({ lang, section, panels, slots, poolJudges, pane
                 children: label
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                lineNumber: 478,
+                lineNumber: 495,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2191,19 +2219,19 @@ function SectionAssignmentBlock({ lang, section, panels, slots, poolJudges, pane
                         onRemoveSlot: (role)=>onRemoveSlot(section.id, panel.id, role)
                     }, panel.id, false, {
                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                        lineNumber: 483,
+                        lineNumber: 500,
                         columnNumber: 13
                     }, this);
                 })
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                lineNumber: 479,
+                lineNumber: 496,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-        lineNumber: 477,
+        lineNumber: 494,
         columnNumber: 5
     }, this);
 }
@@ -2235,7 +2263,7 @@ function JudgesTab({ lang, globalJudges, judgePool, nominations, clubs, assignme
                 onCreateJudge: onCreateJudge
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                lineNumber: 544,
+                lineNumber: 561,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("section", {
@@ -2245,7 +2273,7 @@ function JudgesTab({ lang, globalJudges, judgePool, nominations, clubs, assignme
                         children: t.assignments
                     }, void 0, false, {
                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                        lineNumber: 557,
+                        lineNumber: 574,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2253,7 +2281,7 @@ function JudgesTab({ lang, globalJudges, judgePool, nominations, clubs, assignme
                         children: t.assignmentsHint
                     }, void 0, false, {
                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                        lineNumber: 558,
+                        lineNumber: 575,
                         columnNumber: 9
                     }, this),
                     sortedSections.length === 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2261,7 +2289,7 @@ function JudgesTab({ lang, globalJudges, judgePool, nominations, clubs, assignme
                         children: t.noSections
                     }, void 0, false, {
                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                        lineNumber: 561,
+                        lineNumber: 578,
                         columnNumber: 11
                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
                         children: [
@@ -2276,12 +2304,12 @@ function JudgesTab({ lang, globalJudges, judgePool, nominations, clubs, assignme
                                         children: tabLabel(sec)
                                     }, sec.id, false, {
                                         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                        lineNumber: 569,
+                                        lineNumber: 586,
                                         columnNumber: 17
                                     }, this))
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 567,
+                                lineNumber: 584,
                                 columnNumber: 13
                             }, this),
                             activeSection && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(SectionAssignmentBlock, {
@@ -2297,7 +2325,7 @@ function JudgesTab({ lang, globalJudges, judgePool, nominations, clubs, assignme
                                 onRemoveSlot: onRemoveSlot
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                                lineNumber: 586,
+                                lineNumber: 603,
                                 columnNumber: 15
                             }, this)
                         ]
@@ -2305,13 +2333,13 @@ function JudgesTab({ lang, globalJudges, judgePool, nominations, clubs, assignme
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-                lineNumber: 556,
+                lineNumber: 573,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/admin/competition-detail/JudgesTab.tsx",
-        lineNumber: 543,
+        lineNumber: 560,
         columnNumber: 5
     }, this);
 }
@@ -9510,22 +9538,32 @@ function Page() {
                 } : a));
     }
     async function handleCreateJudge(data) {
-        const { full_name, phone, licence } = data;
-        const { data: newJudge } = await supabase.from('judges').insert({
-            full_name,
-            phone,
-            licence,
-            avatar_url: null
-        }).select().single();
-        if (!newJudge) return;
-        setGlobalJudges((prev)=>[
-                ...prev,
-                {
-                    ...newJudge,
-                    email: data.email
-                }
-            ]);
-        await handleAddToPool(newJudge.id);
+        const { full_name, email, phone, licence } = data;
+        if (!email) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const body = {
+            role: 'judge',
+            email,
+            full_name
+        };
+        if (phone) body.phone = phone;
+        if (licence) body.licence = licence;
+        const res = await fetch('/api/admin/invite', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...token ? {
+                    Authorization: `Bearer ${token}`
+                } : {}
+            },
+            body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+            const { error } = await res.json();
+            throw new Error(error ?? 'Failed to send invite');
+        }
+    // Judge will appear in the pool once they accept the invite and their profile is created
     }
     async function handleAssignJudge(slotId, judgeId) {
         await supabase.from('section_panel_judges').update({
@@ -9701,7 +9739,7 @@ function Page() {
                 onLangChange: (l)=>setLang(l)
             }, void 0, false, {
                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                lineNumber: 446,
+                lineNumber: 456,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9711,27 +9749,27 @@ function Page() {
                         className: "h-4 w-16 bg-slate-100 rounded animate-pulse"
                     }, void 0, false, {
                         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                        lineNumber: 449,
+                        lineNumber: 459,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "h-4 w-px bg-slate-200"
                     }, void 0, false, {
                         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                        lineNumber: 450,
+                        lineNumber: 460,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "h-4 w-48 bg-slate-100 rounded animate-pulse"
                     }, void 0, false, {
                         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                        lineNumber: 451,
+                        lineNumber: 461,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                lineNumber: 448,
+                lineNumber: 458,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9753,17 +9791,17 @@ function Page() {
                             }
                         }, i, false, {
                             fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                            lineNumber: 457,
+                            lineNumber: 467,
                             columnNumber: 13
                         }, this))
                 }, void 0, false, {
                     fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                    lineNumber: 455,
+                    lineNumber: 465,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                lineNumber: 454,
+                lineNumber: 464,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9776,7 +9814,7 @@ function Page() {
                                 className: "h-5 w-40 bg-slate-100 rounded animate-pulse"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                lineNumber: 464,
+                                lineNumber: 474,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9793,31 +9831,31 @@ function Page() {
                                                 className: "h-3 w-20 bg-slate-100 rounded animate-pulse"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                                lineNumber: 468,
+                                                lineNumber: 478,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                 className: "h-9 bg-slate-50 border border-slate-100 rounded-xl animate-pulse"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                                lineNumber: 469,
+                                                lineNumber: 479,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, i, true, {
                                         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                        lineNumber: 467,
+                                        lineNumber: 477,
                                         columnNumber: 15
                                     }, this))
                             }, void 0, false, {
                                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                lineNumber: 465,
+                                lineNumber: 475,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                        lineNumber: 463,
+                        lineNumber: 473,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9827,7 +9865,7 @@ function Page() {
                                 className: "h-5 w-32 bg-slate-100 rounded animate-pulse"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                lineNumber: 475,
+                                lineNumber: 485,
                                 columnNumber: 11
                             }, this),
                             [
@@ -9841,7 +9879,7 @@ function Page() {
                                             className: "w-9 h-9 rounded-full bg-slate-100 animate-pulse shrink-0"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                            lineNumber: 478,
+                                            lineNumber: 488,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9851,44 +9889,44 @@ function Page() {
                                                     className: "h-3.5 w-36 bg-slate-100 rounded animate-pulse"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                                    lineNumber: 480,
+                                                    lineNumber: 490,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                     className: "h-3 w-24 bg-slate-100 rounded animate-pulse"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                                    lineNumber: 481,
+                                                    lineNumber: 491,
                                                     columnNumber: 17
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                            lineNumber: 479,
+                                            lineNumber: 489,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, i, true, {
                                     fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                    lineNumber: 477,
+                                    lineNumber: 487,
                                     columnNumber: 13
                                 }, this))
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                        lineNumber: 474,
+                        lineNumber: 484,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                lineNumber: 462,
+                lineNumber: 472,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-        lineNumber: 445,
+        lineNumber: 455,
         columnNumber: 5
     }, this);
     if (!competition) return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9898,12 +9936,12 @@ function Page() {
             children: "Competition not found."
         }, void 0, false, {
             fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-            lineNumber: 492,
+            lineNumber: 502,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-        lineNumber: 491,
+        lineNumber: 501,
         columnNumber: 5
     }, this);
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9914,7 +9952,7 @@ function Page() {
                 onLangChange: (l)=>setLang(l)
             }, void 0, false, {
                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                lineNumber: 498,
+                lineNumber: 508,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$admin$2f$competition$2d$detail$2f$CompetitionDetail$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -9965,13 +10003,13 @@ function Page() {
                 competitionCoaches: competitionCoaches
             }, void 0, false, {
                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                lineNumber: 500,
+                lineNumber: 510,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-        lineNumber: 497,
+        lineNumber: 507,
         columnNumber: 5
     }, this);
 }
