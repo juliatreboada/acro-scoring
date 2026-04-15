@@ -59,17 +59,33 @@ export default function SetPasswordPage() {
   const t = T[lang]
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    const code = searchParams.get('code')
+
+    if (code) {
+      // PKCE flow: exchange the code for a session (default with @supabase/ssr)
+      supabase.auth.exchangeCodeForSession(code)
+        .then(({ data, error }) => {
+          if (data.session && !error) {
+            window.history.replaceState(null, '', window.location.pathname)
+            setStatus('ready')
+          } else {
+            setStatus('no_session')
+          }
+        })
+      return
+    }
+
+    // Implicit flow fallback: tokens in the URL hash
     const hash   = window.location.hash.substring(1)
     const params = new URLSearchParams(hash)
     const accessToken  = params.get('access_token')
     const refreshToken = params.get('refresh_token')
 
     if (accessToken && refreshToken) {
-      // Explicit session exchange from the invite hash tokens
       supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
         .then(({ data, error }) => {
           if (data.session && !error) {
-            // Remove tokens from the URL bar
             window.history.replaceState(null, '', window.location.pathname)
             setStatus('ready')
           } else {
@@ -77,7 +93,7 @@ export default function SetPasswordPage() {
           }
         })
     } else {
-      // No hash — check for an existing session (e.g. user refreshed the page)
+      // No code or hash — check for an existing session (e.g. user refreshed the page)
       supabase.auth.getUser().then(({ data: { user } }) => {
         setStatus(user ? 'ready' : 'no_session')
       })
