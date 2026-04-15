@@ -343,7 +343,7 @@ export default function Page() {
   async function handleUploadTeamPhoto(id: string, file: File) {
     const ext = file.name.split('.').pop() ?? 'jpg'
     const team = teams.find(t => t.id === id)
-    const nameSlug = (team?.name ?? id)
+    const nameSlug = (team?.gymnast_display ?? id)
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').toLowerCase()
     const path = `${clubId}/${nameSlug}_photo.${ext}`
     const { error } = await supabase.storage.from('team-photos').upload(path, file, { upsert: true })
