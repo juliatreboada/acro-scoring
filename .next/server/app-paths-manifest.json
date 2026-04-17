@@ -11,6 +11,7 @@
   "/api/admin/profiles/route": "app/api/admin/profiles/route.js",
   "/api/admin/users/route": "app/api/admin/users/route.js",
   "/api/club/invite-judge/route": "app/api/club/invite-judge/route.js",
+  "/auth/confirm/page": "app/auth/confirm/page.js",
   "/auth/set-password/page": "app/auth/set-password/page.js",
   "/cjp-aj/page": "app/cjp-aj/page.js",
   "/cjp-dj-aj/page": "app/cjp-dj-aj/page.js",

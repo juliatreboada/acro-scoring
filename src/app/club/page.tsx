@@ -169,7 +169,10 @@ export default function Page() {
 
   async function handleUploadCoachPhoto(id: string, file: File) {
     const ext = file.name.split('.').pop() ?? 'jpg'
-    const path = `${id}/photo.${ext}`
+    const coach = coaches.find(c => c.id === id)
+    const nameSlug = (coach?.full_name ?? id)
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').toLowerCase()
+    const path = `${coach?.club_id ?? id}/${nameSlug}_photo.${ext}`
     const { error } = await supabase.storage.from('coaches-photos').upload(path, file, { upsert: true })
     if (error) { setUploadError(error.message); return }
     const { data } = supabase.storage.from('coaches-photos').getPublicUrl(path)
@@ -180,7 +183,12 @@ export default function Page() {
 
   async function handleUploadCoachLicencia(id: string, file: File) {
     const ext = file.name.split('.').pop() ?? 'pdf'
-    const path = `${id}/licencia.${ext}`
+    const coach = coaches.find(c => c.id === id)
+    const nameParts = (coach?.full_name ?? id)
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '_').toLowerCase()
+    const clubId = coach?.club_id ?? id
+    const path = `${clubId}/${nameParts}.${ext}`
     const { error } = await supabase.storage.from('coach-licencias').upload(path, file, { upsert: true })
     if (error) { setUploadError(error.message); return }
     const { data } = supabase.storage.from('coach-licencias').getPublicUrl(path)
@@ -298,7 +306,11 @@ export default function Page() {
 
   async function handleUploadGymnastPhoto(id: string, file: File) {
     const ext = file.name.split('.').pop() ?? 'jpg'
-    const path = `${id}/photo.${ext}`
+    const gymnast = gymnasts.find(g => g.id === id)
+    const normalize = (s: string) =>
+      s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase()
+    const nameParts = [gymnast?.first_name, gymnast?.last_name_1, gymnast?.last_name_2].filter(Boolean).map(s => normalize(s!))
+    const path = `${gymnast?.club_id ?? id}/${nameParts.join('_')}_photo.${ext}`
     const { error } = await supabase.storage.from('gymnasts-photos').upload(path, file, { upsert: true })
     if (error) { setUploadError(error.message); return }
     const { data } = supabase.storage.from('gymnasts-photos').getPublicUrl(path)
@@ -330,7 +342,10 @@ export default function Page() {
 
   async function handleUploadTeamPhoto(id: string, file: File) {
     const ext = file.name.split('.').pop() ?? 'jpg'
-    const path = `${id}/photo.${ext}`
+    const team = teams.find(t => t.id === id)
+    const nameSlug = (team?.gymnast_display ?? id)
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').toLowerCase()
+    const path = `${clubId}/${nameSlug}_photo.${ext}`
     const { error } = await supabase.storage.from('team-photos').upload(path, file, { upsert: true })
     if (error) { setUploadError(error.message); return }
     const { data } = supabase.storage.from('team-photos').getPublicUrl(path)
@@ -352,7 +367,10 @@ export default function Page() {
 
   async function handleUploadJudgePhoto(id: string, file: File) {
     const ext = file.name.split('.').pop() ?? 'jpg'
-    const path = `${id}/photo.${ext}`
+    const judge = judges.find(j => j.id === id)
+    const nameSlug = (judge?.full_name ?? id)
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').toLowerCase()
+    const path = `${clubId}/${nameSlug}_photo.${ext}`
     const { error } = await supabase.storage.from('judge-photos').upload(path, file, { upsert: true })
     if (error) { setUploadError(error.message); return }
     const { data } = supabase.storage.from('judge-photos').getPublicUrl(path)
@@ -378,8 +396,10 @@ export default function Page() {
       const team = teams.find(t => t.id === teamId)
       const dorsal = entry?.dorsal ?? 0
       const ageGroupRule = ageGroupRules.find(r => r.id === team?.age_group)
-      const ageGroup = (ageGroupRule?.age_group ?? team?.age_group ?? 'unknown').replace(/\s+/g, '-')
-      const clubSlug = club?.club_name.replace(/\s+/g, '-') ?? 'club'
+      const slugify = (s: string) =>
+        s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^a-zA-Z0-9_-]/g, '')
+      const ageGroup = slugify(ageGroupRule?.age_group ?? team?.age_group ?? 'unknown')
+      const clubSlug = slugify(club?.club_name ?? 'club')
       const path = `${competitionId}/${dorsal}-${ageGroup}-${routineType}-${clubSlug}.${ext}`
       const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
       if (error) { setUploadError(error.message); return }

@@ -1,3 +1,2 @@
-[00:00:01.039] Server  LOG     ✓ Ready in 805ms
-[00:00:06.140] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:05:55.294] Server  LOG     ✓ Compiled in 125ms
+[00:00:01.161] Server  LOG     ✓ Ready in 916ms
+[00:00:05.465] Browser ERROR   {"__isAuthError":true,"code":"refresh_token_not_found","name":"AuthApiError","status":400}
