@@ -396,8 +396,10 @@ export default function Page() {
       const team = teams.find(t => t.id === teamId)
       const dorsal = entry?.dorsal ?? 0
       const ageGroupRule = ageGroupRules.find(r => r.id === team?.age_group)
-      const ageGroup = (ageGroupRule?.age_group ?? team?.age_group ?? 'unknown').replace(/\s+/g, '-')
-      const clubSlug = club?.club_name.replace(/\s+/g, '-') ?? 'club'
+      const slugify = (s: string) =>
+        s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^a-zA-Z0-9_-]/g, '')
+      const ageGroup = slugify(ageGroupRule?.age_group ?? team?.age_group ?? 'unknown')
+      const clubSlug = slugify(club?.club_name ?? 'club')
       const path = `${competitionId}/${dorsal}-${ageGroup}-${routineType}-${clubSlug}.${ext}`
       const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
       if (error) { setUploadError(error.message); return }
