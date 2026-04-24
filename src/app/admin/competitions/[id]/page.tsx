@@ -383,6 +383,36 @@ export default function Page() {
   // ── starting order ────────────────────────────────────────────────────────────
   async function handleToggleLock(sessionId: string) {
     const isLocked = lockedSessions.includes(sessionId)
+
+    // When locking: auto-create session_orders if none exist yet
+    if (!isLocked) {
+      const existingOrders = sessionOrders.filter(o => o.session_id === sessionId)
+      if (existingOrders.length === 0) {
+        const session = sessions.find(s => s.id === sessionId)
+        if (session) {
+          const sessionTeamIds = entries
+            .filter(e => !e.dropped_out)
+            .map(e => e.team_id)
+            .filter(tid => {
+              const team = globalTeams.find(t => t.id === tid)
+              return team?.age_group === session.age_group && team?.category === session.category
+            })
+
+          if (sessionTeamIds.length > 0) {
+            const newOrders: SessionOrder[] = sessionTeamIds.map((teamId, idx) => ({
+              session_id: sessionId, team_id: teamId, position: idx + 1,
+            }))
+            await supabase.from('session_orders')
+              .upsert(newOrders, { onConflict: 'session_id,team_id' })
+            setSessionOrders(prev => [
+              ...prev.filter(o => o.session_id !== sessionId),
+              ...newOrders,
+            ])
+          }
+        }
+      }
+    }
+
     await supabase.from('sessions').update({ order_locked: !isLocked } as never).eq('id', sessionId)
     setLockedSessions(prev =>
       isLocked ? prev.filter(sid => sid !== sessionId) : [...prev, sessionId]

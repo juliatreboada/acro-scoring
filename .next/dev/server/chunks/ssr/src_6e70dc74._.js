@@ -6185,7 +6185,9 @@ function Page() {
     }
     async function handleUploadCoachPhoto(id, file) {
         const ext = file.name.split('.').pop() ?? 'jpg';
-        const path = `${id}/photo.${ext}`;
+        const coach = coaches.find((c)=>c.id === id);
+        const nameSlug = (coach?.full_name ?? id).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').toLowerCase();
+        const path = `${coach?.club_id ?? id}/${nameSlug}_photo.${ext}`;
         const { error } = await supabase.storage.from('coaches-photos').upload(path, file, {
             upsert: true
         });
@@ -6205,7 +6207,10 @@ function Page() {
     }
     async function handleUploadCoachLicencia(id, file) {
         const ext = file.name.split('.').pop() ?? 'pdf';
-        const path = `${id}/licencia.${ext}`;
+        const coach = coaches.find((c)=>c.id === id);
+        const nameParts = (coach?.full_name ?? id).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').toLowerCase();
+        const clubId = coach?.club_id ?? id;
+        const path = `${clubId}/${nameParts}.${ext}`;
         const { error } = await supabase.storage.from('coach-licencias').upload(path, file, {
             upsert: true
         });
@@ -6371,7 +6376,14 @@ function Page() {
     }
     async function handleUploadGymnastPhoto(id, file) {
         const ext = file.name.split('.').pop() ?? 'jpg';
-        const path = `${id}/photo.${ext}`;
+        const gymnast = gymnasts.find((g)=>g.id === id);
+        const normalize = (s)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase();
+        const nameParts = [
+            gymnast?.first_name,
+            gymnast?.last_name_1,
+            gymnast?.last_name_2
+        ].filter(Boolean).map((s)=>normalize(s));
+        const path = `${gymnast?.club_id ?? id}/${nameParts.join('_')}_photo.${ext}`;
         const { error } = await supabase.storage.from('gymnasts-photos').upload(path, file, {
             upsert: true
         });
@@ -6428,7 +6440,9 @@ function Page() {
     }
     async function handleUploadTeamPhoto(id, file) {
         const ext = file.name.split('.').pop() ?? 'jpg';
-        const path = `${id}/photo.${ext}`;
+        const team = teams.find((t)=>t.id === id);
+        const nameSlug = (team?.gymnast_display ?? id).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').toLowerCase();
+        const path = `${clubId}/${nameSlug}_photo.${ext}`;
         const { error } = await supabase.storage.from('team-photos').upload(path, file, {
             upsert: true
         });
@@ -6468,7 +6482,9 @@ function Page() {
     }
     async function handleUploadJudgePhoto(id, file) {
         const ext = file.name.split('.').pop() ?? 'jpg';
-        const path = `${id}/photo.${ext}`;
+        const judge = judges.find((j)=>j.id === id);
+        const nameSlug = (judge?.full_name ?? id).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').toLowerCase();
+        const path = `${clubId}/${nameSlug}_photo.${ext}`;
         const { error } = await supabase.storage.from('judge-photos').upload(path, file, {
             upsert: true
         });
@@ -6498,8 +6514,9 @@ function Page() {
             const team = teams.find((t)=>t.id === teamId);
             const dorsal = entry?.dorsal ?? 0;
             const ageGroupRule = ageGroupRules.find((r)=>r.id === team?.age_group);
-            const ageGroup = (ageGroupRule?.age_group ?? team?.age_group ?? 'unknown').replace(/\s+/g, '-');
-            const clubSlug = club?.club_name.replace(/\s+/g, '-') ?? 'club';
+            const slugify = (s)=>s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-').replace(/[^a-zA-Z0-9_-]/g, '');
+            const ageGroup = slugify(ageGroupRule?.age_group ?? team?.age_group ?? 'unknown');
+            const clubSlug = slugify(club?.club_name ?? 'club');
             const path = `${competitionId}/${dorsal}-${ageGroup}-${routineType}-${clubSlug}.${ext}`;
             const { error } = await supabase.storage.from(bucket).upload(path, file, {
                 upsert: true
@@ -6558,12 +6575,12 @@ function Page() {
             className: "w-6 h-6 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin"
         }, void 0, false, {
             fileName: "[project]/src/app/club/page.tsx",
-            lineNumber: 419,
+            lineNumber: 439,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/app/club/page.tsx",
-        lineNumber: 418,
+        lineNumber: 438,
         columnNumber: 5
     }, this);
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6573,7 +6590,7 @@ function Page() {
                 onLangChange: setLang
             }, void 0, false, {
                 fileName: "[project]/src/app/club/page.tsx",
-                lineNumber: 425,
+                lineNumber: 445,
                 columnNumber: 7
             }, this),
             uploadError && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -6583,7 +6600,7 @@ function Page() {
                         children: uploadError
                     }, void 0, false, {
                         fileName: "[project]/src/app/club/page.tsx",
-                        lineNumber: 429,
+                        lineNumber: 449,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -6592,13 +6609,13 @@ function Page() {
                         children: "✕"
                     }, void 0, false, {
                         fileName: "[project]/src/app/club/page.tsx",
-                        lineNumber: 430,
+                        lineNumber: 450,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/club/page.tsx",
-                lineNumber: 428,
+                lineNumber: 448,
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$club$2f$ClubPortal$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -6647,13 +6664,13 @@ function Page() {
                 onUploadAvatar: handleUploadAvatar
             }, void 0, false, {
                 fileName: "[project]/src/app/club/page.tsx",
-                lineNumber: 434,
+                lineNumber: 454,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/club/page.tsx",
-        lineNumber: 424,
+        lineNumber: 444,
         columnNumber: 5
     }, this);
 }

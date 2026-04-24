@@ -1,2 +1,162 @@
-[00:00:01.161] Server  LOG     ✓ Ready in 916ms
-[00:00:05.465] Browser ERROR   {"__isAuthError":true,"code":"refresh_token_not_found","name":"AuthApiError","status":400}
+[00:00:01.209] Server  LOG     ✓ Ready in 922ms
+[00:00:04.509] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:09.522] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:43.067] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:49.069] Browser ERROR   In HTML, %s cannot be a descendant of <%s>.
+This will cause a hydration error.%s <div> p 
+
+  ...
+    <SegmentViewNode type="page" pagePath="starting-o...">
+      <SegmentTrieNode>
+      <ClientPageRoot Component={function Page} serverProvidedParams={{...}}>
+        <Page params={Promise} searchParams={Promise}>
+          <div>
+            <div>
+            <StartingOrderView lang="es" competition={{id:"5da1f8...", ...}} sections={[...]} panels={[...]} ...>
+              <div className="min-h-scre...">
+                <div>
+                <div className="max-w-4xl ...">
+                  <div>
+                  <div className="space-y-4">
+                    <SessionOrderCard session={{id:"b0f735...", ...}} sessionOrders={[...]} isLocked={true} ...>
+                      <div className="bg-white r...">
+                        <div>
+                        <ol className="divide-y d...">
+                          <li className={"flex ite..."}>
+                            <div>
+                            <span>
+                            <span>
+                            <div>
+                            <div className="flex-1 min...">
+                              <p>
+>                             <p className="flex items-center gap-1 text-xs text-slate-400 truncate">
+                                <ClubAvatar club={{id:"cc530e...", ...}}>
+>                                 <div
+>                                   className="w-5 h-5 rounded-full bg-slate-200 text-slate-500 text-[9px] font-semibo..."
+>                                 >
+                                ...
+                    ...
+    ...
+
+[00:00:49.070] Browser ERROR   <%s> cannot contain a nested %s.
+See this log for the ancestor stack trace. p <div>
+[00:01:55.034] Server  LOG     ✓ Compiled in 130ms
+[00:01:58.150] Server  LOG     ✓ Compiled in 44ms
+[00:02:01.245] Server  LOG     ✓ Compiled in 124ms
+[00:10:25.632] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:10:26.570] Browser ERROR   In HTML, %s cannot be a descendant of <%s>.
+This will cause a hydration error.%s <div> p 
+
+  ...
+    <SegmentViewNode type="page" pagePath="starting-o...">
+      <SegmentTrieNode>
+      <ClientPageRoot Component={function Page} serverProvidedParams={{...}}>
+        <Page params={Promise} searchParams={Promise}>
+          <div>
+            <div>
+            <StartingOrderView lang="es" competition={{id:"5da1f8...", ...}} sections={[...]} panels={[...]} ...>
+              <div className="min-h-scre...">
+                <div>
+                <div className="max-w-4xl ...">
+                  <div className="space-y-4">
+                    <SessionOrderCard session={{id:"b0f735...", ...}} sessionOrders={[...]} isLocked={true} ...>
+                      <div className="bg-white r...">
+                        <div>
+                        <ol className="divide-y d...">
+                          <li className={"flex ite..."}>
+                            <div>
+                            <span>
+                            <span>
+                            <div>
+                            <div className="flex-1 min...">
+                              <p>
+>                             <p className="flex items-center gap-1 text-xs text-slate-400 truncate">
+                                <ClubAvatar club={{id:"cc530e...", ...}}>
+>                                 <div
+>                                   className="w-5 h-5 rounded-full bg-slate-200 text-slate-500 text-[9px] font-semibo..."
+>                                 >
+                                ...
+                    ...
+    ...
+
+[00:10:26.571] Browser ERROR   <%s> cannot contain a nested %s.
+See this log for the ancestor stack trace. p <div>
+[03:18:00.882] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[03:18:03.714] Browser ERROR   In HTML, %s cannot be a descendant of <%s>.
+This will cause a hydration error.%s <div> p 
+
+  ...
+    <SegmentViewNode type="page" pagePath="starting-o...">
+      <SegmentTrieNode>
+      <ClientPageRoot Component={function Page} serverProvidedParams={{...}}>
+        <Page params={Promise} searchParams={Promise}>
+          <div>
+            <div>
+            <StartingOrderView lang="es" competition={{id:"5da1f8...", ...}} sections={[...]} panels={[...]} ...>
+              <div className="min-h-scre...">
+                <div>
+                <div className="max-w-4xl ...">
+                  <div className="space-y-4">
+                    <SessionOrderCard session={{id:"b0f735...", ...}} sessionOrders={[...]} isLocked={true} ...>
+                      <div className="bg-white r...">
+                        <div>
+                        <ol className="divide-y d...">
+                          <li className={"flex ite..."}>
+                            <div>
+                            <span>
+                            <span>
+                            <div>
+                            <div className="flex-1 min...">
+                              <p>
+>                             <p className="flex items-center gap-1 text-xs text-slate-400 truncate">
+                                <ClubAvatar club={{id:"cc530e...", ...}}>
+>                                 <div
+>                                   className="w-5 h-5 rounded-full bg-slate-200 text-slate-500 text-[9px] font-semibo..."
+>                                 >
+                                ...
+                    ...
+    ...
+
+[03:18:03.714] Browser ERROR   <%s> cannot contain a nested %s.
+See this log for the ancestor stack trace. p <div>
+[03:18:17.908] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[03:18:18.942] Browser ERROR   In HTML, %s cannot be a descendant of <%s>.
+This will cause a hydration error.%s <div> p 
+
+  ...
+    <SegmentViewNode type="page" pagePath="starting-o...">
+      <SegmentTrieNode>
+      <ClientPageRoot Component={function Page} serverProvidedParams={{...}}>
+        <Page params={Promise} searchParams={Promise}>
+          <div>
+            <div>
+            <StartingOrderView lang="es" competition={{id:"5da1f8...", ...}} sections={[...]} panels={[...]} ...>
+              <div className="min-h-scre...">
+                <div>
+                <div className="max-w-4xl ...">
+                  <div className="space-y-4">
+                    <SessionOrderCard session={{id:"b0f735...", ...}} sessionOrders={[...]} isLocked={true} ...>
+                      <div className="bg-white r...">
+                        <div>
+                        <ol className="divide-y d...">
+                          <li className={"flex ite..."}>
+                            <div>
+                            <span>
+                            <span>
+                            <div>
+                            <div className="flex-1 min...">
+                              <p>
+>                             <p className="flex items-center gap-1 text-xs text-slate-400 truncate">
+                                <ClubAvatar club={{id:"cc530e...", ...}}>
+>                                 <div
+>                                   className="w-5 h-5 rounded-full bg-slate-200 text-slate-500 text-[9px] font-semibo..."
+>                                 >
+                                ...
+                    ...
+    ...
+
+[03:18:18.942] Browser ERROR   <%s> cannot contain a nested %s.
+See this log for the ancestor stack trace. p <div>
+[07:12:25.001] Browser ERROR   {}
+[07:12:25.233] Browser ERROR   {}
+[07:12:25.586] Browser ERROR   {}

@@ -9635,6 +9635,33 @@ function Page() {
     // ── starting order ────────────────────────────────────────────────────────────
     async function handleToggleLock(sessionId) {
         const isLocked = lockedSessions.includes(sessionId);
+        // When locking: auto-create session_orders if none exist yet
+        if (!isLocked) {
+            const existingOrders = sessionOrders.filter((o)=>o.session_id === sessionId);
+            if (existingOrders.length === 0) {
+                const session = sessions.find((s)=>s.id === sessionId);
+                if (session) {
+                    const sessionTeamIds = entries.filter((e)=>!e.dropped_out).map((e)=>e.team_id).filter((tid)=>{
+                        const team = globalTeams.find((t)=>t.id === tid);
+                        return team?.age_group === session.age_group && team?.category === session.category;
+                    });
+                    if (sessionTeamIds.length > 0) {
+                        const newOrders = sessionTeamIds.map((teamId, idx)=>({
+                                session_id: sessionId,
+                                team_id: teamId,
+                                position: idx + 1
+                            }));
+                        await supabase.from('session_orders').upsert(newOrders, {
+                            onConflict: 'session_id,team_id'
+                        });
+                        setSessionOrders((prev)=>[
+                                ...prev.filter((o)=>o.session_id !== sessionId),
+                                ...newOrders
+                            ]);
+                    }
+                }
+            }
+        }
         await supabase.from('sessions').update({
             order_locked: !isLocked
         }).eq('id', sessionId);
@@ -9739,7 +9766,7 @@ function Page() {
                 onLangChange: (l)=>setLang(l)
             }, void 0, false, {
                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                lineNumber: 456,
+                lineNumber: 486,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9749,27 +9776,27 @@ function Page() {
                         className: "h-4 w-16 bg-slate-100 rounded animate-pulse"
                     }, void 0, false, {
                         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                        lineNumber: 459,
+                        lineNumber: 489,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "h-4 w-px bg-slate-200"
                     }, void 0, false, {
                         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                        lineNumber: 460,
+                        lineNumber: 490,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "h-4 w-48 bg-slate-100 rounded animate-pulse"
                     }, void 0, false, {
                         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                        lineNumber: 461,
+                        lineNumber: 491,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                lineNumber: 458,
+                lineNumber: 488,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9791,17 +9818,17 @@ function Page() {
                             }
                         }, i, false, {
                             fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                            lineNumber: 467,
+                            lineNumber: 497,
                             columnNumber: 13
                         }, this))
                 }, void 0, false, {
                     fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                    lineNumber: 465,
+                    lineNumber: 495,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                lineNumber: 464,
+                lineNumber: 494,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9814,7 +9841,7 @@ function Page() {
                                 className: "h-5 w-40 bg-slate-100 rounded animate-pulse"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                lineNumber: 474,
+                                lineNumber: 504,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9831,31 +9858,31 @@ function Page() {
                                                 className: "h-3 w-20 bg-slate-100 rounded animate-pulse"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                                lineNumber: 478,
+                                                lineNumber: 508,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                 className: "h-9 bg-slate-50 border border-slate-100 rounded-xl animate-pulse"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                                lineNumber: 479,
+                                                lineNumber: 509,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, i, true, {
                                         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                        lineNumber: 477,
+                                        lineNumber: 507,
                                         columnNumber: 15
                                     }, this))
                             }, void 0, false, {
                                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                lineNumber: 475,
+                                lineNumber: 505,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                        lineNumber: 473,
+                        lineNumber: 503,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9865,7 +9892,7 @@ function Page() {
                                 className: "h-5 w-32 bg-slate-100 rounded animate-pulse"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                lineNumber: 485,
+                                lineNumber: 515,
                                 columnNumber: 11
                             }, this),
                             [
@@ -9879,7 +9906,7 @@ function Page() {
                                             className: "w-9 h-9 rounded-full bg-slate-100 animate-pulse shrink-0"
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                            lineNumber: 488,
+                                            lineNumber: 518,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9889,44 +9916,44 @@ function Page() {
                                                     className: "h-3.5 w-36 bg-slate-100 rounded animate-pulse"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                                    lineNumber: 490,
+                                                    lineNumber: 520,
                                                     columnNumber: 17
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                     className: "h-3 w-24 bg-slate-100 rounded animate-pulse"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                                    lineNumber: 491,
+                                                    lineNumber: 521,
                                                     columnNumber: 17
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                            lineNumber: 489,
+                                            lineNumber: 519,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, i, true, {
                                     fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                                    lineNumber: 487,
+                                    lineNumber: 517,
                                     columnNumber: 13
                                 }, this))
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                        lineNumber: 484,
+                        lineNumber: 514,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                lineNumber: 472,
+                lineNumber: 502,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-        lineNumber: 455,
+        lineNumber: 485,
         columnNumber: 5
     }, this);
     if (!competition) return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9936,12 +9963,12 @@ function Page() {
             children: "Competition not found."
         }, void 0, false, {
             fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-            lineNumber: 502,
+            lineNumber: 532,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-        lineNumber: 501,
+        lineNumber: 531,
         columnNumber: 5
     }, this);
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -9952,7 +9979,7 @@ function Page() {
                 onLangChange: (l)=>setLang(l)
             }, void 0, false, {
                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                lineNumber: 508,
+                lineNumber: 538,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$admin$2f$competition$2d$detail$2f$CompetitionDetail$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -10003,13 +10030,13 @@ function Page() {
                 competitionCoaches: competitionCoaches
             }, void 0, false, {
                 fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-                lineNumber: 510,
+                lineNumber: 540,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/admin/competitions/[id]/page.tsx",
-        lineNumber: 507,
+        lineNumber: 537,
         columnNumber: 5
     }, this);
 }
