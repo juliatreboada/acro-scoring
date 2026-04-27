@@ -36,5 +36,6 @@
   "/results/[id]/page": "app/results/[id]/page.js",
   "/results/page": "app/results/page.js",
   "/starting-order/[id]/page": "app/starting-order/[id]/page.js",
-  "/starting-order/page": "app/starting-order/page.js"
+  "/starting-order/page": "app/starting-order/page.js",
+  "/tv/[competitionId]/page": "app/tv/[competitionId]/page.js"
 }

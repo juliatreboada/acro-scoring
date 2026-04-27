@@ -439,6 +439,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           cjp_penalty: number | null
+          cjp_penalty_detail: Json | null
           created_at: string
           dif_penalty: number | null
           dif_score: number | null
@@ -455,6 +456,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           cjp_penalty?: number | null
+          cjp_penalty_detail?: Json | null
           created_at?: string
           dif_penalty?: number | null
           dif_score?: number | null
@@ -471,6 +473,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           cjp_penalty?: number | null
+          cjp_penalty_detail?: Json | null
           created_at?: string
           dif_penalty?: number | null
           dif_score?: number | null
@@ -511,7 +514,12 @@ export type Database = {
           aj_score: number | null
           cjp_penalty: number | null
           dj_difficulty: number | null
+          dj_extra_elements: Json | null
+          dj_flags: Json | null
+          dj_incorrect_ts: boolean | null
           dj_penalty: number | null
+          ej_deductions: Json | null
+          ej_extra_elements: Json | null
           ej_score: number | null
           id: string
           section_panel_judge_id: string
@@ -524,7 +532,12 @@ export type Database = {
           aj_score?: number | null
           cjp_penalty?: number | null
           dj_difficulty?: number | null
+          dj_extra_elements?: Json | null
+          dj_flags?: Json | null
+          dj_incorrect_ts?: boolean | null
           dj_penalty?: number | null
+          ej_deductions?: Json | null
+          ej_extra_elements?: Json | null
           ej_score?: number | null
           id?: string
           section_panel_judge_id: string
@@ -537,7 +550,12 @@ export type Database = {
           aj_score?: number | null
           cjp_penalty?: number | null
           dj_difficulty?: number | null
+          dj_extra_elements?: Json | null
+          dj_flags?: Json | null
+          dj_incorrect_ts?: boolean | null
           dj_penalty?: number | null
+          ej_deductions?: Json | null
+          ej_extra_elements?: Json | null
           ej_score?: number | null
           id?: string
           section_panel_judge_id?: string
@@ -1015,6 +1033,55 @@ export type Database = {
             referencedRelation: "teams"
             referencedColumns: ["id"]
           }
+        ]
+      }
+      tv_state: {
+        Row: {
+          id: string
+          competition_id: string
+          session_id: string | null
+          team_id: string | null
+          revealed: boolean
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          competition_id: string
+          session_id?: string | null
+          team_id?: string | null
+          revealed?: boolean
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          competition_id?: string
+          session_id?: string | null
+          team_id?: string | null
+          revealed?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tv_state_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: true
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tv_state_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tv_state_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
