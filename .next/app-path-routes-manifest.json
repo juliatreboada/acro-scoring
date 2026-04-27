@@ -36,5 +36,6 @@
   "/results/[id]/page": "/results/[id]",
   "/results/page": "/results",
   "/starting-order/[id]/page": "/starting-order/[id]",
-  "/starting-order/page": "/starting-order"
+  "/starting-order/page": "/starting-order",
+  "/tv/[competitionId]/page": "/tv/[competitionId]"
 }

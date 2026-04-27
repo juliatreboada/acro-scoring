@@ -538,7 +538,7 @@ export type CJPViewProps = {
   results: Record<string, RoutineResult>
   onOpen: (perfId: string) => void
   onSkip: (perfId: string) => void
-  onSubmit: (status: 'provisional' | 'approved', result: RoutineResult) => void
+  onSubmit: (status: 'provisional' | 'approved', result: RoutineResult, penaltyDetail?: PenaltyState | null) => void
   onReopenScore: (perfId: string, panelJudgeId: string | 'all') => void
   onEditScore?: (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
 }
@@ -586,19 +586,19 @@ export default function CJPView({
   function handleSubmit(status: 'provisional' | 'approved') {
     if (!currentPerfId) return
     const result = computeResult(currentPerfId, currentScores, panelJudges, cjpPenalty, status)
-    onSubmit(status, result)
+    onSubmit(status, result, currentPenalty)
   }
 
   function handleConfirmFinalFromReview() {
     if (!reviewPerfId) return
     const result = computeResult(reviewPerfId, reviewScores, panelJudges, reviewCjpPenalty, 'approved')
-    onSubmit('approved', result)
+    onSubmit('approved', result, reviewPenalty)
   }
 
   function handleUpdateProvisional() {
     if (!reviewPerfId) return
     const result = computeResult(reviewPerfId, reviewScores, panelJudges, reviewCjpPenalty, 'provisional')
-    onSubmit('provisional', result)
+    onSubmit('provisional', result, reviewPenalty)
   }
 
   function handleRankingRowClick(perfId: string) {

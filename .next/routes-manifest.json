@@ -52,6 +52,14 @@
         "nxtPid": "nxtPid"
       },
       "namedRegex": "^/starting\\-order/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/tv/[competitionId]",
+      "regex": "^/tv/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPcompetitionId": "nxtPcompetitionId"
+      },
+      "namedRegex": "^/tv/(?<nxtPcompetitionId>[^/]+?)(?:/)?$"
     }
   ],
   "staticRoutes": [

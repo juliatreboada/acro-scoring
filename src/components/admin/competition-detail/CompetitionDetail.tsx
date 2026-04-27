@@ -10,6 +10,7 @@ import RegistrationsTab, { type RegistrationsTabProps } from './RegistrationsTab
 import StartingOrderTab, { type StartingOrderTabProps } from './StartingOrderTab'
 import CompetitionDayTab from './CompetitionDayTab'
 import LicenciasTab from './LicenciasTab'
+import TVTab from './TVTab'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -24,6 +25,7 @@ const T = {
       overview:      'Overview',
       day:           'Competition day',
       licencias:     'Licencias',
+      tv:            'TV',
     },
     soon: 'Coming soon',
     soonSub: 'This section is not built yet.',
@@ -85,6 +87,7 @@ const T = {
       overview:      'Resumen',
       day:           'Día de competición',
       licencias:     'Licencias',
+      tv:            'TV',
     },
     soon: 'Próximamente',
     soonSub: 'Esta jornada aún no está construida.',
@@ -150,7 +153,7 @@ const ACTION_STYLE: Partial<Record<CompetitionStatus, string>> = {
   active:               'border-red-200 text-red-600 hover:bg-red-50',
 }
 
-type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias'
+type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias' | 'tv'
 
 function formatDateRange(start: string | null, end: string | null): string {
   const fmt = (d: string) =>
@@ -515,6 +518,7 @@ export default function CompetitionDetail({
     { key: 'registrations', label: t.tabs.registrations },
     { key: 'licencias',     label: t.tabs.licencias     },
     { key: 'day',           label: t.tabs.day, live: competition.status === 'active' },
+    { key: 'tv',            label: t.tabs.tv            },
     { key: 'overview',      label: t.tabs.overview      },
   ]
 
@@ -731,6 +735,16 @@ export default function CompetitionDetail({
           entries={entries}
           onStartSession={onStartSession}
           onFinishSession={onFinishSession}
+        />
+      )}
+      {activeTab === 'tv' && (
+        <TVTab
+          lang={lang}
+          competition={competition}
+          sessions={sessions}
+          globalTeams={globalTeams}
+          clubs={clubs}
+          entries={entries}
         />
       )}
     </div>

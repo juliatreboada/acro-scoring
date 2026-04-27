@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useProfile } from '@/contexts/ProfileContext'
-import type { PanelJudge, MockPerf, JudgeScore, RoutineResult } from '@/components/cjp/types'
+import type { PanelJudge, MockPerf, JudgeScore, RoutineResult, PenaltyState } from '@/components/cjp/types'
 import type { SessionStatus } from '@/components/judge/JudgeSession'
 
 // ─── types ────────────────────────────────────────────────────────────────────
@@ -24,7 +24,7 @@ export type JudgeSessionData = {
   ejMethod:      string | null
   handleOpen:              (perfId: string) => Promise<void>
   handleSkip:              (perfId: string) => void
-  handleCJPSubmit:         (status: 'provisional' | 'approved', result: RoutineResult) => Promise<void>
+  handleCJPSubmit:         (status: 'provisional' | 'approved', result: RoutineResult, penaltyDetail?: PenaltyState | null) => Promise<void>
   handleReopenScore:       (perfId: string, panelJudgeId: string | 'all') => Promise<void>
   handleJudgeScoreSubmit:  (score: JudgeScore) => Promise<void>
   handleEditScore:         (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
@@ -361,7 +361,7 @@ export function useJudgeSession(): JudgeSessionData {
     setPerformances(prev => prev.map(p => p.id === perfId ? { ...p, skipped: true } : p))
   }
 
-  async function handleCJPSubmit(status: 'provisional' | 'approved', result: RoutineResult) {
+  async function handleCJPSubmit(status: 'provisional' | 'approved', result: RoutineResult, penaltyDetail?: PenaltyState | null) {
     if (!sessionId) return
     const teamId = result.performanceId.replace(`${sessionId}_`, '')
     await supabase.from('routine_results').upsert({
@@ -369,6 +369,7 @@ export function useJudgeSession(): JudgeSessionData {
       e_score: result.eScore, a_score: result.aScore,
       dif_score: result.difScore, dif_penalty: result.difPenalty,
       cjp_penalty: result.cjpPenalty, final_score: result.finalScore, status,
+      cjp_penalty_detail: penaltyDetail ?? null,
     }, { onConflict: 'session_id,team_id' })
     setResults(prev => ({ ...prev, [result.performanceId]: result }))
   }
