@@ -40,6 +40,7 @@ type ResultData = {
   cjp_penalty: number | null
   final_score: number | null
   cjp_penalty_detail: PenaltyState | null
+  dj_penalty_detail: ElementFlags | null
 }
 
 type CompetitionData = {
@@ -88,7 +89,6 @@ export default function TVPage() {
   const [dorsal, setDorsal] = useState<number | null>(null)
   const [rank, setRank] = useState<number | null>(null)
   const [rankTotal, setRankTotal] = useState<number>(0)
-  const [djPenalties, setDjPenalties] = useState<{ label: string; value: number }[]>([])
 
   // Separate score-visible state so animation only triggers on reveal change,
   // not on team switch (team switch resets immediately, no animation).
@@ -158,7 +158,6 @@ export default function TVPage() {
       setDorsal(null)
       setRank(null)
       setRankTotal(0)
-      setDjPenalties([])
       setScoreVisible(false)
       prevRevealedRef.current = false
       return
@@ -195,7 +194,7 @@ export default function TVPage() {
           .maybeSingle(),
         supabase
           .from('routine_results')
-          .select('e_score, a_score, dif_score, dif_penalty, cjp_penalty, final_score, cjp_penalty_detail')
+          .select('e_score, a_score, dif_score, dif_penalty, cjp_penalty, final_score, cjp_penalty_detail, dj_penalty_detail')
           .eq('session_id', session_id)
           .eq('team_id', team_id)
           .maybeSingle(),
@@ -224,35 +223,6 @@ export default function TVPage() {
           section_id: sess.section_id,
           panel_id:   sess.panel_id,
         })
-
-        // DJ penalty reasons — find DJ judge IDs for this session, then get their flags
-        const { data: djJudgeRows } = await supabase
-          .from('section_panel_judges')
-          .select('id')
-          .eq('section_id', sess.section_id)
-          .eq('panel_id', sess.panel_id)
-          .eq('role', 'DJ')
-
-        if (djJudgeRows && djJudgeRows.length > 0) {
-          const djIds = djJudgeRows.map((j) => j.id)
-          const { data: djScoreRows } = await supabase
-            .from('scores')
-            .select('dj_flags')
-            .in('section_panel_judge_id', djIds)
-            .eq('session_id', session_id)
-            .eq('team_id', team_id)
-            .not('dj_flags', 'is', null)
-
-          // Use the first DJ's flags (typically identical across DJs)
-          const firstFlags = djScoreRows?.[0]?.dj_flags as ElementFlags | null
-          if (firstFlags && Object.keys(firstFlags).length > 0) {
-            setDjPenalties(activeDJPenalties(firstFlags, lang))
-          } else {
-            setDjPenalties([])
-          }
-        } else {
-          setDjPenalties([])
-        }
 
         // Ranking: all approved results for same age_group + category + routine_type
         const { data: peerSessions } = await supabase
@@ -291,6 +261,7 @@ export default function TVPage() {
           cjp_penalty:         resultRes.data.cjp_penalty,
           final_score:         resultRes.data.final_score,
           cjp_penalty_detail:  resultRes.data.cjp_penalty_detail as PenaltyState | null,
+          dj_penalty_detail:   resultRes.data.dj_penalty_detail as ElementFlags | null,
         })
       } else {
         setResult(null)
@@ -305,6 +276,9 @@ export default function TVPage() {
   const routineLabel = (rt: string) =>
     ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
 
+  const djPenalties  = result?.dj_penalty_detail
+    ? activeDJPenalties(result.dj_penalty_detail, lang)
+    : []
   const cjpPenalties = result?.cjp_penalty_detail
     ? activePenalties(result.cjp_penalty_detail, lang)
     : []

@@ -364,12 +364,29 @@ export function useJudgeSession(): JudgeSessionData {
   async function handleCJPSubmit(status: 'provisional' | 'approved', result: RoutineResult, penaltyDetail?: PenaltyState | null) {
     if (!sessionId) return
     const teamId = result.performanceId.replace(`${sessionId}_`, '')
+
+    // Capture DJ element flags so the TV page can display penalty reasons
+    // (scores table is auth-restricted; we denormalize here at submit time).
+    const djJudgeIds = panelJudges.filter(j => j.role === 'DJ').map(j => j.id)
+    let djPenaltyDetail: import('@/lib/database.types').Json | null = null
+    if (djJudgeIds.length > 0) {
+      const { data: djScores } = await supabase
+        .from('scores')
+        .select('dj_flags')
+        .in('section_panel_judge_id', djJudgeIds)
+        .eq('session_id', sessionId)
+        .eq('team_id', teamId)
+        .not('dj_flags', 'is', null)
+      djPenaltyDetail = djScores?.[0]?.dj_flags ?? null
+    }
+
     await supabase.from('routine_results').upsert({
       session_id: sessionId, team_id: teamId,
       e_score: result.eScore, a_score: result.aScore,
       dif_score: result.difScore, dif_penalty: result.difPenalty,
       cjp_penalty: result.cjpPenalty, final_score: result.finalScore, status,
       cjp_penalty_detail: penaltyDetail ?? null,
+      dj_penalty_detail:  djPenaltyDetail,
     }, { onConflict: 'session_id,team_id' })
     setResults(prev => ({ ...prev, [result.performanceId]: result }))
   }
