@@ -334,13 +334,19 @@ export default function TVPage() {
       {/* main area */}
       <div className="flex-1 flex min-h-0">
 
-        {/* team photo */}
+        {/* team photo — falls back to club logo */}
         <div className="w-[38%] shrink-0 flex items-center justify-center p-8">
           {team.photo_url ? (
             <img
               src={team.photo_url}
               alt={team.gymnast_display}
               className="w-full h-full object-contain max-h-full rounded-2xl"
+            />
+          ) : team.club.avatar_url ? (
+            <img
+              src={team.club.avatar_url}
+              alt={team.club.club_name}
+              className="w-full h-full object-contain max-h-full"
             />
           ) : (
             <div className="w-full aspect-square rounded-2xl bg-slate-800 flex items-center justify-center">

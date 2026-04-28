@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Section, Panel, Session, Team, Club, CompetitionEntry, SessionOrder, AgeGroupRule } from '@/components/admin/types'
+import type { Section, Panel, Session, Team, Club, CompetitionEntry, SessionOrder, AgeGroupRule, TimelineEntry } from '@/components/admin/types'
 import { categoryLabel } from '@/components/admin/types'
 
 // ─── time helpers ─────────────────────────────────────────────────────────────
@@ -119,6 +119,8 @@ const T = {
     viewSessions: 'Sessions',
     viewTimeline: 'Timeline',
     print: 'Print',
+    addBreak: 'Add break',
+    breakLabel: 'Break',
   },
   es: {
     hint: 'Establece el orden de actuación en cada sesión.',
@@ -136,6 +138,8 @@ const T = {
     viewSessions: 'Sesiones',
     viewTimeline: 'Línea de tiempo',
     print: 'Imprimir',
+    addBreak: 'Añadir pausa',
+    breakLabel: 'Pausa',
   },
 }
 
@@ -480,6 +484,10 @@ function PanelColumn({ lang, panel, sessions, globalTeams, clubs, entries, sessi
 
 // ─── admin timeline view ──────────────────────────────────────────────────────
 
+type TimelineDragInfo =
+  | { kind: 'team'; sessionId: string; teamId: string }
+  | { kind: 'break'; breakId: string }
+
 type AdminSlot = {
   sessionId: string
   sessionName: string
@@ -488,9 +496,16 @@ type AdminSlot = {
   isDropout: boolean
 }
 
+type BreakSlot = { type: 'break'; id: string; duration_minutes: number; label?: string }
+type MergedSlot = AdminSlot | BreakSlot
+
+function isBreak(slot: MergedSlot): slot is BreakSlot {
+  return 'type' in slot && slot.type === 'break'
+}
+
 function calcMergedTimes(
   section: Section,
-  mergedSlots: AdminSlot[],
+  mergedSlots: MergedSlot[],
   sessions: Session[],
   ageGroupRules: AgeGroupRule[],
 ): Map<string, SlotTimes> {
@@ -501,6 +516,14 @@ function calcMergedTimes(
   const warmupSec = (section.warmup_duration_minutes ?? 0) * 60
   let elapsed = 0
   for (const slot of mergedSlots) {
+    if (isBreak(slot)) {
+      result.set(`break:${slot.id}`, {
+        compete: addSecsToHHMM(startHHMM, elapsed),
+        warmup:  addSecsToHHMM(startHHMM, elapsed),
+      })
+      elapsed += slot.duration_minutes * 60
+      continue
+    }
     if (!slot.isDropout) {
       const sess = sessions.find(s => s.id === slot.sessionId)
       const rule = sess ? ageGroupRules.find(r => r.id === sess.age_group) : undefined
@@ -525,10 +548,10 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
   globalTeams: Team[]
   clubs: Club[]
   ageGroupRules: AgeGroupRule[]
-  onReorderTimeline: (sectionId: string, order: Array<{ session_id: string; team_id: string }>) => void
+  onReorderTimeline: (sectionId: string, order: Array<TimelineEntry>) => void
 }) {
   const t = T[lang]
-  const [dragInfo, setDragInfo] = useState<{ sessionId: string; teamId: string } | null>(null)
+  const [dragInfo, setDragInfo] = useState<TimelineDragInfo | null>(null)
   const [overIdx, setOverIdx] = useState<number | null>(null)
 
   const sortedPanels = [...panels].sort((a, b) => a.panel_number - b.panel_number)
@@ -558,12 +581,17 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
   const slotLookup = new Map<string, AdminSlot>(allPanelSlots.map(s => [`${s.sessionId}:${s.teamId}`, s]))
 
   // Build merged list: use timeline_order if present, otherwise default interleaving
-  const merged: AdminSlot[] = (() => {
+  const merged: MergedSlot[] = (() => {
     if (section.timeline_order && section.timeline_order.length > 0) {
       const used = new Set<string>()
-      const ordered: AdminSlot[] = []
+      const ordered: MergedSlot[] = []
       for (const entry of section.timeline_order) {
-        const key = `${entry.session_id}:${entry.team_id}`
+        if ('type' in entry && entry.type === 'break') {
+          ordered.push({ type: 'break', id: entry.id, duration_minutes: entry.duration_minutes, label: entry.label })
+          continue
+        }
+        const te = entry as { session_id: string; team_id: string }
+        const key = `${te.session_id}:${te.team_id}`
         const slot = slotLookup.get(key)
         if (slot) { ordered.push(slot); used.add(key) }
       }
@@ -577,7 +605,7 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
     if (sortedPanels.length === 1) return [...allPanelSlots]
     const slots1 = buildPanelSlots(sortedPanels[0])
     const slots2 = buildPanelSlots(sortedPanels[1])
-    const result: AdminSlot[] = []
+    const result: MergedSlot[] = []
     const len = Math.max(slots1.length, slots2.length)
     for (let i = 0; i < len; i++) {
       if (i < slots1.length) result.push(slots1[i])
@@ -588,37 +616,76 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
 
   const timesMap = calcMergedTimes(section, merged, sessions, ageGroupRules)
 
-  // Compute drag validity bounds (based on panel-order preservation constraint)
+  // Compute drag validity bounds (only relevant when dragging a team slot)
   let dragBounds = { prevBound: -1, nextBound: merged.length }
-  if (dragInfo) {
-    const dragIdx = merged.findIndex(s => s.teamId === dragInfo.teamId && s.sessionId === dragInfo.sessionId)
+  if (dragInfo?.kind === 'team') {
+    const dragIdx = merged.findIndex(s => !isBreak(s) && s.teamId === dragInfo.teamId && s.sessionId === dragInfo.sessionId)
     if (dragIdx !== -1) {
-      const dragPanel = merged[dragIdx].panelNumber
+      const dragSlot = merged[dragIdx] as AdminSlot
+      const dragPanel = dragSlot.panelNumber
       let prevBound = -1
       for (let i = dragIdx - 1; i >= 0; i--) {
-        if (merged[i].panelNumber === dragPanel) { prevBound = i; break }
+        const s = merged[i]; if (isBreak(s)) continue
+        if (s.panelNumber === dragPanel) { prevBound = i; break }
       }
       let nextBound = merged.length
       for (let i = dragIdx + 1; i < merged.length; i++) {
-        if (merged[i].panelNumber === dragPanel) { nextBound = i; break }
+        const s = merged[i]; if (isBreak(s)) continue
+        if (s.panelNumber === dragPanel) { nextBound = i; break }
       }
       dragBounds = { prevBound, nextBound }
     }
   }
 
+  function mergedToOrder(): TimelineEntry[] {
+    return merged.map(s => isBreak(s)
+      ? { type: 'break' as const, id: s.id, duration_minutes: s.duration_minutes, label: s.label }
+      : { session_id: s.sessionId, team_id: s.teamId }
+    )
+  }
+
   function handleDrop(dropIdx: number) {
     if (!dragInfo) return
-    const dragIdx = merged.findIndex(s => s.teamId === dragInfo.teamId && s.sessionId === dragInfo.sessionId)
+    const dragIdx = dragInfo.kind === 'break'
+      ? merged.findIndex(s => isBreak(s) && s.id === dragInfo.breakId)
+      : merged.findIndex(s => !isBreak(s) && s.teamId === dragInfo.teamId && s.sessionId === dragInfo.sessionId)
     setDragInfo(null); setOverIdx(null)
     if (dragIdx === -1 || dragIdx === dropIdx) return
-    const dragSlot = merged[dragIdx]
-    if (dragSlot.isDropout || merged[dropIdx].isDropout) return
-    // Validate panel-order constraint
-    if (dropIdx <= dragBounds.prevBound || dropIdx >= dragBounds.nextBound) return
-    // Reorder and save
-    const newOrder = merged.map(s => ({ session_id: s.sessionId, team_id: s.teamId }))
+    if (dragInfo.kind === 'team') {
+      const dragSlot = merged[dragIdx] as AdminSlot
+      const dropSlot = merged[dropIdx]
+      if (dragSlot.isDropout || (!isBreak(dropSlot) && dropSlot.isDropout)) return
+      if (dropIdx <= dragBounds.prevBound || dropIdx >= dragBounds.nextBound) return
+    }
+    const newOrder = mergedToOrder()
     const [moved] = newOrder.splice(dragIdx, 1)
     newOrder.splice(dropIdx, 0, moved)
+    onReorderTimeline(section.id, newOrder)
+  }
+
+  function handleAddBreak() {
+    const newBreak: TimelineEntry = { type: 'break', id: crypto.randomUUID(), duration_minutes: 15 }
+    onReorderTimeline(section.id, [...mergedToOrder(), newBreak])
+  }
+
+  function handleRemoveBreak(breakId: string) {
+    onReorderTimeline(section.id, mergedToOrder().filter(e => !('type' in e && e.id === breakId)))
+  }
+
+  function handleMoveBreak(breakId: string, direction: 'up' | 'down') {
+    const idx = merged.findIndex(s => isBreak(s) && s.id === breakId)
+    if (idx === -1) return
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1
+    if (targetIdx < 0 || targetIdx >= merged.length) return
+    const newOrder = mergedToOrder()
+    ;[newOrder[idx], newOrder[targetIdx]] = [newOrder[targetIdx], newOrder[idx]]
+    onReorderTimeline(section.id, newOrder)
+  }
+
+  function handleUpdateBreakDuration(breakId: string, minutes: number) {
+    const newOrder = mergedToOrder().map(e =>
+      'type' in e && e.id === breakId ? { ...e, duration_minutes: Math.max(1, minutes) } : e
+    )
     onReorderTimeline(section.id, newOrder)
   }
 
@@ -627,103 +694,218 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
 
   // Pre-compute sequential position numbers (active teams only)
   let _n = 0
-  const positions = merged.map(s => { if (!s.isDropout) _n++; return _n })
+  const positions = merged.map(s => { if (!isBreak(s) && !s.isDropout) _n++; return _n })
 
   if (merged.length === 0) {
-    return <p className="text-center text-sm text-slate-400 py-16">{t.noTeams}</p>
+    return (
+      <div className="space-y-3">
+        <p className="text-center text-sm text-slate-400 py-16">{t.noTeams}</p>
+        <button
+          onClick={handleAddBreak}
+          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 border-dashed rounded-xl hover:bg-amber-100 transition-colors"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          {t.addBreak}
+        </button>
+      </div>
+    )
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-      <ol className="divide-y divide-slate-50">
-        {merged.map((slot, idx) => {
-          const team       = teamById[slot.teamId]
-          const club       = team ? clubById[team.club_id] : null
-          const slotTimes  = timesMap.get(`${slot.sessionId}:${slot.teamId}`)
-          const dorsal     = dorsalMap[slot.teamId]
-          const colors     = PANEL_COLORS[slot.panelNumber] ?? PANEL_COLORS[1]
-          const isDragging = dragInfo?.teamId === slot.teamId && dragInfo?.sessionId === slot.sessionId
-          const isValidDrop = dragInfo !== null && !slot.isDropout && !isDragging
-            && idx > dragBounds.prevBound && idx < dragBounds.nextBound
-          const isDimmed   = dragInfo !== null && !isDragging && !isValidDrop
-          const isOver     = overIdx === idx && isValidDrop
-
-          return (
-            <li
-              key={`${slot.panelNumber}-${slot.teamId}-${idx}`}
-              draggable={!slot.isDropout}
-              onDragStart={!slot.isDropout ? (e) => { e.dataTransfer.effectAllowed = 'move'; setDragInfo({ sessionId: slot.sessionId, teamId: slot.teamId }) } : undefined}
-              onDragOver={(e) => { if (isValidDrop) { e.preventDefault(); setOverIdx(idx) } }}
-              onDragEnd={() => { setDragInfo(null); setOverIdx(null) }}
-              onDrop={(e) => { e.preventDefault(); handleDrop(idx) }}
-              className={[
-                'flex items-center gap-3 px-4 py-3 select-none transition-all',
-                slot.isDropout ? 'opacity-50' : '',
-                isDragging ? 'opacity-30' : '',
-                isDimmed   ? 'opacity-25' : '',
-                isOver     ? 'bg-blue-50 border-t-2 border-blue-400' : '',
-                !slot.isDropout ? 'cursor-grab active:cursor-grabbing' : '',
-              ].join(' ')}
-            >
-              {/* drag handle */}
-              <svg className={['w-3.5 h-3.5 shrink-0', slot.isDropout ? 'text-slate-100' : 'text-slate-300'].join(' ')} fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
-              </svg>
-              {/* times */}
-              {slotTimes && !slot.isDropout ? (
-                <div className="flex flex-col shrink-0 w-14 gap-0">
-                  <span className="text-[10px] text-slate-400 leading-tight">⏰ {slotTimes.warmup}</span>
-                  <span className="text-[10px] font-semibold text-slate-600 leading-tight">▶ {slotTimes.compete}</span>
-                </div>
-              ) : (
-                <div className="w-14 shrink-0" />
-              )}
-              {/* position */}
-              <span className={['w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0',
-                slot.isDropout ? 'bg-slate-100 text-slate-400' : colors.num].join(' ')}>
-                {positions[idx]}
-              </span>
-              {/* panel badge — only when dual panel */}
-              {sortedPanels.length > 1 && (
-                <span className={['inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold shrink-0', colors.badge].join(' ')}>
-                  P{slot.panelNumber}
-                </span>
-              )}
-              {/* dorsal */}
-              {dorsal != null && (
-                <span className={['text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
-                  slot.isDropout ? 'bg-slate-100 text-slate-300' : 'bg-slate-800 text-white'].join(' ')}>
-                  #{dorsal}
-                </span>
-              )}
-              {/* photo */}
-              {team?.photo_url ? (
-                <img src={team.photo_url} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
-              ) : (
-                <div className="w-9 h-9 rounded-full bg-slate-100 shrink-0 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-slate-300" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+    <div className="space-y-3">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+        <ol className="divide-y divide-slate-50">
+          {merged.map((slot, idx) => {
+            if (isBreak(slot)) {
+              const breakTimes = timesMap.get(`break:${slot.id}`)
+              const isDraggingBreak = dragInfo?.kind === 'break' && dragInfo.breakId === slot.id
+              const isValidDropBreak = (dragInfo?.kind === 'break' && !isDraggingBreak) ||
+                (dragInfo?.kind === 'team' && idx > dragBounds.prevBound && idx < dragBounds.nextBound)
+              const isDimmedBreak = dragInfo !== null && !isDraggingBreak && !isValidDropBreak
+              const isOverBreak = overIdx === idx && isValidDropBreak
+              return (
+                <li
+                  key={`break-${slot.id}`}
+                  draggable
+                  onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setDragInfo({ kind: 'break', breakId: slot.id }) }}
+                  onDragOver={(e) => { if (isValidDropBreak) { e.preventDefault(); setOverIdx(idx) } }}
+                  onDragEnd={() => { setDragInfo(null); setOverIdx(null) }}
+                  onDrop={(e) => { e.preventDefault(); handleDrop(idx) }}
+                  className={[
+                    'flex items-center gap-3 px-4 py-2.5 select-none transition-all cursor-grab active:cursor-grabbing',
+                    isDraggingBreak ? 'opacity-30' : '',
+                    isDimmedBreak   ? 'opacity-25' : '',
+                    isOverBreak     ? 'bg-amber-100 border-t-2 border-amber-400' : 'bg-amber-50',
+                  ].join(' ')}
+                >
+                  {/* drag handle */}
+                  <svg className="w-3.5 h-3.5 shrink-0 text-amber-300" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
                   </svg>
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className={['text-sm font-medium text-slate-800 truncate', slot.isDropout ? 'line-through text-slate-400' : ''].join(' ')}>
-                  {team?.gymnast_display ?? slot.teamId}
-                </p>
-                <p className="flex items-center gap-1 text-xs text-slate-400 truncate">
-                  <ClubAvatar club={club} />
-                  {club?.club_name ?? ''} · {slot.sessionName}
-                </p>
-              </div>
-              {slot.isDropout && (
-                <span className="shrink-0 text-xs font-semibold bg-red-50 text-red-400 px-2 py-0.5 rounded-full">
-                  {t.baja}
+                  {/* times */}
+                  {breakTimes ? (
+                    <div className="flex flex-col shrink-0 w-14 gap-0">
+                      <span className="text-[10px] font-semibold text-amber-600 leading-tight">▶ {breakTimes.compete}</span>
+                    </div>
+                  ) : (
+                    <div className="w-14 shrink-0" />
+                  )}
+                  {/* break icon */}
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-amber-100 text-amber-600">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  {/* panel badge placeholder when dual panel */}
+                  {sortedPanels.length > 1 && <div className="w-10 shrink-0" />}
+                  {/* label + duration controls */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-amber-700">{slot.label ?? t.breakLabel}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <button
+                        onClick={() => handleUpdateBreakDuration(slot.id, slot.duration_minutes - 5)}
+                        className="w-5 h-5 flex items-center justify-center rounded text-amber-500 hover:bg-amber-100 text-xs font-bold leading-none"
+                      >−</button>
+                      <span className="text-xs text-amber-600 font-mono min-w-[3.5rem] text-center">{slot.duration_minutes} min</span>
+                      <button
+                        onClick={() => handleUpdateBreakDuration(slot.id, slot.duration_minutes + 5)}
+                        className="w-5 h-5 flex items-center justify-center rounded text-amber-500 hover:bg-amber-100 text-xs font-bold leading-none"
+                      >+</button>
+                    </div>
+                  </div>
+                  {/* up / down / remove */}
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <button
+                      onClick={() => handleMoveBreak(slot.id, 'up')}
+                      disabled={idx === 0}
+                      className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                    >
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleMoveBreak(slot.id, 'down')}
+                      disabled={idx === merged.length - 1}
+                      className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-30"
+                    >
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleRemoveBreak(slot.id)}
+                      className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-red-500 hover:bg-red-50"
+                    >
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </li>
+              )
+            }
+
+            const team       = teamById[slot.teamId]
+            const club       = team ? clubById[team.club_id] : null
+            const slotTimes  = timesMap.get(`${slot.sessionId}:${slot.teamId}`)
+            const dorsal     = dorsalMap[slot.teamId]
+            const colors     = PANEL_COLORS[slot.panelNumber] ?? PANEL_COLORS[1]
+            const isDragging = dragInfo?.kind === 'team' && dragInfo.teamId === slot.teamId && dragInfo.sessionId === slot.sessionId
+            const slotIsDropout = slot.isDropout
+            const isValidDrop = dragInfo !== null && !slotIsDropout && !isDragging
+              && idx > dragBounds.prevBound && idx < dragBounds.nextBound
+            const isDimmed   = dragInfo !== null && !isDragging && !isValidDrop
+            const isOver     = overIdx === idx && isValidDrop
+
+            return (
+              <li
+                key={`${slot.panelNumber}-${slot.teamId}-${idx}`}
+                draggable={!slot.isDropout}
+                onDragStart={!slot.isDropout ? (e) => { e.dataTransfer.effectAllowed = 'move'; setDragInfo({ kind: 'team', sessionId: slot.sessionId, teamId: slot.teamId }) } : undefined}
+                onDragOver={(e) => { if (isValidDrop) { e.preventDefault(); setOverIdx(idx) } }}
+                onDragEnd={() => { setDragInfo(null); setOverIdx(null) }}
+                onDrop={(e) => { e.preventDefault(); handleDrop(idx) }}
+                className={[
+                  'flex items-center gap-3 px-4 py-3 select-none transition-all',
+                  slot.isDropout ? 'opacity-50' : '',
+                  isDragging ? 'opacity-30' : '',
+                  isDimmed   ? 'opacity-25' : '',
+                  isOver     ? 'bg-blue-50 border-t-2 border-blue-400' : '',
+                  !slot.isDropout ? 'cursor-grab active:cursor-grabbing' : '',
+                ].join(' ')}
+              >
+                {/* drag handle */}
+                <svg className={['w-3.5 h-3.5 shrink-0', slot.isDropout ? 'text-slate-100' : 'text-slate-300'].join(' ')} fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+                </svg>
+                {/* times */}
+                {slotTimes && !slot.isDropout ? (
+                  <div className="flex flex-col shrink-0 w-14 gap-0">
+                    <span className="text-[10px] text-slate-400 leading-tight">⏰ {slotTimes.warmup}</span>
+                    <span className="text-[10px] font-semibold text-slate-600 leading-tight">▶ {slotTimes.compete}</span>
+                  </div>
+                ) : (
+                  <div className="w-14 shrink-0" />
+                )}
+                {/* position */}
+                <span className={['w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0',
+                  slot.isDropout ? 'bg-slate-100 text-slate-400' : colors.num].join(' ')}>
+                  {positions[idx]}
                 </span>
-              )}
-            </li>
-          )
-        })}
-      </ol>
+                {/* panel badge — only when dual panel */}
+                {sortedPanels.length > 1 && (
+                  <span className={['inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold shrink-0', colors.badge].join(' ')}>
+                    P{slot.panelNumber}
+                  </span>
+                )}
+                {/* dorsal */}
+                {dorsal != null && (
+                  <span className={['text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
+                    slot.isDropout ? 'bg-slate-100 text-slate-300' : 'bg-slate-800 text-white'].join(' ')}>
+                    #{dorsal}
+                  </span>
+                )}
+                {/* photo */}
+                {team?.photo_url ? (
+                  <img src={team.photo_url} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-slate-100 shrink-0 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-slate-300" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+                    </svg>
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className={['text-sm font-medium text-slate-800 truncate', slot.isDropout ? 'line-through text-slate-400' : ''].join(' ')}>
+                    {team?.gymnast_display ?? slot.teamId}
+                  </p>
+                  <p className="flex items-center gap-1 text-xs text-slate-400 truncate">
+                    <ClubAvatar club={club} />
+                    {club?.club_name ?? ''} · {slot.sessionName}
+                  </p>
+                </div>
+                {slot.isDropout && (
+                  <span className="shrink-0 text-xs font-semibold bg-red-50 text-red-400 px-2 py-0.5 rounded-full">
+                    {t.baja}
+                  </span>
+                )}
+              </li>
+            )
+          })}
+        </ol>
+      </div>
+      <button
+        onClick={handleAddBreak}
+        className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 border-dashed rounded-xl hover:bg-amber-100 transition-colors"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+        {t.addBreak}
+      </button>
     </div>
   )
 }
@@ -744,7 +926,7 @@ export type StartingOrderTabProps = {
   ageGroupRules: AgeGroupRule[]
   onReorder: (sessionId: string, teamIds: string[]) => void
   onToggleLock: (sessionId: string) => void
-  onReorderTimeline: (sectionId: string, order: Array<{ session_id: string; team_id: string }>) => void
+  onReorderTimeline: (sectionId: string, order: Array<TimelineEntry>) => void
 }
 
 export default function StartingOrderTab({

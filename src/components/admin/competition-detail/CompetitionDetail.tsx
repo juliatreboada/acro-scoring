@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach } from '@/components/admin/types'
+import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry } from '@/components/admin/types'
 import { NEXT_STATUS } from '@/components/admin/types'
 import StructureTab from './StructureTab'
 import JudgesTab, { type JudgesTabProps, type PanelLock } from './JudgesTab'
@@ -474,7 +474,7 @@ export type CompetitionDetailProps = {
   lockedSessions: string[]
   onReorder: (sessionId: string, teamIds: string[]) => void
   onToggleLock: (sessionId: string) => void
-  onReorderTimeline: (sectionId: string, order: Array<{ session_id: string; team_id: string }>) => void
+  onReorderTimeline: (sectionId: string, order: Array<TimelineEntry>) => void
   // overview
   availableAdmins: AdminUser[]
   ageGroupRules: AgeGroupRule[]

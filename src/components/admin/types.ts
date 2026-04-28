@@ -45,8 +45,12 @@ export type Section = {
   starting_time: string | null           // 'HH:MM' (or 'HH:MM:SS' from DB, normalised on read)
   waiting_time_seconds: number | null    // buffer between performances, in seconds
   warmup_duration_minutes: number | null // how many minutes before competing the team starts warmup
-  timeline_order: Array<{ session_id: string; team_id: string }> | null
+  timeline_order: Array<TimelineEntry> | null
 }
+
+export type TimelineEntry =
+  | { session_id: string; team_id: string }
+  | { type: 'break'; id: string; duration_minutes: number; label?: string }
 
 export type ScoringMethod = 'keyboard' | 'elements'
 

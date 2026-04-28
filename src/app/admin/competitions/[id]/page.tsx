@@ -9,7 +9,7 @@ import type { Lang } from '@/components/aj-scoring/types'
 import type {
   Competition, Panel, Section, Session, Judge, SectionPanelJudge,
   Role, Team, Club, CompetitionEntry, SessionOrder, AdminUser,
-  AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach,
+  AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry,
 } from '@/components/admin/types'
 import { ROLE_CONFIG, defaultSlots, NEXT_STATUS } from '@/components/admin/types'
 import type { PanelLock } from '@/components/admin/competition-detail/JudgesTab'
@@ -431,7 +431,7 @@ export default function Page() {
     ])
   }
 
-  async function handleReorderTimeline(sectionId: string, order: Array<{ session_id: string; team_id: string }>) {
+  async function handleReorderTimeline(sectionId: string, order: Array<TimelineEntry>) {
     await supabase.from('sections').update({ timeline_order: order } as never).eq('id', sectionId)
     setSections(prev => prev.map(s => s.id === sectionId ? { ...s, timeline_order: order } : s))
   }

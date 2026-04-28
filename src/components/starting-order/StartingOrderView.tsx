@@ -116,6 +116,7 @@ const T = {
     dates: 'Dates',
     pendingSession: 'Order not yet published',
     print: 'Print',
+    breakLabel: 'Break',
   },
   es: {
     title: 'Orden de salida',
@@ -129,6 +130,7 @@ const T = {
     dates: 'Fechas',
     pendingSession: 'Orden no publicado aún',
     print: 'Imprimir',
+    breakLabel: 'Pausa',
   },
 }
 
@@ -322,6 +324,7 @@ function SessionOrderCard({
 type PerfSlot =
   | { kind: 'team'; panelNumber: number; sessionId: string; sessionName: string; teamId: string; isDropout: boolean }
   | { kind: 'pending'; panelNumber: number; sessionName: string }
+  | { kind: 'break'; duration_minutes: number; label?: string }
 
 const PANEL_COLORS: Record<number, { badge: string; num: string }> = {
   1: { badge: 'bg-emerald-100 text-emerald-700', num: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
@@ -386,6 +389,10 @@ function calcTimeFromMerged(
   const warmupSec = (section.warmup_duration_minutes ?? 0) * 60
   let elapsed = 0
   for (const slot of mergedSlots) {
+    if (slot.kind === 'break') {
+      elapsed += slot.duration_minutes * 60
+      continue
+    }
     if (slot.kind === 'team' && !slot.isDropout) {
       const sess = sessions.find(s => s.id === slot.sessionId)
       const rule = sess ? ageGroupRules.find(r => r.id === sess.age_group) : undefined
@@ -425,24 +432,29 @@ function InterleavedTimeline({
     const pendingAdded = new Set<string>()
     merged = []
     for (const entry of section.timeline_order) {
-      const sess = sessions.find(s => s.id === entry.session_id)
+      if ('type' in entry && entry.type === 'break') {
+        merged.push({ kind: 'break', duration_minutes: entry.duration_minutes, label: entry.label })
+        continue
+      }
+      const te = entry as { session_id: string; team_id: string }
+      const sess = sessions.find(s => s.id === te.session_id)
       if (!sess) continue
       const panelNum = panels.find(p => p.id === sess.panel_id)?.panel_number ?? 1
-      if (!lockedSessions.includes(entry.session_id)) {
-        if (!pendingAdded.has(entry.session_id)) {
+      if (!lockedSessions.includes(te.session_id)) {
+        if (!pendingAdded.has(te.session_id)) {
           merged.push({ kind: 'pending', panelNumber: panelNum, sessionName: sess.name })
-          pendingAdded.add(entry.session_id)
+          pendingAdded.add(te.session_id)
         }
       } else {
-        const team = globalTeams.find(t => t.id === entry.team_id)
+        const team = globalTeams.find(t => t.id === te.team_id)
         if (!team || team.age_group !== sess.age_group || team.category !== sess.category) continue
         merged.push({
           kind: 'team',
           panelNumber: panelNum,
-          sessionId: entry.session_id,
+          sessionId: te.session_id,
           sessionName: sess.name,
-          teamId: entry.team_id,
-          isDropout: droppedIds.has(entry.team_id),
+          teamId: te.team_id,
+          isDropout: droppedIds.has(te.team_id),
         })
       }
     }
@@ -471,7 +483,27 @@ function InterleavedTimeline({
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
       <ol className="divide-y divide-slate-50">
         {merged.map((slot, i) => {
-          const panelColors = PANEL_COLORS[slot.panelNumber] ?? PANEL_COLORS[1]
+          const panelColors = slot.kind !== 'break' ? (PANEL_COLORS[slot.panelNumber] ?? PANEL_COLORS[1]) : PANEL_COLORS[1]
+
+          if (slot.kind === 'break') {
+            return (
+              <li key={`break-${i}`} className="flex items-center gap-3 px-4 py-2.5 bg-amber-50">
+                <div className="w-14 shrink-0" />
+                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-amber-100 text-amber-600">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold shrink-0 bg-amber-100 text-amber-600">
+                  —
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-amber-700">{slot.label ?? t.breakLabel}</p>
+                  <p className="text-xs text-amber-500">{slot.duration_minutes} min</p>
+                </div>
+              </li>
+            )
+          }
 
           if (slot.kind === 'pending') {
             return (
