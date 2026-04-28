@@ -4,7 +4,7 @@ import { useState } from 'react'
 import type { Performance, Lang } from '../aj-scoring/types'
 import type { TsElement, ElementType } from '../ej-scoring/types'
 import type { ElementFlag, ElementFlags } from '../dj-scoring/types'
-import type { PanelJudge, MockPerf, JudgeScore, RoutineResult, PenaltyState } from '../cjp/types'
+import type { PanelJudge, MockPerf, JudgeScore, RoutineResult, PenaltyState, ScoreDetail } from '../cjp/types'
 import { calcCjpPenalty, DEFAULT_PENALTY } from '../cjp/types'
 import { PenaltyPanel } from '../shared/CJPPenaltyPanel'
 import AJScoringPanel from '../shared/AJScoringPanel'
@@ -235,7 +235,7 @@ function TabletLayout({
   onPenaltyChange: (perfId: string, p: PenaltyState) => void
   onOpen: (perfId: string) => void
   onSkip?: (perfId: string) => void
-  onSubmitDJScore?: (perfId: string, difficulty: number, djPenalty: number) => void
+  onSubmitDJScore?: (perfId: string, difficulty: number, djPenalty: number, detail: ScoreDetail) => void
   onSubmitAJScore?: (perfId: string, score: number) => void
   onSubmit?: (status: 'provisional' | 'approved', result: RoutineResult) => void
   onReopenScore?: (perfId: string, panelJudgeId: string | 'all') => void
@@ -304,7 +304,7 @@ function TabletLayout({
                     onToggleIncorrectTs={onToggleIncorrectTs}
                     onSubmit={() => {
                       setDjSubmitted((prev) => ({ ...prev, [activePerfId]: true }))
-                      onSubmitDJScore?.(activePerfId, djDifficulty, djPenaltyVal)
+                      onSubmitDJScore?.(activePerfId, djDifficulty, djPenaltyVal, { djFlags: flags, djExtraElements: extraElements, djIncorrectTs: incorrectTs })
                     }}
                     isSubmitted={isDJSubmitted}
                     djDifficulty={djDifficulty}
@@ -346,7 +346,7 @@ export type CJPDJAJViewProps = {
   djMode?: 'elements' | 'keyboard'
   onOpen: (perfId: string) => void
   onSkip?: (perfId: string) => void
-  onSubmitDJScore?: (perfId: string, difficulty: number, djPenalty: number) => void
+  onSubmitDJScore?: (perfId: string, difficulty: number, djPenalty: number, detail: ScoreDetail) => void
   onSubmitAJScore?: (perfId: string, score: number) => void
   onSubmit?: (status: 'provisional' | 'approved', result: RoutineResult) => void
   onReopenScore?: (perfId: string, panelJudgeId: string | 'all') => void

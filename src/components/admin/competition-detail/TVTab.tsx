@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Competition, Session, Team, Club, CompetitionEntry } from '@/components/admin/types'
@@ -100,6 +100,11 @@ export default function TVTab({
   const [autoQueue, setAutoQueue]   = useState(true)
   const [busy, setBusy]             = useState(false)
 
+  const previewRef = useRef<HTMLDivElement>(null)
+  const [previewScale, setPreviewScale] = useState(0.3)
+  const IFRAME_W = 1280
+  const IFRAME_H = 720
+
   const routineLabel = (rt: string) =>
     ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
 
@@ -107,6 +112,16 @@ export default function TVTab({
   useEffect(() => {
     setTvUrl(`${window.location.origin}/tv/${competition.id}`)
   }, [competition.id])
+
+  // Scale the preview iframe to fill its container
+  useEffect(() => {
+    if (!previewRef.current) return
+    const ro = new ResizeObserver((entries) => {
+      setPreviewScale(entries[0].contentRect.width / IFRAME_W)
+    })
+    ro.observe(previewRef.current)
+    return () => ro.disconnect()
+  }, [])
 
   // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -277,46 +292,30 @@ export default function TVTab({
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t.currentlyOn}</p>
         </div>
 
-        {!queuedResult ? (
-          <div className="p-6 text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 text-xs font-medium mb-2">
-              <span className="w-2 h-2 rounded-full bg-slate-400" />
-              {t.idle}
-            </div>
-            <p className="text-sm text-slate-400">{t.noStateSub}</p>
-          </div>
-        ) : (
-          <div className="p-4 space-y-4">
-            {/* team + score info */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div>
-                <p className="font-semibold text-slate-800 text-base">{queuedResult.gymnast_display}</p>
-                <p className="text-sm text-slate-500">
-                  {categoryLabel(queuedResult.category, lang)}
-                  {' · '}
-                  {routineLabel(queuedResult.routine_type)}
-                  {' · '}
-                  {queuedResult.age_group}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold tabular-nums text-slate-800">
-                  {queuedResult.final_score?.toFixed(3) ?? '—'}
-                </p>
-                <div className={[
-                  'inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full',
-                  tvState?.revealed ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700',
-                ].join(' ')}>
-                  <span className={[
-                    'w-1.5 h-1.5 rounded-full',
-                    tvState?.revealed ? 'bg-emerald-500' : 'bg-amber-500',
-                  ].join(' ')} />
-                  {tvState?.revealed ? t.revealed : t.hidden}
-                </div>
-              </div>
-            </div>
+        {/* live TV preview */}
+        <div
+          ref={previewRef}
+          className="w-full overflow-hidden bg-slate-950"
+          style={{ height: IFRAME_H * previewScale }}
+        >
+          {tvUrl && (
+            <iframe
+              src={`${tvUrl}?lang=${lang}`}
+              style={{
+                width: IFRAME_W,
+                height: IFRAME_H,
+                border: 'none',
+                pointerEvents: 'none',
+                transformOrigin: 'top left',
+                transform: `scale(${previewScale})`,
+              }}
+            />
+          )}
+        </div>
 
-            {/* reveal / hide button */}
+        {/* reveal / hide button — only when something is queued */}
+        {queuedResult && (
+          <div className="p-3 border-t border-slate-200">
             <button
               disabled={busy}
               onClick={() => setRevealed(!tvState?.revealed)}

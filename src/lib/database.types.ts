@@ -443,6 +443,7 @@ export type Database = {
           created_at: string
           dif_penalty: number | null
           dif_score: number | null
+          dj_penalty_detail: Json | null
           e_score: number | null
           final_score: number | null
           id: string
@@ -460,6 +461,7 @@ export type Database = {
           created_at?: string
           dif_penalty?: number | null
           dif_score?: number | null
+          dj_penalty_detail?: Json | null
           e_score?: number | null
           final_score?: number | null
           id?: string
@@ -477,6 +479,7 @@ export type Database = {
           created_at?: string
           dif_penalty?: number | null
           dif_score?: number | null
+          dj_penalty_detail?: Json | null
           e_score?: number | null
           final_score?: number | null
           id?: string

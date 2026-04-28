@@ -628,7 +628,7 @@ export type CJPTabletShellProps = {
   penaltyStates: Record<string, PenaltyState>
   onOpen: (perfId: string) => void
   onSkip?: (perfId: string) => void
-  onSubmit?: (status: 'provisional' | 'approved', result: RoutineResult) => void
+  onSubmit?: (status: 'provisional' | 'approved', result: RoutineResult, penaltyDetail?: PenaltyState) => void
   onReopenScore?: (perfId: string, panelJudgeId: string | 'all') => void
   onEditScore?: (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
   /** Render the right panel. activePerfId = reviewed perf during review mode, else currentPerfId. */
@@ -670,19 +670,19 @@ export default function CJPTabletShell({
   function handleCJPSubmit(status: 'provisional' | 'approved') {
     if (!currentPerfId) return
     const result = computeResult(currentPerfId, currentScores, panelJudges, cjpPenalty, status)
-    onSubmit?.(status, result)
+    onSubmit?.(status, result, currentPenalty)
   }
 
   function handleConfirmFinalFromReview() {
     if (!reviewPerfId) return
     const result = computeResult(reviewPerfId, reviewScores, panelJudges, reviewCjpPenalty, 'approved')
-    onSubmit?.('approved', result)
+    onSubmit?.('approved', result, reviewPenalty)
   }
 
   function handleUpdateProvisional() {
     if (!reviewPerfId) return
     const result = computeResult(reviewPerfId, reviewScores, panelJudges, reviewCjpPenalty, 'provisional')
-    onSubmit?.('provisional', result)
+    onSubmit?.('provisional', result, reviewPenalty)
   }
 
   function handleRankingRowClick(perfId: string) {

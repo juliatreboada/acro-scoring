@@ -5,7 +5,7 @@ import { useJudgeSession } from '@/hooks/useJudgeSession'
 import CJPDJAJView from '@/components/cjp-dj-aj-scoring/CJPDJAJView'
 import AuthBar from '@/components/shared/AuthBar'
 import type { Lang } from '@/components/aj-scoring/types'
-import type { JudgeScore } from '@/components/cjp/types'
+import type { JudgeScore, ScoreDetail } from '@/components/cjp/types'
 
 export default function Page() {
   const [lang, setLang] = useState<Lang>('es')
@@ -30,10 +30,10 @@ export default function Page() {
     </div>
   )
 
-  function handleSubmitDJScore(_p: string, difficulty: number, penalty: number) {
+  function handleSubmitDJScore(_p: string, difficulty: number, penalty: number, detail: ScoreDetail) {
     const r = assignedRoles.find(r => r.role === 'DJ')
     if (!r) return
-    handleJudgeScoreSubmit({ panelJudgeId: r.id, ejScore: null, ajScore: null, djDifficulty: difficulty, djPenalty: penalty, cjpPenalty: null })
+    handleJudgeScoreSubmit({ panelJudgeId: r.id, ejScore: null, ajScore: null, djDifficulty: difficulty, djPenalty: penalty, cjpPenalty: null, detail })
   }
 
   function handleSubmitAJScore(_p: string, score: number) {
