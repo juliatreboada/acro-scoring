@@ -151,13 +151,92 @@ on conflict (session_id, team_id) do update set
   cjp_penalty = excluded.cjp_penalty, cjp_penalty_detail = excluded.cjp_penalty_detail,
   final_score = excluded.final_score, status = excluded.status, updated_at = now();
 
+-- ─── dj_penalty_detail test data ─────────────────────────────────────────────
+-- Run AFTER migration 20260428000001_dj_penalty_detail.sql.
+--
+-- ElementFlags shape (one entry per element key "elementId:retryNumber"):
+--   { isDone, tfCount, srNotDone, forbiddenElement, landingWithoutSupport, note }
+-- Penalty values: tfCount × 0.3 | srNotDone × 1.0 | forbiddenElement × 1.0
+--                 landingWithoutSupport × 0.5
+--
+-- #3 Martínez / Sánchez — dif_penalty 0.5 → landing without support on element 3
+update public.routine_results
+set dj_penalty_detail = '{
+  "elem_3:1": {
+    "isDone": true,
+    "tfCount": 0,
+    "srNotDone": false,
+    "forbiddenElement": false,
+    "landingWithoutSupport": true,
+    "note": "Fall on dismount"
+  }
+}'::jsonb
+where session_id = 'fd000000-0000-0000-0000-000000000013'
+  and team_id    = 'fd000000-0000-0000-0000-000000000005';
+
+-- #5 Vidal / Moreno — multiple DJ penalties + CJP penalty (combined scenario)
+--   dif_penalty breakdown:
+--     elem_1:1 tfCount=2 → 0.6
+--     elem_2:1 srNotDone → 1.0
+--     elem_4:1 forbiddenElement → 1.0
+--     elem_5:1 landingWithoutSupport → 0.5
+--     total dif_penalty = 3.1 (already reflected in final_score below)
+--   cjp_penalty: p6Count=1 → 0.5 (landing outside boundary)
+--   final = (6.800 × 2) + 6.500 + 2.50 − 3.1 − 0.5 = 19.000
+
+insert into public.teams (id, club_id, category, age_group, gymnast_display)
+values (
+  'fd000000-0000-0000-0000-000000000007',
+  'fd000000-0000-0000-0000-000000000002',
+  'Women''s Pair',
+  'fd000000-0000-0000-0000-000000000001',
+  'Vidal / Moreno'
+)
+on conflict (id) do nothing;
+
+insert into public.competition_entries (id, competition_id, team_id, dorsal, dropped_out)
+values (
+  'fd000000-0000-0000-0000-000000000024',
+  'fd000000-0000-0000-0000-000000000010',
+  'fd000000-0000-0000-0000-000000000007',
+  5, false
+)
+on conflict (id) do nothing;
+
+insert into public.routine_results
+  (session_id, team_id, e_score, a_score, dif_score, dif_penalty, cjp_penalty, cjp_penalty_detail, dj_penalty_detail, final_score, status)
+values (
+  'fd000000-0000-0000-0000-000000000013',
+  'fd000000-0000-0000-0000-000000000007',
+  6.800, 6.500, 2.50, 3.1, 0.5,
+  '{"p1Seconds":0,"p2Value":0,"p3":false,"p4":false,"p5Count":0,"p6Count":1,"p7":false,"p8":false,"p9Count":0,"p10":false,"p11":false,"p12":false,"p13":false,"p14Count":0}'::jsonb,
+  '{
+    "elem_1:1": {"isDone": true,  "tfCount": 2, "srNotDone": false, "forbiddenElement": false, "landingWithoutSupport": false, "note": "Incomplete rotation"},
+    "elem_2:1": {"isDone": false, "tfCount": 0, "srNotDone": true,  "forbiddenElement": false, "landingWithoutSupport": false, "note": ""},
+    "elem_4:1": {"isDone": true,  "tfCount": 0, "srNotDone": false, "forbiddenElement": true,  "landingWithoutSupport": false, "note": "Element not in tariff"},
+    "elem_5:1": {"isDone": true,  "tfCount": 0, "srNotDone": false, "forbiddenElement": false, "landingWithoutSupport": true,  "note": "No hand contact on landing"}
+  }'::jsonb,
+  19.000, 'approved'
+)
+on conflict (session_id, team_id) do update set
+  e_score = excluded.e_score, a_score = excluded.a_score,
+  dif_score = excluded.dif_score, dif_penalty = excluded.dif_penalty,
+  cjp_penalty = excluded.cjp_penalty, cjp_penalty_detail = excluded.cjp_penalty_detail,
+  dj_penalty_detail = excluded.dj_penalty_detail,
+  final_score = excluded.final_score, status = excluded.status, updated_at = now();
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- TEST STEPS
 -- 1. Run migration 20260427000000_tv_feature.sql
--- 2. Run this file
--- 3. Admin → competition "Test Championship 2026 (TV)" → TV tab
--- 4. Open /tv/fd000000-0000-0000-0000-000000000010 in a second window
--- 5. Queue a result → score hidden on TV
--- 6. Click "Reveal score" → scores animate in
--- 7. Queue "Torres / Blanco" to see the CJP penalty reason breakdown
+-- 2. Run migration 20260428000001_dj_penalty_detail.sql  (adds dj_penalty_detail column)
+-- 3. Run migration 20260428000000_tv_state_realtime.sql  (enables Realtime for tv_state)
+-- 4. Run this file
+-- 5. Admin → competition "Test Championship 2026 (TV)" → TV tab
+-- 6. Open /tv/fd000000-0000-0000-0000-000000000010 in a second window
+-- 7. Queue a result → score hidden on TV
+-- 8. Click "Reveal score" → scores animate in instantly (no reload needed)
+-- 9. Queue "Martínez / Sánchez" → see DJ penalty: landing without support (0.5)
+-- 10. Queue "Torres / Blanco"   → see CJP penalties: boundary ×2 + advertising
+-- 11. Queue "Vidal / Moreno"    → see both DJ penalties (TF ×2, SR not done,
+--                                  forbidden element, landing) + CJP penalty
 -- ─────────────────────────────────────────────────────────────────────────────
