@@ -1,47 +1,7 @@
-[00:00:01.122] Server  LOG     ✓ Ready in 888ms
-[00:00:19.972] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:20.565] Browser ERROR   {"__isAuthError":true,"code":"refresh_token_not_found","name":"AuthApiError","status":400}
-[00:00:31.452] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
-[00:00:37.577] Browser ERROR   In HTML, %s cannot be a descendant of <%s>.
-This will cause a hydration error.%s <div> p 
-
-  ...
-    <CompetitionDetail lang="es" competition={{id:"5da1f8...", ...}} panels={[...]} sections={[...]} sessions={[...]} ...>
-      <div className="max-w-4xl ...">
-        <div>
-        <div>
-        <StartingOrderTab lang="es" globalTeams={[...]} clubs={[...]} entries={[...]} sections={[...]} panels={[...]} ...>
-          <div className="space-y-6">
-            <div>
-            <div className="so-print-area">
-              <div>
-              <div className="grid gap-4...">
-                <PanelColumn lang="es" panel={{id:"5a8ebd...", ...}} sessions={[...]} globalTeams={[...]} clubs={[...]} ...>
-                  <div className="border bor...">
-                    <div>
-                    <div className="p-3 space-y-3">
-                      <SessionOrderCard session={{id:"b0f735...", ...}} globalTeams={[...]} clubs={[...]} entries={[...]} ...>
-                        <div className="border rou...">
-                          <div>
-                          <div className="p-3">
-                            <div className="space-y-0.5">
-                              <div className={"flex ite..."}>
-                                <div>
-                                <span>
-                                <span>
-                                <div className="flex-1 min...">
-                                  <p>
->                                 <p className="flex items-center gap-1 text-xs truncate text-slate-400">
-                                    <ClubAvatar club={{id:"cc530e...", ...}}>
->                                     <div
->                                       className="w-5 h-5 rounded-full bg-slate-200 text-slate-500 text-[9px] font-se..."
->                                     >
-                                    ...
-                      ...
-
-[00:00:37.577] Browser ERROR   <%s> cannot contain a nested %s.
-See this log for the ancestor stack trace. p <div>
-[00:02:46.319] Server  LOG     ✓ Compiled in 123ms
-[00:02:58.717] Server  LOG     ✓ Compiled in 46ms
-[00:03:07.082] Server  LOG     ✓ Compiled in 92ms
-[00:03:18.813] Server  LOG     ✓ Compiled in 119ms
+[00:00:01.156] Server  LOG     ✓ Ready in 888ms
+[00:00:04.455] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:55.570] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:07:23.534] Server  LOG     ✓ Compiled in 512ms
+[00:07:27.992] Server  LOG     ✓ Compiled in 45ms
+[00:07:31.761] Server  LOG     ✓ Compiled in 56ms
+[00:08:45.973] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold

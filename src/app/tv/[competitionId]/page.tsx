@@ -25,7 +25,8 @@ type TeamData = {
 }
 
 type SessionData = {
-  age_group: string
+  age_group: string       // raw ID — used for DB filtering (ranking queries)
+  age_group_label: string // resolved display name
   category: string
   routine_type: string
   section_id: string
@@ -216,12 +217,18 @@ export default function TVPage() {
 
       const sess = sessionRes.data
       if (sess) {
+        const { data: agRule } = await supabase
+          .from('age_group_rules')
+          .select('age_group')
+          .eq('id', sess.age_group)
+          .maybeSingle()
         setSession({
-          age_group:  sess.age_group,
-          category:   sess.category,
-          routine_type: sess.routine_type,
-          section_id: sess.section_id,
-          panel_id:   sess.panel_id,
+          age_group:       sess.age_group,
+          age_group_label: agRule?.age_group ?? sess.age_group,
+          category:        sess.category,
+          routine_type:    sess.routine_type,
+          section_id:      sess.section_id,
+          panel_id:        sess.panel_id,
         })
 
         // Ranking: all approved results for same age_group + category + routine_type
@@ -326,7 +333,7 @@ export default function TVPage() {
             {' · '}
             {routineLabel(session.routine_type)}
             {' · '}
-            {session.age_group}
+            {session.age_group_label}
           </span>
         )}
       </div>
