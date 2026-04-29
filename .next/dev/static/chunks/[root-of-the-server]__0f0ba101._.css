@@ -1081,6 +1081,10 @@
     max-height: 90vh;
   }
 
+  .max-h-\[500px\] {
+    max-height: 500px;
+  }
+
   .max-h-full {
     max-height: 100%;
   }

@@ -150,7 +150,7 @@ export default function TVTab({
       .from('routine_results')
       .select('session_id, team_id, final_score, status, updated_at')
       .in('session_id', sessionIds)
-      .eq('status', 'approved')
+      .in('status', ['approved', 'provisional'])
       .order('updated_at', { ascending: false })
 
     if (!data) return
@@ -418,7 +418,7 @@ export default function TVTab({
         {participants.length === 0 ? (
           <p className="text-sm text-slate-400 text-center py-8">{t.noResults}</p>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
             {participants.map((p) => {
               const isQueued = tvState?.session_id === p.session_id && tvState?.team_id === p.team_id
               const hasScore = p.result !== null
@@ -466,9 +466,16 @@ export default function TVTab({
 
                   {/* score or waiting indicator */}
                   {hasScore ? (
-                    <span className="tabular-nums font-bold text-slate-700 text-sm shrink-0">
-                      {p.result!.final_score?.toFixed(3) ?? '—'}
-                    </span>
+                    <div className="flex flex-col items-end shrink-0 gap-0.5">
+                      {p.result!.status === 'provisional' && (
+                        <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded leading-none">
+                          {t.prov}
+                        </span>
+                      )}
+                      <span className="tabular-nums font-bold text-slate-700 text-sm">
+                        {p.result!.final_score?.toFixed(3) ?? '—'}
+                      </span>
+                    </div>
                   ) : (
                     <span className="text-xs text-slate-300 shrink-0 w-14 text-right">—</span>
                   )}
