@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Team, Club, Gymnast, CompetitionEntry, AgeGroupRule } from '@/components/admin/types'
 import { categoryLabel, sortByAgeGroupAndCategory } from '@/components/admin/types'
 import ClickableImg from '@/components/shared/ClickableImg'
 import ImportTab from './ImportTab'
+import { createClient } from '@/lib/supabase'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -22,6 +23,10 @@ const T = {
     baja: 'Dropout',
     licenciaWarning: 'Missing licencia',
     licenciaWarningFull: 'One or more gymnasts have no licencia uploaded.',
+    tsWarning: 'Missing TS',
+    tsWarningFull: 'No TS uploaded.',
+    musicWarning: 'Missing music',
+    musicWarningFull: 'No music file uploaded.',
     expandAll: 'Expand all',
     collapseAll: 'Collapse all',
   },
@@ -37,6 +42,10 @@ const T = {
     baja: 'Baja',
     licenciaWarning: 'Licencia pendiente',
     licenciaWarningFull: 'Uno o más gimnastas no tienen la licencia subida.',
+    tsWarning: 'Falta TS',
+    tsWarningFull: 'No se ha subido la TS.',
+    musicWarning: 'Falta música',
+    musicWarningFull: 'No se ha subido el archivo de música.',
     expandAll: 'Expandir todo',
     collapseAll: 'Contraer todo',
   },
@@ -80,7 +89,7 @@ function TeamAvatar({ team }: { team: Team }) {
 
 // ─── group ────────────────────────────────────────────────────────────────────
 
-type GroupItem = { entry: CompetitionEntry; team: Team; club: Club | undefined; missingLicencia: boolean }
+type GroupItem = { entry: CompetitionEntry; team: Team; club: Club | undefined; missingLicencia: boolean; missingTS: boolean; missingMusic: boolean }
 
 function RegistrationGroup({ age_group, category, items, lang, agLabels, open, onToggle, onToggleDropout }: {
   age_group: string
@@ -120,7 +129,7 @@ function RegistrationGroup({ age_group, category, items, lang, agLabels, open, o
 
       {/* team rows */}
       {open && <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden">
-        {items.map(({ entry, team, club, missingLicencia }) => (
+        {items.map(({ entry, team, club, missingLicencia, missingTS, missingMusic }) => (
           <div
             key={entry.id}
             className={[
@@ -153,6 +162,16 @@ function RegistrationGroup({ age_group, category, items, lang, agLabels, open, o
                 {missingLicencia && (
                   <span title={t.licenciaWarningFull} className="text-xs font-semibold px-1.5 py-0.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-full shrink-0">
                     ⚠ {t.licenciaWarning}
+                  </span>
+                )}
+                {missingTS && (
+                  <span title={t.tsWarningFull} className="text-xs font-semibold px-1.5 py-0.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-full shrink-0">
+                    ⚠ {t.tsWarning}
+                  </span>
+                )}
+                {missingMusic && (
+                  <span title={t.musicWarningFull} className="text-xs font-semibold px-1.5 py-0.5 bg-purple-50 text-purple-600 border border-purple-200 rounded-full shrink-0">
+                    ⚠ {t.musicWarning}
                   </span>
                 )}
               </div>
@@ -226,6 +245,19 @@ export default function RegistrationsTab({
   // empty Set = all open sentinel for both levels and groups
   const [openLevels,  setOpenLevels]  = useState<Set<string>>(new Set())
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
+  const [routineMusic, setRoutineMusic] = useState<Array<{ team_id: string; music_path: string | null; ts_path: string | null }>>([])
+
+  useEffect(() => {
+    const teamIds = entries.map(e => e.team_id)
+    if (teamIds.length === 0) return
+    const supabase = createClient()
+    supabase
+      .from('routine_music')
+      .select('team_id, music_path, ts_path')
+      .eq('competition_id', competitionId)
+      .in('team_id', teamIds)
+      .then(({ data }) => { if (data) setRoutineMusic(data) })
+  }, [competitionId, entries])
 
   if (showImport) {
     return (
@@ -259,11 +291,14 @@ export default function RegistrationsTab({
     const missingLicencia = (team.gymnast_ids ?? []).some((gid) =>
       !gymnasts.find((g) => g.id === gid)?.licencia_url
     )
+    const music = routineMusic.find((m) => m.team_id === team.id)
+    const missingTS = !music?.ts_path
+    const missingMusic = !music?.music_path
     const key = `${team.age_group}||${team.category}`
     if (!groupMap.has(key)) {
       groupMap.set(key, { age_group: team.age_group, category: team.category, items: [] })
     }
-    groupMap.get(key)!.items.push({ entry, team, club, missingLicencia })
+    groupMap.get(key)!.items.push({ entry, team, club, missingLicencia, missingTS, missingMusic })
   }
 
   const groups = sortByAgeGroupAndCategory([...groupMap.values()], ageGroupRules)
