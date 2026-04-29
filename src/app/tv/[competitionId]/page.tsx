@@ -40,6 +40,7 @@ type ResultData = {
   dif_penalty: number | null
   cjp_penalty: number | null
   final_score: number | null
+  status: string | null
   cjp_penalty_detail: PenaltyState | null
   dj_penalty_detail: ElementFlags | null
 }
@@ -60,6 +61,7 @@ const T = {
     rank: (n: number, total: number) => `#${n} of ${total}`,
     penLabel: 'Penalties',
     dorsal: (n: number) => `#${n}`,
+    provisional: 'PROVISIONAL',
   },
   es: {
     waiting: 'Esperando resultados',
@@ -69,6 +71,7 @@ const T = {
     rank: (n: number, total: number) => `#${n} de ${total}`,
     penLabel: 'Penalizaciones',
     dorsal: (n: number) => `#${n}`,
+    provisional: 'PROVISIONAL',
   },
 }
 
@@ -195,7 +198,7 @@ export default function TVPage() {
           .maybeSingle(),
         supabase
           .from('routine_results')
-          .select('e_score, a_score, dif_score, dif_penalty, cjp_penalty, final_score, cjp_penalty_detail, dj_penalty_detail')
+          .select('e_score, a_score, dif_score, dif_penalty, cjp_penalty, final_score, status, cjp_penalty_detail, dj_penalty_detail')
           .eq('session_id', session_id)
           .eq('team_id', team_id)
           .maybeSingle(),
@@ -246,7 +249,7 @@ export default function TVPage() {
             .from('routine_results')
             .select('team_id, final_score')
             .in('session_id', ids)
-            .eq('status', 'approved')
+            .in('status', ['approved', 'provisional'])
             .order('final_score', { ascending: false })
 
           if (allResults) {
@@ -267,6 +270,7 @@ export default function TVPage() {
           dif_penalty:         resultRes.data.dif_penalty,
           cjp_penalty:         resultRes.data.cjp_penalty,
           final_score:         resultRes.data.final_score,
+          status:              (resultRes.data as unknown as { status: string | null }).status ?? null,
           cjp_penalty_detail:  resultRes.data.cjp_penalty_detail as PenaltyState | null,
           dj_penalty_detail:   resultRes.data.dj_penalty_detail as ElementFlags | null,
         })
@@ -431,6 +435,19 @@ export default function TVPage() {
                     </span>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* provisional badge */}
+            {result?.status === 'provisional' && (
+              <div
+                className="flex items-center gap-2.5 transition-opacity duration-300"
+                style={{ transitionDelay: scoreVisible ? '350ms' : '0ms' }}
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                <span className="text-amber-400 text-lg font-bold uppercase tracking-widest">
+                  {t.provisional}
+                </span>
               </div>
             )}
 

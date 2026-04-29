@@ -281,6 +281,7 @@
     --tracking-widest: .1em;
     --leading-tight: 1.25;
     --leading-snug: 1.375;
+    --leading-relaxed: 1.625;
     --radius-md: .375rem;
     --radius-lg: .5rem;
     --radius-xl: .75rem;
@@ -1079,6 +1080,10 @@
 
   .max-h-\[90vh\] {
     max-height: 90vh;
+  }
+
+  .max-h-\[500px\] {
+    max-height: 500px;
   }
 
   .max-h-full {
@@ -2540,6 +2545,11 @@
   .leading-none {
     --tw-leading: 1;
     line-height: 1;
+  }
+
+  .leading-relaxed {
+    --tw-leading: var(--leading-relaxed);
+    line-height: var(--leading-relaxed);
   }
 
   .leading-snug {

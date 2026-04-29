@@ -121,6 +121,8 @@ const T = {
     print: 'Print',
     addBreak: 'Add break',
     breakLabel: 'Break',
+    saveStartingOrder: 'Save starting order',
+    saveStartingOrderHint: 'Overwrite the timeline order with the current session order (keeps existing breaks).',
   },
   es: {
     hint: 'Establece el orden de actuación en cada sesión.',
@@ -140,6 +142,8 @@ const T = {
     print: 'Imprimir',
     addBreak: 'Añadir pausa',
     breakLabel: 'Pausa',
+    saveStartingOrder: 'Guardar orden de salida',
+    saveStartingOrderHint: 'Reescribe la línea de tiempo con el orden de sesión actual (mantiene las pausas existentes).',
   },
 }
 
@@ -160,9 +164,9 @@ function ClubAvatar({ club }: { club: Club | null | undefined }) {
   return club.avatar_url ? (
     <img src={club.avatar_url} alt={club.club_name} className="w-5 h-5 rounded-full object-cover shrink-0" />
   ) : (
-    <div className="w-5 h-5 rounded-full bg-slate-200 text-slate-500 text-[9px] font-semibold flex items-center justify-center shrink-0">
+    <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-500 text-[9px] font-semibold flex items-center justify-center shrink-0">
       {club.club_name.charAt(0).toUpperCase()}
-    </div>
+    </span>
   )
 }
 
@@ -318,14 +322,13 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
               const dorsal = sessionEntries.find(e => e.team_id === team.id)?.dorsal
               return (
                 <div key={team.id} className={['flex items-center gap-2 py-1.5', isDropout ? 'opacity-50' : ''].join(' ')}>
-                  {times && !isDropout ? (
-                    <div className="flex flex-col shrink-0 w-14 gap-0 text-right">
-                      <span className="text-[10px] text-slate-400 font-mono leading-tight">{t.warmup} {times.warmup}</span>
-                      <span className="text-[10px] text-slate-600 font-mono font-semibold leading-tight">{t.compete} {times.compete}</span>
-                    </div>
-                  ) : (
-                    <div className="w-14 shrink-0" />
-                  )}
+                  <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 bg-slate-100 flex items-center justify-center">
+                    {club?.avatar_url ? (
+                      <img src={club.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[10px] font-semibold text-slate-400">{club?.club_name?.charAt(0).toUpperCase() ?? '?'}</span>
+                    )}
+                  </div>
                   <span className={['text-xs font-mono w-5 shrink-0 text-right', isDropout ? 'text-slate-300 line-through' : 'text-slate-400'].join(' ')}>
                     {idx + 1}.
                   </span>
@@ -335,15 +338,9 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                       #{dorsal}
                     </span>
                   )}
-                  <div className="flex-1 min-w-0">
-                    <p className={['text-xs font-medium truncate', isDropout ? 'text-slate-400 line-through' : 'text-slate-700'].join(' ')}>
-                      {team.gymnast_display}
-                    </p>
-                    <p className={['flex items-center gap-1 text-xs truncate', isDropout ? 'text-slate-300' : 'text-slate-400'].join(' ')}>
-                      <ClubAvatar club={club} />
-                      {club?.club_name ?? '—'}
-                    </p>
-                  </div>
+                  <p className={['flex-1 text-xs font-medium truncate', isDropout ? 'text-slate-400 line-through' : 'text-slate-700'].join(' ')}>
+                    {team.gymnast_display}
+                  </p>
                   {isDropout && (
                     <span className="text-xs font-semibold text-red-300 shrink-0">{t.baja}</span>
                   )}
@@ -382,17 +379,18 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                   <svg className="w-3.5 h-3.5 text-slate-300 shrink-0" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM8.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 21a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
                   </svg>
+                  <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 bg-slate-100 flex items-center justify-center">
+                    {club?.avatar_url ? (
+                      <img src={club.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-[10px] font-semibold text-slate-400">{club?.club_name?.charAt(0).toUpperCase() ?? '?'}</span>
+                    )}
+                  </div>
                   <span className="text-xs font-mono text-slate-400 w-5 shrink-0 text-right">{idx + 1}.</span>
                   {dorsal != null && (
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-white shrink-0">#{dorsal}</span>
                   )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-slate-700 truncate">{team.gymnast_display}</p>
-                    <p className="flex items-center gap-1 text-xs text-slate-400 truncate">
-                      <ClubAvatar club={club} />
-                      {club?.club_name ?? '—'}
-                    </p>
-                  </div>
+                  <p className="flex-1 text-xs font-medium text-slate-700 truncate">{team.gymnast_display}</p>
                 </div>
               )
             })}
@@ -407,18 +405,19 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
                   const club = clubs.find((c) => c.id === team.club_id)
                   const dorsal = sessionEntries.find(e => e.team_id === team.id)?.dorsal
                   return (
-                    <div key={team.id} className="flex items-center gap-2 py-1.5">
-                      <span className="w-5 shrink-0" />
+                    <div key={team.id} className="flex items-center gap-2 py-1.5 opacity-50">
+                      <span className="w-3.5 shrink-0" />
+                      <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 bg-slate-100 flex items-center justify-center">
+                        {club?.avatar_url ? (
+                          <img src={club.avatar_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-[10px] font-semibold text-slate-400">{club?.club_name?.charAt(0).toUpperCase() ?? '?'}</span>
+                        )}
+                      </div>
                       {dorsal != null && (
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-300 shrink-0">#{dorsal}</span>
                       )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-slate-300 line-through truncate">{team.gymnast_display}</p>
-                        <p className="flex items-center gap-1 text-xs text-slate-300 truncate">
-                          <ClubAvatar club={club} />
-                          {club?.club_name ?? '—'}
-                        </p>
-                      </div>
+                      <p className="flex-1 text-xs font-medium text-slate-300 line-through truncate">{team.gymnast_display}</p>
                       <span className="text-xs font-semibold text-red-300 shrink-0">{t.baja}</span>
                     </div>
                   )
@@ -882,10 +881,10 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
                   <p className={['text-sm font-medium text-slate-800 truncate', slot.isDropout ? 'line-through text-slate-400' : ''].join(' ')}>
                     {team?.gymnast_display ?? slot.teamId}
                   </p>
-                  <p className="flex items-center gap-1 text-xs text-slate-400 truncate">
+                  <span className="flex items-center gap-1 text-xs text-slate-400 truncate">
                     <ClubAvatar club={club} />
                     {club?.club_name ?? ''} · {slot.sessionName}
-                  </p>
+                  </span>
                 </div>
                 {slot.isDropout && (
                   <span className="shrink-0 text-xs font-semibold bg-red-50 text-red-400 px-2 py-0.5 rounded-full">
@@ -944,11 +943,95 @@ export default function StartingOrderTab({
     return sec.label ?? t.sectionN(sec.section_number)
   }
 
+  // Build timeline_order from the Sessions tab order (sessionOrders) and save it.
+  // This is a repair tool: if timeline_order is stale (e.g. new inscription after it was saved),
+  // this rewrites it from the authoritative session_orders data, preserving any existing breaks.
+  function handleSaveStartingOrder() {
+    if (!activeSection) return
+    const sortedPanels = [...panels].sort((a, b) => a.panel_number - b.panel_number)
+    const sectionSessions = sessions.filter(s => s.section_id === activeSection.id)
+    const droppedIds = new Set(entries.filter(e => e.dropped_out).map(e => e.team_id))
+
+    function buildSlots(panel: Panel): Array<{ sessionId: string; teamId: string }> {
+      const panelSessions = sectionSessions
+        .filter(s => s.panel_id === panel.id)
+        .sort((a, b) => a.order_index - b.order_index)
+      const result: Array<{ sessionId: string; teamId: string }> = []
+      for (const session of panelSessions) {
+        const orders = sessionOrders
+          .filter(o => o.session_id === session.id)
+          .sort((a, b) => a.position - b.position)
+        const matchingTeams = globalTeams.filter(
+          t => t.age_group === session.age_group && t.category === session.category
+        )
+        const matchingIds = new Set(matchingTeams.map(t => t.id))
+        const orderedIds = orders.filter(o => matchingIds.has(o.team_id)).map(o => o.team_id)
+        const unorderedIds = matchingTeams.filter(t => !orderedIds.includes(t.id)).map(t => t.id)
+        for (const teamId of [...orderedIds, ...unorderedIds]) {
+          result.push({ sessionId: session.id, teamId })
+        }
+      }
+      return result
+    }
+
+    let freshSlots: Array<{ sessionId: string; teamId: string }>
+    if (sortedPanels.length === 1) {
+      freshSlots = buildSlots(sortedPanels[0])
+    } else {
+      const s1 = buildSlots(sortedPanels[0])
+      const s2 = buildSlots(sortedPanels[1])
+      freshSlots = []
+      const len = Math.max(s1.length, s2.length)
+      for (let i = 0; i < len; i++) {
+        if (i < s1.length) freshSlots.push(s1[i])
+        if (i < s2.length) freshSlots.push(s2[i])
+      }
+    }
+
+    // Exclude dropouts from the timeline (they stay in session_orders for record-keeping)
+    const newOrder: TimelineEntry[] = freshSlots
+      .filter(s => !droppedIds.has(s.teamId))
+      .map(s => ({ session_id: s.sessionId, team_id: s.teamId }))
+
+    // Re-insert any existing breaks at their original relative positions
+    const existingBreaks: Array<{ index: number; entry: BreakSlot }> = []
+    if (activeSection.timeline_order) {
+      let nonBreakCount = 0
+      for (const entry of activeSection.timeline_order) {
+        if ('type' in entry && entry.type === 'break') {
+          existingBreaks.push({
+            index: nonBreakCount,
+            entry: { type: 'break', id: entry.id, duration_minutes: entry.duration_minutes, label: entry.label },
+          })
+        } else {
+          nonBreakCount++
+        }
+      }
+    }
+    let offset = 0
+    for (const { index, entry } of existingBreaks) {
+      const at = Math.min(index + offset, newOrder.length)
+      newOrder.splice(at, 0, { type: 'break' as const, id: entry.id, duration_minutes: entry.duration_minutes, label: entry.label })
+      offset++
+    }
+
+    onReorderTimeline(activeSection.id, newOrder)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 print:hidden">
         <p className="text-xs text-slate-400">{t.hint}</p>
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleSaveStartingOrder}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+            </svg>
+            {t.saveStartingOrder}
+          </button>
           <button
             onClick={() => window.print()}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
