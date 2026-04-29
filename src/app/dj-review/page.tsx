@@ -73,7 +73,7 @@ function DJReviewPage() {
           // if admin set an explicit deadline, use it strictly (covers both open and close actions)
           c.ts_music_deadline !== null
             ? today > c.ts_music_deadline
-            : ['registration_closed', 'active', 'finished'].includes(c.status)
+            : ['registration_closed', 'published', 'active', 'finished'].includes(c.status)
         )
       if (!validComps.length) { setLoading(false); return }
 

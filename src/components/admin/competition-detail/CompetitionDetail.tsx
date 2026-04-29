@@ -54,6 +54,7 @@ const T = {
       draft:                'Draft',
       registration_open:    'Registration open',
       registration_closed:  'Registration closed',
+      published:            'Published',
       active:               'Live',
       finished:             'Finished',
     },
@@ -61,12 +62,13 @@ const T = {
     action: {
       draft:                'Open registration',
       registration_open:    'Close registration',
-      registration_closed:  'Start competition',
+      registration_closed:  'Publish starting order',
+      published:            'Start competition',
       active:               'Finish competition',
     } as Partial<Record<CompetitionStatus, string>>,
     confirmAction: {
-      registration_closed:  'This will start the competition and enable scoring. Continue?',
-      active:               'This will mark the competition as finished. Continue?',
+      published:  'This will start the competition and enable scoring. Continue?',
+      active:     'This will mark the competition as finished. Continue?',
     } as Partial<Record<CompetitionStatus, string>>,
     posterUpload: 'Upload image',
     posterReplace: 'Replace',
@@ -114,18 +116,20 @@ const T = {
       draft:                'Borrador',
       registration_open:    'Inscripción abierta',
       registration_closed:  'Inscripción cerrada',
+      published:            'Publicada',
       active:               'En vivo',
       finished:             'Finalizada',
     },
     action: {
       draft:                'Abrir inscripción',
       registration_open:    'Cerrar inscripción',
-      registration_closed:  'Iniciar competición',
+      registration_closed:  'Publicar orden de salida',
+      published:            'Iniciar competición',
       active:               'Finalizar competición',
     } as Partial<Record<CompetitionStatus, string>>,
     confirmAction: {
-      registration_closed:  '¿Iniciar la competición y habilitar la puntuación?',
-      active:               '¿Marcar la competición como finalizada?',
+      published:  '¿Iniciar la competición y habilitar la puntuación?',
+      active:     '¿Marcar la competición como finalizada?',
     } as Partial<Record<CompetitionStatus, string>>,
     posterUpload: 'Subir imagen',
     posterReplace: 'Reemplazar',
@@ -142,6 +146,7 @@ const STATUS_BADGE: Record<CompetitionStatus, string> = {
   draft:                'bg-slate-100 text-slate-500',
   registration_open:    'bg-green-100 text-green-700',
   registration_closed:  'bg-amber-100 text-amber-700',
+  published:            'bg-indigo-100 text-indigo-700',
   active:               'bg-blue-600 text-white',
   finished:             'bg-slate-100 text-slate-400',
 }
@@ -149,7 +154,8 @@ const STATUS_BADGE: Record<CompetitionStatus, string> = {
 const ACTION_STYLE: Partial<Record<CompetitionStatus, string>> = {
   draft:                'border-green-200 text-green-700 hover:bg-green-50',
   registration_open:    'border-amber-200 text-amber-700 hover:bg-amber-50',
-  registration_closed:  'border-blue-200 text-blue-700 hover:bg-blue-50',
+  registration_closed:  'border-indigo-200 text-indigo-700 hover:bg-indigo-50',
+  published:            'border-blue-200 text-blue-700 hover:bg-blue-50',
   active:               'border-red-200 text-red-600 hover:bg-red-50',
 }
 
