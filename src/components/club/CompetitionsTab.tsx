@@ -58,6 +58,7 @@ const T = {
       draft: 'Draft',
       registration_open: 'Open',
       registration_closed: 'Closed',
+      published: 'Published',
       active: 'Live',
       finished: 'Finished',
     } as Record<string, string>,
@@ -115,6 +116,7 @@ const T = {
       draft: 'Borrador',
       registration_open: 'Abierta',
       registration_closed: 'Cerrada',
+      published: 'Publicada',
       active: 'En vivo',
       finished: 'Finalizada',
     } as Record<string, string>,
@@ -128,6 +130,7 @@ const STATUS_BADGE: Record<string, string> = {
   draft:               'bg-slate-100 text-slate-500',
   registration_open:   'bg-green-100 text-green-700',
   registration_closed: 'bg-amber-100 text-amber-700',
+  published:           'bg-indigo-100 text-indigo-700',
   active:              'bg-blue-600 text-white',
   finished:            'bg-slate-100 text-slate-400',
 }

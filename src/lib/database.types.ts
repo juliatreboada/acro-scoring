@@ -1109,6 +1109,7 @@ export type Database = {
         | "draft"
         | "registration_open"
         | "registration_closed"
+        | "published"
         | "active"
         | "finished"
       judge_role: "CJP" | "EJ" | "AJ" | "DJ"

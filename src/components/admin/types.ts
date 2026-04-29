@@ -264,11 +264,12 @@ export function sortByAgeGroupAndCategory<T extends { age_group: string; categor
 
 export const ROUTINE_TYPES = ['Balance', 'Dynamic', 'Combined'] as const
 
-export type CompetitionStatus = 'draft' | 'registration_open' | 'registration_closed' | 'active' | 'finished'
+export type CompetitionStatus = 'draft' | 'registration_open' | 'registration_closed' | 'published' | 'active' | 'finished'
 
 export const NEXT_STATUS: Partial<Record<CompetitionStatus, CompetitionStatus>> = {
   draft:                'registration_open',
   registration_open:    'registration_closed',
-  registration_closed:  'active',
+  registration_closed:  'published',
+  published:            'active',
   active:               'finished',
 }

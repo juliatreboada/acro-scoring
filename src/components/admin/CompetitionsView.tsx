@@ -35,6 +35,7 @@ const T = {
     draft:                'Draft',
     registration_open:    'Registration open',
     registration_closed:  'Registration closed',
+    published:            'Published',
     active:               'Live',
     finished:             'Finished',
     // card
@@ -69,6 +70,7 @@ const T = {
     draft:                'Borrador',
     registration_open:    'Inscripción abierta',
     registration_closed:  'Inscripción cerrada',
+    published:            'Publicada',
     active:               'En vivo',
     finished:             'Finalizada',
     // card

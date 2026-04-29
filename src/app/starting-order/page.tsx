@@ -18,6 +18,7 @@ const T = {
     title: 'Starting Orders',
     subtitle: 'Select a competition to view its published starting orders.',
     live: 'Live',
+    published: 'Starting order published',
     finished: 'Finished',
     viewOrder: 'View starting order',
     noCompetitions: 'No competitions available.',
@@ -28,6 +29,7 @@ const T = {
     title: 'Órdenes de salida',
     subtitle: 'Selecciona una competición para ver sus órdenes de salida publicadas.',
     live: 'En vivo',
+    published: 'Orden de salida publicada',
     finished: 'Finalizada',
     viewOrder: 'Ver orden de salida',
     noCompetitions: 'No hay competiciones disponibles.',
@@ -37,8 +39,9 @@ const T = {
 }
 
 const STATUS_BADGE: Partial<Record<Competition['status'], string>> = {
-  active:   'bg-blue-600 text-white',
-  finished: 'bg-slate-100 text-slate-500',
+  published: 'bg-indigo-100 text-indigo-700',
+  active:    'bg-blue-600 text-white',
+  finished:  'bg-slate-100 text-slate-500',
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -69,7 +72,7 @@ export default function Page() {
       const { data } = await supabase
         .from('competitions')
         .select('id, name, status, location, start_date, end_date')
-        .in('status', ['active', 'finished'])
+        .in('status', ['published', 'active', 'finished'])
         .order('start_date', { ascending: false })
       setComps(data ?? [])
       setLoading(false)
@@ -109,7 +112,7 @@ export default function Page() {
             {visible.map((comp) => {
               const dateStr = formatDateRange(comp.start_date, comp.end_date)
               const badgeCls = STATUS_BADGE[comp.status] ?? ''
-              const statusLabel = comp.status === 'active' ? t.live : t.finished
+              const statusLabel = comp.status === 'active' ? t.live : comp.status === 'published' ? t.published : t.finished
 
               return (
                 <button
@@ -121,9 +124,7 @@ export default function Page() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                         <span className={['px-2 py-0.5 rounded-md text-xs font-semibold flex items-center gap-1', badgeCls].join(' ')}>
-                          {comp.status === 'active' && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />
-                          )}
+                          {comp.status === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />}
                           {statusLabel}
                         </span>
                       </div>
