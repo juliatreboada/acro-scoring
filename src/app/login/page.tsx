@@ -183,7 +183,7 @@ export default function LoginPage() {
 
     const PRIORITY: DbRole[] = ['super_admin', 'admin', 'club', 'judge']
     const role = PRIORITY.find(r => loginProfiles?.some(p => p.role === r))
-    router.push(role ? ROLE_REDIRECT[role] : '/')
+    router.push('/')
   }
 
   async function handleSignOut() {
@@ -235,7 +235,7 @@ export default function LoginPage() {
                 {t.alreadyLogged} <span className="font-semibold text-slate-800">{session.name}</span>
               </p>
               <div className="flex flex-col gap-2">
-                <button onClick={() => router.push(ROLE_REDIRECT[session.role])}
+                <button onClick={() => router.push('/')}
                   className="w-full px-4 py-2.5 bg-slate-800 text-white text-sm font-medium rounded-xl hover:bg-slate-700 transition-all">
                   {t.goToDashboard}
                 </button>
