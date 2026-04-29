@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { useProfile, ROLE_HOME } from '@/contexts/ProfileContext'
 import type { Lang } from '@/components/aj-scoring/types'
 import type { Database } from '@/lib/database.types'
 
@@ -170,6 +171,17 @@ function CompCard({
   )
 }
 
+const ROLE_BADGE_BG: Record<string, string> = {
+  super_admin: 'bg-violet-500',
+  admin:       'bg-blue-500',
+  judge:       'bg-amber-500',
+  club:        'bg-emerald-500',
+}
+
+function avatarInitials(name: string) {
+  return name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?'
+}
+
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
@@ -180,6 +192,7 @@ export default function HomePage() {
   const router = useRouter()
   const supabase = createClient()
   const t = T[lang]
+  const { activeProfile, profileLoading } = useProfile()
 
   useEffect(() => {
     async function load() {
@@ -226,15 +239,31 @@ export default function HomePage() {
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => router.push('/login')}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition-all"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-              </svg>
-              {t.signIn}
-            </button>
+            {!profileLoading && activeProfile ? (
+              <button
+                onClick={() => router.push(ROLE_HOME[activeProfile.role])}
+                title={activeProfile.name}
+                className="w-8 h-8 rounded-full overflow-hidden shrink-0 hover:opacity-80 transition-opacity"
+              >
+                {activeProfile.avatar_url ? (
+                  <img src={activeProfile.avatar_url} alt={activeProfile.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className={['w-full h-full flex items-center justify-center text-white text-xs font-bold', ROLE_BADGE_BG[activeProfile.role] ?? 'bg-slate-500'].join(' ')}>
+                    {avatarInitials(activeProfile.name)}
+                  </div>
+                )}
+              </button>
+            ) : !profileLoading && (
+              <button
+                onClick={() => router.push('/login')}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition-all"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                </svg>
+                {t.signIn}
+              </button>
+            )}
           </div>
         </div>
       </header>
