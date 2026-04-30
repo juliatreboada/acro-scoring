@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import CompetitionsView from '@/components/admin/CompetitionsView'
 import AuthBar from '@/components/shared/AuthBar'
-import type { Lang } from '@/components/aj-scoring/types'
+import type { Lang } from '@/components/scoring/types'
 import type { Competition, AgeGroupRule, AdminUser } from '@/components/admin/types'
 
 const T_USERS = { en: 'Users', es: 'Usuarios' }

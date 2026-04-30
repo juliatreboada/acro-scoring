@@ -1,4 +1,4 @@
-import type { ElementType } from '../ej-scoring/types'
+import type { ElementType } from '../scoring/types'
 
 export type { ElementType }
 

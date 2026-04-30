@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { Lang } from '@/components/aj-scoring/types'
+import type { Lang } from '@/components/scoring/types'
 import type { Judge, Panel, Section, SectionPanelJudge, Role, Club, CompetitionJudgeNomination } from '@/components/admin/types'
 import ClickableImg from '@/components/shared/ClickableImg'
 import { ROLE_CONFIG } from '@/components/admin/types'

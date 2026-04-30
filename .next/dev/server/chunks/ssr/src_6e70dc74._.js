@@ -2080,7 +2080,8 @@ const ROUTINE_TYPES = [
 const NEXT_STATUS = {
     draft: 'registration_open',
     registration_open: 'registration_closed',
-    registration_closed: 'active',
+    registration_closed: 'published',
+    published: 'active',
     active: 'finished'
 };
 }),
@@ -2775,6 +2776,7 @@ const T = {
             draft: 'Draft',
             registration_open: 'Open',
             registration_closed: 'Closed',
+            published: 'Published',
             active: 'Live',
             finished: 'Finished'
         },
@@ -2832,6 +2834,7 @@ const T = {
             draft: 'Borrador',
             registration_open: 'Abierta',
             registration_closed: 'Cerrada',
+            published: 'Publicada',
             active: 'En vivo',
             finished: 'Finalizada'
         },
@@ -2844,6 +2847,7 @@ const STATUS_BADGE = {
     draft: 'bg-slate-100 text-slate-500',
     registration_open: 'bg-green-100 text-green-700',
     registration_closed: 'bg-amber-100 text-amber-700',
+    published: 'bg-indigo-100 text-indigo-700',
     active: 'bg-blue-600 text-white',
     finished: 'bg-slate-100 text-slate-400'
 };
@@ -2883,7 +2887,7 @@ function FileChip({ label, filename, accept, locked, onUpload, onRemove, onPrevi
                 children: label
             }, void 0, false, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 170,
+                lineNumber: 173,
                 columnNumber: 7
             }, this),
             displayName ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2895,14 +2899,14 @@ function FileChip({ label, filename, accept, locked, onUpload, onRemove, onPrevi
                         children: displayName
                     }, void 0, false, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 174,
+                        lineNumber: 177,
                         columnNumber: 13
                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                         className: "text-xs text-green-700 truncate",
                         children: displayName
                     }, void 0, false, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 178,
+                        lineNumber: 181,
                         columnNumber: 13
                     }, this),
                     !locked && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2911,20 +2915,20 @@ function FileChip({ label, filename, accept, locked, onUpload, onRemove, onPrevi
                         children: "✕"
                     }, void 0, false, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 181,
+                        lineNumber: 184,
                         columnNumber: 13
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 172,
+                lineNumber: 175,
                 columnNumber: 9
             }, this) : locked ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                 className: "text-xs text-slate-300 border border-dashed border-slate-200 rounded-full px-2 py-0.5",
                 children: "—"
             }, void 0, false, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 185,
+                lineNumber: 188,
                 columnNumber: 9
             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                 onClick: ()=>inputRef.current?.click(),
@@ -2932,7 +2936,7 @@ function FileChip({ label, filename, accept, locked, onUpload, onRemove, onPrevi
                 children: "+ upload"
             }, void 0, false, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 187,
+                lineNumber: 190,
                 columnNumber: 9
             }, this),
             !locked && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -2943,13 +2947,13 @@ function FileChip({ label, filename, accept, locked, onUpload, onRemove, onPrevi
                 onChange: handleChange
             }, void 0, false, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 192,
+                lineNumber: 195,
                 columnNumber: 19
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-        lineNumber: 169,
+        lineNumber: 172,
         columnNumber: 5
     }, this);
 }
@@ -2977,19 +2981,19 @@ function PDFViewerModal({ url, title, onClose }) {
                                     d: "M15 19l-7-7 7-7"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                    lineNumber: 209,
+                                    lineNumber: 212,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 208,
+                                lineNumber: 211,
                                 columnNumber: 11
                             }, this),
                             "Volver"
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 204,
+                        lineNumber: 207,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -2997,7 +3001,7 @@ function PDFViewerModal({ url, title, onClose }) {
                         children: "|"
                     }, void 0, false, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 213,
+                        lineNumber: 216,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3005,7 +3009,7 @@ function PDFViewerModal({ url, title, onClose }) {
                         children: title
                     }, void 0, false, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 214,
+                        lineNumber: 217,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("a", {
@@ -3016,13 +3020,13 @@ function PDFViewerModal({ url, title, onClose }) {
                         children: "Abrir en nueva pestaña"
                     }, void 0, false, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 215,
+                        lineNumber: 218,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 203,
+                lineNumber: 206,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("iframe", {
@@ -3031,13 +3035,13 @@ function PDFViewerModal({ url, title, onClose }) {
                 title: title
             }, void 0, false, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 225,
+                lineNumber: 228,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-        lineNumber: 201,
+        lineNumber: 204,
         columnNumber: 5
     }, this);
 }
@@ -3065,17 +3069,17 @@ function MusicPlayerModal({ url, title, onClose }) {
                                     d: "M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                    lineNumber: 240,
+                                    lineNumber: 243,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 239,
+                                lineNumber: 242,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                            lineNumber: 238,
+                            lineNumber: 241,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3083,7 +3087,7 @@ function MusicPlayerModal({ url, title, onClose }) {
                             children: title
                         }, void 0, false, {
                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                            lineNumber: 243,
+                            lineNumber: 246,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -3101,23 +3105,23 @@ function MusicPlayerModal({ url, title, onClose }) {
                                     d: "M6 18L18 6M6 6l12 12"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                    lineNumber: 246,
+                                    lineNumber: 249,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 245,
+                                lineNumber: 248,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                            lineNumber: 244,
+                            lineNumber: 247,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                    lineNumber: 237,
+                    lineNumber: 240,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3130,23 +3134,23 @@ function MusicPlayerModal({ url, title, onClose }) {
                         children: "Your browser does not support the audio element."
                     }, void 0, false, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 252,
+                        lineNumber: 255,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                    lineNumber: 251,
+                    lineNumber: 254,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-            lineNumber: 235,
+            lineNumber: 238,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-        lineNumber: 234,
+        lineNumber: 237,
         columnNumber: 5
     }, this);
 }
@@ -3168,7 +3172,7 @@ function RoutineRow({ lang, routineType, record, locked, reviewStatus, reviewCom
                                 children: routineType
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 281,
+                                lineNumber: 284,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(FileChip, {
@@ -3181,7 +3185,7 @@ function RoutineRow({ lang, routineType, record, locked, reviewStatus, reviewCom
                                 onRemove: ()=>onSet('ts', null)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 282,
+                                lineNumber: 285,
                                 columnNumber: 11
                             }, this),
                             reviewStatus === 'checked' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3199,19 +3203,19 @@ function RoutineRow({ lang, routineType, record, locked, reviewStatus, reviewCom
                                             d: "M5 13l4 4L19 7"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                            lineNumber: 291,
+                                            lineNumber: 294,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 290,
+                                        lineNumber: 293,
                                         columnNumber: 15
                                     }, this),
                                     lang === 'es' ? 'Revisada' : 'Reviewed'
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 289,
+                                lineNumber: 292,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(FileChip, {
@@ -3224,13 +3228,13 @@ function RoutineRow({ lang, routineType, record, locked, reviewStatus, reviewCom
                                 onRemove: ()=>onSet('music', null)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 296,
+                                lineNumber: 299,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 280,
+                        lineNumber: 283,
                         columnNumber: 9
                     }, this),
                     reviewStatus === 'incorrect' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3241,7 +3245,7 @@ function RoutineRow({ lang, routineType, record, locked, reviewStatus, reviewCom
                                 children: lang === 'es' ? 'TS marcada como incorrecta por el juez DJ:' : 'TS marked as incorrect by DJ judge:'
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 305,
+                                lineNumber: 308,
                                 columnNumber: 13
                             }, this),
                             reviewComment && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3249,7 +3253,7 @@ function RoutineRow({ lang, routineType, record, locked, reviewStatus, reviewCom
                                 children: reviewComment
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 309,
+                                lineNumber: 312,
                                 columnNumber: 15
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3257,13 +3261,13 @@ function RoutineRow({ lang, routineType, record, locked, reviewStatus, reviewCom
                                 children: lang === 'es' ? 'Sube una nueva TS para corregirla.' : 'Upload a new TS to correct it.'
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 311,
+                                lineNumber: 314,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 304,
+                        lineNumber: 307,
                         columnNumber: 11
                     }, this),
                     reviewStatus === 'new_ts' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3271,13 +3275,13 @@ function RoutineRow({ lang, routineType, record, locked, reviewStatus, reviewCom
                         children: lang === 'es' ? 'Nueva TS enviada — pendiente de revisión por el juez.' : 'New TS sent — pending DJ review.'
                     }, void 0, false, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 317,
+                        lineNumber: 320,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 279,
+                lineNumber: 282,
                 columnNumber: 7
             }, this),
             tsPreviewUrl && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(PDFViewerModal, {
@@ -3286,7 +3290,7 @@ function RoutineRow({ lang, routineType, record, locked, reviewStatus, reviewCom
                 onClose: ()=>setTsPreviewUrl(null)
             }, void 0, false, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 323,
+                lineNumber: 326,
                 columnNumber: 9
             }, this),
             musicPreviewUrl && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(MusicPlayerModal, {
@@ -3295,7 +3299,7 @@ function RoutineRow({ lang, routineType, record, locked, reviewStatus, reviewCom
                 onClose: ()=>setMusicPreviewUrl(null)
             }, void 0, false, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 330,
+                lineNumber: 333,
                 columnNumber: 9
             }, this)
         ]
@@ -3351,7 +3355,7 @@ function InviteJudgeForm({ lang, onSend, onCancel }) {
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                    lineNumber: 376,
+                    lineNumber: 379,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3359,7 +3363,7 @@ function InviteJudgeForm({ lang, onSend, onCancel }) {
                     children: t.inviteInfo
                 }, void 0, false, {
                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                    lineNumber: 377,
+                    lineNumber: 380,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3370,18 +3374,18 @@ function InviteJudgeForm({ lang, onSend, onCancel }) {
                         children: t.cancel
                     }, void 0, false, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 379,
+                        lineNumber: 382,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                    lineNumber: 378,
+                    lineNumber: 381,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-            lineNumber: 375,
+            lineNumber: 378,
             columnNumber: 7
         }, this);
     }
@@ -3403,7 +3407,7 @@ function InviteJudgeForm({ lang, onSend, onCancel }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 392,
+                                lineNumber: 395,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -3415,13 +3419,13 @@ function InviteJudgeForm({ lang, onSend, onCancel }) {
                                 autoFocus: true
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 393,
+                                lineNumber: 396,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 391,
+                        lineNumber: 394,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3435,7 +3439,7 @@ function InviteJudgeForm({ lang, onSend, onCancel }) {
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 396,
+                                lineNumber: 399,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -3446,13 +3450,13 @@ function InviteJudgeForm({ lang, onSend, onCancel }) {
                                 className: inputCls
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 397,
+                                lineNumber: 400,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 395,
+                        lineNumber: 398,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3462,7 +3466,7 @@ function InviteJudgeForm({ lang, onSend, onCancel }) {
                                 children: t.phone
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 400,
+                                lineNumber: 403,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -3472,13 +3476,13 @@ function InviteJudgeForm({ lang, onSend, onCancel }) {
                                 className: inputCls
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 401,
+                                lineNumber: 404,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 399,
+                        lineNumber: 402,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3488,7 +3492,7 @@ function InviteJudgeForm({ lang, onSend, onCancel }) {
                                 children: t.licence
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 404,
+                                lineNumber: 407,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -3498,19 +3502,19 @@ function InviteJudgeForm({ lang, onSend, onCancel }) {
                                 className: inputCls
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 405,
+                                lineNumber: 408,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 403,
+                        lineNumber: 406,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 390,
+                lineNumber: 393,
                 columnNumber: 7
             }, this),
             error && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3518,7 +3522,7 @@ function InviteJudgeForm({ lang, onSend, onCancel }) {
                 children: error
             }, void 0, false, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 408,
+                lineNumber: 411,
                 columnNumber: 17
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3531,7 +3535,7 @@ function InviteJudgeForm({ lang, onSend, onCancel }) {
                         children: t.cancel
                     }, void 0, false, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 410,
+                        lineNumber: 413,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -3541,19 +3545,19 @@ function InviteJudgeForm({ lang, onSend, onCancel }) {
                         children: t.send
                     }, void 0, false, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 414,
+                        lineNumber: 417,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 409,
+                lineNumber: 412,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-        lineNumber: 389,
+        lineNumber: 392,
         columnNumber: 5
     }, this);
 }
@@ -3648,19 +3652,19 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                             d: "M15.75 19.5L8.25 12l7.5-7.5"
                         }, void 0, false, {
                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                            lineNumber: 547,
+                            lineNumber: 550,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 546,
+                        lineNumber: 549,
                         columnNumber: 9
                     }, this),
                     t.back
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 544,
+                lineNumber: 547,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3677,7 +3681,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                         children: competition.name
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 556,
+                                        lineNumber: 559,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3698,19 +3702,19 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                             d: "M15 10.5a3 3 0 11-6 0 3 3 0 016 0zM19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                            lineNumber: 560,
+                                                            lineNumber: 563,
                                                             columnNumber: 114
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                        lineNumber: 560,
+                                                        lineNumber: 563,
                                                         columnNumber: 19
                                                     }, this),
                                                     competition.location
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 559,
+                                                lineNumber: 562,
                                                 columnNumber: 17
                                             }, this),
                                             dateStr && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3718,7 +3722,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                 children: dateStr
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 564,
+                                                lineNumber: 567,
                                                 columnNumber: 27
                                             }, this),
                                             competition.registration_deadline && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3730,7 +3734,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 566,
+                                                lineNumber: 569,
                                                 columnNumber: 17
                                             }, this),
                                             competition.ts_music_deadline && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3745,13 +3749,13 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 571,
+                                                lineNumber: 574,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 557,
+                                        lineNumber: 560,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3761,18 +3765,18 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                 children: agLabels[ag] ?? ag
                                             }, ag, false, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 578,
+                                                lineNumber: 581,
                                                 columnNumber: 17
                                             }, this))
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 576,
+                                        lineNumber: 579,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 555,
+                                lineNumber: 558,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3785,20 +3789,20 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                         className: "w-1.5 h-1.5 rounded-full bg-white animate-pulse"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 583,
+                                        lineNumber: 586,
                                         columnNumber: 49
                                     }, this),
                                     t.status[competition.status]
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 582,
+                                lineNumber: 585,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 554,
+                        lineNumber: 557,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -3813,7 +3817,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                         children: t.coachesTitle
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 593,
+                                        lineNumber: 596,
                                         columnNumber: 13
                                     }, this),
                                     registeredCoaches.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3821,13 +3825,13 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                         children: registeredCoaches.length
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 595,
+                                        lineNumber: 598,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 592,
+                                lineNumber: 595,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
@@ -3845,18 +3849,18 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                     d: "M19.5 8.25l-7.5 7.5-7.5-7.5"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                    lineNumber: 600,
+                                    lineNumber: 603,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 598,
+                                lineNumber: 601,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 590,
+                        lineNumber: 593,
                         columnNumber: 9
                     }, this),
                     coachesOpen && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3866,7 +3870,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                             children: t.noCoachesInClub
                         }, void 0, false, {
                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                            lineNumber: 607,
+                            lineNumber: 610,
                             columnNumber: 15
                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Fragment"], {
                             children: [
@@ -3881,12 +3885,12 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                     className: "w-full h-full object-cover"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                    lineNumber: 613,
+                                                    lineNumber: 616,
                                                     columnNumber: 38
                                                 }, this) : c.full_name.charAt(0)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 612,
+                                                lineNumber: 615,
                                                 columnNumber: 21
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3897,7 +3901,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                         children: c.full_name
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                        lineNumber: 616,
+                                                        lineNumber: 619,
                                                         columnNumber: 23
                                                     }, this),
                                                     c.licence && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3905,13 +3909,13 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                         children: c.licence
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                        lineNumber: 617,
+                                                        lineNumber: 620,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 615,
+                                                lineNumber: 618,
                                                 columnNumber: 21
                                             }, this),
                                             isOpen && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -3920,13 +3924,13 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                 children: t.unregisterCoach
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 620,
+                                                lineNumber: 623,
                                                 columnNumber: 23
                                             }, this)
                                         ]
                                     }, c.id, true, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 611,
+                                        lineNumber: 614,
                                         columnNumber: 19
                                     }, this)),
                                 isOpen && unregisteredCoaches.map((c)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3940,12 +3944,12 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                     className: "w-full h-full object-cover"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                    lineNumber: 630,
+                                                    lineNumber: 633,
                                                     columnNumber: 38
                                                 }, this) : c.full_name.charAt(0)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 629,
+                                                lineNumber: 632,
                                                 columnNumber: 21
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3956,7 +3960,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                         children: c.full_name
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                        lineNumber: 633,
+                                                        lineNumber: 636,
                                                         columnNumber: 23
                                                     }, this),
                                                     c.licence && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3964,13 +3968,13 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                         children: c.licence
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                        lineNumber: 634,
+                                                        lineNumber: 637,
                                                         columnNumber: 37
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 632,
+                                                lineNumber: 635,
                                                 columnNumber: 21
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -3979,13 +3983,13 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                 children: t.registerCoach
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 636,
+                                                lineNumber: 639,
                                                 columnNumber: 21
                                             }, this)
                                         ]
                                     }, c.id, true, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 628,
+                                        lineNumber: 631,
                                         columnNumber: 19
                                     }, this)),
                                 registeredCoaches.length === 0 && !isOpen && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3993,14 +3997,14 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                     children: t.noCoaches
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                    lineNumber: 643,
+                                    lineNumber: 646,
                                     columnNumber: 19
                                 }, this)
                             ]
                         }, void 0, true)
                     }, void 0, false, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 605,
+                        lineNumber: 608,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4021,7 +4025,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                         children: t.judgesTitle
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 658,
+                                        lineNumber: 661,
                                         columnNumber: 13
                                     }, this),
                                     compNominations.length > 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4029,7 +4033,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                         children: compNominations.length
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 662,
+                                        lineNumber: 665,
                                         columnNumber: 15
                                     }, this) : hasJudgeWarning ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         className: "text-xs font-semibold text-amber-600",
@@ -4039,13 +4043,13 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 666,
+                                        lineNumber: 669,
                                         columnNumber: 15
                                     }, this) : null
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 657,
+                                lineNumber: 660,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
@@ -4064,18 +4068,18 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                     d: "M19.5 8.25l-7.5 7.5-7.5-7.5"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                    lineNumber: 671,
+                                    lineNumber: 674,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 669,
+                                lineNumber: 672,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 651,
+                        lineNumber: 654,
                         columnNumber: 9
                     }, this),
                     judgesOpen && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4086,7 +4090,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                 children: t.noJudges
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 679,
+                                lineNumber: 682,
                                 columnNumber: 15
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "space-y-2",
@@ -4100,7 +4104,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                 children: judge.full_name.charAt(0)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 686,
+                                                lineNumber: 689,
                                                 columnNumber: 23
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4113,7 +4117,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                             children: judge.full_name
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                            lineNumber: 691,
+                                                            lineNumber: 694,
                                                             columnNumber: 27
                                                         }, this),
                                                         judge.licence && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4121,18 +4125,18 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                             children: judge.licence
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                            lineNumber: 693,
+                                                            lineNumber: 696,
                                                             columnNumber: 29
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                    lineNumber: 690,
+                                                    lineNumber: 693,
                                                     columnNumber: 25
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 689,
+                                                lineNumber: 692,
                                                 columnNumber: 23
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4143,7 +4147,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                         children: t.nominated
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                        lineNumber: 698,
+                                                        lineNumber: 701,
                                                         columnNumber: 25
                                                     }, this),
                                                     isOpen && nomination && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4152,25 +4156,25 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                         children: t.removeNomination
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                        lineNumber: 700,
+                                                        lineNumber: 703,
                                                         columnNumber: 27
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 697,
+                                                lineNumber: 700,
                                                 columnNumber: 23
                                             }, this)
                                         ]
                                     }, judge.id, true, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 685,
+                                        lineNumber: 688,
                                         columnNumber: 21
                                     }, this);
                                 })
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 681,
+                                lineNumber: 684,
                                 columnNumber: 15
                             }, this),
                             isOpen && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4185,7 +4189,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                         children: t.addFromPool
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 716,
+                                        lineNumber: 719,
                                         columnNumber: 19
                                     }, this),
                                     showPoolPicker && !showInviteForm && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4201,12 +4205,12 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                     className: "w-full text-sm text-slate-700 bg-transparent outline-none placeholder:text-slate-300"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                    lineNumber: 726,
+                                                    lineNumber: 729,
                                                     columnNumber: 23
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 725,
+                                                lineNumber: 728,
                                                 columnNumber: 21
                                             }, this),
                                             filteredPool.length === 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -4214,7 +4218,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                 children: t.noPoolJudges
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 735,
+                                                lineNumber: 738,
                                                 columnNumber: 23
                                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                 className: "max-h-48 overflow-y-auto divide-y divide-slate-50",
@@ -4231,7 +4235,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                                 children: judge.full_name.charAt(0)
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                                lineNumber: 742,
+                                                                lineNumber: 745,
                                                                 columnNumber: 29
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4242,7 +4246,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                                         children: judge.full_name
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                                        lineNumber: 746,
+                                                                        lineNumber: 749,
                                                                         columnNumber: 31
                                                                     }, this),
                                                                     judge.licence && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -4250,30 +4254,30 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                                         children: judge.licence
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                                        lineNumber: 747,
+                                                                        lineNumber: 750,
                                                                         columnNumber: 49
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                                lineNumber: 745,
+                                                                lineNumber: 748,
                                                                 columnNumber: 29
                                                             }, this)
                                                         ]
                                                     }, judge.id, true, {
                                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                        lineNumber: 739,
+                                                        lineNumber: 742,
                                                         columnNumber: 27
                                                     }, this))
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 737,
+                                                lineNumber: 740,
                                                 columnNumber: 23
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 724,
+                                        lineNumber: 727,
                                         columnNumber: 19
                                     }, this),
                                     !showPoolPicker && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4285,7 +4289,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                         children: t.inviteNew
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 758,
+                                        lineNumber: 761,
                                         columnNumber: 19
                                     }, this),
                                     showInviteForm && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(InviteJudgeForm, {
@@ -4301,25 +4305,25 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                         onCancel: ()=>setShowInviteForm(false)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 766,
+                                        lineNumber: 769,
                                         columnNumber: 19
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 714,
+                                lineNumber: 717,
                                 columnNumber: 15
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 676,
+                        lineNumber: 679,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 553,
+                lineNumber: 556,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -4327,7 +4331,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                 children: t.teamsTitle
             }, void 0, false, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 781,
+                lineNumber: 784,
                 columnNumber: 7
             }, this),
             teams.length === 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -4335,14 +4339,14 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                 children: t.noTeams
             }, void 0, false, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 783,
+                lineNumber: 786,
                 columnNumber: 9
             }, this) : eligibleTeams.length === 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                 className: "text-sm text-slate-400 text-center py-10 bg-white border border-slate-200 rounded-2xl",
                 children: t.noEligibleTeams
             }, void 0, false, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 785,
+                lineNumber: 788,
                 columnNumber: 9
             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "space-y-3",
@@ -4371,7 +4375,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                        lineNumber: 801,
+                                                        lineNumber: 804,
                                                         columnNumber: 25
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -4379,7 +4383,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                         children: team.gymnast_display
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                        lineNumber: 803,
+                                                        lineNumber: 806,
                                                         columnNumber: 23
                                                     }, this),
                                                     entry?.dropped_out && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4387,7 +4391,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                         children: t.dropout
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                        lineNumber: 805,
+                                                        lineNumber: 808,
                                                         columnNumber: 25
                                                     }, this),
                                                     missingLicencia && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4399,13 +4403,13 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                        lineNumber: 808,
+                                                        lineNumber: 811,
                                                         columnNumber: 25
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 799,
+                                                lineNumber: 802,
                                                 columnNumber: 21
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -4417,13 +4421,13 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 813,
+                                                lineNumber: 816,
                                                 columnNumber: 21
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 798,
+                                        lineNumber: 801,
                                         columnNumber: 19
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4436,7 +4440,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                     children: t.registered
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                    lineNumber: 818,
+                                                    lineNumber: 821,
                                                     columnNumber: 25
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -4448,13 +4452,13 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                     children: entry.dropped_out ? t.undoDropout : t.toggleDropout
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                    lineNumber: 819,
+                                                    lineNumber: 822,
                                                     columnNumber: 25
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                            lineNumber: 817,
+                                            lineNumber: 820,
                                             columnNumber: 23
                                         }, this) : isOpen ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                                             onClick: ()=>{
@@ -4481,25 +4485,25 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                             children: t.register
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                            lineNumber: 829,
+                                            lineNumber: 832,
                                             columnNumber: 23
                                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                             className: "text-xs text-slate-300",
                                             children: t.registrationClosed
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                            lineNumber: 842,
+                                            lineNumber: 845,
                                             columnNumber: 23
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 815,
+                                        lineNumber: 818,
                                         columnNumber: 19
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 797,
+                                lineNumber: 800,
                                 columnNumber: 17
                             }, this),
                             entry && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4520,19 +4524,19 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                     d: "M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                    lineNumber: 853,
+                                                    lineNumber: 856,
                                                     columnNumber: 27
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 852,
+                                                lineNumber: 855,
                                                 columnNumber: 25
                                             }, this),
                                             t.filesLocked
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 851,
+                                        lineNumber: 854,
                                         columnNumber: 23
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4549,31 +4553,31 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                 onSet: (field, filename)=>onSetFile(team.id, rt, field, filename)
                                             }, rt, false, {
                                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                lineNumber: 862,
+                                                lineNumber: 865,
                                                 columnNumber: 27
                                             }, this);
                                         })
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 858,
+                                        lineNumber: 861,
                                         columnNumber: 21
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 849,
+                                lineNumber: 852,
                                 columnNumber: 19
                             }, this)
                         ]
                     }, team.id, true, {
                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                        lineNumber: 795,
+                        lineNumber: 798,
                         columnNumber: 15
                     }, this);
                 })
             }, void 0, false, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 787,
+                lineNumber: 790,
                 columnNumber: 9
             }, this),
             ageError && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4598,17 +4602,17 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                             d: "M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                            lineNumber: 886,
+                                            lineNumber: 889,
                                             columnNumber: 19
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                        lineNumber: 885,
+                                        lineNumber: 888,
                                         columnNumber: 17
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                    lineNumber: 884,
+                                    lineNumber: 887,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4618,7 +4622,7 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                             children: lang === 'es' ? 'No se puede inscribir este equipo' : 'Cannot register this team'
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                            lineNumber: 890,
+                                            lineNumber: 893,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("ul", {
@@ -4628,24 +4632,24 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                                     children: m
                                                 }, i, false, {
                                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                    lineNumber: 895,
+                                                    lineNumber: 898,
                                                     columnNumber: 21
                                                 }, this))
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                            lineNumber: 893,
+                                            lineNumber: 896,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                    lineNumber: 889,
+                                    lineNumber: 892,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                            lineNumber: 883,
+                            lineNumber: 886,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4656,29 +4660,29 @@ function CompetitionDetailView({ lang, competition, teams, gymnasts, coaches, co
                                 children: lang === 'es' ? 'Entendido' : 'Got it'
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 901,
+                                lineNumber: 904,
                                 columnNumber: 15
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                            lineNumber: 900,
+                            lineNumber: 903,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                    lineNumber: 882,
+                    lineNumber: 885,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 881,
+                lineNumber: 884,
                 columnNumber: 9
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-        lineNumber: 542,
+        lineNumber: 545,
         columnNumber: 5
     }, this);
 }
@@ -4693,7 +4697,7 @@ function CompetitionListView({ lang, competitions, teams, entries, nominations, 
             children: t.empty
         }, void 0, false, {
             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-            lineNumber: 934,
+            lineNumber: 937,
             columnNumber: 12
         }, this);
     }
@@ -4726,14 +4730,14 @@ function CompetitionListView({ lang, competitions, teams, entries, nominations, 
                                                     className: "w-1.5 h-1.5 rounded-full bg-white animate-pulse"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                                    lineNumber: 953,
+                                                    lineNumber: 956,
                                                     columnNumber: 50
                                                 }, this),
                                                 t.status[comp.status]
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                            lineNumber: 952,
+                                            lineNumber: 955,
                                             columnNumber: 19
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4744,7 +4748,7 @@ function CompetitionListView({ lang, competitions, teams, entries, nominations, 
                                             children: t.teamCount(registeredCount)
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                            lineNumber: 956,
+                                            lineNumber: 959,
                                             columnNumber: 19
                                         }, this),
                                         needsJudge && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4755,13 +4759,13 @@ function CompetitionListView({ lang, competitions, teams, entries, nominations, 
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                            lineNumber: 960,
+                                            lineNumber: 963,
                                             columnNumber: 21
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                    lineNumber: 951,
+                                    lineNumber: 954,
                                     columnNumber: 17
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -4769,7 +4773,7 @@ function CompetitionListView({ lang, competitions, teams, entries, nominations, 
                                     children: comp.name
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                    lineNumber: 965,
+                                    lineNumber: 968,
                                     columnNumber: 17
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4780,7 +4784,7 @@ function CompetitionListView({ lang, competitions, teams, entries, nominations, 
                                             children: comp.location
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                            lineNumber: 967,
+                                            lineNumber: 970,
                                             columnNumber: 37
                                         }, this),
                                         dateStr && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4788,19 +4792,19 @@ function CompetitionListView({ lang, competitions, teams, entries, nominations, 
                                             children: dateStr
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                            lineNumber: 968,
+                                            lineNumber: 971,
                                             columnNumber: 31
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                    lineNumber: 966,
+                                    lineNumber: 969,
                                     columnNumber: 17
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                            lineNumber: 950,
+                            lineNumber: 953,
                             columnNumber: 15
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
@@ -4815,29 +4819,29 @@ function CompetitionListView({ lang, competitions, teams, entries, nominations, 
                                 d: "M8.25 4.5l7.5 7.5-7.5 7.5"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                                lineNumber: 972,
+                                lineNumber: 975,
                                 columnNumber: 17
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                            lineNumber: 971,
+                            lineNumber: 974,
                             columnNumber: 15
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                    lineNumber: 949,
+                    lineNumber: 952,
                     columnNumber: 13
                 }, this)
             }, comp.id, false, {
                 fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-                lineNumber: 947,
+                lineNumber: 950,
                 columnNumber: 11
             }, this);
         })
     }, void 0, false, {
         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-        lineNumber: 938,
+        lineNumber: 941,
         columnNumber: 5
     }, this);
 }
@@ -4870,7 +4874,7 @@ function CompetitionsTab({ lang, competitions, teams, gymnasts, coaches, competi
             onUnregisterCoach: (coachId)=>onUnregisterCoach(selected.id, coachId)
         }, void 0, false, {
             fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-            lineNumber: 1017,
+            lineNumber: 1020,
             columnNumber: 7
         }, this);
     }
@@ -4883,7 +4887,7 @@ function CompetitionsTab({ lang, competitions, teams, gymnasts, coaches, competi
         onSelect: setSelectedId
     }, void 0, false, {
         fileName: "[project]/src/components/club/CompetitionsTab.tsx",
-        lineNumber: 1045,
+        lineNumber: 1048,
         columnNumber: 5
     }, this);
 }

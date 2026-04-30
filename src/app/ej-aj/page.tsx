@@ -2,32 +2,18 @@
 
 import { useState } from 'react'
 import { useJudgeSession } from '@/hooks/useJudgeSession'
-import EJAJView from '@/components/ej-aj-scoring/EJAJView'
-import AuthBar from '@/components/shared/AuthBar'
-import type { Lang } from '@/components/aj-scoring/types'
-import type { JudgeScore } from '@/components/cjp/types'
+import EJAJView from '@/components/scoring/views/EJAJView'
+import { JudgeScoringShell } from '@/components/shared/JudgeScoringShell'
+import type { Lang } from '@/components/scoring/types'
+import type { JudgeScore } from '@/components/scoring/types'
 
 export default function Page() {
   const [lang, setLang] = useState<Lang>('es')
   const {
     loading, sessionId,
     assignedRoles, panelJudges, currentPerfId, currentPerf, judgeScores, results,
-    ejMethod, handleJudgeScoreSubmit,
+    ejMethod, handleJudgeScoreSubmit, submitError, clearSubmitError,
   } = useJudgeSession()
-
-  if (loading) return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
-    </div>
-  )
-
-  if (!sessionId) return (
-    <div className="min-h-screen bg-slate-50"><AuthBar />
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-48px)] gap-3">
-        <p className="text-xl font-semibold text-slate-600">No active session</p>
-      </div>
-    </div>
-  )
 
   const ejRole = assignedRoles.find(r => r.role === 'EJ')
   const ajRole = assignedRoles.find(r => r.role === 'AJ')
@@ -46,20 +32,19 @@ export default function Page() {
   }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col md:h-[100dvh] md:overflow-hidden bg-slate-100">
-      <AuthBar lang={lang} onLangChange={setLang} />
+    <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} submitError={submitError} onClearError={clearSubmitError}>
       <div className="md:flex-1 md:min-h-0 md:flex md:flex-col">
-      <EJAJView
-        currentPerf={currentPerf} lang={lang} elements={currentPerf?.elements ?? []}
-        ejMode={(ejMethod as 'elements' | 'keyboard') ?? 'elements'}
-        onSubmit={handleSubmit}
-        panelJudges={panelJudges} judgeScores={currentScores}
-        waitingForOtherScores={waitingForOtherScores}
-        result={currentResult ?? undefined}
-        myEJSubmittedScore={myEJScore?.ejScore ?? null}
-        myAJSubmittedScore={myAJScore?.ajScore ?? null}
-      />
+        <EJAJView
+          currentPerf={currentPerf} lang={lang} elements={currentPerf?.elements ?? []}
+          ejMode={(ejMethod as 'elements' | 'keyboard') ?? 'elements'}
+          onSubmit={handleSubmit}
+          panelJudges={panelJudges} judgeScores={currentScores}
+          waitingForOtherScores={waitingForOtherScores}
+          result={currentResult ?? undefined}
+          myEJSubmittedScore={myEJScore?.ejScore ?? null}
+          myAJSubmittedScore={myAJScore?.ajScore ?? null}
+        />
       </div>
-    </div>
+    </JudgeScoringShell>
   )
 }

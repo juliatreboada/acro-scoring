@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import type { Lang, Answers } from '../aj-scoring/types'
-import { getSections, getQuestionValues, calcSectionScore, calcTotal } from '../aj-scoring/aj-content'
+import type { Lang, Answers } from '../scoring/types'
+import { getSections, getQuestionValues, calcSectionScore, calcTotal } from '../scoring/aj-content'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 

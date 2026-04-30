@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { Lang } from '../aj-scoring/types'
-import type { MockPerf, RoutineResult } from '../cjp/types'
+import type { Lang } from '../scoring/types'
+import type { ScoringPerformance, RoutineResult } from '../scoring/types'
 import { categoryLabel } from '@/components/admin/types'
 
 // ─── translations ─────────────────────────────────────────────────────────────
@@ -89,7 +89,7 @@ function ClubAvatar({ url }: { url: string | null | undefined }) {
 // across all sections on the page.
 
 function GroupRanking({ rows, results, t, clubAvatarByTeam }: {
-  rows: MockPerf[]
+  rows: ScoringPerformance[]
   results: Record<string, RoutineResult>
   t: typeof T['en']
   clubAvatarByTeam: Record<string, string | null>
@@ -376,7 +376,7 @@ function CategoryBlock({
 }: {
   ageGroup: string
   category: string
-  performances: MockPerf[]
+  performances: ScoringPerformance[]
   results: Record<string, RoutineResult>
   t: typeof T['en']
   clubAvatarByTeam: Record<string, string | null>
@@ -474,7 +474,7 @@ function getRuleset(ageGroup: string): string {
 }
 
 export type ResultsViewProps = {
-  performances: MockPerf[]
+  performances: ScoringPerformance[]
   results: Record<string, RoutineResult>
   lang: Lang
   clubAvatarByTeam?: Record<string, string | null>

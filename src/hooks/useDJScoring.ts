@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import type { TsElement, ElementType, Deductions } from '@/components/ej-scoring/types'
-import type { ElementFlag, ElementFlags } from '@/components/dj-scoring/types'
-import { DEFAULT_FLAG } from '@/components/dj-scoring/types'
+import type { TsElement, ElementType, Deductions } from '@/components/scoring/types'
+import type { ElementFlag, ElementFlags } from '@/components/scoring/types'
+import { DEFAULT_FLAG } from '@/components/scoring/types'
 import { getElementConfig } from '@/components/shared/DJElementsShared'
 
 function safeRead<T>(key: string): T | null {

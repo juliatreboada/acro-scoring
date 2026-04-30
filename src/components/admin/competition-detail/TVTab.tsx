@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
-import type { Lang } from '@/components/aj-scoring/types'
+import type { Lang } from '@/components/scoring/types'
 import type { Competition, Session, Team, Club, CompetitionEntry } from '@/components/admin/types'
 import { categoryLabel } from '@/components/admin/types'
 

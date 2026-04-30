@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import ResultsView from '@/components/results/ResultsView'
-import type { Lang } from '@/components/aj-scoring/types'
-import type { MockPerf, RoutineResult } from '@/components/cjp/types'
+import type { Lang } from '@/components/scoring/types'
+import type { ScoringPerformance, RoutineResult } from '@/components/scoring/types'
 
 // ─── page ─────────────────────────────────────────────────────────────────────
 
@@ -15,7 +15,7 @@ export default function Page() {
 
   const [lang, setLang]                   = useState<Lang>('es')
   const [competitionName, setCompName]    = useState('')
-  const [performances, setPerformances]   = useState<MockPerf[]>([])
+  const [performances, setPerformances]   = useState<ScoringPerformance[]>([])
   const [results, setResults]             = useState<Record<string, RoutineResult>>({})
   const [clubAvatarByTeam, setClubAvatarByTeam] = useState<Record<string, string | null>>({})
   const [agSortOrder, setAgSortOrder]     = useState<Record<string, number>>({})
@@ -91,8 +91,8 @@ export default function Page() {
       const sessionMap = Object.fromEntries(sessions.map((s) => [s.id, s]))
       const dropoutSet = new Set(entries.filter((e) => e.dropped_out).map((e) => e.team_id))
 
-      // ── build MockPerf[] ───────────────────────────────────────────────────
-      const perfs: MockPerf[] = orders.map((o) => {
+      // ── build ScoringPerformance[] ───────────────────────────────────────────────────
+      const perfs: ScoringPerformance[] = orders.map((o) => {
         const session = sessionMap[o.session_id]
         return {
           id:          `${o.session_id}_${o.team_id}`,

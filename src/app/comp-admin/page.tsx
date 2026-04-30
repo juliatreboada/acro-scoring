@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase'
 import CompetitionsView from '@/components/admin/CompetitionsView'
 import AuthBar from '@/components/shared/AuthBar'
 import ProfileEditor from '@/components/shared/ProfileEditor'
-import type { Lang } from '@/components/aj-scoring/types'
+import type { Lang } from '@/components/scoring/types'
 import type { Competition } from '@/components/admin/types'
 import { useProfile } from '@/contexts/ProfileContext'
 

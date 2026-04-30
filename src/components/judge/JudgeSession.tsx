@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { Lang } from '../aj-scoring/types'
-import type { PanelJudge, MockPerf, JudgeScore, RoutineResult } from '../cjp/types'
-import type { TsElement } from '../ej-scoring/types'
-import CJPView from '../cjp/CJPView'
-import EJView from '../ej-scoring/EJView'
-import AJView from '../aj-scoring/AJView'
-import DJView from '../dj-scoring/DJView'
+import type { Lang } from '../scoring/types'
+import type { PanelJudge, ScoringPerformance, JudgeScore, RoutineResult } from '../scoring/types'
+import type { TsElement } from '../scoring/types'
+import CJPView from '../scoring/views/CJPView'
+import EJView from '../scoring/views/EJView'
+import AJView from '../scoring/views/AJView'
+import DJView from '../scoring/views/DJView'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -19,12 +19,12 @@ export type JudgeSessionProps = {
   assignedRoles: PanelJudge[]         // roles assigned to this judge (may be multiple)
 
   // shared — active performance driven by CJP
-  currentPerf: MockPerf | null
+  currentPerf: ScoringPerformance | null
   elements: TsElement[]               // TS elements for current perf (EJ / DJ)
 
   // CJP-specific (only relevant when CJP is in assignedRoles)
   panelJudges: PanelJudge[]
-  performances: MockPerf[]
+  performances: ScoringPerformance[]
   currentPerfId: string | null
   judgeScores: Record<string, JudgeScore[]>
   results: Record<string, RoutineResult>

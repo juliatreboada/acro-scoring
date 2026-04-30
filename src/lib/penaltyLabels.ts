@@ -1,5 +1,5 @@
-import type { PenaltyState } from '@/components/cjp/types'
-import type { ElementFlags } from '@/components/dj-scoring/types'
+import type { PenaltyState } from '@/components/scoring/types'
+import type { ElementFlags } from '@/components/scoring/types'
 
 export const PENALTY_LABELS: Record<'en' | 'es', string[]> = {
   en: [

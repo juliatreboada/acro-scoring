@@ -2,32 +2,18 @@
 
 import { useState } from 'react'
 import { useJudgeSession } from '@/hooks/useJudgeSession'
-import AJView from '@/components/aj-scoring/AJView'
-import AuthBar from '@/components/shared/AuthBar'
-import type { Lang } from '@/components/aj-scoring/types'
-import type { JudgeScore } from '@/components/cjp/types'
+import AJView from '@/components/scoring/views/AJView'
+import { JudgeScoringShell } from '@/components/shared/JudgeScoringShell'
+import type { Lang } from '@/components/scoring/types'
+import type { JudgeScore } from '@/components/scoring/types'
 
 export default function Page() {
   const [lang, setLang] = useState<Lang>('es')
   const {
     loading, sessionId,
     assignedRoles, panelJudges, currentPerfId, currentPerf, judgeScores, results,
-    handleJudgeScoreSubmit,
+    handleJudgeScoreSubmit, submitError, clearSubmitError,
   } = useJudgeSession()
-
-  if (loading) return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
-    </div>
-  )
-
-  if (!sessionId) return (
-    <div className="min-h-screen bg-slate-50"><AuthBar />
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-48px)] gap-3">
-        <p className="text-xl font-semibold text-slate-600">No active session</p>
-      </div>
-    </div>
-  )
 
   const myRole = assignedRoles.find(r => r.role === 'AJ')
   const currentScores = currentPerfId ? (judgeScores[currentPerfId] ?? []) : []
@@ -42,21 +28,20 @@ export default function Page() {
   }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col md:h-[100dvh] md:overflow-hidden bg-slate-50">
-      <AuthBar lang={lang} onLangChange={setLang} />
+    <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} className="min-h-[100dvh] flex flex-col md:h-[100dvh] md:overflow-hidden bg-slate-50" submitError={submitError} onClearError={clearSubmitError}>
       <div className="flex-1 min-h-0 overflow-auto">
-      <div className="max-w-lg mx-auto py-4">
-        <AJView
-          currentPerf={currentPerf}
-          lang={lang}
-          onSubmit={handleSubmit}
-          panelJudges={panelJudges}
-          judgeScores={currentScores}
-          waitingForOtherScores={waitingForOtherScores}
-          result={currentResult ?? undefined}
-        />
+        <div className="max-w-lg mx-auto py-4">
+          <AJView
+            currentPerf={currentPerf}
+            lang={lang}
+            onSubmit={handleSubmit}
+            panelJudges={panelJudges}
+            judgeScores={currentScores}
+            waitingForOtherScores={waitingForOtherScores}
+            result={currentResult ?? undefined}
+          />
+        </div>
       </div>
-      </div>
-    </div>
+    </JudgeScoringShell>
   )
 }

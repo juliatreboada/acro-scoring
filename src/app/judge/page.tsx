@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import JudgeLobby from '@/components/judge/JudgeLobby'
 import AuthBar from '@/components/shared/AuthBar'
-import type { Lang } from '@/components/aj-scoring/types'
+import type { Lang } from '@/components/scoring/types'
 
 export default function Page() {
   const [lang, setLang] = useState<Lang>('es')

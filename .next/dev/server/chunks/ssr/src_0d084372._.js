@@ -128,6 +128,7 @@ const T = {
         draft: 'Draft',
         registration_open: 'Registration open',
         registration_closed: 'Registration closed',
+        published: 'Published',
         active: 'Live',
         finished: 'Finished',
         // card
@@ -162,6 +163,7 @@ const T = {
         draft: 'Borrador',
         registration_open: 'Inscripción abierta',
         registration_closed: 'Inscripción cerrada',
+        published: 'Publicada',
         active: 'En vivo',
         finished: 'Finalizada',
         // card
@@ -234,7 +236,7 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                 children: t.formTitle
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                lineNumber: 153,
+                lineNumber: 155,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("form", {
@@ -251,7 +253,7 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 158,
+                                lineNumber: 160,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -262,13 +264,13 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                 className: "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 159,
+                                lineNumber: 161,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 157,
+                        lineNumber: 159,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -278,7 +280,7 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                 children: t.location
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 170,
+                                lineNumber: 172,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -289,13 +291,13 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                 className: "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 171,
+                                lineNumber: 173,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 169,
+                        lineNumber: 171,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -308,7 +310,7 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                         children: t.startDate
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                        lineNumber: 183,
+                                        lineNumber: 185,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -318,13 +320,13 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                         className: "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                        lineNumber: 184,
+                                        lineNumber: 186,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 182,
+                                lineNumber: 184,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -334,7 +336,7 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                         children: t.endDate
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                        lineNumber: 192,
+                                        lineNumber: 194,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -345,19 +347,19 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                         className: "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                        lineNumber: 193,
+                                        lineNumber: 195,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 191,
+                                lineNumber: 193,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 181,
+                        lineNumber: 183,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -367,7 +369,7 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                 children: t.registrationDeadline
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 205,
+                                lineNumber: 207,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -378,13 +380,13 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                 className: "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 206,
+                                lineNumber: 208,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 204,
+                        lineNumber: 206,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -394,7 +396,7 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                 children: t.poster
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 217,
+                                lineNumber: 219,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
@@ -405,13 +407,13 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                 className: "w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 218,
+                                lineNumber: 220,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 216,
+                        lineNumber: 218,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -424,7 +426,7 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 229,
+                                lineNumber: 231,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -432,7 +434,7 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                 children: t.ageGroupsHint
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 230,
+                                lineNumber: 232,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -457,7 +459,7 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                                lineNumber: 249,
+                                                lineNumber: 251,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -468,25 +470,25 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                                 children: rangeLabel
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                                lineNumber: 250,
+                                                lineNumber: 252,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, rule.id, true, {
                                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                        lineNumber: 238,
+                                        lineNumber: 240,
                                         columnNumber: 17
                                     }, this);
                                 })
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 231,
+                                lineNumber: 233,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 228,
+                        lineNumber: 230,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -496,7 +498,7 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                 children: t.competitionAdmin
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 261,
+                                lineNumber: 263,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
@@ -509,7 +511,7 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                         children: t.noAdmin
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                        lineNumber: 267,
+                                        lineNumber: 269,
                                         columnNumber: 13
                                     }, this),
                                     availableAdmins.map((u)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("option", {
@@ -521,19 +523,19 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                             ]
                                         }, u.id, true, {
                                             fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                            lineNumber: 269,
+                                            lineNumber: 271,
                                             columnNumber: 15
                                         }, this))
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 262,
+                                lineNumber: 264,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 260,
+                        lineNumber: 262,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -546,7 +548,7 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                 children: t.cancel
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 276,
+                                lineNumber: 278,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -556,25 +558,25 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
                                 children: t.create
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 283,
+                                lineNumber: 285,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 275,
+                        lineNumber: 277,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                lineNumber: 154,
+                lineNumber: 156,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-        lineNumber: 152,
+        lineNumber: 154,
         columnNumber: 5
     }, this);
 }
@@ -593,7 +595,7 @@ function CompetitionCard({ competition: c, lang, onManage }) {
                         className: "w-full h-full object-cover"
                     }, void 0, false, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 313,
+                        lineNumber: 315,
                         columnNumber: 11
                     }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "w-full h-full flex items-center justify-center",
@@ -609,17 +611,17 @@ function CompetitionCard({ competition: c, lang, onManage }) {
                                 d: "M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 21h18M3.75 3h16.5c.621 0 1.125.504 1.125 1.125v13.5c0 .621-.504 1.125-1.125 1.125H3.75A1.125 1.125 0 012.625 17.625V4.125C2.625 3.504 3.129 3 3.75 3z"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 321,
+                                lineNumber: 323,
                                 columnNumber: 15
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                            lineNumber: 320,
+                            lineNumber: 322,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 319,
+                        lineNumber: 321,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -632,20 +634,20 @@ function CompetitionCard({ competition: c, lang, onManage }) {
                                 className: "inline-block w-1.5 h-1.5 rounded-full bg-white animate-pulse mr-1.5 align-middle"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 327,
+                                lineNumber: 329,
                                 columnNumber: 37
                             }, this),
                             t[c.status]
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 326,
+                        lineNumber: 328,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                lineNumber: 311,
+                lineNumber: 313,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -656,7 +658,7 @@ function CompetitionCard({ competition: c, lang, onManage }) {
                         children: c.name
                     }, void 0, false, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 334,
+                        lineNumber: 336,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -678,7 +680,7 @@ function CompetitionCard({ competition: c, lang, onManage }) {
                                                 d: "M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                                lineNumber: 340,
+                                                lineNumber: 342,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
@@ -687,26 +689,26 @@ function CompetitionCard({ competition: c, lang, onManage }) {
                                                 d: "M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                                lineNumber: 341,
+                                                lineNumber: 343,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                        lineNumber: 339,
+                                        lineNumber: 341,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         children: c.location || t.noLocation
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                        lineNumber: 343,
+                                        lineNumber: 345,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 338,
+                                lineNumber: 340,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -724,25 +726,25 @@ function CompetitionCard({ competition: c, lang, onManage }) {
                                             d: "M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                            lineNumber: 348,
+                                            lineNumber: 350,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                        lineNumber: 347,
+                                        lineNumber: 349,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         children: dateStr || t.noDates
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                        lineNumber: 350,
+                                        lineNumber: 352,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 346,
+                                lineNumber: 348,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -760,31 +762,31 @@ function CompetitionCard({ competition: c, lang, onManage }) {
                                             d: "M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                            lineNumber: 355,
+                                            lineNumber: 357,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                        lineNumber: 354,
+                                        lineNumber: 356,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         children: c.admin?.full_name ?? t.noAdminAssigned
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                        lineNumber: 357,
+                                        lineNumber: 359,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 353,
+                                lineNumber: 355,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 336,
+                        lineNumber: 338,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -793,19 +795,19 @@ function CompetitionCard({ competition: c, lang, onManage }) {
                         children: t.manage
                     }, void 0, false, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 362,
+                        lineNumber: 364,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                lineNumber: 333,
+                lineNumber: 335,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-        lineNumber: 309,
+        lineNumber: 311,
         columnNumber: 5
     }, this);
 }
@@ -827,7 +829,7 @@ function CompetitionsView({ lang, ageGroupRules, availableAdmins, competitions, 
                         children: t.title
                     }, void 0, false, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 400,
+                        lineNumber: 402,
                         columnNumber: 9
                     }, this),
                     canCreate && !showForm && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -846,25 +848,25 @@ function CompetitionsView({ lang, ageGroupRules, availableAdmins, competitions, 
                                     d: "M12 4.5v15m7.5-7.5h-15"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                    lineNumber: 407,
+                                    lineNumber: 409,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 406,
+                                lineNumber: 408,
                                 columnNumber: 13
                             }, this),
                             t.newCompetition
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 402,
+                        lineNumber: 404,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                lineNumber: 399,
+                lineNumber: 401,
                 columnNumber: 7
             }, this),
             canCreate && showForm && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(CreateForm, {
@@ -875,7 +877,7 @@ function CompetitionsView({ lang, ageGroupRules, availableAdmins, competitions, 
                 onCancel: ()=>setShowForm(false)
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                lineNumber: 416,
+                lineNumber: 418,
                 columnNumber: 9
             }, this),
             competitions.length === 0 && !showForm ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -895,17 +897,17 @@ function CompetitionsView({ lang, ageGroupRules, availableAdmins, competitions, 
                                 d: "M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 002.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 012.916.52 6.003 6.003 0 01-5.395 4.972m0 0a6.726 6.726 0 01-2.749 1.35m0 0a6.772 6.772 0 01-3.044 0"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                                lineNumber: 430,
+                                lineNumber: 432,
                                 columnNumber: 15
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                            lineNumber: 429,
+                            lineNumber: 431,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 428,
+                        lineNumber: 430,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -913,7 +915,7 @@ function CompetitionsView({ lang, ageGroupRules, availableAdmins, competitions, 
                         children: t.noCompetitions
                     }, void 0, false, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 433,
+                        lineNumber: 435,
                         columnNumber: 11
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -921,13 +923,13 @@ function CompetitionsView({ lang, ageGroupRules, availableAdmins, competitions, 
                         children: t.noCompetitionsSub
                     }, void 0, false, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 434,
+                        lineNumber: 436,
                         columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                lineNumber: 427,
+                lineNumber: 429,
                 columnNumber: 9
             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4",
@@ -937,18 +939,18 @@ function CompetitionsView({ lang, ageGroupRules, availableAdmins, competitions, 
                         onManage: onManage
                     }, c.id, false, {
                         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                        lineNumber: 439,
+                        lineNumber: 441,
                         columnNumber: 13
                     }, this))
             }, void 0, false, {
                 fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-                lineNumber: 437,
+                lineNumber: 439,
                 columnNumber: 9
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/admin/CompetitionsView.tsx",
-        lineNumber: 397,
+        lineNumber: 399,
         columnNumber: 5
     }, this);
 }

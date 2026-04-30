@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
-import type { Lang } from '../aj-scoring/types'
+import type { Lang } from '../scoring/types'
 import type { Sheet, ReviewElement, ElementType, TsReviewStatus } from './types'
 import { categoryLabel } from '@/components/admin/types'
 
