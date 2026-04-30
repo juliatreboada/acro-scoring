@@ -27,7 +27,7 @@ export default function Page() {
       const [rulesRes, compsRes, adminsRes] = await Promise.all([
         supabase.from('age_group_rules').select('id, age_group, ruleset, min_age, max_age, sort_order').order('sort_order'),
         supabase.from('competitions')
-          .select('id, name, status, location, start_date, end_date, registration_deadline, ts_music_deadline, age_groups, poster_url, admin_id, created_at')
+          .select('id, name, status, location, start_date, end_date, registration_deadline, ts_music_deadline, age_groups, poster_url, admin_id, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
           .order('created_at', { ascending: false }),
         supabase.from('profiles')
           .select('id, email')
@@ -83,7 +83,7 @@ export default function Page() {
         poster_url:            data.poster_url,
         admin_id:              data.admin?.id ?? null,
       })
-      .select('id, name, status, location, start_date, end_date, registration_deadline, ts_music_deadline, age_groups, poster_url, admin_id, created_at')
+      .select('id, name, status, location, start_date, end_date, registration_deadline, ts_music_deadline, age_groups, poster_url, admin_id, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
       .single()
 
     if (error || !created) return

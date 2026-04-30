@@ -32,6 +32,12 @@ const T = {
     sectionN: (n: number) => `Section ${n}`,
     panelBadge: (n: number) => `P${n}`,
     panelN: (n: number) => `Panel ${n}`,
+    // fees
+    feesTitle: 'Entry fees',
+    feePerTeam: 'Fee per team (€)',
+    feePerGymnast: 'Fee per gymnast (€)',
+    judgeMissingFine: 'No-judge fine (€)',
+    feesHint: 'Use fee per team OR per gymnast (not both). Gymnast counts: pair=2, trio=3, group=4.',
   },
   es: {
     sections: 'Jornadas',
@@ -57,6 +63,12 @@ const T = {
     sectionN: (n: number) => `Jornada ${n}`,
     panelBadge: (n: number) => `P${n}`,
     panelN: (n: number) => `Panel ${n}`,
+    // fees
+    feesTitle: 'Tasas de inscripción',
+    feePerTeam: 'Cuota por equipo (€)',
+    feePerGymnast: 'Cuota por gimnasta (€)',
+    judgeMissingFine: 'Penalización sin juez (€)',
+    feesHint: 'Usa cuota por equipo O por gimnasta (no ambas). Recuento: pareja=2, trío=3, grupo=4.',
   },
 }
 
@@ -415,6 +427,86 @@ function SectionBlock({
   )
 }
 
+// ─── fee config card ──────────────────────────────────────────────────────────
+
+type FeeValues = {
+  fee_per_team: number | null
+  fee_per_gymnast: number | null
+  judge_missing_fine: number | null
+}
+
+function FeeConfigCard({ lang, fees, onSave }: {
+  lang: Lang
+  fees: FeeValues
+  onSave: (v: FeeValues) => void
+}) {
+  const t = T[lang]
+  const [perTeam,    setPerTeam]    = useState(fees.fee_per_team?.toString()     ?? '')
+  const [perGymnast, setPerGymnast] = useState(fees.fee_per_gymnast?.toString()  ?? '')
+  const [fine,       setFine]       = useState(fees.judge_missing_fine?.toString() ?? '')
+
+  function parseNum(s: string): number | null {
+    const n = parseFloat(s)
+    return s.trim() === '' || isNaN(n) ? null : n
+  }
+
+  function save() {
+    onSave({
+      fee_per_team:       parseNum(perTeam),
+      fee_per_gymnast:    parseNum(perGymnast),
+      judge_missing_fine: parseNum(fine),
+    })
+  }
+
+  const inputCls = 'w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
+
+  return (
+    <div className="border border-slate-200 rounded-2xl overflow-hidden mb-6">
+      <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
+        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{t.feesTitle}</p>
+      </div>
+      <div className="p-4 space-y-3">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t.feePerTeam}</label>
+            <input
+              type="number" min={0} step="0.01"
+              value={perTeam}
+              onChange={e => setPerTeam(e.target.value)}
+              onBlur={save}
+              placeholder="—"
+              className={inputCls}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t.feePerGymnast}</label>
+            <input
+              type="number" min={0} step="0.01"
+              value={perGymnast}
+              onChange={e => setPerGymnast(e.target.value)}
+              onBlur={save}
+              placeholder="—"
+              className={inputCls}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{t.judgeMissingFine}</label>
+            <input
+              type="number" min={0} step="0.01"
+              value={fine}
+              onChange={e => setFine(e.target.value)}
+              onBlur={save}
+              placeholder="—"
+              className={inputCls}
+            />
+          </div>
+        </div>
+        <p className="text-[11px] text-slate-400">{t.feesHint}</p>
+      </div>
+    </div>
+  )
+}
+
 // ─── main component ───────────────────────────────────────────────────────────
 
 export type StructureTabProps = {
@@ -426,18 +518,20 @@ export type StructureTabProps = {
   panels: Panel[]
   sections: Section[]
   sessions: Session[]
+  fees: FeeValues
   onAddSection: () => void
   onUpdateSectionLabel: (sectionId: string, label: string) => void
   onUpdateSectionTimes: (sectionId: string, times: SectionTimes) => void
   onDeleteSection: (sectionId: string) => void
   onAddSession: (s: Omit<Session, 'id'>) => void
   onDeleteSession: (sessionId: string) => void
+  onUpdateFees: (v: FeeValues) => void
 }
 
 export default function StructureTab({
   lang, competitionId, ageGroups, agLabels, ageGroupRules, panels, sections, sessions,
-  onAddSection, onUpdateSectionLabel, onUpdateSectionTimes, onDeleteSection,
-  onAddSession, onDeleteSession,
+  fees, onAddSection, onUpdateSectionLabel, onUpdateSectionTimes, onDeleteSection,
+  onAddSession, onDeleteSession, onUpdateFees,
 }: StructureTabProps) {
   const t = T[lang]
   const sorted = [...sections].sort((a, b) => a.section_number - b.section_number)
@@ -462,22 +556,26 @@ export default function StructureTab({
 
   if (sections.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-slate-200 rounded-2xl">
-        <p className="text-sm font-medium text-slate-500">{t.noSections}</p>
-        <p className="text-xs text-slate-400 mt-1 mb-4">{t.noSectionsSub}</p>
-        <button onClick={onAddSection}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          {t.addSection}
-        </button>
+      <div>
+        <FeeConfigCard lang={lang} fees={fees} onSave={onUpdateFees} />
+        <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-slate-200 rounded-2xl">
+          <p className="text-sm font-medium text-slate-500">{t.noSections}</p>
+          <p className="text-xs text-slate-400 mt-1 mb-4">{t.noSectionsSub}</p>
+          <button onClick={onAddSection}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            {t.addSection}
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
     <div>
+      <FeeConfigCard lang={lang} fees={fees} onSave={onUpdateFees} />
       {/* section tab bar */}
       <div className="flex items-center border-b border-slate-200 mb-6 gap-0">
         {sorted.map((sec) => (

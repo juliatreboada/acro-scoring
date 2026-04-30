@@ -190,7 +190,8 @@ export default function ClubPortal({
             onUploadPhoto={onUploadTeamPhoto} />
         )}
         {activeTab === 'competitions' && (
-          <CompetitionsTab lang={lang} competitions={competitions} teams={teams}
+          <CompetitionsTab lang={lang} clubId={club.id} clubName={club.club_name}
+            competitions={competitions} teams={teams}
             gymnasts={gymnasts} coaches={coaches} competitionCoaches={competitionCoaches}
             entries={entries} music={music} judges={judges} nominations={nominations}
             agLabels={agLabels} ageGroupRules={ageGroupRules}

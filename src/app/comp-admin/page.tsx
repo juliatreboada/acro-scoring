@@ -31,7 +31,7 @@ export default function Page() {
       if (!activeProfile) return
       const { data } = await supabase
         .from('competitions')
-        .select('id,name,status,location,start_date,end_date,registration_deadline,ts_music_deadline,age_groups,poster_url,admin_id,created_at')
+        .select('id,name,status,location,start_date,end_date,registration_deadline,ts_music_deadline,age_groups,poster_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine')
         .eq('admin_id', activeProfile.id)
         .order('created_at', { ascending: false })
 

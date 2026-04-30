@@ -192,7 +192,10 @@ export type Database = {
           created_at: string
           created_by: string | null
           end_date: string | null
+          fee_per_gymnast: number | null
+          fee_per_team: number | null
           id: string
+          judge_missing_fine: number | null
           location: string | null
           name: string
           poster_url: string | null
@@ -208,7 +211,10 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           end_date?: string | null
+          fee_per_gymnast?: number | null
+          fee_per_team?: number | null
           id?: string
+          judge_missing_fine?: number | null
           location?: string | null
           name: string
           poster_url?: string | null
@@ -224,7 +230,10 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           end_date?: string | null
+          fee_per_gymnast?: number | null
+          fee_per_team?: number | null
           id?: string
+          judge_missing_fine?: number | null
           location?: string | null
           name?: string
           poster_url?: string | null
@@ -247,6 +256,159 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "admins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competition_allowed_clubs: {
+        Row: {
+          club_id: string
+          competition_id: string
+          created_at: string
+          id: string
+          source: string
+        }
+        Insert: {
+          club_id: string
+          competition_id: string
+          created_at?: string
+          id?: string
+          source?: string
+        }
+        Update: {
+          club_id?: string
+          competition_id?: string
+          created_at?: string
+          id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_allowed_clubs_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competition_allowed_clubs_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      definitive_entries: {
+        Row: {
+          admin_notes: string | null
+          club_id: string
+          competition_id: string
+          contact_email: string
+          contact_name: string
+          contact_phone: string
+          created_at: string
+          id: string
+          judge_name: string | null
+          payment_document_url: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          teams_per_category: Json
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          club_id: string
+          competition_id: string
+          contact_email?: string
+          contact_name?: string
+          contact_phone?: string
+          created_at?: string
+          id?: string
+          judge_name?: string | null
+          payment_document_url?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          teams_per_category?: Json
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          club_id?: string
+          competition_id?: string
+          contact_email?: string
+          contact_name?: string
+          contact_phone?: string
+          created_at?: string
+          id?: string
+          judge_name?: string | null
+          payment_document_url?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          teams_per_category?: Json
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "definitive_entries_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "definitive_entries_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provisional_entries: {
+        Row: {
+          club_id: string
+          competition_id: string
+          created_at: string
+          id: string
+          teams_per_category: Json
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          competition_id: string
+          created_at?: string
+          id?: string
+          teams_per_category?: Json
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          competition_id?: string
+          created_at?: string
+          id?: string
+          teams_per_category?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provisional_entries_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provisional_entries_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
             referencedColumns: ["id"]
           },
         ]
@@ -1107,6 +1269,8 @@ export type Database = {
     Enums: {
       competition_status:
         | "draft"
+        | "provisional_entry"
+        | "definitive_entry"
         | "registration_open"
         | "registration_closed"
         | "published"
@@ -1246,8 +1410,11 @@ export const Constants = {
     Enums: {
       competition_status: [
         "draft",
+        "provisional_entry",
+        "definitive_entry",
         "registration_open",
         "registration_closed",
+        "published",
         "active",
         "finished",
       ],

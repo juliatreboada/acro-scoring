@@ -29,6 +29,9 @@ export type Competition = {
   poster_url: string | null            // event poster / logo
   admin: AdminUser | null              // assigned competition-admin
   created_at: string
+  fee_per_team: number | null          // fixed fee per team entry
+  fee_per_gymnast: number | null       // fee × gymnast count per category (pair=2, trio=3, group=4)
+  judge_missing_fine: number | null    // extra charge if club doesn't provide a judge
 }
 
 export type Panel = {
@@ -264,10 +267,12 @@ export function sortByAgeGroupAndCategory<T extends { age_group: string; categor
 
 export const ROUTINE_TYPES = ['Balance', 'Dynamic', 'Combined'] as const
 
-export type CompetitionStatus = 'draft' | 'registration_open' | 'registration_closed' | 'published' | 'active' | 'finished'
+export type CompetitionStatus = 'draft' | 'provisional_entry' | 'definitive_entry' | 'registration_open' | 'registration_closed' | 'published' | 'active' | 'finished'
 
 export const NEXT_STATUS: Partial<Record<CompetitionStatus, CompetitionStatus>> = {
-  draft:                'registration_open',
+  draft:                'provisional_entry',
+  provisional_entry:    'definitive_entry',
+  definitive_entry:     'registration_open',
   registration_open:    'registration_closed',
   registration_closed:  'published',
   published:            'active',

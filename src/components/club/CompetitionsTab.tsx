@@ -1,9 +1,12 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, Team, Gymnast, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule, Coach, CompetitionCoach } from '@/components/admin/types'
 import { ROUTINE_TYPES } from '@/components/admin/types'
+import ProvisionalEntryForm from './ProvisionalEntryForm'
+import DefinitiveEntryForm from './DefinitiveEntryForm'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -18,6 +21,8 @@ const T = {
     undoDropout: 'Undo dropout',
     dorsal: 'Dorsal',
     registrationClosed: 'Registration closed',
+    notAllowedTitle: 'Registration not available for your club',
+    notAllowedHint: 'Your club has not been approved to register teams for this competition. Contact the organiser if you believe this is an error.',
     noEligibleTeams: 'None of your teams match the age groups of this competition.',
     noTeams: 'Create teams first to be able to register.',
     teamsTitle: 'Your teams',
@@ -56,6 +61,8 @@ const T = {
     inviteInfo: 'The judge will receive an email to set up their account.',
     status: {
       draft: 'Draft',
+      provisional_entry: 'Provisional entry',
+      definitive_entry: 'Definitive entry',
       registration_open: 'Open',
       registration_closed: 'Closed',
       published: 'Published',
@@ -76,6 +83,8 @@ const T = {
     undoDropout: 'Deshacer baja',
     dorsal: 'Dorsal',
     registrationClosed: 'Inscripción cerrada',
+    notAllowedTitle: 'Inscripción no disponible para tu club',
+    notAllowedHint: 'Tu club no ha sido autorizado para inscribir equipos en esta competición. Contacta con el organizador si crees que es un error.',
     noEligibleTeams: 'Ningún equipo coincide con los grupos de edad de esta competición.',
     noTeams: 'Crea equipos primero para poder inscribirte.',
     teamsTitle: 'Tus equipos',
@@ -114,6 +123,8 @@ const T = {
     inviteInfo: 'El juez recibirá un email para crear su cuenta.',
     status: {
       draft: 'Borrador',
+      provisional_entry: 'Inscripción provisional',
+      definitive_entry: 'Inscripción definitiva',
       registration_open: 'Abierta',
       registration_closed: 'Cerrada',
       published: 'Publicada',
@@ -128,6 +139,8 @@ const T = {
 
 const STATUS_BADGE: Record<string, string> = {
   draft:               'bg-slate-100 text-slate-500',
+  provisional_entry:   'bg-violet-100 text-violet-700',
+  definitive_entry:    'bg-orange-100 text-orange-700',
   registration_open:   'bg-green-100 text-green-700',
   registration_closed: 'bg-amber-100 text-amber-700',
   published:           'bg-indigo-100 text-indigo-700',
@@ -459,12 +472,13 @@ function routineTypesForTeam(team: Team, ageGroupRules: AgeGroupRule[]): (typeof
 }
 
 function CompetitionDetailView({
-  lang, competition, teams, gymnasts, coaches, competitionCoaches, entries, music, judges, nominations, agLabels, ageGroupRules,
+  lang, clubId, competition, teams, gymnasts, coaches, competitionCoaches, entries, music, judges, nominations, agLabels, ageGroupRules,
   tsReviewStatuses, onBack,
   onRegister, onDropout, onSetFile, onNominate, onRemoveNomination, onInviteJudge,
   onRegisterCoach, onUnregisterCoach,
 }: {
   lang: Lang
+  clubId: string
   competition: Competition
   teams: Team[]
   gymnasts: Gymnast[]
@@ -496,6 +510,20 @@ function CompetitionDetailView({
     ? new Date(competition.start_date + 'T00:00:00').getFullYear()
     : new Date().getFullYear()
   const [ageError, setAgeError] = useState<{ teamId: string; messages: string[] } | null>(null)
+
+  // registration gate: check if this club is in competition_allowed_clubs
+  const [allowed, setAllowed] = useState<boolean | null>(isOpen ? null : true)
+  useEffect(() => {
+    if (!isOpen) return
+    const supabase = createClient()
+    supabase
+      .from('competition_allowed_clubs')
+      .select('id')
+      .eq('competition_id', competition.id)
+      .eq('club_id', clubId)
+      .maybeSingle()
+      .then(({ data }) => setAllowed(!!data))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fix eligible teams filter: match by UUID (ag_group = rule.id) OR by label name (legacy)
   const eligibleTeams = teams.filter((team) =>
@@ -782,7 +810,18 @@ function CompetitionDetailView({
 
       {/* teams */}
       <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">{t.teamsTitle}</p>
-      {teams.length === 0 ? (
+
+      {/* registration gate */}
+      {isOpen && allowed === null ? (
+        <div className="flex justify-center py-10">
+          <div className="w-5 h-5 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />
+        </div>
+      ) : isOpen && allowed === false ? (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-6 text-center space-y-1">
+          <p className="text-sm font-semibold text-amber-800">{t.notAllowedTitle}</p>
+          <p className="text-xs text-amber-600">{t.notAllowedHint}</p>
+        </div>
+      ) : teams.length === 0 ? (
         <p className="text-sm text-slate-400 text-center py-10 bg-white border border-slate-200 rounded-2xl">{t.noTeams}</p>
       ) : eligibleTeams.length === 0 ? (
         <p className="text-sm text-slate-400 text-center py-10 bg-white border border-slate-200 rounded-2xl">{t.noEligibleTeams}</p>
@@ -916,7 +955,7 @@ function CompetitionDetailView({
 // ─── list view ────────────────────────────────────────────────────────────────
 
 function CompetitionListView({
-  lang, competitions, teams, entries, nominations, onSelect,
+  lang, competitions, teams, entries, nominations, onSelect, onOpenProvisionalEntry, onOpenDefinitiveEntry,
 }: {
   lang: Lang
   competitions: Competition[]
@@ -924,11 +963,15 @@ function CompetitionListView({
   entries: CompetitionEntry[]
   nominations: CompetitionJudgeNomination[]
   onSelect: (id: string) => void
+  onOpenProvisionalEntry: (comp: Competition) => void
+  onOpenDefinitiveEntry: (comp: Competition) => void
 }) {
   const t = T[lang]
   const teamIds = new Set(teams.map((tm) => tm.id))
 
   const visible = competitions.filter((c) =>
+    c.status === 'provisional_entry' ||
+    c.status === 'definitive_entry' ||
     c.status === 'registration_open' ||
     entries.some((e) => e.competition_id === c.id && teamIds.has(e.team_id))
   )
@@ -946,36 +989,61 @@ function CompetitionListView({
         const nominatedCount = nominations.filter((n) => n.competition_id === comp.id).length
         const needsJudge = comp.status === 'registration_open' && registeredCount > 0 && nominatedCount === 0
         const dateStr = formatDateRange(comp.start_date, comp.end_date)
+        const isProvisionalEntry = comp.status === 'provisional_entry'
+        const isDefinitiveEntry = comp.status === 'definitive_entry'
         return (
-          <button key={comp.id} onClick={() => onSelect(comp.id)}
-            className="w-full text-left bg-white border border-slate-200 rounded-2xl px-5 py-4 hover:border-blue-300 hover:shadow-sm transition-all group">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                  <span className={['px-2 py-0.5 rounded-md text-xs font-semibold flex items-center gap-1', STATUS_BADGE[comp.status]].join(' ')}>
-                    {comp.status === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
-                    {t.status[comp.status]}
-                  </span>
-                  <span className={['text-xs font-medium', registeredCount > 0 ? 'text-green-600' : 'text-slate-400'].join(' ')}>
-                    {t.teamCount(registeredCount)}
-                  </span>
-                  {needsJudge && (
-                    <span className="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                      ⚠ {t.judgesWarning}
+          <div key={comp.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-blue-300 hover:shadow-sm transition-all group">
+            <button onClick={() => onSelect(comp.id)} className="w-full text-left px-5 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <span className={['px-2 py-0.5 rounded-md text-xs font-semibold flex items-center gap-1', STATUS_BADGE[comp.status]].join(' ')}>
+                      {comp.status === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
+                      {t.status[comp.status]}
                     </span>
-                  )}
+                    {comp.status === 'registration_open' && (
+                      <span className={['text-xs font-medium', registeredCount > 0 ? 'text-green-600' : 'text-slate-400'].join(' ')}>
+                        {t.teamCount(registeredCount)}
+                      </span>
+                    )}
+                    {needsJudge && (
+                      <span className="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                        ⚠ {t.judgesWarning}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">{comp.name}</p>
+                  <div className="flex flex-wrap gap-x-3 mt-1">
+                    {comp.location && <span className="text-xs text-slate-400">{comp.location}</span>}
+                    {dateStr && <span className="text-xs text-slate-400">{dateStr}</span>}
+                  </div>
                 </div>
-                <p className="text-sm font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">{comp.name}</p>
-                <div className="flex flex-wrap gap-x-3 mt-1">
-                  {comp.location && <span className="text-xs text-slate-400">{comp.location}</span>}
-                  {dateStr && <span className="text-xs text-slate-400">{dateStr}</span>}
-                </div>
+                <svg className="w-4 h-4 text-slate-300 group-hover:text-blue-400 shrink-0 mt-1 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
               </div>
-              <svg className="w-4 h-4 text-slate-300 group-hover:text-blue-400 shrink-0 mt-1 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-              </svg>
-            </div>
-          </button>
+            </button>
+
+            {isProvisionalEntry && (
+              <div className="px-5 pb-4">
+                <button
+                  onClick={() => onOpenProvisionalEntry(comp)}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold border-2 border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100 transition-all text-center">
+                  {lang === 'es' ? 'Inscripción provisional →' : 'Provisional entry →'}
+                </button>
+              </div>
+            )}
+
+            {isDefinitiveEntry && (
+              <div className="px-5 pb-4">
+                <button
+                  onClick={() => onOpenDefinitiveEntry(comp)}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold border-2 border-orange-200 text-orange-700 bg-orange-50 hover:bg-orange-100 transition-all text-center">
+                  {lang === 'es' ? 'Inscripción definitiva →' : 'Definitive entry →'}
+                </button>
+              </div>
+            )}
+          </div>
         )
       })}
     </div>
@@ -985,12 +1053,14 @@ function CompetitionListView({
 // ─── main export ──────────────────────────────────────────────────────────────
 
 export default function CompetitionsTab({
-  lang, competitions, teams, gymnasts, coaches, competitionCoaches, entries, music, judges, nominations, agLabels, ageGroupRules,
+  lang, clubId, clubName, competitions, teams, gymnasts, coaches, competitionCoaches, entries, music, judges, nominations, agLabels, ageGroupRules,
   tsReviewStatuses,
   onRegister, onDropout, onSetFile, onNominate, onRemoveNomination, onInviteJudge,
   onRegisterCoach, onUnregisterCoach,
 }: {
   lang: Lang
+  clubId: string
+  clubName: string
   competitions: Competition[]
   teams: Team[]
   gymnasts: Gymnast[]
@@ -1013,45 +1083,72 @@ export default function CompetitionsTab({
   onUnregisterCoach: (competitionId: string, coachId: string) => void
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [provisionalEntryComp, setProvisionalEntryComp] = useState<Competition | null>(null)
+  const [definitiveEntryComp, setDefinitiveEntryComp] = useState<Competition | null>(null)
   const selected = competitions.find((c) => c.id === selectedId) ?? null
 
-  if (selected) {
-    return (
-      <CompetitionDetailView
-        lang={lang}
-        competition={selected}
-        teams={teams}
-        gymnasts={gymnasts}
-        coaches={coaches}
-        competitionCoaches={competitionCoaches.filter(cc => cc.competition_id === selected.id)}
-        entries={entries}
-        music={music}
-        judges={judges}
-        nominations={nominations}
-        agLabels={agLabels}
-        ageGroupRules={ageGroupRules}
-        tsReviewStatuses={tsReviewStatuses}
-        onBack={() => setSelectedId(null)}
-        onRegister={(teamId) => onRegister(selected.id, teamId)}
-        onDropout={onDropout}
-        onSetFile={(teamId, routineType, field, file) => onSetFile(teamId, selected.id, routineType, field, file)}
-        onNominate={(judgeId) => onNominate(selected.id, judgeId)}
-        onRemoveNomination={onRemoveNomination}
-        onInviteJudge={onInviteJudge}
-        onRegisterCoach={(coachId) => onRegisterCoach(selected.id, coachId)}
-        onUnregisterCoach={(coachId) => onUnregisterCoach(selected.id, coachId)}
-      />
-    )
-  }
-
   return (
-    <CompetitionListView
-      lang={lang}
-      competitions={competitions}
-      teams={teams}
-      entries={entries}
-      nominations={nominations}
-      onSelect={setSelectedId}
-    />
+    <>
+      {selected ? (
+        <CompetitionDetailView
+          lang={lang}
+          clubId={clubId}
+          competition={selected}
+          teams={teams}
+          gymnasts={gymnasts}
+          coaches={coaches}
+          competitionCoaches={competitionCoaches.filter(cc => cc.competition_id === selected.id)}
+          entries={entries}
+          music={music}
+          judges={judges}
+          nominations={nominations}
+          agLabels={agLabels}
+          ageGroupRules={ageGroupRules}
+          tsReviewStatuses={tsReviewStatuses}
+          onBack={() => setSelectedId(null)}
+          onRegister={(teamId) => onRegister(selected.id, teamId)}
+          onDropout={onDropout}
+          onSetFile={(teamId, routineType, field, file) => onSetFile(teamId, selected.id, routineType, field, file)}
+          onNominate={(judgeId) => onNominate(selected.id, judgeId)}
+          onRemoveNomination={onRemoveNomination}
+          onInviteJudge={onInviteJudge}
+          onRegisterCoach={(coachId) => onRegisterCoach(selected.id, coachId)}
+          onUnregisterCoach={(coachId) => onUnregisterCoach(selected.id, coachId)}
+        />
+      ) : (
+        <CompetitionListView
+          lang={lang}
+          competitions={competitions}
+          teams={teams}
+          entries={entries}
+          nominations={nominations}
+          onSelect={setSelectedId}
+          onOpenProvisionalEntry={setProvisionalEntryComp}
+          onOpenDefinitiveEntry={setDefinitiveEntryComp}
+        />
+      )}
+
+      {provisionalEntryComp && (
+        <ProvisionalEntryForm
+          lang={lang}
+          competition={provisionalEntryComp}
+          clubId={clubId}
+          clubName={clubName}
+          ageGroupRules={ageGroupRules}
+          onClose={() => setProvisionalEntryComp(null)}
+        />
+      )}
+
+      {definitiveEntryComp && (
+        <DefinitiveEntryForm
+          lang={lang}
+          competition={definitiveEntryComp}
+          clubId={clubId}
+          clubName={clubName}
+          ageGroupRules={ageGroupRules}
+          onClose={() => setDefinitiveEntryComp(null)}
+        />
+      )}
+    </>
   )
 }

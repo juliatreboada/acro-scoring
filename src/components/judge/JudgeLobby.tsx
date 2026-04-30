@@ -10,7 +10,7 @@ import JudgePractice from './JudgePractice'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
-type CompetitionStatus = 'draft' | 'registration_open' | 'registration_closed' | 'active' | 'finished'
+type CompetitionStatus = 'draft' | 'provisional_entry' | 'definitive_entry' | 'registration_open' | 'registration_closed' | 'active' | 'finished'
 type SessionStatus = 'waiting' | 'active' | 'finished'
 
 type LobbyCompetition = {
@@ -55,6 +55,8 @@ const T = {
     panelN: (n: number) => `Panel ${n}`,
     status: {
       draft: 'Draft',
+      provisional_entry: 'Provisional entry',
+      definitive_entry: 'Definitive entry',
       registration_open: 'Registration open',
       registration_closed: 'Registration closed',
       active: 'Live',
@@ -89,6 +91,8 @@ const T = {
     panelN: (n: number) => `Panel ${n}`,
     status: {
       draft: 'Borrador',
+      provisional_entry: 'Inscripción provisional',
+      definitive_entry: 'Inscripción definitiva',
       registration_open: 'Inscripción abierta',
       registration_closed: 'Inscripción cerrada',
       active: 'En vivo',
@@ -117,6 +121,8 @@ const T = {
 
 const COMP_STATUS_BADGE: Record<CompetitionStatus, string> = {
   draft:                'bg-slate-100 text-slate-500',
+  provisional_entry:    'bg-violet-100 text-violet-700',
+  definitive_entry:     'bg-orange-100 text-orange-700',
   registration_open:    'bg-green-100 text-green-700',
   registration_closed:  'bg-amber-100 text-amber-700',
   active:               'bg-blue-600 text-white',

@@ -52,6 +52,8 @@ const T = {
     // status
     status: {
       draft:                'Draft',
+      provisional_entry:    'Provisional entry',
+      definitive_entry:     'Definitive entry',
       registration_open:    'Registration open',
       registration_closed:  'Registration closed',
       published:            'Published',
@@ -60,7 +62,9 @@ const T = {
     },
     // status advance actions
     action: {
-      draft:                'Open registration',
+      draft:                'Open provisional entry',
+      provisional_entry:    'Open definitive entry',
+      definitive_entry:     'Open registration',
       registration_open:    'Close registration',
       registration_closed:  'Publish starting order',
       published:            'Start competition',
@@ -114,6 +118,8 @@ const T = {
     // status
     status: {
       draft:                'Borrador',
+      provisional_entry:    'Inscripción provisional',
+      definitive_entry:     'Inscripción definitiva',
       registration_open:    'Inscripción abierta',
       registration_closed:  'Inscripción cerrada',
       published:            'Publicada',
@@ -121,7 +127,9 @@ const T = {
       finished:             'Finalizada',
     },
     action: {
-      draft:                'Abrir inscripción',
+      draft:                'Abrir inscripción provisional',
+      provisional_entry:    'Abrir inscripción definitiva',
+      definitive_entry:     'Abrir inscripción nominativa',
       registration_open:    'Cerrar inscripción',
       registration_closed:  'Publicar orden de salida',
       published:            'Iniciar competición',
@@ -144,6 +152,8 @@ const T = {
 
 const STATUS_BADGE: Record<CompetitionStatus, string> = {
   draft:                'bg-slate-100 text-slate-500',
+  provisional_entry:    'bg-violet-100 text-violet-700',
+  definitive_entry:     'bg-orange-100 text-orange-700',
   registration_open:    'bg-green-100 text-green-700',
   registration_closed:  'bg-amber-100 text-amber-700',
   published:            'bg-indigo-100 text-indigo-700',
@@ -152,7 +162,9 @@ const STATUS_BADGE: Record<CompetitionStatus, string> = {
 }
 
 const ACTION_STYLE: Partial<Record<CompetitionStatus, string>> = {
-  draft:                'border-green-200 text-green-700 hover:bg-green-50',
+  draft:                'border-violet-200 text-violet-700 hover:bg-violet-50',
+  provisional_entry:    'border-orange-200 text-orange-700 hover:bg-orange-50',
+  definitive_entry:     'border-green-200 text-green-700 hover:bg-green-50',
   registration_open:    'border-amber-200 text-amber-700 hover:bg-amber-50',
   registration_closed:  'border-indigo-200 text-indigo-700 hover:bg-indigo-50',
   published:            'border-blue-200 text-blue-700 hover:bg-blue-50',
@@ -191,7 +203,7 @@ function PlaceholderTab({ lang }: { lang: Lang }) {
 
 // ─── overview tab ─────────────────────────────────────────────────────────────
 
-type OverviewUpdate = Omit<Competition, 'id' | 'created_at' | 'status'>
+type OverviewUpdate = Omit<Competition, 'id' | 'created_at' | 'status' | 'fee_per_team' | 'fee_per_gymnast' | 'judge_missing_fine'>
 
 function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels, sessions, onUpdate, onSetPanelCount, onUploadPoster }: {
   competition: Competition
@@ -475,6 +487,7 @@ export type CompetitionDetailProps = {
   clubs: Club[]
   entries: CompetitionEntry[]
   onToggleDropout: (entryId: string) => void
+  onRemoveClubEntries?: (clubId: string) => void
   // starting order
   sessionOrders: SessionOrder[]
   lockedSessions: string[]
@@ -484,8 +497,9 @@ export type CompetitionDetailProps = {
   // overview
   availableAdmins: AdminUser[]
   ageGroupRules: AgeGroupRule[]
-  onUpdateCompetition: (updates: Omit<Competition, 'id' | 'created_at' | 'status'>) => void
+  onUpdateCompetition: (updates: OverviewUpdate) => void
   onUploadPoster: (file: File) => Promise<void>
+  onUpdateFees: (fees: { fee_per_team: number | null; fee_per_gymnast: number | null; judge_missing_fine: number | null }) => void
   // dj review
   onSetDJReviewDeadline: (date: string | null) => void
   // competition day
@@ -504,8 +518,8 @@ export default function CompetitionDetail({
   globalJudges, judgePool, nominations, assignments,
   panelLocks, onAddToPool, onRemoveFromPool, onAssignJudge, onAddSlot, onRemoveSlot,
   onTogglePanelLock, onCreateJudge,
-  globalTeams, clubs, entries, onToggleDropout, sessionOrders, lockedSessions, onReorder, onToggleLock, onReorderTimeline,
-  availableAdmins, ageGroupRules, onUpdateCompetition, onUploadPoster,
+  globalTeams, clubs, entries, onToggleDropout, onRemoveClubEntries, sessionOrders, lockedSessions, onReorder, onToggleLock, onReorderTimeline,
+  availableAdmins, ageGroupRules, onUpdateCompetition, onUploadPoster, onUpdateFees,
   onSetDJReviewDeadline, onStartSession, onFinishSession,
   competitionGymnasts, competitionCoaches, globalCoaches,
 }: CompetitionDetailProps) {
@@ -642,12 +656,18 @@ export default function CompetitionDetail({
           panels={panels}
           sections={sections}
           sessions={sessions}
+          fees={{
+            fee_per_team:       competition.fee_per_team,
+            fee_per_gymnast:    competition.fee_per_gymnast,
+            judge_missing_fine: competition.judge_missing_fine,
+          }}
           onAddSection={onAddSection}
           onUpdateSectionLabel={onUpdateSectionLabel}
           onUpdateSectionTimes={onUpdateSectionTimes}
           onDeleteSection={onDeleteSection}
           onAddSession={onAddSession}
           onDeleteSession={onDeleteSession}
+          onUpdateFees={onUpdateFees}
         />
       )}
       {activeTab === 'overview' && (
@@ -710,6 +730,7 @@ export default function CompetitionDetail({
           entries={entries}
           agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group}`]))}
           onToggleDropout={onToggleDropout}
+          onRemoveClubEntries={onRemoveClubEntries}
           competitionId={competition.id}
           ageGroupRules={ageGroupRules}
           competitionAgeGroups={competition.age_groups}
@@ -719,6 +740,7 @@ export default function CompetitionDetail({
       {activeTab === 'licencias' && (
         <LicenciasTab
           lang={lang}
+          competitionId={competition.id}
           globalTeams={globalTeams}
           clubs={clubs}
           entries={entries}

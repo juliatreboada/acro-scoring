@@ -33,6 +33,8 @@ const T = {
     noAdmin: '— assign later —',
     // status
     draft:                'Draft',
+    provisional_entry:    'Provisional entry',
+    definitive_entry:     'Definitive entry',
     registration_open:    'Registration open',
     registration_closed:  'Registration closed',
     published:            'Published',
@@ -68,6 +70,8 @@ const T = {
     noAdmin: '— asignar después —',
     // status
     draft:                'Borrador',
+    provisional_entry:    'Inscripción provisional',
+    definitive_entry:     'Inscripción definitiva',
     registration_open:    'Inscripción abierta',
     registration_closed:  'Inscripción cerrada',
     published:            'Publicada',
@@ -95,6 +99,8 @@ function formatDateRange(start: string | null, end: string | null): string {
 
 const STATUS_STYLES: Record<string, string> = {
   draft:                'bg-slate-100/90 text-slate-500',
+  provisional_entry:    'bg-violet-100/90 text-violet-700',
+  definitive_entry:     'bg-orange-100/90 text-orange-700',
   registration_open:    'bg-green-100/90 text-green-700',
   registration_closed:  'bg-amber-100/90 text-amber-700',
   active:               'bg-blue-600/90 text-white',
@@ -145,6 +151,9 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
       ts_music_deadline: null,
       poster_url: posterUrl.trim() || null,
       admin,
+      fee_per_team: null,
+      fee_per_gymnast: null,
+      judge_missing_fine: null,
     })
   }
 

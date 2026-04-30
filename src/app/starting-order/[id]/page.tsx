@@ -31,7 +31,7 @@ export default function Page() {
       // ── first wave: competition + panels + sections + sessions + entries ──────
       const [compRes, panelsRes, sectionsRes, sessionsRes, entriesRes, rulesRes] = await Promise.all([
         supabase.from('competitions')
-          .select('id, name, status, location, start_date, end_date, registration_deadline, ts_music_deadline, age_groups, poster_url, created_at')
+          .select('id, name, status, location, start_date, end_date, registration_deadline, ts_music_deadline, age_groups, poster_url, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
           .eq('id', id).single(),
         supabase.from('panels')
           .select('id, competition_id, panel_number')
