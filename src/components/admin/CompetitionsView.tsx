@@ -154,6 +154,8 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
       fee_per_team: null,
       fee_per_gymnast: null,
       judge_missing_fine: null,
+      provisional_entry_deadline: null,
+      definitive_entry_deadline: null,
     })
   }
 

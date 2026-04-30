@@ -60,9 +60,9 @@ let _client = null;
 function getSupabaseAdmin() {
     if (_client) return _client;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const url = ("TURBOPACK compile-time value", "https://lhvqstibxmuvphiixqof.supabase.co") ?? '';
+    const url = ("TURBOPACK compile-time value", "https://bdyykgmjksadihiuqiju.supabase.co") ?? '';
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const key = ("TURBOPACK compile-time value", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxodnFzdGlieG11dnBoaWl4cW9mIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDUxNzc4NSwiZXhwIjoyMDkwMDkzNzg1fQ.YmZft8GNTrmkZWLgXSoMhBf9MsNy75Bc3hfDxBy9FRA") ?? '';
+    const key = ("TURBOPACK compile-time value", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkeXlrZ21qa3NhZGloaXVxaWp1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjE2Njg0MSwiZXhwIjoyMDkxNzQyODQxfQ.Och66Mg-7TeckYvcaGY2o1dGB-32fILQ8w-cscvxZP4") ?? '';
     if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
     ;
     _client = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$supabase$2f$supabase$2d$js$2f$dist$2f$index$2e$mjs__$5b$app$2d$route$5d$__$28$ecmascript$29$__$3c$locals$3e$__["createClient"])(url, key);

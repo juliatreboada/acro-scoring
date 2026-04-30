@@ -19,7 +19,7 @@ const T = {
     droppedOut: 'Dropped out',
     noGymnasts: 'No gymnasts linked',
     coaches: 'Coaches',
-    gymnasts: 'Gymnasts',
+    gymnasts: 'Teams',
     subTabs: { provisional: 'Provisional', definitive: 'Definitive', nominative: 'Nominative' },
     // provisional
     noProvisional: 'No provisional entries yet.',
@@ -46,7 +46,7 @@ const T = {
     droppedOut: 'Retirado',
     noGymnasts: 'Sin gimnastas vinculados',
     coaches: 'Entrenadores',
-    gymnasts: 'Gimnastas',
+    gymnasts: 'Equipos',
     subTabs: { provisional: 'Provisional', definitive: 'Definitiva', nominative: 'Nominativa' },
     // provisional
     noProvisional: 'Sin inscripciones provisionales todavía.',

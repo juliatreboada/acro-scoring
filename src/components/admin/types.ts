@@ -23,6 +23,8 @@ export type Competition = {
   location: string | null
   start_date: string | null            // ISO date 'YYYY-MM-DD'
   end_date: string | null
+  provisional_entry_deadline: string | null
+  definitive_entry_deadline: string | null
   registration_deadline: string | null // last day clubs can register
   ts_music_deadline: string | null     // after this date clubs cannot upload/modify/delete TS or music
   age_groups: string[]                 // selected age groups for this competition

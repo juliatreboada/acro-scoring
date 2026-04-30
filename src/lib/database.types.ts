@@ -191,6 +191,7 @@ export type Database = {
           age_groups: string[]
           created_at: string
           created_by: string | null
+          definitive_entry_deadline: string | null
           end_date: string | null
           fee_per_gymnast: number | null
           fee_per_team: number | null
@@ -199,6 +200,7 @@ export type Database = {
           location: string | null
           name: string
           poster_url: string | null
+          provisional_entry_deadline: string | null
           registration_deadline: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["competition_status"]
@@ -210,6 +212,7 @@ export type Database = {
           age_groups?: string[]
           created_at?: string
           created_by?: string | null
+          definitive_entry_deadline?: string | null
           end_date?: string | null
           fee_per_gymnast?: number | null
           fee_per_team?: number | null
@@ -218,6 +221,7 @@ export type Database = {
           location?: string | null
           name: string
           poster_url?: string | null
+          provisional_entry_deadline?: string | null
           registration_deadline?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["competition_status"]
@@ -229,6 +233,7 @@ export type Database = {
           age_groups?: string[]
           created_at?: string
           created_by?: string | null
+          definitive_entry_deadline?: string | null
           end_date?: string | null
           fee_per_gymnast?: number | null
           fee_per_team?: number | null
@@ -237,6 +242,7 @@ export type Database = {
           location?: string | null
           name?: string
           poster_url?: string | null
+          provisional_entry_deadline?: string | null
           registration_deadline?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["competition_status"]
