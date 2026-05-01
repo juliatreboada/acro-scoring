@@ -140,11 +140,12 @@ type Props = {
   clubName: string
   ageGroupRules: AgeGroupRule[]
   onClose: () => void
+  onSaved?: () => void
 }
 
 type EntryStatus = 'pending' | 'payment_uploaded' | 'approved' | 'rejected'
 
-export default function DefinitiveEntryForm({ lang, competition, clubId, clubName, ageGroupRules, onClose }: Props) {
+export default function DefinitiveEntryForm({ lang, competition, clubId, clubName, ageGroupRules, onClose, onSaved }: Props) {
   const t = T[lang]
   const supabase = createClient()
   const paymentInputRef = useRef<HTMLInputElement>(null)
@@ -230,11 +231,18 @@ export default function DefinitiveEntryForm({ lang, competition, clubId, clubNam
         setEntryStatus(data.status as EntryStatus)
       }
       setSaved(true)
+      onSaved?.()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
       setSaving(false)
     }
+  }
+
+  function handleViewDocument() {
+    if (!paymentUrl) return
+    const { data } = supabase.storage.from('payment-documents').getPublicUrl(paymentUrl)
+    window.open(data.publicUrl, '_blank')
   }
 
   async function handlePaymentUpload(file: File) {
@@ -417,6 +425,10 @@ export default function DefinitiveEntryForm({ lang, competition, clubId, clubNam
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span className="text-sm font-medium text-green-700 flex-1">{t.paymentUploaded}</span>
+                  <button onClick={handleViewDocument}
+                    className="text-xs text-green-600 hover:text-green-800 font-medium shrink-0 underline underline-offset-2">
+                    {lang === 'es' ? 'Ver' : 'View'}
+                  </button>
                   {!isApproved && (
                     <button onClick={() => paymentInputRef.current?.click()} disabled={uploading}
                       className="text-xs text-green-600 hover:text-green-800 font-medium shrink-0">

@@ -1136,12 +1136,14 @@ export default function CompetitionDetail({
           ageGroupRules={ageGroupRules}
           competitionAgeGroups={competition.age_groups}
           competitionYear={competition.start_date ? new Date(competition.start_date + 'T00:00:00').getFullYear() : new Date().getFullYear()}
+          competitionStatus={competition.status}
         />
       )}
       {activeTab === 'licencias' && (
         <LicenciasTab
           lang={lang}
           competitionId={competition.id}
+          competitionStatus={competition.status}
           globalTeams={globalTeams}
           clubs={clubs}
           entries={entries}

@@ -38,9 +38,10 @@ type Props = {
   clubName: string
   ageGroupRules: AgeGroupRule[]
   onClose: () => void
+  onSaved?: () => void
 }
 
-export default function ProvisionalEntryForm({ lang, competition, clubId, clubName, ageGroupRules, onClose }: Props) {
+export default function ProvisionalEntryForm({ lang, competition, clubId, clubName, ageGroupRules, onClose, onSaved }: Props) {
   const t = T[lang]
   const supabase = createClient()
 
@@ -82,6 +83,7 @@ export default function ProvisionalEntryForm({ lang, competition, clubId, clubNa
         )
       if (err) throw err
       setSaved(true)
+      onSaved?.()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {

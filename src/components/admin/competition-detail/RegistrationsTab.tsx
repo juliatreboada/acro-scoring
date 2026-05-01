@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import type { Lang } from '@/components/scoring/types'
-import type { Team, Club, Gymnast, CompetitionEntry, AgeGroupRule } from '@/components/admin/types'
+import type { Team, Club, Gymnast, CompetitionEntry, AgeGroupRule, CompetitionStatus } from '@/components/admin/types'
 import { categoryLabel, sortByAgeGroupAndCategory, categoriesForRuleset, CATEGORY_LABELS } from '@/components/admin/types'
 import ClickableImg from '@/components/shared/ClickableImg'
 import ImportTab from './ImportTab'
@@ -34,7 +34,7 @@ const T = {
     // provisional sub-tab
     noProvisional: 'No provisional entries yet.',
     total: 'Total',
-    teams: 'Teams',
+    teams: 'teams',
     // definitive sub-tab
     noDefinitive: 'No definitive entries yet.',
     contact: 'Contact',
@@ -63,6 +63,15 @@ const T = {
     confirm: 'Confirm',
     adminNotes: 'Admin notes',
     saveNotes: 'Save',
+    withDefinitiveEntry: 'With definitive entry',
+    noDefinitiveEntry: 'Other clubs',
+    inviteNewClub: '+ Invite new club',
+    inviteClubTitle: 'Invite new club',
+    emailLabel: 'Email',
+    sendInvite: 'Send invitation',
+    inviteSent: 'Invitation sent to',
+    inviteClubInfo: 'The club will receive an email to set up their account.',
+    sending: 'Sending…',
   },
   es: {
     noRegistrations: 'Sin equipos registrados todavía.',
@@ -87,7 +96,7 @@ const T = {
     // provisional sub-tab
     noProvisional: 'Sin inscripciones provisionales todavía.',
     total: 'Total',
-    teams: 'Equipos',
+    teams: 'equipos',
     // definitive sub-tab
     noDefinitive: 'Sin inscripciones definitivas todavía.',
     contact: 'Contacto',
@@ -116,6 +125,15 @@ const T = {
     confirm: 'Confirmar',
     adminNotes: 'Notas del admin',
     saveNotes: 'Guardar',
+    withDefinitiveEntry: 'Con inscripción definitiva',
+    noDefinitiveEntry: 'Otros clubes',
+    inviteNewClub: '+ Invitar nuevo club',
+    inviteClubTitle: 'Invitar nuevo club',
+    emailLabel: 'Email',
+    sendInvite: 'Enviar invitación',
+    inviteSent: 'Invitación enviada a',
+    inviteClubInfo: 'El club recibirá un email para crear su cuenta.',
+    sending: 'Enviando…',
   },
 }
 
@@ -180,6 +198,18 @@ function TeamAvatar({ team }: { team: Team }) {
   )
 }
 
+// ─── level helpers (shared with nominative view) ──────────────────────────────
+
+type Level = 'Escolar' | 'Base' | 'Nacional'
+const LEVEL_ORDER: Level[] = ['Escolar', 'Base', 'Nacional']
+
+function getLevel(ageGroupId: string, rules: AgeGroupRule[]): Level {
+  const ag = rules.find(r => r.id === ageGroupId)?.age_group ?? ''
+  if (ag.includes('Escolar')) return 'Escolar'
+  if (ag.includes('Base'))    return 'Base'
+  return 'Nacional'
+}
+
 // ─── provisional sub-tab ──────────────────────────────────────────────────────
 
 function ProvisionalSubTab({ lang, provisionalEntries, clubs, ageGroupRules, competitionAgeGroups }: {
@@ -190,98 +220,132 @@ function ProvisionalSubTab({ lang, provisionalEntries, clubs, ageGroupRules, com
   competitionAgeGroups: string[]
 }) {
   const t = T[lang]
+  const [openLevels, setOpenLevels] = useState<Set<string>>(new Set())
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
 
-  if (provisionalEntries.length === 0) {
-    return <p className="text-sm text-slate-400 text-center py-12 border border-dashed border-slate-200 rounded-xl">{t.noProvisional}</p>
-  }
-
-  // Build category rows ordered by sort_order
   type CatRow = { ageGroupId: string; ageGroupName: string; age_group: string; category: string }
   const rawRows: CatRow[] = competitionAgeGroups.flatMap(agId => {
     const rule = ageGroupRules.find(r => r.id === agId)
     if (!rule) return []
     return categoriesForRuleset(rule.age_group).map(cat => ({
-      ageGroupId: agId,
-      age_group: agId,
-      ageGroupName: rule.age_group,
-      category: cat,
+      ageGroupId: agId, age_group: agId, ageGroupName: rule.age_group, category: cat,
     }))
   })
-  const rows = sortByAgeGroupAndCategory(rawRows, ageGroupRules)
+  const allRows = sortByAgeGroupAndCategory(rawRows, ageGroupRules)
 
-  // Clubs that submitted (preserve submission order)
-  const submittedClubIds = provisionalEntries.map(e => e.club_id)
-  const submittedClubs = submittedClubIds.map(cid => clubs.find(c => c.id === cid)).filter(Boolean) as Club[]
+  // Only rows where at least one club submitted teams
+  const activeRows = allRows.filter(row =>
+    provisionalEntries.some(e => (e.teams_per_category[`${row.ageGroupId}|${row.category}`] ?? 0) > 0)
+  )
 
-  function getCount(entry: ProvisionalEntry, agId: string, cat: string): number {
-    return entry.teams_per_category[`${agId}|${cat}`] ?? 0
+  const byLevel = new Map<Level, CatRow[]>()
+  for (const row of activeRows) {
+    const level = getLevel(row.ageGroupId, ageGroupRules)
+    if (!byLevel.has(level)) byLevel.set(level, [])
+    byLevel.get(level)!.push(row)
+  }
+  const presentLevels = LEVEL_ORDER.filter(l => byLevel.has(l))
+  const allGroupKeys = activeRows.map(r => `${r.ageGroupId}|${r.category}`)
+
+  function getRowTotal(agId: string, cat: string): number {
+    return provisionalEntries.reduce((s, e) => s + (e.teams_per_category[`${agId}|${cat}`] ?? 0), 0)
+  }
+  function getLevelTotal(rows: CatRow[]): number {
+    return rows.reduce((s, r) => s + getRowTotal(r.ageGroupId, r.category), 0)
   }
 
-  function rowTotal(agId: string, cat: string): number {
-    return provisionalEntries.reduce((s, e) => s + getCount(e, agId, cat), 0)
+  const isLevelOpen = (level: string) => openLevels.size === 0 || openLevels.has(level)
+  const toggleLevel = (level: string) => {
+    setOpenLevels(prev => {
+      const next = prev.size === 0 ? new Set<string>(presentLevels) : new Set(prev)
+      if (next.has(level)) next.delete(level); else next.add(level)
+      return next
+    })
+  }
+  const isGroupOpen = (key: string) => openGroups.size === 0 || openGroups.has(key)
+  const toggleGroup = (key: string) => {
+    setOpenGroups(prev => {
+      const next = prev.size === 0 ? new Set(allGroupKeys) : new Set(prev)
+      if (next.has(key)) next.delete(key); else next.add(key)
+      return next
+    })
+  }
+
+  if (provisionalEntries.length === 0 || activeRows.length === 0) {
+    return <p className="text-sm text-slate-400 text-center py-12 border border-dashed border-slate-200 rounded-xl">{t.noProvisional}</p>
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm border-collapse">
-        <thead>
-          <tr className="border-b border-slate-200">
-            <th className="text-left py-2.5 pr-4 text-xs font-semibold uppercase tracking-wide text-slate-400 whitespace-nowrap">{t.teams}</th>
-            {submittedClubs.map(c => (
-              <th key={c.id} className="text-center py-2.5 px-3 text-xs font-semibold text-slate-700 whitespace-nowrap max-w-[120px]">
-                <div className="flex flex-col items-center gap-1">
-                  {c.avatar_url
-                    ? <img src={c.avatar_url} alt={c.club_name} className="w-6 h-6 rounded-full object-cover" />
-                    : <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-400 text-[10px] font-bold flex items-center justify-center">{c.club_name.charAt(0)}</div>
-                  }
-                  <span className="truncate max-w-[90px]">{c.club_name}</span>
-                </div>
-              </th>
-            ))}
-            <th className="text-center py-2.5 px-3 text-xs font-semibold text-slate-400 whitespace-nowrap">{t.total}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(row => {
-            const total = rowTotal(row.ageGroupId, row.category)
-            return (
-              <tr key={`${row.ageGroupId}|${row.category}`} className="border-b border-slate-100 hover:bg-slate-50/50">
-                <td className="py-2.5 pr-4 text-slate-700 whitespace-nowrap">
-                  <span className="font-medium">{row.ageGroupName}</span>
-                  <span className="text-slate-400 ml-1.5">· {CATEGORY_LABELS[lang]?.[row.category] ?? row.category}</span>
-                </td>
-                {provisionalEntries.map(entry => {
-                  const count = getCount(entry, row.ageGroupId, row.category)
+    <div className="space-y-4">
+      {presentLevels.map(level => {
+        const levelRows = byLevel.get(level)!
+        const levelOpen = isLevelOpen(level)
+        const levelTotal = getLevelTotal(levelRows)
+        return (
+          <div key={level} className="border border-slate-200 rounded-2xl overflow-hidden">
+            <button
+              onClick={() => toggleLevel(level)}
+              className="w-full flex items-center gap-3 px-5 py-3.5 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+            >
+              <svg
+                className={['w-4 h-4 text-slate-400 shrink-0 transition-transform', levelOpen ? 'rotate-90' : ''].join(' ')}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
+              <span className="text-sm font-bold text-slate-700">{level}</span>
+              <span className="text-xs text-slate-400">{levelTotal} {t.teams}</span>
+            </button>
+
+            {levelOpen && (
+              <div className="px-5 py-4 space-y-4">
+                {levelRows.map(row => {
+                  const key = `${row.ageGroupId}|${row.category}`
+                  const groupOpen = isGroupOpen(key)
+                  const total = getRowTotal(row.ageGroupId, row.category)
+                  const clubRows = provisionalEntries
+                    .map(e => ({ club: clubs.find(c => c.id === e.club_id), count: e.teams_per_category[`${row.ageGroupId}|${row.category}`] ?? 0, clubId: e.club_id }))
+                    .filter(x => x.count > 0)
+
                   return (
-                    <td key={entry.id} className="text-center py-2.5 px-3">
-                      <span className={count > 0 ? 'font-semibold text-slate-800' : 'text-slate-300'}>
-                        {count > 0 ? count : '—'}
-                      </span>
-                    </td>
+                    <div key={key}>
+                      <button onClick={() => toggleGroup(key)} className="w-full flex items-center gap-3 mb-2 text-left group">
+                        <svg
+                          className={['w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform', groupOpen ? 'rotate-90' : ''].join(' ')}
+                          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                        </svg>
+                        <span className="text-sm font-semibold text-slate-700">
+                          {row.ageGroupName} · {CATEGORY_LABELS[lang]?.[row.category] ?? row.category}
+                        </span>
+                        <span className="text-xs text-slate-400">{total} {t.teams}</span>
+                      </button>
+
+                      {groupOpen && (
+                        <div className="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden">
+                          {clubRows.map(({ club, count, clubId }) => (
+                            <div key={clubId} className="flex items-center gap-3 px-4 py-2.5 bg-white">
+                              {club?.avatar_url
+                                ? <img src={club.avatar_url} alt={club.club_name} className="w-7 h-7 rounded-lg object-cover shrink-0" />
+                                : <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-400 text-xs font-bold flex items-center justify-center shrink-0">
+                                    {club?.club_name.charAt(0).toUpperCase() ?? '?'}
+                                  </div>
+                              }
+                              <p className="flex-1 text-sm font-medium text-slate-700 truncate">{club?.club_name ?? '—'}</p>
+                              <span className="text-sm font-bold text-slate-800 shrink-0">{count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )
                 })}
-                <td className="text-center py-2.5 px-3 font-bold text-slate-700">
-                  {total > 0 ? total : '—'}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-        <tfoot>
-          <tr className="border-t-2 border-slate-200 bg-slate-50">
-            <td className="py-2.5 pr-4 text-xs font-bold text-slate-500 uppercase tracking-wide">{t.total}</td>
-            {provisionalEntries.map(entry => {
-              const total = Object.values(entry.teams_per_category).reduce((s, n) => s + n, 0)
-              return (
-                <td key={entry.id} className="text-center py-2.5 px-3 font-bold text-slate-700">{total > 0 ? total : '—'}</td>
-              )
-            })}
-            <td className="text-center py-2.5 px-3 font-bold text-slate-800">
-              {provisionalEntries.reduce((s, e) => s + Object.values(e.teams_per_category).reduce((ss, n) => ss + n, 0), 0)}
-            </td>
-          </tr>
-        </tfoot>
-      </table>
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -293,6 +357,89 @@ const STATUS_BADGE: Record<string, string> = {
   payment_uploaded: 'bg-blue-50 text-blue-700 border-blue-200',
   approved:         'bg-emerald-50 text-emerald-700 border-emerald-200',
   rejected:         'bg-red-50 text-red-500 border-red-200',
+}
+
+// ─── invite club form ─────────────────────────────────────────────────────────
+
+function InviteClubForm({ lang, competitionId, onDone, onCancel }: {
+  lang: Lang
+  competitionId: string
+  onDone: () => void
+  onCancel: () => void
+}) {
+  const t = T[lang]
+  const [email, setEmail] = useState('')
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!email.trim()) return
+    setSending(true); setError(null)
+    try {
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      const res = await fetch('/api/admin/invite-club', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ email: email.trim() }),
+      })
+      if (!res.ok) {
+        const body = await res.json()
+        throw new Error(body.error ?? 'Failed to send invitation')
+      }
+      setSent(email.trim())
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSending(false)
+    }
+  }
+
+  if (sent) {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded-2xl p-4 space-y-2">
+        <p className="text-sm font-semibold text-green-800">{t.inviteSent} {sent}</p>
+        <p className="text-xs text-green-700">{t.inviteClubInfo}</p>
+        <div className="flex justify-end">
+          <button onClick={onDone}
+            className="px-4 py-2 rounded-xl text-sm font-medium text-green-700 hover:bg-green-100 transition-all">
+            {t.cancel}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-widest text-blue-600">{t.inviteClubTitle}</p>
+      <div>
+        <label className="block text-xs font-medium text-slate-500 mb-1">{t.emailLabel} *</label>
+        <input
+          type="email"
+          required
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          autoFocus
+          className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </div>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancel}
+          className="px-4 py-2 rounded-xl text-sm font-medium text-slate-500 hover:bg-slate-100 transition-all">
+          {t.cancel}
+        </button>
+        <button type="submit" disabled={sending}
+          className="px-4 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-all">
+          {sending ? t.sending : t.sendInvite}
+        </button>
+      </div>
+    </form>
+  )
 }
 
 // ─── definitive sub-tab ───────────────────────────────────────────────────────
@@ -314,8 +461,17 @@ function DefinitiveSubTab({ lang, competitionId, definitiveEntries, allowedClubs
 
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
   const [showAddDropdown, setShowAddDropdown]   = useState(false)
+  const [showInviteForm, setShowInviteForm]     = useState(false)
   const [addClubId, setAddClubId]               = useState('')
   const [saving, setSaving]                     = useState(false)
+
+  // All clubs fetched from DB (for the "add club" picker)
+  const [allClubs, setAllClubs] = useState<Club[]>(clubs)
+  useEffect(() => {
+    const client = createClient()
+    client.from('clubs').select('id, club_name, avatar_url, contact_name, phone')
+      .then(({ data }) => { if (data) setAllClubs(data as Club[]) })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Build category row labels for displaying teams_per_category
   type CatRow = { ageGroupId: string; ageGroupName: string; age_group: string; category: string }
@@ -334,6 +490,11 @@ function DefinitiveSubTab({ lang, competitionId, definitiveEntries, allowedClubs
     if (s === 'approved')         return t.statusApproved
     if (s === 'rejected')         return t.statusRejected
     return s
+  }
+
+  function handleViewPayment(path: string) {
+    const { data } = supabase.storage.from('payment-documents').getPublicUrl(path)
+    window.open(data.publicUrl, '_blank')
   }
 
   async function handleApprove(entry: DefinitiveEntry) {
@@ -357,13 +518,6 @@ function DefinitiveSubTab({ lang, competitionId, definitiveEntries, allowedClubs
   async function handleRemoveConfirm(allowedClub: AllowedClub) {
     setSaving(true)
     await supabase.from('competition_allowed_clubs').delete().eq('id', allowedClub.id)
-    // also delete their competition_entries
-    const clubTeamIds = entries
-      .map(e => ({ entryId: e.id, teamId: e.team_id }))
-      .filter(({ teamId }) => {
-        // we can't easily look up team→club here without globalTeams, so we rely on the parent callback
-        return true
-      })
     onRemoveClubEntries(allowedClub.club_id)
     setConfirmRemoveId(null)
     onRefresh()
@@ -384,7 +538,10 @@ function DefinitiveSubTab({ lang, competitionId, definitiveEntries, allowedClubs
   }
 
   const allowedClubIds = new Set(allowedClubs.map(ac => ac.club_id))
-  const eligibleToAdd = clubs.filter(c => !allowedClubIds.has(c.id))
+  const definitiveClubIds = new Set(definitiveEntries.map(e => e.club_id))
+  const eligibleToAdd = allClubs.filter(c => !allowedClubIds.has(c.id))
+  const withEntry = eligibleToAdd.filter(c => definitiveClubIds.has(c.id))
+  const withoutEntry = eligibleToAdd.filter(c => !definitiveClubIds.has(c.id))
 
   return (
     <div className="space-y-6">
@@ -399,7 +556,7 @@ function DefinitiveSubTab({ lang, competitionId, definitiveEntries, allowedClubs
         ) : (
           <div className="divide-y divide-slate-100">
             {definitiveEntries.map(entry => {
-              const club = clubs.find(c => c.id === entry.club_id)
+              const club = clubs.find(c => c.id === entry.club_id) ?? allClubs.find(c => c.id === entry.club_id)
               const teamTotals = categoryRows
                 .map(row => ({ label: `${row.ageGroupName} · ${CATEGORY_LABELS[lang]?.[row.category] ?? row.category}`, count: entry.teams_per_category[`${row.ageGroupId}|${row.category}`] ?? 0 }))
                 .filter(r => r.count > 0)
@@ -442,10 +599,11 @@ function DefinitiveSubTab({ lang, competitionId, definitiveEntries, allowedClubs
                   {/* actions row */}
                   <div className="flex items-center gap-2">
                     {entry.payment_document_url && (
-                      <a href={entry.payment_document_url} target="_blank" rel="noopener noreferrer"
+                      <button
+                        onClick={() => handleViewPayment(entry.payment_document_url!)}
                         className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all">
                         {t.viewPayment}
-                      </a>
+                      </button>
                     )}
                     {canAct && (
                       <>
@@ -475,49 +633,73 @@ function DefinitiveSubTab({ lang, competitionId, definitiveEntries, allowedClubs
       <div className="border border-slate-200 rounded-2xl overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-100">
           <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{t.allowedClubs}</p>
-          {!showAddDropdown && (
-            <button onClick={() => setShowAddDropdown(true)}
-              className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors">
-              + {t.addManually}
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {!showAddDropdown && !showInviteForm && (
+              <>
+                <button onClick={() => setShowAddDropdown(true)}
+                  className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors">
+                  + {t.addManually}
+                </button>
+                <button onClick={() => setShowInviteForm(true)}
+                  className="text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors">
+                  {t.inviteNewClub}
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
-        {showAddDropdown && (
-          <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
-            <select
-              value={addClubId}
-              onChange={e => setAddClubId(e.target.value)}
-              className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">{t.selectClub}</option>
-              {eligibleToAdd.map(c => <option key={c.id} value={c.id}>{c.club_name}</option>)}
-            </select>
-            <button
-              disabled={!addClubId || saving}
-              onClick={handleAddManually}
-              className="text-xs font-semibold px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 transition-all">
-              {t.add}
-            </button>
-            <button onClick={() => { setShowAddDropdown(false); setAddClubId('') }}
-              className="text-xs text-slate-400 hover:text-slate-600 px-2 py-1.5 transition-colors">
-              {t.cancel}
-            </button>
+        {showInviteForm && (
+          <div className="p-4">
+            <InviteClubForm
+              lang={lang}
+              competitionId={competitionId}
+              onDone={() => setShowInviteForm(false)}
+              onCancel={() => setShowInviteForm(false)}
+            />
           </div>
         )}
 
-        {allowedClubs.length === 0 && !showAddDropdown ? (
+        {showAddDropdown && !showInviteForm && (
+          <div className="px-4 py-3 border-b border-slate-100 space-y-3">
+            <select
+              value={addClubId}
+              onChange={e => setAddClubId(e.target.value)}
+              className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">{t.selectClub}</option>
+              {withEntry.length > 0 && (
+                <optgroup label={t.withDefinitiveEntry}>
+                  {withEntry.map(c => <option key={c.id} value={c.id}>{c.club_name}</option>)}
+                </optgroup>
+              )}
+              {withoutEntry.length > 0 && (
+                <optgroup label={t.noDefinitiveEntry}>
+                  {withoutEntry.map(c => <option key={c.id} value={c.id}>{c.club_name}</option>)}
+                </optgroup>
+              )}
+            </select>
+            <div className="flex items-center gap-2">
+              <button
+                disabled={!addClubId || saving}
+                onClick={handleAddManually}
+                className="text-xs font-semibold px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 transition-all">
+                {t.add}
+              </button>
+              <button onClick={() => { setShowAddDropdown(false); setAddClubId('') }}
+                className="text-xs text-slate-400 hover:text-slate-600 px-2 py-1.5 transition-colors">
+                {t.cancel}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {allowedClubs.length === 0 && !showAddDropdown && !showInviteForm ? (
           <p className="text-sm text-slate-400 text-center py-8">{t.noAllowedClubs}</p>
         ) : (
           <ul className="divide-y divide-slate-100">
             {allowedClubs.map(ac => {
-              const club = clubs.find(c => c.id === ac.club_id)
-              const teamCount = entries.filter(e => {
-                // note: this only counts entries that are in scope — parent passes all entries for this competition
-                return true // we'll pass globalTeams separately below
-              }).length
-              // actual count requires globalTeams — we receive entries already filtered by competition via parent
-              // club_id match done via onRemoveClubEntries callback in parent
+              const club = clubs.find(c => c.id === ac.club_id) ?? allClubs.find(c => c.id === ac.club_id)
               const isConfirming = confirmRemoveId === ac.id
 
               return (
@@ -658,14 +840,12 @@ function RegistrationGroup({ age_group, category, items, lang, agLabels, open, o
   )
 }
 
-type Level = 'Escolar' | 'Base' | 'Nacional'
-const LEVEL_ORDER: Level[] = ['Escolar', 'Base', 'Nacional']
+// ─── status → default sub-tab ─────────────────────────────────────────────────
 
-function getLevel(ageGroupId: string, rules: AgeGroupRule[]): Level {
-  const ag = rules.find(r => r.id === ageGroupId)?.age_group ?? ''
-  if (ag.includes('Escolar')) return 'Escolar'
-  if (ag.includes('Base'))    return 'Base'
-  return 'Nacional'
+function defaultSubTab(status: CompetitionStatus): SubTab {
+  if (status === 'provisional_entry') return 'provisional'
+  if (status === 'definitive_entry')  return 'definitive'
+  return 'nominative'
 }
 
 // ─── main component ───────────────────────────────────────────────────────────
@@ -683,16 +863,17 @@ export type RegistrationsTabProps = {
   ageGroupRules: AgeGroupRule[]
   competitionAgeGroups: string[]
   competitionYear: number
+  competitionStatus: CompetitionStatus
 }
 
 type SubTab = 'provisional' | 'definitive' | 'nominative'
 
 export default function RegistrationsTab({
   lang, globalTeams, clubs, gymnasts, entries, agLabels, onToggleDropout, onRemoveClubEntries,
-  competitionId, ageGroupRules, competitionAgeGroups, competitionYear,
+  competitionId, ageGroupRules, competitionAgeGroups, competitionYear, competitionStatus,
 }: RegistrationsTabProps) {
   const t = T[lang]
-  const [activeSubTab, setActiveSubTab] = useState<SubTab>('nominative')
+  const [activeSubTab, setActiveSubTab] = useState<SubTab>(() => defaultSubTab(competitionStatus))
   const [showImport, setShowImport] = useState(false)
 
   // ── nominative state ────────────────────────────────────────────────────────
@@ -704,6 +885,8 @@ export default function RegistrationsTab({
   const [provisionalEntries, setProvisionalEntries] = useState<ProvisionalEntry[]>([])
   const [definitiveEntries,  setDefinitiveEntries]  = useState<DefinitiveEntry[]>([])
   const [allowedClubs,       setAllowedClubs]       = useState<AllowedClub[]>([])
+  // extra clubs from provisional/definitive entries that aren't in the `clubs` prop
+  const [extraClubs, setExtraClubs] = useState<Club[]>([])
 
   useEffect(() => {
     const teamIds = entries.map(e => e.team_id)
@@ -727,9 +910,24 @@ export default function RegistrationsTab({
     if (provRes.data)    setProvisionalEntries(provRes.data as ProvisionalEntry[])
     if (defRes.data)     setDefinitiveEntries(defRes.data as DefinitiveEntry[])
     if (allowedRes.data) setAllowedClubs(allowedRes.data as AllowedClub[])
+
+    // Fetch any clubs from entry data not already in the clubs prop
+    const allEntryClubIds = [
+      ...(provRes.data ?? []).map(e => e.club_id),
+      ...(defRes.data ?? []).map(e => e.club_id),
+      ...(allowedRes.data ?? []).map(ac => ac.club_id),
+    ]
+    const knownIds = new Set(clubs.map(c => c.id))
+    const missingIds = [...new Set(allEntryClubIds)].filter(id => !knownIds.has(id))
+    if (missingIds.length > 0) {
+      const { data: extra } = await supabase.from('clubs').select('id,club_name,avatar_url,contact_name,phone').in('id', missingIds)
+      if (extra) setExtraClubs(extra as Club[])
+    }
   }
 
   useEffect(() => { fetchEntryData() }, [competitionId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const allClubs = [...clubs, ...extraClubs]
 
   // ── import screen ────────────────────────────────────────────────────────────
   if (showImport) {
@@ -785,7 +983,7 @@ export default function RegistrationsTab({
         <ProvisionalSubTab
           lang={lang}
           provisionalEntries={provisionalEntries}
-          clubs={clubs}
+          clubs={allClubs}
           ageGroupRules={ageGroupRules}
           competitionAgeGroups={competitionAgeGroups}
         />
@@ -798,7 +996,7 @@ export default function RegistrationsTab({
           competitionId={competitionId}
           definitiveEntries={definitiveEntries}
           allowedClubs={allowedClubs}
-          clubs={clubs}
+          clubs={allClubs}
           entries={entries}
           ageGroupRules={ageGroupRules}
           competitionAgeGroups={competitionAgeGroups}

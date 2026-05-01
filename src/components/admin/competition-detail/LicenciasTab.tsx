@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import type { Lang } from '@/components/scoring/types'
-import type { Team, Club, CompetitionEntry, Gymnast, Coach, AgeGroupRule } from '@/components/admin/types'
-import { categoryLabel, sortByAgeGroupAndCategory } from '@/components/admin/types'
+import type { Team, Club, CompetitionEntry, Gymnast, Coach, AgeGroupRule, CompetitionStatus } from '@/components/admin/types'
+import { categoryLabel, sortByAgeGroupAndCategory, CATEGORY_SIZE } from '@/components/admin/types'
 import { createClient } from '@/lib/supabase'
 
 // ─── translations ─────────────────────────────────────────────────────────────
@@ -23,7 +23,8 @@ const T = {
     subTabs: { provisional: 'Provisional', definitive: 'Definitive', nominative: 'Nominative' },
     // provisional
     noProvisional: 'No provisional entries yet.',
-    totalTeams: 'estimated teams',
+    totalTeams: 'est. teams',
+    totalGymnasts: 'est. gymnasts',
     // definitive
     noDefinitive: 'No definitive entries yet.',
     contact: 'Contact',
@@ -50,7 +51,8 @@ const T = {
     subTabs: { provisional: 'Provisional', definitive: 'Definitiva', nominative: 'Nominativa' },
     // provisional
     noProvisional: 'Sin inscripciones provisionales todavía.',
-    totalTeams: 'equipos estimados',
+    totalTeams: 'equipos est.',
+    totalGymnasts: 'gimnastas est.',
     // definitive
     noDefinitive: 'Sin inscripciones definitivas todavía.',
     contact: 'Contacto',
@@ -99,6 +101,7 @@ type DefinitiveEntry = {
 type Props = {
   lang: Lang
   competitionId: string
+  competitionStatus: CompetitionStatus
   globalTeams: Team[]
   clubs: Club[]
   entries: CompetitionEntry[]
@@ -110,16 +113,22 @@ type Props = {
 
 type SubTab = 'provisional' | 'definitive' | 'nominative'
 
+function defaultSubTab(status: CompetitionStatus): SubTab {
+  if (status === 'provisional_entry') return 'provisional'
+  if (status === 'definitive_entry')  return 'definitive'
+  return 'nominative'
+}
+
 // ─── component ────────────────────────────────────────────────────────────────
 
-export default function LicenciasTab({ lang, competitionId, globalTeams, clubs, entries, competitionGymnasts, competitionCoaches, globalCoaches, ageGroupRules }: Props) {
+export default function LicenciasTab({ lang, competitionId, competitionStatus, globalTeams, clubs, entries, competitionGymnasts, competitionCoaches, globalCoaches, ageGroupRules }: Props) {
   const t = T[lang]
-  const [activeSubTab, setActiveSubTab] = useState<SubTab>('nominative')
+  const supabase = createClient()
+  const [activeSubTab, setActiveSubTab] = useState<SubTab>(() => defaultSubTab(competitionStatus))
   const [provisionalEntries, setProvisionalEntries] = useState<ProvisionalEntry[]>([])
   const [definitiveEntries,  setDefinitiveEntries]  = useState<DefinitiveEntry[]>([])
 
   useEffect(() => {
-    const supabase = createClient()
     Promise.all([
       supabase.from('provisional_entries').select('id,club_id,teams_per_category,created_at').eq('competition_id', competitionId),
       supabase.from('definitive_entries').select('id,club_id,contact_name,contact_phone,contact_email,judge_name,total_amount,status,payment_document_url,created_at').eq('competition_id', competitionId),
@@ -127,7 +136,7 @@ export default function LicenciasTab({ lang, competitionId, globalTeams, clubs, 
       if (provRes.data)  setProvisionalEntries(provRes.data as ProvisionalEntry[])
       if (defRes.data)   setDefinitiveEntries(defRes.data as DefinitiveEntry[])
     })
-  }, [competitionId])
+  }, [competitionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const SUB_TABS: { key: SubTab; label: string }[] = [
     { key: 'provisional', label: t.subTabs.provisional },
@@ -141,6 +150,18 @@ export default function LicenciasTab({ lang, competitionId, globalTeams, clubs, 
     if (s === 'approved')         return t.statusApproved
     if (s === 'rejected')         return t.statusRejected
     return s
+  }
+
+  function handleViewPayment(path: string) {
+    const { data } = supabase.storage.from('payment-documents').getPublicUrl(path)
+    window.open(data.publicUrl, '_blank')
+  }
+
+  function estimatedGymnasts(tpc: Record<string, number>): number {
+    return Object.entries(tpc).reduce((sum, [key, count]) => {
+      const category = key.split('|')[1] ?? ''
+      return sum + count * (CATEGORY_SIZE[category] ?? 2)
+    }, 0)
   }
 
   return (
@@ -171,7 +192,8 @@ export default function LicenciasTab({ lang, competitionId, globalTeams, clubs, 
             <div className="space-y-3">
               {provisionalEntries.map(pe => {
                 const club = clubs.find(c => c.id === pe.club_id)
-                const total = Object.values(pe.teams_per_category).reduce((s, n) => s + n, 0)
+                const totalTeams = Object.values(pe.teams_per_category).reduce((s, n) => s + n, 0)
+                const totalGym = estimatedGymnasts(pe.teams_per_category)
                 return (
                   <div key={pe.id} className="flex items-center gap-3 px-4 py-3 border border-slate-200 rounded-2xl bg-white">
                     {club?.avatar_url
@@ -179,8 +201,16 @@ export default function LicenciasTab({ lang, competitionId, globalTeams, clubs, 
                       : <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-400 text-sm font-bold flex items-center justify-center shrink-0">{club?.club_name.charAt(0) ?? '?'}</div>
                     }
                     <p className="flex-1 font-semibold text-slate-800 truncate">{club?.club_name ?? '—'}</p>
-                    <span className="text-sm font-semibold text-slate-700">{total}</span>
-                    <span className="text-xs text-slate-400">{t.totalTeams}</span>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        <span className="text-sm font-semibold text-slate-700">{totalTeams}</span>
+                        <span className="text-xs text-slate-400 ml-1">{t.totalTeams}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-semibold text-slate-500">{totalGym}</span>
+                        <span className="text-xs text-slate-400 ml-1">{t.totalGymnasts}</span>
+                      </div>
+                    </div>
                   </div>
                 )
               })}
@@ -213,10 +243,11 @@ export default function LicenciasTab({ lang, competitionId, globalTeams, clubs, 
                       <span>{t.judgeProvided}: <span className="text-slate-700 font-medium">{de.judge_name ?? t.noJudge}</span></span>
                       <span>{t.totalAmount}: <span className="font-semibold text-slate-700">{de.total_amount.toFixed(2)} €</span></span>
                       {de.payment_document_url && (
-                        <a href={de.payment_document_url} target="_blank" rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline font-medium">
+                        <button
+                          onClick={() => handleViewPayment(de.payment_document_url!)}
+                          className="text-blue-600 hover:underline font-medium transition-colors">
                           {t.viewPayment}
-                        </a>
+                        </button>
                       )}
                     </div>
                   </div>
@@ -245,7 +276,7 @@ export default function LicenciasTab({ lang, competitionId, globalTeams, clubs, 
 
 // ─── nominative view (existing content extracted) ─────────────────────────────
 
-function NominativeView({ lang, globalTeams, clubs, entries, competitionGymnasts, competitionCoaches, globalCoaches, ageGroupRules }: Omit<Props, 'competitionId'>) {
+function NominativeView({ lang, globalTeams, clubs, entries, competitionGymnasts, competitionCoaches, globalCoaches, ageGroupRules }: Omit<Props, 'competitionId' | 'competitionStatus'>) {
   const t = T[lang]
 
   const clubMap    = Object.fromEntries(clubs.map(c => [c.id, c]))
