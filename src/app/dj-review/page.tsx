@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase'
 import { useProfile } from '@/contexts/ProfileContext'
 import DJReview from '@/components/dj-review/DJReview'
 import AuthBar from '@/components/shared/AuthBar'
-import type { Lang } from '@/components/aj-scoring/types'
+import type { Lang } from '@/components/scoring/types'
 import type { Sheet } from '@/components/dj-review/types'
 
 function DJReviewPage() {

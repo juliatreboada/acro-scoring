@@ -7,6 +7,7 @@
   "/aj/page": "app/aj/page.js",
   "/api/admin/clubs/route": "app/api/admin/clubs/route.js",
   "/api/admin/import/route": "app/api/admin/import/route.js",
+  "/api/admin/invite-club/route": "app/api/admin/invite-club/route.js",
   "/api/admin/invite/route": "app/api/admin/invite/route.js",
   "/api/admin/profiles/route": "app/api/admin/profiles/route.js",
   "/api/admin/users/route": "app/api/admin/users/route.js",

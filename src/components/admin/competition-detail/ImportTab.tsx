@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import * as XLSX from 'xlsx'
-import type { Lang } from '@/components/aj-scoring/types'
+import type { Lang } from '@/components/scoring/types'
 import type { AgeGroupRule } from '@/components/admin/types'
 import { CATEGORY_LABELS } from '@/components/admin/types'
 

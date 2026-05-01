@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import type { Lang } from '../aj-scoring/types'
-import type { TsElement, ElementType } from '../ej-scoring/types'
-import type { ElementFlag, ElementFlags } from '../dj-scoring/types'
-import { DEFAULT_FLAG } from '../dj-scoring/types'
-
-export const MAX_RETRIES = 3
+import type { Lang } from '../scoring/types'
+import type { TsElement, ElementType } from '../scoring/types'
+import type { ElementFlag, ElementFlags } from '../scoring/types'
+import { DEFAULT_FLAG } from '../scoring/types'
+import { MAX_RETRIES } from '@/lib/scoringRules'
+export { MAX_RETRIES } from '@/lib/scoringRules'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 

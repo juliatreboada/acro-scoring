@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
-import type { Lang } from '@/components/aj-scoring/types'
+import type { Lang } from '@/components/scoring/types'
 import type { Gymnast } from '@/components/admin/types'
 
 const T = {

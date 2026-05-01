@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import type { TsElement, Deductions } from '@/components/ej-scoring/types'
+import type { TsElement, Deductions } from '@/components/scoring/types'
 
 /**
  * Manages EJ-only element state: deductions, extra elements with drag-reorder,

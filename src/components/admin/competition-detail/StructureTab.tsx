@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { Lang } from '@/components/aj-scoring/types'
+import type { Lang } from '@/components/scoring/types'
 import type { Panel, Section, Session, AgeGroupRule } from '@/components/admin/types'
 import { ROUTINE_TYPES, categoriesForRuleset, CATEGORY_LABELS } from '@/components/admin/types'
 
@@ -32,7 +32,7 @@ const T = {
     sectionN: (n: number) => `Section ${n}`,
     panelBadge: (n: number) => `P${n}`,
     panelN: (n: number) => `Panel ${n}`,
-  },
+   },
   es: {
     sections: 'Jornadas',
     addSection: 'Añadir jornada',
@@ -57,7 +57,7 @@ const T = {
     sectionN: (n: number) => `Jornada ${n}`,
     panelBadge: (n: number) => `P${n}`,
     panelN: (n: number) => `Panel ${n}`,
-  },
+   },
 }
 
 // ─── panel colours ────────────────────────────────────────────────────────────
@@ -415,6 +415,7 @@ function SectionBlock({
   )
 }
 
+
 // ─── main component ───────────────────────────────────────────────────────────
 
 export type StructureTabProps = {
@@ -462,16 +463,18 @@ export default function StructureTab({
 
   if (sections.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-slate-200 rounded-2xl">
-        <p className="text-sm font-medium text-slate-500">{t.noSections}</p>
-        <p className="text-xs text-slate-400 mt-1 mb-4">{t.noSectionsSub}</p>
-        <button onClick={onAddSection}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          {t.addSection}
-        </button>
+      <div>
+        <div className="flex flex-col items-center justify-center py-16 text-center border border-dashed border-slate-200 rounded-2xl">
+          <p className="text-sm font-medium text-slate-500">{t.noSections}</p>
+          <p className="text-xs text-slate-400 mt-1 mb-4">{t.noSectionsSub}</p>
+          <button onClick={onAddSection}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            {t.addSection}
+          </button>
+        </div>
       </div>
     )
   }

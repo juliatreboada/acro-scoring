@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import AuthBar from '@/components/shared/AuthBar'
 import { useRouter } from 'next/navigation'
-import type { Lang } from '@/components/aj-scoring/types'
+import type { Lang } from '@/components/scoring/types'
 
 // ─── types ─────────────────────────────────────────────────────────────────────
 

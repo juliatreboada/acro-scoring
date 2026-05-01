@@ -118,6 +118,12 @@
       "namedRegex": "^/api/admin/invite(?:/)?$"
     },
     {
+      "page": "/api/admin/invite-club",
+      "regex": "^/api/admin/invite\\-club(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/invite\\-club(?:/)?$"
+    },
+    {
       "page": "/api/admin/profiles",
       "regex": "^/api/admin/profiles(?:/)?$",
       "routeKeys": {},

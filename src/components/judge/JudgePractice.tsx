@@ -1,10 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import type { Lang } from '@/components/aj-scoring/types'
-import type { PanelJudge, MockPerf, JudgeScore, RoutineResult } from '@/components/cjp/types'
-import { computeResult } from '@/components/cjp/types'
-import type { TsElement } from '@/components/ej-scoring/types'
+import type { Lang } from '@/components/scoring/types'
+import type { PanelJudge, ScoringPerformance, JudgeScore, RoutineResult } from '@/components/scoring/types'
+import { computeResult } from '@/components/scoring/types'
+import type { TsElement } from '@/components/scoring/types'
 import type { Sheet } from '@/components/dj-review/types'
 import DJReview from '@/components/dj-review/DJReview'
 import JudgeSession from './JudgeSession'
@@ -55,7 +55,7 @@ const MOCK_SHEET: Sheet = {
   hasTwoDJs: true,
 }
 
-function makeMockPerf(resetKey: number): MockPerf {
+function makeScoringPerformance(resetKey: number): ScoringPerformance {
   return {
     id: `mock-practice-${resetKey}`, teamId: 't1', position: 1,
     gymnasts: 'García / López',
@@ -81,7 +81,7 @@ export default function JudgePractice({ lang, onBack }: { lang: Lang; onBack: ()
   const [judgeScores, setJudgeScores]   = useState<Record<string, JudgeScore[]>>({})
   const [results, setResults]           = useState<Record<string, RoutineResult>>({})
 
-  const mockPerf = makeMockPerf(resetKey)
+  const mockPerf = makeScoringPerformance(resetKey)
 
   function reset() {
     setJudgeScores({})

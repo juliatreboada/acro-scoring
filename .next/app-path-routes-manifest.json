@@ -7,6 +7,7 @@
   "/aj/page": "/aj",
   "/api/admin/clubs/route": "/api/admin/clubs",
   "/api/admin/import/route": "/api/admin/import",
+  "/api/admin/invite-club/route": "/api/admin/invite-club",
   "/api/admin/invite/route": "/api/admin/invite",
   "/api/admin/profiles/route": "/api/admin/profiles",
   "/api/admin/users/route": "/api/admin/users",
