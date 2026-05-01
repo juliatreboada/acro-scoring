@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useProfile } from '@/contexts/ProfileContext'
-import type { Lang } from '@/components/aj-scoring/types'
+import type { Lang } from '@/components/scoring/types'
 import ClickableImg from '@/components/shared/ClickableImg'
 
 // ─── translations ─────────────────────────────────────────────────────────────

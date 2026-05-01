@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import type { Lang } from '@/components/aj-scoring/types'
+import type { Lang } from '@/components/scoring/types'
 import type { Coach } from '@/components/admin/types'
 import { PhotoAvatar } from './GymnastsTab'
 

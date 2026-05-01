@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import type { Lang } from '@/components/aj-scoring/types'
+import type { Lang } from '@/components/scoring/types'
 import type { Section, Panel, Session, Team, Club, CompetitionEntry, SessionOrder, AgeGroupRule, TimelineEntry } from '@/components/admin/types'
 import { categoryLabel } from '@/components/admin/types'
 

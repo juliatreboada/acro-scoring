@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import CompetitionDetail from '@/components/admin/competition-detail/CompetitionDetail'
 import AuthBar from '@/components/shared/AuthBar'
-import type { Lang } from '@/components/aj-scoring/types'
+import type { Lang } from '@/components/scoring/types'
 import type {
   Competition, Panel, Section, Session, Judge, SectionPanelJudge,
   Role, Team, Club, CompetitionEntry, SessionOrder, AdminUser,
@@ -47,11 +47,11 @@ export default function Page() {
   useEffect(() => {
     async function load() {
       try {
-      const [compRes, panelsRes, sectionsRes, sessionsRes, judgesRes,
-             nominationsRes, entriesRes, rulesRes, adminsRes] = await Promise.all([
+        const [compRes, panelsRes, sectionsRes, sessionsRes, judgesRes,
+          nominationsRes, entriesRes, rulesRes, adminsRes] = await Promise.all([
         supabase.from('competitions')
-          .select('id,name,status,location,start_date,end_date,registration_deadline,ts_music_deadline,age_groups,poster_url,admin_id,created_at')
-          .eq('id', id).single(),
+       .select('id,name,status,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,age_groups,poster_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine')
+       .eq('id', id).single(),
         supabase.from('panels').select('id,competition_id,panel_number').eq('competition_id', id).order('panel_number'),
         supabase.from('sections').select('id,competition_id,section_number,label,starting_time,waiting_time_seconds,warmup_duration_minutes,timeline_order').eq('competition_id', id).order('section_number'),
         supabase.from('sessions').select('id,competition_id,panel_id,section_id,name,age_group,category,routine_type,status,order_index,order_locked,dj_method,ej_method').eq('competition_id', id).order('order_index'),
@@ -61,8 +61,11 @@ export default function Page() {
         supabase.from('age_group_rules').select('id, age_group, ruleset, min_age, max_age, routine_count, sort_order').order('sort_order'),
         supabase.from('profiles').select('id,email').eq('role', 'admin'),
       ])
-
-      if (!compRes.data) { setLoading(false); return }
+      // Check if competition exists
+      if (!compRes.data || (compRes.data as any).error) { 
+        setLoading(false)
+        return 
+      }
 
       // ── wave 2: all queries that depend on wave-1 IDs, run in parallel ────────
       type TeamRow = { id: string; club_id: string; category: string; age_group: string; gymnast_display: string; photo_url: string | null; gymnast_ids: string[] | null }
@@ -152,11 +155,14 @@ export default function Page() {
         : { data: [] }
       const coachesData = (coachesResult as any).data as Coach[] ?? []
 
-      const adminMap  = Object.fromEntries(adminsWithEmail.map(a => [a.id, a]))
-      const { admin_id, ...compRest } = compRes.data
+      // Then later when setting competition:
+      const adminMap = Object.fromEntries(adminsWithEmail.map(a => [a.id, a]))
+      // Now TypeScript knows compRes.data exists
+      const compData = compRes.data as { admin_id: string | null; [key: string]: any }
+      const { admin_id, ...compRest } = compData
       const rawNoms = nominationsRes.data ?? []
-
-      setCompetition({ ...compRest, admin: admin_id ? (adminMap[admin_id] ?? null) : null })
+      
+      setCompetition({ ...compRest, admin: admin_id ? (adminMap[admin_id] ?? null) : null } as Competition)
       setPanels((panelsRes.data ?? []) as unknown as Panel[])
       setSections((sectionsRes.data ?? []) as unknown as Section[])
       setSessions(rawSessions.map(({ order_locked: _, ...s }) => s) as Session[])
@@ -380,6 +386,13 @@ export default function Page() {
     setEntries(prev => prev.map(e => e.id === entryId ? { ...e, dropped_out: next } : e))
   }
 
+  async function handleRemoveClubEntries(clubId: string) {
+    const clubTeamIds = globalTeams.filter(t => t.club_id === clubId).map(t => t.id)
+    if (clubTeamIds.length === 0) return
+    await supabase.from('competition_entries').delete().eq('competition_id', id).in('team_id', clubTeamIds)
+    setEntries(prev => prev.filter(e => !clubTeamIds.includes(e.team_id)))
+  }
+
   // ── starting order ────────────────────────────────────────────────────────────
   async function handleToggleLock(sessionId: string) {
     const isLocked = lockedSessions.includes(sessionId)
@@ -437,19 +450,45 @@ export default function Page() {
   }
 
   // ── competition overview ──────────────────────────────────────────────────────
-  async function handleUpdateCompetition(updates: Omit<Competition, 'id' | 'created_at' | 'status'>) {
+  async function handleUpdateCompetition(updates: {
+    name: string
+    location: string | null
+    start_date: string | null
+    end_date: string | null
+    provisional_entry_deadline: string | null
+    definitive_entry_deadline: string | null
+    registration_deadline: string | null
+    ts_music_deadline: string | null
+    age_groups: string[]
+    poster_url: string | null
+    admin: AdminUser | null
+    fee_per_team: number | null
+    fee_per_gymnast: number | null
+    judge_missing_fine: number | null
+  }) {
     await supabase.from('competitions').update({
-      name:                  updates.name,
-      location:              updates.location,
-      start_date:            updates.start_date,
-      end_date:              updates.end_date,
+      name: updates.name,
+      location: updates.location,
+      start_date: updates.start_date,
+      end_date: updates.end_date,
+      provisional_entry_deadline: updates.provisional_entry_deadline,
+      definitive_entry_deadline: updates.definitive_entry_deadline,
       registration_deadline: updates.registration_deadline,
-      ts_music_deadline:     updates.ts_music_deadline,
-      age_groups:            updates.age_groups,
-      poster_url:            updates.poster_url,
-      admin_id:              updates.admin?.id ?? null,
+      ts_music_deadline: updates.ts_music_deadline,
+      age_groups: updates.age_groups,
+      poster_url: updates.poster_url,
+      admin_id: updates.admin?.id ?? null,
+      fee_per_team: updates.fee_per_team,
+      fee_per_gymnast: updates.fee_per_gymnast,
+      judge_missing_fine: updates.judge_missing_fine,
     }).eq('id', id)
     setCompetition(prev => prev ? { ...prev, ...updates } : prev)
+  }
+
+  // ── fee config ────────────────────────────────────────────────────────────────
+  async function handleUpdateFees(fees: { fee_per_team: number | null; fee_per_gymnast: number | null; judge_missing_fine: number | null }) {
+    await supabase.from('competitions').update(fees).eq('id', id)
+    setCompetition(prev => prev ? { ...prev, ...fees } : prev)
   }
 
   // ── poster upload ─────────────────────────────────────────────────────────────
@@ -568,6 +607,7 @@ export default function Page() {
         clubs={clubs}
         entries={entries}
         onToggleDropout={handleToggleDropout}
+        onRemoveClubEntries={handleRemoveClubEntries}
         sessionOrders={sessionOrders}
         lockedSessions={lockedSessions}
         onReorder={handleReorder}
@@ -577,6 +617,7 @@ export default function Page() {
         ageGroupRules={ageGroupRules}
         onUpdateCompetition={handleUpdateCompetition}
         onUploadPoster={handleUploadPoster}
+        onUpdateFees={handleUpdateFees}
         onSetDJReviewDeadline={handleSetDJReviewDeadline}
         onStartSession={handleStartSession}
         onFinishSession={handleFinishSession}

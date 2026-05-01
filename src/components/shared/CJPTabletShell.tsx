@@ -1,9 +1,9 @@
 'use client'
 
 import React, { useState, useEffect, useRef, type ReactNode } from 'react'
-import type { Lang } from '../aj-scoring/types'
-import type { PanelJudge, MockPerf, JudgeScore, RoutineResult, PenaltyState } from '../cjp/types'
-import { calcCjpPenalty, droppedIndices, computeResult, DEFAULT_PENALTY } from '../cjp/types'
+import type { Lang } from '../scoring/types'
+import type { PanelJudge, ScoringPerformance, JudgeScore, RoutineResult, PenaltyState } from '../scoring/types'
+import { calcCjpPenalty, droppedIndices, computeResult, DEFAULT_PENALTY } from '../scoring/types'
 import { categoryLabel } from '@/components/admin/types'
 
 // ─── translations ──────────────────────────────────────────────────────────────
@@ -525,7 +525,7 @@ export function ScorePreview({ scores, panelJudges, cjpPenalty, lang, compact }:
 // ─── ranking table ─────────────────────────────────────────────────────────────
 
 export function RankingTable({ performances, results, lang, selectedPerfId, onSelectPerf }: {
-  performances: MockPerf[]
+  performances: ScoringPerformance[]
   results: Record<string, RoutineResult>
   lang: Lang
   selectedPerfId?: string | null
@@ -535,8 +535,8 @@ export function RankingTable({ performances, results, lang, selectedPerfId, onSe
   if (Object.values(results).length === 0) return null
 
   const routineLabel = (rt: string) => ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
-  const groupKey = (p: MockPerf) => `${p.ageGroup}||${p.category}||${p.routineType}`
-  const groupLabel = (p: MockPerf) => `${p.ageGroup} · ${categoryLabel(p.category, lang)} · ${routineLabel(p.routineType)}`
+  const groupKey = (p: ScoringPerformance) => `${p.ageGroup}||${p.category}||${p.routineType}`
+  const groupLabel = (p: ScoringPerformance) => `${p.ageGroup} · ${categoryLabel(p.category, lang)} · ${routineLabel(p.routineType)}`
 
   const groupOrder: string[] = []
   for (const p of performances) {
@@ -620,7 +620,7 @@ export function RankingTable({ performances, results, lang, selectedPerfId, onSe
 
 export type CJPTabletShellProps = {
   lang: Lang
-  performances: MockPerf[]
+  performances: ScoringPerformance[]
   currentPerfId: string | null
   panelJudges: PanelJudge[]
   judgeScores: Record<string, JudgeScore[]>

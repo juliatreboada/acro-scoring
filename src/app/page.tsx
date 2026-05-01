@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useProfile, ROLE_HOME } from '@/contexts/ProfileContext'
-import type { Lang } from '@/components/aj-scoring/types'
+import type { Lang } from '@/components/scoring/types'
 import type { Database } from '@/lib/database.types'
 
 type Competition = Pick<

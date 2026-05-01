@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import type { PenaltyState } from '@/components/cjp/types'
-import { DEFAULT_PENALTY } from '@/components/cjp/types'
+import type { PenaltyState } from '@/components/scoring/types'
+import { DEFAULT_PENALTY } from '@/components/scoring/types'
 
 /**
  * Manages per-performance CJP penalty state map.

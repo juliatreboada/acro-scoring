@@ -1,6 +1,6 @@
 'use client'
 
-import type { Lang } from '../aj-scoring/types'
+import type { Lang } from '../scoring/types'
 
 const T = {
   en: {

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useProfile } from '@/contexts/ProfileContext'
-import type { PanelJudge, MockPerf, JudgeScore, RoutineResult, PenaltyState } from '@/components/cjp/types'
+import type { PanelJudge, ScoringPerformance, JudgeScore, RoutineResult, PenaltyState } from '@/components/scoring/types'
 import type { SessionStatus } from '@/components/judge/JudgeSession'
 
 // ─── types ────────────────────────────────────────────────────────────────────
@@ -14,20 +14,22 @@ export type JudgeSessionData = {
   sessionId:     string | null
   sessionStatus: SessionStatus
   currentPerfId: string | null
-  currentPerf:   MockPerf | null
+  currentPerf:   ScoringPerformance | null
   assignedRoles: PanelJudge[]
   panelJudges:   PanelJudge[]
-  performances:  MockPerf[]
+  performances:  ScoringPerformance[]
   judgeScores:   Record<string, JudgeScore[]>
   results:       Record<string, RoutineResult>
   djMethod:      string | null
   ejMethod:      string | null
+  submitError:   string | null
   handleOpen:              (perfId: string) => Promise<void>
   handleSkip:              (perfId: string) => void
   handleCJPSubmit:         (status: 'provisional' | 'approved', result: RoutineResult, penaltyDetail?: PenaltyState | null) => Promise<void>
   handleReopenScore:       (perfId: string, panelJudgeId: string | 'all') => Promise<void>
   handleJudgeScoreSubmit:  (score: JudgeScore) => Promise<void>
   handleEditScore:         (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
+  clearSubmitError:        () => void
 }
 
 // ─── hook ─────────────────────────────────────────────────────────────────────
@@ -42,11 +44,12 @@ export function useJudgeSession(): JudgeSessionData {
   const [currentPerfId, setCurrentPerfId] = useState<string | null>(null)
   const [assignedRoles, setAssignedRoles] = useState<PanelJudge[]>([])
   const [panelJudges,   setPanelJudges]   = useState<PanelJudge[]>([])
-  const [performances,  setPerformances]  = useState<MockPerf[]>([])
+  const [performances,  setPerformances]  = useState<ScoringPerformance[]>([])
   const [judgeScores,   setJudgeScores]   = useState<Record<string, JudgeScore[]>>({})
   const [results,       setResults]       = useState<Record<string, RoutineResult>>({})
   const [djMethod,      setDjMethod]      = useState<string | null>(null)
   const [ejMethod,      setEjMethod]      = useState<string | null>(null)
+  const [submitError,   setSubmitError]   = useState<string | null>(null)
 
   const sessionIdRef = useRef<string | null>(null)
   useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
@@ -188,20 +191,20 @@ export function useJudgeSession(): JudgeSessionData {
           .map(m => [m.team_id, m.ts_path ?? null])
       )
 
-      const elementsMap: Record<string, import('@/components/ej-scoring/types').TsElement[]> = {}
+      const elementsMap: Record<string, import('@/components/scoring/types').TsElement[]> = {}
       for (const el of (elementsRes.data ?? []) as { id: string; team_id: string; position: number; label: string; element_type: string; is_static: boolean; difficulty_value: number }[]) {
         if (!elementsMap[el.team_id]) elementsMap[el.team_id] = []
         elementsMap[el.team_id].push({
           id:              el.id,
           position:        el.position,
           label:           el.label,
-          elementType:     el.element_type as import('@/components/ej-scoring/types').ElementType,
+          elementType:     el.element_type as import('@/components/scoring/types').ElementType,
           isStatic:        el.is_static,
           difficultyValue: el.difficulty_value,
         })
       }
 
-      const builtPerfs: MockPerf[] = orderedEntries.map(o => ({
+      const builtPerfs: ScoringPerformance[] = orderedEntries.map(o => ({
         id:          `${session.id}_${o.team_id}`,
         teamId:      o.team_id,
         position:    o.position,
@@ -363,32 +366,39 @@ export function useJudgeSession(): JudgeSessionData {
 
   async function handleCJPSubmit(status: 'provisional' | 'approved', result: RoutineResult, penaltyDetail?: PenaltyState | null) {
     if (!sessionId) return
-    const teamId = result.performanceId.replace(`${sessionId}_`, '')
+    setSubmitError(null)
+    try {
+      const teamId = result.performanceId.replace(`${sessionId}_`, '')
 
-    // Capture DJ element flags so the TV page can display penalty reasons
-    // (scores table is auth-restricted; we denormalize here at submit time).
-    const djJudgeIds = panelJudges.filter(j => j.role === 'DJ').map(j => j.id)
-    let djPenaltyDetail: import('@/lib/database.types').Json | null = null
-    if (djJudgeIds.length > 0) {
-      const { data: djScores } = await supabase
-        .from('scores')
-        .select('dj_flags')
-        .in('section_panel_judge_id', djJudgeIds)
-        .eq('session_id', sessionId)
-        .eq('team_id', teamId)
-        .not('dj_flags', 'is', null)
-      djPenaltyDetail = djScores?.[0]?.dj_flags ?? null
+      // Capture DJ element flags so the TV page can display penalty reasons
+      // (scores table is auth-restricted; we denormalize here at submit time).
+      const djJudgeIds = panelJudges.filter(j => j.role === 'DJ').map(j => j.id)
+      let djPenaltyDetail: import('@/lib/database.types').Json | null = null
+      if (djJudgeIds.length > 0) {
+        const { data: djScores } = await supabase
+          .from('scores')
+          .select('dj_flags')
+          .in('section_panel_judge_id', djJudgeIds)
+          .eq('session_id', sessionId)
+          .eq('team_id', teamId)
+          .not('dj_flags', 'is', null)
+        djPenaltyDetail = djScores?.[0]?.dj_flags ?? null
+      }
+
+      const { error } = await supabase.from('routine_results').upsert({
+        session_id: sessionId, team_id: teamId,
+        e_score: result.eScore, a_score: result.aScore,
+        dif_score: result.difScore, dif_penalty: result.difPenalty,
+        cjp_penalty: result.cjpPenalty, final_score: result.finalScore, status,
+        cjp_penalty_detail: penaltyDetail ?? null,
+        dj_penalty_detail:  djPenaltyDetail,
+      }, { onConflict: 'session_id,team_id' })
+      if (error) throw error
+      setResults(prev => ({ ...prev, [result.performanceId]: result }))
+    } catch (err) {
+      console.error('CJP submit failed:', err)
+      setSubmitError('No se pudo guardar el resultado — comprueba la conexión e inténtalo de nuevo.')
     }
-
-    await supabase.from('routine_results').upsert({
-      session_id: sessionId, team_id: teamId,
-      e_score: result.eScore, a_score: result.aScore,
-      dif_score: result.difScore, dif_penalty: result.difPenalty,
-      cjp_penalty: result.cjpPenalty, final_score: result.finalScore, status,
-      cjp_penalty_detail: penaltyDetail ?? null,
-      dj_penalty_detail:  djPenaltyDetail,
-    }, { onConflict: 'session_id,team_id' })
-    setResults(prev => ({ ...prev, [result.performanceId]: result }))
   }
 
   async function handleReopenScore(perfId: string, panelJudgeId: string | 'all') {
@@ -411,37 +421,44 @@ export function useJudgeSession(): JudgeSessionData {
 
   async function handleJudgeScoreSubmit(score: JudgeScore) {
     if (!sessionId || !currentPerfId) return
-    const teamId = currentPerfId.replace(`${sessionId}_`, '')
-    await supabase.from('scores').upsert({
-      session_id: sessionId, team_id: teamId,
-      section_panel_judge_id: score.panelJudgeId,
-      ej_score: score.ejScore, aj_score: score.ajScore,
-      dj_difficulty: score.djDifficulty, dj_penalty: score.djPenalty, cjp_penalty: score.cjpPenalty,
-      dj_flags: score.detail?.djFlags ?? null,
-      dj_extra_elements: score.detail?.djExtraElements ?? null,
-      dj_incorrect_ts: score.detail?.djIncorrectTs ?? null,
-      ej_deductions: score.detail?.ejDeductions ?? null,
-      ej_extra_elements: score.detail?.ejExtraElements ?? null,
-    }, { onConflict: 'session_id,team_id,section_panel_judge_id' })
-    // Re-fetch all scores for this performance to catch any submitted in the
-    // race window between initial page load and real-time subscription setup
-    const { data: latest } = await supabase.from('scores')
-      .select('section_panel_judge_id,ej_score,aj_score,dj_difficulty,dj_penalty,cjp_penalty')
-      .eq('session_id', sessionId)
-      .eq('team_id', teamId)
-    if (latest) {
-      const perfId = currentPerfId
-      setJudgeScores(prev => ({
-        ...prev,
-        [perfId]: latest.map((s: any) => ({
-          panelJudgeId: s.section_panel_judge_id,
-          ejScore:      s.ej_score,
-          ajScore:      s.aj_score,
-          djDifficulty: s.dj_difficulty,
-          djPenalty:    s.dj_penalty,
-          cjpPenalty:   s.cjp_penalty,
-        })),
-      }))
+    setSubmitError(null)
+    try {
+      const teamId = currentPerfId.replace(`${sessionId}_`, '')
+      const { error } = await supabase.from('scores').upsert({
+        session_id: sessionId, team_id: teamId,
+        section_panel_judge_id: score.panelJudgeId,
+        ej_score: score.ejScore, aj_score: score.ajScore,
+        dj_difficulty: score.djDifficulty, dj_penalty: score.djPenalty, cjp_penalty: score.cjpPenalty,
+        dj_flags: score.detail?.djFlags ?? null,
+        dj_extra_elements: score.detail?.djExtraElements ?? null,
+        dj_incorrect_ts: score.detail?.djIncorrectTs ?? null,
+        ej_deductions: score.detail?.ejDeductions ?? null,
+        ej_extra_elements: score.detail?.ejExtraElements ?? null,
+      }, { onConflict: 'session_id,team_id,section_panel_judge_id' })
+      if (error) throw error
+      // Re-fetch all scores for this performance to catch any submitted in the
+      // race window between initial page load and real-time subscription setup
+      const { data: latest } = await supabase.from('scores')
+        .select('section_panel_judge_id,ej_score,aj_score,dj_difficulty,dj_penalty,cjp_penalty')
+        .eq('session_id', sessionId)
+        .eq('team_id', teamId)
+      if (latest) {
+        const perfId = currentPerfId
+        setJudgeScores(prev => ({
+          ...prev,
+          [perfId]: latest.map((s: any) => ({
+            panelJudgeId: s.section_panel_judge_id,
+            ejScore:      s.ej_score,
+            ajScore:      s.aj_score,
+            djDifficulty: s.dj_difficulty,
+            djPenalty:    s.dj_penalty,
+            cjpPenalty:   s.cjp_penalty,
+          })),
+        }))
+      }
+    } catch (err) {
+      console.error('Score submission failed:', err)
+      setSubmitError('No se pudo enviar la puntuación — comprueba la conexión e inténtalo de nuevo.')
     }
   }
 
@@ -455,13 +472,15 @@ export function useJudgeSession(): JudgeSessionData {
     }))
   }
 
+  function clearSubmitError() { setSubmitError(null) }
+
   const currentPerf = currentPerfId ? (performances.find(p => p.id === currentPerfId) ?? null) : null
 
   return {
     loading, sessionId, sessionStatus, currentPerfId, currentPerf,
     assignedRoles, panelJudges, performances, judgeScores, results,
-    djMethod, ejMethod,
+    djMethod, ejMethod, submitError,
     handleOpen, handleSkip, handleCJPSubmit, handleReopenScore,
-    handleJudgeScoreSubmit, handleEditScore,
+    handleJudgeScoreSubmit, handleEditScore, clearSubmitError,
   }
 }

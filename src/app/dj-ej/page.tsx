@@ -2,32 +2,18 @@
 
 import { useState } from 'react'
 import { useJudgeSession } from '@/hooks/useJudgeSession'
-import DJEJView from '@/components/dj-ej-scoring/DJEJView'
-import AuthBar from '@/components/shared/AuthBar'
-import type { Lang } from '@/components/aj-scoring/types'
-import type { JudgeScore, ScoreDetail } from '@/components/cjp/types'
+import DJEJView from '@/components/scoring/views/DJEJView'
+import { JudgeScoringShell } from '@/components/shared/JudgeScoringShell'
+import type { Lang } from '@/components/scoring/types'
+import type { JudgeScore, ScoreDetail } from '@/components/scoring/types'
 
 export default function Page() {
   const [lang, setLang] = useState<Lang>('es')
   const {
     loading, sessionId,
     assignedRoles, panelJudges, currentPerfId, currentPerf, judgeScores, results,
-    djMethod, ejMethod, handleJudgeScoreSubmit,
+    djMethod, ejMethod, handleJudgeScoreSubmit, submitError, clearSubmitError,
   } = useJudgeSession()
-
-  if (loading) return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-      <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
-    </div>
-  )
-
-  if (!sessionId) return (
-    <div className="min-h-screen bg-slate-50"><AuthBar />
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-48px)] gap-3">
-        <p className="text-xl font-semibold text-slate-600">No active session</p>
-      </div>
-    </div>
-  )
 
   const djRole = assignedRoles.find(r => r.role === 'DJ')
   const ejRole = assignedRoles.find(r => r.role === 'EJ')
@@ -48,8 +34,7 @@ export default function Page() {
   }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col md:h-[100dvh] md:overflow-hidden bg-slate-100">
-      <AuthBar lang={lang} onLangChange={setLang} />
+    <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} submitError={submitError} onClearError={clearSubmitError}>
       <div className="md:flex-1 md:min-h-0 md:flex md:flex-col">
       <DJEJView
         currentPerf={currentPerf} lang={lang} elements={currentPerf?.elements ?? []}
@@ -63,6 +48,6 @@ export default function Page() {
         myEJSubmittedScore={myEJScore?.ejScore ?? null}
       />
       </div>
-    </div>
+    </JudgeScoringShell>
   )
 }

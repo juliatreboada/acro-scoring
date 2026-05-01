@@ -1,16 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import type { Lang } from '../aj-scoring/types'
-import type { TsElement, ElementType, Deductions } from '../ej-scoring/types'
-import type { ElementFlag, ElementFlags } from '../dj-scoring/types'
-import { DEFAULT_FLAG } from '../dj-scoring/types'
+import type { Lang } from '../scoring/types'
+import type { TsElement, ElementType, Deductions } from '../scoring/types'
+import type { ElementFlag, ElementFlags } from '../scoring/types'
+import { DEFAULT_FLAG } from '../scoring/types'
 import {
   MAX_RETRIES, ElementConfig, getElementConfig, maxAttemptInFlags,
   Toggle, TfCounter, calcDJTotals, IncorrectTsToggle, DJElementRow,
 } from './DJElementsShared'
 
-export const DEDUCTION_VALUES = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+import { DEDUCTION_VALUES } from '@/lib/scoringRules'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 

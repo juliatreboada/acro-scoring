@@ -3,9 +3,9 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import type { PenaltyState } from '@/components/cjp/types'
+import type { PenaltyState } from '@/components/scoring/types'
 import { activePenalties, activeDJPenalties } from '@/lib/penaltyLabels'
-import type { ElementFlags } from '@/components/dj-scoring/types'
+import type { ElementFlags } from '@/components/scoring/types'
 import { categoryLabel } from '@/components/admin/types'
 
 // ─── types ────────────────────────────────────────────────────────────────────

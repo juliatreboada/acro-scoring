@@ -1,6 +1,6 @@
-import type { Lang } from '../aj-scoring/types'
-import type { PanelJudge, JudgeScore, RoutineResult } from '../cjp/types'
-import { droppedIndices } from '../cjp/types'
+import type { Lang } from '../scoring/types'
+import type { PanelJudge, JudgeScore, RoutineResult } from '../scoring/types'
+import { droppedIndices } from '../scoring/types'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
