@@ -2,7 +2,7 @@
   "version": 1,
   "config": {
     "env": {
-      "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkeXlrZ21qa3NhZGloaXVxaWp1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjE2Njg0MSwiZXhwIjoyMDkxNzQyODQxfQ.Och66Mg-7TeckYvcaGY2o1dGB-32fILQ8w-cscvxZP4"
+      "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxodnFzdGlieG11dnBoaWl4cW9mIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDUxNzc4NSwiZXhwIjoyMDkwMDkzNzg1fQ.YmZft8GNTrmkZWLgXSoMhBf9MsNy75Bc3hfDxBy9FRA"
     },
     "webpack": null,
     "typescript": {
@@ -159,7 +159,7 @@
       "proxyPrefetch": "flexible",
       "optimisticClientCache": true,
       "manualClientBasePath": false,
-      "cpus": 7,
+      "cpus": 1,
       "memoryBasedWorkersCount": false,
       "imgOptConcurrency": null,
       "imgOptTimeoutInSeconds": 7,

@@ -23,7 +23,7 @@ type LobbyCompetition = {
   ts_music_deadline: string | null
 }
 
-type OrderEntry = { position: number; gymnast_display: string }
+type OrderEntry = { position: number; teamId: string; gymnast_display: string }
 
 type LobbySession = {
   id: string
@@ -318,7 +318,11 @@ function CompetitionDetail({ comp, lang, onBack }: {
                 status: s.status as SessionStatus,
                 orders: (orders ?? [])
                   .filter(o => o.session_id === s.id)
-                  .map(o => ({ position: o.position, gymnast_display: teamMap[o.team_id] ?? '' })),
+                  .map(o => ({
+                    position: o.position,
+                    teamId: o.team_id,
+                    gymnast_display: teamMap[o.team_id] ?? '',
+                  })),
               })),
           })
         }
@@ -429,7 +433,7 @@ function CompetitionDetail({ comp, lang, onBack }: {
                             <p className="text-xs font-medium text-slate-400 mb-1.5">{t.startingOrder}</p>
                             <div className="space-y-1">
                               {session.orders.map(o => (
-                                <div key={o.position} className="flex items-center gap-3 text-xs text-slate-600">
+                                <div key={`${session.id}-${o.teamId}`} className="flex items-center gap-3 text-xs text-slate-600">
                                   <span className="w-5 text-right font-mono text-slate-400 shrink-0">{o.position}</span>
                                   <span>{o.gymnast_display}</span>
                                 </div>
