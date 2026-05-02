@@ -265,7 +265,12 @@ function DJReviewPage() {
     <div className="min-h-screen bg-slate-100">
       <AuthBar lang={lang} onLangChange={setLang} />
       <div className="max-w-5xl mx-auto pt-4 pb-16">
-        <DJReview initialSheets={sheets} myJudgeId={myJudgeId} lang={lang} />
+        <DJReview
+          initialSheets={sheets}
+          myJudgeId={myJudgeId}
+          lang={lang}
+          judgeLobbyHref={filterCompId ? '/judge' : undefined}
+        />
       </div>
     </div>
   )
@@ -278,3 +283,4 @@ export default function Page() {
     </Suspense>
   )
 }
+
