@@ -33,7 +33,7 @@ const T = {
     note: 'Nota…', addRetry: 'Añadir reintento', retry: 'Reintento',
     djLabel: 'DJ', ejLabel: 'EJ', deduction: 'Deducción',
     difficulty: 'D', elementLabel: 'Descripción del elemento…', isStatic: 'Estático',
-    noElements: 'No hay elementos en la hoja de tarifa', noElementsNote: 'Puedes enviar directamente',
+    noElements: 'No hay elementos en la TS', noElementsNote: 'Puedes enviar directamente',
     addElement: '+ Añadir elemento no listado',
     submit: 'Enviar', difficultyTotal: 'Dificultad', djPenalty: 'Pen. DJ', ejScore: 'Nota EJ',
     ejHint: 'Nota EJ (0.0 – 10.0)',
