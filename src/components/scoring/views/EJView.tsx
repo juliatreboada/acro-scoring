@@ -42,9 +42,9 @@ const T = {
   es: {
     waiting: 'Esperando actuación…',
     waitingSub: 'El juez coordinador no ha abierto ninguna rutina todavía.',
-    pdfPlaceholder: 'PDF Hoja de Tarifa',
+    pdfPlaceholder: 'PDF TS',
     pdfNote: 'El PDF aparecerá aquí una vez subido',
-    noElements: 'No hay elementos en la hoja de tarifa',
+    noElements: 'No hay elementos en la TS',
     noElementsNote: 'Puedes enviar una puntuación de 10.0',
     difficulty: 'D',
     addRetry: 'Añadir reintento',

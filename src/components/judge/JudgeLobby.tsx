@@ -108,7 +108,7 @@ const T = {
     startingOrder: 'Orden de salida',
     noOrder: 'El orden de salida aún no está publicado.',
     scoreButton: 'Puntuar',
-    djReviewButton: 'Revisar hojas de tarifa',
+    djReviewButton: 'Revisar TS',
     loadingDetail: 'Cargando…',
     profile: 'Perfil',
     competitions: 'Competiciones',

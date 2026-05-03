@@ -38,7 +38,7 @@ const T = {
     submitProv: 'Enviar provisional', submitFinal: 'Enviar final',
     confirmFinal: 'Confirmar final', nextPerf: 'Siguiente actuación',
     updateProv: 'Actualizar provisional',
-    tsPdfTitle: 'Hoja de Tarifa', pdfNote: 'El PDF aparecerá aquí una vez subido',
+    tsPdfTitle: 'TS', pdfNote: 'El PDF aparecerá aquí una vez subido',
     ej: 'EJ', aj: 'AJ', dj: 'DJ',
     avg: 'Media', djDif: 'DJ Dif.', djPen: 'Pen.',
     cjpPen: 'CJP Pen.',

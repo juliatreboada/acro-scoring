@@ -53,11 +53,11 @@ const T = {
     djPenalty: 'Pen. DJ',
     ejScore: 'Nota EJ',
     ajScore: 'Punt. AJ',
-    pdfPlaceholder: 'Hoja de tarifa',
+    pdfPlaceholder: 'TS',
     pdfNote: 'El PDF aparecerá aquí una vez subido',
     submit: 'Enviar',
     addElement: '+ Añadir elemento no listado',
-    noElements: 'No hay elementos en la hoja de tarifa',
+    noElements: 'No hay elementos en la TS',
     noElementsNote: 'Puedes enviar directamente',
   },
 }
