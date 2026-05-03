@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '../scoring/types'
 import type { Sheet, ReviewElement, ElementType, TsReviewStatus } from './types'
@@ -55,6 +56,7 @@ const T = {
     routineCombined: 'Combined',
     totalDifficulty: 'Total D',
     refresh: 'Refresh',
+    back: 'Back',
   },
   es: {
     title: 'Revisión de TS',
@@ -102,6 +104,7 @@ const T = {
     routineCombined: 'Combinado',
     totalDifficulty: 'D total',
     refresh: 'Actualizar',
+    back: 'Volver',
   },
 }
 
@@ -584,7 +587,7 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
               if (!isLocked && editingId === el.id) {
                 return (
                   <ElementEditRow
-                    key={el.id}
+                    key={`${sheet.id}-${el.id}`}
                     el={el}
                     lang={lang}
                     integerMode={integerMode}
@@ -599,7 +602,7 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
               const badge = typeBadge(el.elementType, el.isStatic, t)
               return (
                 <div
-                  key={el.id}
+                  key={`${sheet.id}-${el.id}`}
                   className="group flex items-center gap-2 px-3 py-2 bg-white border border-slate-100 rounded-xl"
                 >
                   <span className="text-xs text-slate-400 font-mono w-5 shrink-0">{el.position}</span>
@@ -675,9 +678,12 @@ type DJReviewProps = {
   myJudgeId: string
   lang: Lang
   practiceMode?: boolean
+  /** When set (e.g. `/judge`), show a lobby-style back control */
+  judgeLobbyHref?: string
 }
 
-export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode = false }: DJReviewProps) {
+export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode = false, judgeLobbyHref }: DJReviewProps) {
+  const router = useRouter()
   const supabase = createClient()
   const t = T[lang]
   const [sheets, setSheets] = useState<Sheet[]>(initialSheets)
@@ -906,6 +912,20 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
     <>
       <div className="px-4 pb-8">
         {/* header */}
+        {judgeLobbyHref ? (
+          <div className="mb-3">
+            <button
+              type="button"
+              onClick={() => router.push(judgeLobbyHref)}
+              className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+              </svg>
+              {t.back}
+            </button>
+          </div>
+        ) : null}
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-lg font-bold text-slate-800">{t.title}</h1>
           <span className={[

@@ -49,7 +49,8 @@ export default function Page() {
     async function load() {
       try {
       const [compRes, panelsRes, sectionsRes, sessionsRes, judgesRes,
-             nominationsRes, entriesRes, rulesRes, adminsRes] = await Promise.all([
+             nominationsRes, entriesRes, rulesRes, adminsRes,
+             provisionalClubsRes, definitiveClubsRes] = await Promise.all([
         supabase.from('competitions')
           .select('id,name,status,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,age_groups,poster_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine')
           .eq('id', id).single(),
@@ -61,6 +62,8 @@ export default function Page() {
         supabase.from('competition_entries').select('id,competition_id,team_id,dorsal,dropped_out').eq('competition_id', id),
         supabase.from('age_group_rules').select('id,age_group,ruleset,min_age,max_age,routine_count,sort_order').order('sort_order'),
         supabase.from('profiles').select('id,email').eq('role', 'admin'),
+        supabase.from('provisional_entries').select('club_id').eq('competition_id', id),
+        supabase.from('definitive_entries').select('club_id').eq('competition_id', id),
       ])
 
       if (!compRes.data) { setLoading(false); return }
@@ -130,7 +133,11 @@ export default function Page() {
       }
 
       // ── wave 3: clubs + gymnasts depend on teams (wave 2) ─────────────────────
-      const clubIds       = [...new Set(teamsData.map(t => t.club_id))]
+      const licenciasClubIds = [
+        ...((provisionalClubsRes.data ?? []) as { club_id: string }[]).map(r => r.club_id),
+        ...((definitiveClubsRes.data ?? []) as { club_id: string }[]).map(r => r.club_id),
+      ]
+      const clubIds = [...new Set([...teamsData.map(t => t.club_id), ...licenciasClubIds])]
       const allGymnastIds = [...new Set(teamsData.flatMap(t => t.gymnast_ids ?? []))]
 
       const [clubsResult, gymnastsResult, compCoachesResult] = await Promise.all([
