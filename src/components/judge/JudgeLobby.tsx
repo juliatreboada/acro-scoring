@@ -8,6 +8,15 @@ import type { Lang } from '@/components/scoring/types'
 import ProfileEditor from '@/components/shared/ProfileEditor'
 import JudgePractice from './JudgePractice'
 
+function parseTimelineOrder(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  return null
+}
+
 // ─── types ────────────────────────────────────────────────────────────────────
 
 type CompetitionStatus = 'draft' | 'provisional_entry' | 'definitive_entry' | 'registration_open' | 'registration_closed' | 'active' | 'finished'
@@ -35,6 +44,8 @@ type LobbySession = {
 type LobbyPanel = {
   sectionId: string
   sectionNumber: number
+  /** Matches admin timeline / section order (timeline_order ?? section_number) */
+  sectionTimelineSort: number
   sectionLabel: string | null
   panelId: string
   panelNumber: number
@@ -241,7 +252,7 @@ function CompetitionDetail({ comp, lang, onBack }: {
       // 1. Get my SPJ entries for this competition's sections
       const { data: sections } = await supabase
         .from('sections')
-        .select('id, section_number, label')
+        .select('id, section_number, label, timeline_order')
         .eq('competition_id', comp.id)
       if (!sections?.length) { setLoading(false); return }
 
@@ -275,7 +286,7 @@ function CompetitionDetail({ comp, lang, onBack }: {
       const [panelsRes, sessionsRes] = await Promise.all([
         supabase.from('panels').select('id, panel_number').in('id', panelIds),
         supabase.from('sessions')
-          .select('id, name, status, section_id, panel_id')
+          .select('id, name, status, section_id, panel_id, order_index')
           .in('section_id', sectionIds)
           .in('panel_id', panelIds),
       ])
@@ -306,18 +317,24 @@ function CompetitionDetail({ comp, lang, onBack }: {
           groupMap.set(key, {
             sectionId: spj.section_id,
             sectionNumber: sec?.section_number ?? 0,
+            sectionTimelineSort:
+              parseTimelineOrder((sec as { timeline_order?: unknown } | undefined)?.timeline_order)
+              ?? sec?.section_number
+              ?? Number.MAX_SAFE_INTEGER,
             sectionLabel: sec?.label ?? null,
             panelId: spj.panel_id,
             panelNumber: panelMap[spj.panel_id] ?? 0,
             roles: [],
             sessions: allSessions
               .filter(s => s.section_id === spj.section_id && s.panel_id === spj.panel_id)
+              .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0) || a.id.localeCompare(b.id))
               .map(s => ({
                 id: s.id,
                 name: s.name,
                 status: s.status as SessionStatus,
                 orders: (orders ?? [])
                   .filter(o => o.session_id === s.id)
+                  .sort((a, b) => a.position - b.position || a.team_id.localeCompare(b.team_id))
                   .map(o => ({
                     position: o.position,
                     teamId: o.team_id,
@@ -330,7 +347,10 @@ function CompetitionDetail({ comp, lang, onBack }: {
       }
 
       const sorted = [...groupMap.values()].sort(
-        (a, b) => a.sectionNumber - b.sectionNumber || a.panelNumber - b.panelNumber
+        (a, b) =>
+          a.sectionTimelineSort - b.sectionTimelineSort ||
+          a.sectionNumber - b.sectionNumber ||
+          a.panelNumber - b.panelNumber,
       )
       setPanels(sorted)
       setSessionIds(sorted.flatMap(p => p.sessions.map(s => s.id)))

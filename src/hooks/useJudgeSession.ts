@@ -9,6 +9,15 @@ import type { SessionStatus } from '@/components/judge/JudgeSession'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
+function parseTimelineOrder(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  return null
+}
+
 export type JudgeSessionData = {
   loading:       boolean
   sessionId:     string | null
@@ -82,11 +91,17 @@ export function useJudgeSession(): JudgeSessionData {
       const sectionIds = [...new Set(spjs.map(s => s.section_id))]
       const panelIds   = [...new Set(spjs.map(s => s.panel_id))]
 
-      const { data: allSessions } = await supabase
-        .from('sessions')
-        .select('id, name, status, section_id, panel_id, competition_id, current_team_id, age_group, category, routine_type, dj_method, ej_method')
-        .in('section_id', sectionIds)
-        .in('panel_id',   panelIds)
+      const [{ data: allSessions }, { data: sectionRows }] = await Promise.all([
+        supabase
+          .from('sessions')
+          .select('id, name, status, section_id, panel_id, competition_id, current_team_id, age_group, category, routine_type, dj_method, ej_method, order_index')
+          .in('section_id', sectionIds)
+          .in('panel_id', panelIds),
+        supabase
+          .from('sections')
+          .select('id, section_number, timeline_order')
+          .in('id', sectionIds),
+      ])
 
       if (!allSessions?.length) { setLoading(false); return }
 
@@ -94,7 +109,24 @@ export function useJudgeSession(): JudgeSessionData {
       const mySessions = allSessions.filter(s => spjPairs.has(`${s.section_id}|${s.panel_id}`))
       if (!mySessions.length) { setLoading(false); return }
 
-      const session = mySessions.find(s => s.status === 'active') ?? mySessions[0]
+      const sectionOrderMap = new Map(
+        (sectionRows ?? []).map((row) => [
+          row.id,
+          parseTimelineOrder(row.timeline_order) ?? row.section_number ?? Number.MAX_SAFE_INTEGER,
+        ]),
+      )
+
+      const sortedMySessions = [...mySessions].sort((a, b) => {
+        const secA = sectionOrderMap.get(a.section_id) ?? Number.MAX_SAFE_INTEGER
+        const secB = sectionOrderMap.get(b.section_id) ?? Number.MAX_SAFE_INTEGER
+        if (secA !== secB) return secA - secB
+        const oiA = a.order_index ?? Number.MAX_SAFE_INTEGER
+        const oiB = b.order_index ?? Number.MAX_SAFE_INTEGER
+        if (oiA !== oiB) return oiA - oiB
+        return a.id.localeCompare(b.id)
+      })
+
+      const session = sortedMySessions.find(s => s.status === 'active') ?? sortedMySessions[0]
 
       const mySpjsForSession = spjs.filter(
         s => s.section_id === session.section_id && s.panel_id === session.panel_id
@@ -153,13 +185,18 @@ export function useJudgeSession(): JudgeSessionData {
           .eq('dropped_out', false)
         const { data: fallbackTeams } = (entries ?? []).length > 0
           ? await supabase.from('teams')
-              .select('id')
+              .select('id, gymnast_display')
               .in('id', (entries ?? []).map(e => e.team_id))
               .eq('age_group', session.age_group)
               .eq('category', session.category)
-          : { data: [] as { id: string }[] }
+              .order('gymnast_display')
+          : { data: [] as { id: string; gymnast_display: string }[] }
         orderedEntries = (fallbackTeams ?? []).map((t, i) => ({ team_id: t.id, position: i + 1 }))
       }
+
+      orderedEntries.sort(
+        (a, b) => a.position - b.position || a.team_id.localeCompare(b.team_id),
+      )
 
       const teamIds = orderedEntries.map(o => o.team_id)
       const [teamsRes, musicRes, elementsRes] = await Promise.all([
