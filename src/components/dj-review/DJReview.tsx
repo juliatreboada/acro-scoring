@@ -113,10 +113,10 @@ const T = {
 function usesIntegerDifficulty(ageGroup: string): boolean {
   const lower = ageGroup.toLowerCase()
   return (
-    lower.includes('youth') ||
+    lower === 'youth' ||
     lower.includes('junior') ||
     lower.includes('senior') ||
-    lower.includes('absoluta')
+    lower.includes('absoluto')
   )
 }
 

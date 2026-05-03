@@ -53,7 +53,7 @@ function DJReviewPage() {
       // 3. Sections → competitions
       const { data: sections } = await supabase
         .from('sections')
-        .select('id, competition_id')
+        .select('id, competition_id, section_number, timeline_order')
         .in('id', lockedSectionIds)
       if (!sections?.length) { setLoading(false); return }
 
@@ -91,7 +91,7 @@ function DJReviewPage() {
       // 5. Sessions for my DJ panels
       const { data: allSessions } = await supabase
         .from('sessions')
-        .select('id, section_id, panel_id, routine_type, competition_id, age_group, category')
+        .select('id, section_id, panel_id, routine_type, competition_id, age_group, category, order_index')
         .in('section_id', validSectionIds)
         .in('panel_id', validPanelIds)
       if (!allSessions?.length) { setLoading(false); return }
@@ -107,10 +107,11 @@ function DJReviewPage() {
       // 6. Starting order — with fallback to competition_entries
       const { data: orders } = await supabase
         .from('session_orders')
-        .select('session_id, team_id')
+        .select('session_id, team_id, position')
         .in('session_id', sessionIds)
+        .order('position')
 
-      let sessionTeams: { session_id: string; team_id: string }[] = orders ?? []
+      let sessionTeams: { session_id: string; team_id: string; position?: number }[] = orders ?? []
 
       if (sessionTeams.length === 0) {
         // Fallback: registered teams filtered by session age_group + category
@@ -196,9 +197,29 @@ function DJReviewPage() {
       type RawReview = { team_id: string; competition_id: string; routine_type: string; status: string; dj1_id: string | null; dj1_decision: string | null; dj1_comment: string | null; dj2_id: string | null; final_comment: string | null }
       const rawReviews = (reviewRes.data ?? []) as RawReview[]
 
+      const parseTimelineOrder = (value: unknown): number | null => {
+        if (typeof value === 'number' && Number.isFinite(value)) return value
+        if (typeof value === 'string') {
+          const parsed = Number(value)
+          return Number.isFinite(parsed) ? parsed : null
+        }
+        return null
+      }
+
+      const sectionOrderMap = new Map(
+        sections.map((s) => [s.id, parseTimelineOrder(s.timeline_order) ?? s.section_number ?? Number.MAX_SAFE_INTEGER])
+      )
+      const sessionOrderMap = new Map(
+        mySessions.map((s) => [s.id, s.order_index ?? Number.MAX_SAFE_INTEGER])
+      )
+      const teamPositionMap = new Map(
+        sessionTeams.map((s) => [`${s.session_id}|${s.team_id}`, s.position ?? Number.MAX_SAFE_INTEGER])
+      )
+
       // Build one sheet per (session × team), deduplicating
+      type SortableSheet = Sheet & { __sectionOrder: number; __sessionOrder: number; __teamOrder: number }
       const seenKeys = new Set<string>()
-      const builtSheets: Sheet[] = sessionTeams.flatMap(o => {
+      const builtSheets: SortableSheet[] = sessionTeams.flatMap(o => {
         const key = `${o.session_id}_${o.team_id}`
         if (seenKeys.has(key)) return []
         seenKeys.add(key)
@@ -229,6 +250,9 @@ function DJReviewPage() {
         const reviewRow = rawReviews.find(
           r => r.team_id === o.team_id && r.competition_id === session.competition_id && r.routine_type === session.routine_type
         )
+        const sectionOrder = sectionOrderMap.get(session.section_id) ?? Number.MAX_SAFE_INTEGER
+        const sessionOrder = sessionOrderMap.get(session.id) ?? Number.MAX_SAFE_INTEGER
+        const teamOrder = teamPositionMap.get(`${session.id}|${o.team_id}`) ?? Number.MAX_SAFE_INTEGER
         return [{
           id:            key,
           teamId:        o.team_id,
@@ -246,10 +270,22 @@ function DJReviewPage() {
           dj2Id:         reviewRow?.dj2_id ?? null,
           finalComment:  reviewRow?.final_comment ?? null,
           hasTwoDJs,
+          __sectionOrder: sectionOrder,
+          __sessionOrder: sessionOrder,
+          __teamOrder: teamOrder,
         }]
       })
+      const sortedSheets: Sheet[] = builtSheets
+        .sort((a, b) =>
+          a.__sectionOrder - b.__sectionOrder ||
+          a.__sessionOrder - b.__sessionOrder ||
+          a.__teamOrder - b.__teamOrder ||
+          a.gymnasts.localeCompare(b.gymnasts) ||
+          a.teamId.localeCompare(b.teamId)
+        )
+        .map(({ __sectionOrder: _sectionOrder, __sessionOrder: _sessionOrder, __teamOrder: _teamOrder, ...sheet }) => sheet)
 
-      setSheets(builtSheets)
+      setSheets(sortedSheets)
       setLoading(false)
     }
     load()
