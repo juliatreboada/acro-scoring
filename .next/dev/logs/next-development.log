@@ -1,3 +1,5 @@
-[20:00:03.130] Browser ERROR   {}
-[20:00:03.323] Browser ERROR   {}
-[20:00:03.609] Browser ERROR   {}
+[00:00:00.738] Server  LOG     ✓ Ready in 538ms
+[00:00:20.307] Browser ERROR   Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. 7
+[00:00:20.307] Browser ERROR   Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. 8
+[00:00:20.307] Browser ERROR   Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. 7
+[00:00:20.307] Browser ERROR   Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsupported and could change in a future version. 8
