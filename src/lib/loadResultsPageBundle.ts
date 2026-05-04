@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/database.types'
 import type { ScoringPerformance, RoutineResult } from '@/components/scoring/types'
+import type { TeamClubInfo } from '@/lib/clubTrophyRanking'
 
 export type ResultsPageCompetitionMeta = {
   name: string
@@ -14,6 +15,8 @@ export type ResultsPageBundle = {
   performances: ScoringPerformance[]
   results: Record<string, RoutineResult>
   clubAvatarByTeam: Record<string, string | null>
+  /** Per team: club id/name/avatar for club-level rankings (e.g. Trofeo Gondomar). */
+  teamClubInfo: Record<string, TeamClubInfo>
   agSortOrder: Record<string, number>
 }
 
@@ -29,6 +32,7 @@ export async function loadResultsPageBundle(
     performances: [],
     results: {},
     clubAvatarByTeam: {},
+    teamClubInfo: {},
     agSortOrder: {},
   }
 
@@ -62,7 +66,7 @@ export async function loadResultsPageBundle(
   const agSortOrder = Object.fromEntries(agRules.map((r) => [r.age_group, r.sort_order ?? 0]))
 
   if (!sessions?.length) {
-    return { competition, performances: [], results: {}, clubAvatarByTeam: {}, agSortOrder }
+    return { competition, performances: [], results: {}, clubAvatarByTeam: {}, teamClubInfo: {}, agSortOrder }
   }
 
   const sessionIds = sessions.map((s) => s.id)
@@ -104,13 +108,32 @@ export async function loadResultsPageBundle(
   ]
   const { data: clubs } =
     clubIds.length > 0
-      ? await supabase.from('clubs').select('id, avatar_url').in('id', clubIds)
+      ? await supabase.from('clubs').select('id, club_name, avatar_url').in('id', clubIds)
       : { data: [] }
-  const clubAvatarMap = Object.fromEntries((clubs ?? []).map((c) => [c.id, c.avatar_url ?? null]))
+  const clubMeta = Object.fromEntries(
+    (clubs ?? []).map((c) => [
+      c.id,
+      {
+        name: (c as { club_name?: string }).club_name ?? '',
+        avatar: c.avatar_url ?? null,
+      },
+    ]),
+  )
   const teamClubAvatars: Record<string, string | null> = {}
+  const teamClubInfo: Record<string, TeamClubInfo> = {}
   for (const t of teams ?? []) {
     const clubId = (t as { club_id?: string }).club_id
-    teamClubAvatars[t.id] = clubId ? (clubAvatarMap[clubId] ?? null) : null
+    if (clubId) {
+      const meta = clubMeta[clubId]
+      teamClubAvatars[t.id] = meta?.avatar ?? null
+      teamClubInfo[t.id] = {
+        clubId,
+        clubName: meta?.name ?? '',
+        clubAvatar: meta?.avatar ?? null,
+      }
+    } else {
+      teamClubAvatars[t.id] = null
+    }
   }
 
   const sessionMap = Object.fromEntries(sessions.map((s) => [s.id, s]))
@@ -156,6 +179,7 @@ export async function loadResultsPageBundle(
     performances: perfs,
     results,
     clubAvatarByTeam: teamClubAvatars,
+    teamClubInfo,
     agSortOrder,
   }
 }

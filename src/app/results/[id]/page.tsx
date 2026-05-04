@@ -7,6 +7,8 @@ import { loadResultsPageBundle, type ResultsPageCompetitionMeta } from '@/lib/lo
 import ResultsView from '@/components/results/ResultsView'
 import type { Lang } from '@/components/scoring/types'
 import type { ScoringPerformance, RoutineResult } from '@/components/scoring/types'
+import type { TeamClubInfo } from '@/lib/clubTrophyRanking'
+import { showTrofeoGondomarClubRanking } from '@/lib/trofeoGondomarCompetition'
 
 function ResultsPageInner() {
   const { id } = useParams<{ id: string }>()
@@ -19,6 +21,7 @@ function ResultsPageInner() {
   const [performances, setPerformances] = useState<ScoringPerformance[]>([])
   const [results, setResults] = useState<Record<string, RoutineResult>>({})
   const [clubAvatarByTeam, setClubAvatarByTeam] = useState<Record<string, string | null>>({})
+  const [teamClubInfo, setTeamClubInfo] = useState<Record<string, TeamClubInfo>>({})
   const [agSortOrder, setAgSortOrder] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
 
@@ -33,6 +36,7 @@ function ResultsPageInner() {
       setPerformances(bundle.performances)
       setResults(bundle.results)
       setClubAvatarByTeam(bundle.clubAvatarByTeam)
+      setTeamClubInfo(bundle.teamClubInfo)
       setAgSortOrder(bundle.agSortOrder)
       setLoading(false)
     }
@@ -48,6 +52,7 @@ function ResultsPageInner() {
   }
 
   const competitionName = competitionMeta?.name ?? ''
+  const trofeoGondomar = showTrofeoGondomarClubRanking(id)
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -122,8 +127,10 @@ function ResultsPageInner() {
         results={results}
         lang={lang}
         clubAvatarByTeam={clubAvatarByTeam}
+        teamClubInfo={teamClubInfo}
         agSortOrder={agSortOrder}
         officialDocument={isOfficial}
+        showTrofeoGondomarClubRanking={trofeoGondomar}
       />
 
       {isOfficial && (

@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import type { Lang } from '../scoring/types'
 import type { ScoringPerformance, RoutineResult } from '../scoring/types'
 import { categoryLabel } from '@/components/admin/types'
+import { getResultsRuleset } from '@/lib/resultsRuleset'
+import { computeClubTrophyRanking, type TeamClubInfo, type ClubTrophyRow } from '@/lib/clubTrophyRanking'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -25,6 +27,14 @@ const T = {
     noResults: 'No results yet',
     noResultsSub: 'Scores will appear here as they are submitted.',
     combinedCategories: 'Combined categories',
+    trophyEscolar: 'Gondomar Trophy — Escolar',
+    trophyBase: 'Gondomar Trophy — Base',
+    trophyExplain:
+      'Club ranking: sum of the three highest routine scores in this block (each Balance / Dynamic / Combined routine counts once).',
+    trophyClub: 'Club',
+    trophyTop3: 'Total (best 3)',
+    trophyBreakdown: 'Top scores',
+    trophyRoutines: 'Routines',
   },
   es: {
     balance: 'Equilibrio',
@@ -43,6 +53,14 @@ const T = {
     noResults: 'Sin resultados',
     noResultsSub: 'Las puntuaciones aparecerán aquí a medida que se envíen.',
     combinedCategories: 'Categorías combinadas',
+    trophyEscolar: 'Trofeo Gondomar — Escolar',
+    trophyBase: 'Trofeo Gondomar — Base',
+    trophyExplain:
+      'Clasificación por club: suma de las tres mejores puntuaciones de rutina en este bloque (cada rutina de equilibrio, dinámico o combinado cuenta una vez).',
+    trophyClub: 'Club',
+    trophyTop3: 'Total (3 mejores)',
+    trophyBreakdown: 'Puntuaciones',
+    trophyRoutines: 'Rutinas',
   },
 }
 
@@ -84,6 +102,123 @@ function RankCircle({ rank }: { rank: number }) {
 function ClubAvatar({ url }: { url: string | null | undefined }) {
   if (!url) return null
   return <img src={url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+}
+
+function ClubTrophyBlock({
+  ruleset,
+  performances,
+  results,
+  teamClubInfo,
+  t,
+}: {
+  ruleset: 'Escolar' | 'Base'
+  performances: ScoringPerformance[]
+  results: Record<string, RoutineResult>
+  teamClubInfo: Record<string, TeamClubInfo>
+  t: typeof T['en']
+}) {
+  if (Object.keys(teamClubInfo).length === 0) return null
+  const rows = computeClubTrophyRanking(performances, results, teamClubInfo, ruleset)
+  if (rows.length === 0) return null
+
+  const title = ruleset === 'Escolar' ? t.trophyEscolar : t.trophyBase
+
+  return (
+    <div className="bg-white border-t border-slate-200 print:break-inside-avoid">
+      <div className="px-2 sm:px-4 py-4 sm:py-5">
+        <h3 className="text-base sm:text-lg font-bold text-slate-800">{title}</h3>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1 mb-4 max-w-2xl">{t.trophyExplain}</p>
+
+        {/* desktop */}
+        <table className="w-full table-fixed hidden sm:table">
+          <colgroup>
+            <col className="w-14" />
+            <col />
+            <col className="w-36" />
+            <col className="w-28" />
+            <col className="w-24" />
+            <col className="w-16" />
+          </colgroup>
+          <thead>
+            <tr className="border-b border-slate-100">
+              <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">#</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.trophyClub}</th>
+              <th className="px-3 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.trophyBreakdown}</th>
+              <th className="px-3 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.trophyRoutines}</th>
+              <th className="px-3 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.trophyTop3}</th>
+              <th className="px-3 py-2 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <ClubTrophyRowDesktop key={row.clubId} row={row} t={t} />
+            ))}
+          </tbody>
+        </table>
+
+        {/* mobile */}
+        <div className="sm:hidden space-y-2">
+          {rows.map((row) => (
+            <ClubTrophyRowMobile key={row.clubId} row={row} t={t} />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ClubTrophyRowDesktop({ row, t }: { row: ClubTrophyRow; t: typeof T['en'] }) {
+  const medal = row.rank <= 3 ? MEDALS[row.rank - 1] : null
+  return (
+    <tr className={['border-b border-slate-50', medal ? medal.row : '', row.hasProvisional && !medal ? 'bg-amber-50/40' : ''].join(' ')}>
+      <td className="px-3 py-3"><RankCircle rank={row.rank} /></td>
+      <td className="px-3 py-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <ClubAvatar url={row.clubAvatar} />
+          <p className="font-semibold text-slate-800 text-base break-words">{row.clubName || '—'}</p>
+        </div>
+      </td>
+      <td className="px-3 py-3 text-right text-xs tabular-nums text-slate-600 font-mono">
+        {row.topScores.map((s) => s.toFixed(3)).join(' · ')}
+      </td>
+      <td className="px-3 py-3 text-right text-sm tabular-nums text-slate-500">{row.routinesCounted}</td>
+      <td className="px-3 py-3 text-right">
+        <span className={['text-xl font-bold tabular-nums print:text-sm', row.hasProvisional ? 'text-amber-600' : 'text-slate-800'].join(' ')}>
+          {row.sumTop3.toFixed(3)}
+        </span>
+      </td>
+      <td className="px-3 py-3 text-right">
+        {row.hasProvisional && (
+          <span className="text-xs font-bold bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded">{t.prov}</span>
+        )}
+      </td>
+    </tr>
+  )
+}
+
+function ClubTrophyRowMobile({ row, t }: { row: ClubTrophyRow; t: typeof T['en'] }) {
+  const medal = row.rank <= 3 ? MEDALS[row.rank - 1] : null
+  return (
+    <div className={['flex items-center gap-3 px-3 py-3 rounded-xl', medal ? medal.row : row.hasProvisional ? 'bg-amber-50/60' : 'bg-slate-50'].join(' ')}>
+      <RankCircle rank={row.rank} />
+      <ClubAvatar url={row.clubAvatar} />
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-slate-800 break-words">{row.clubName || '—'}</p>
+        <p className="text-xs text-slate-400 mt-0.5 tabular-nums">
+          {t.trophyBreakdown}: {row.topScores.map((s) => s.toFixed(3)).join(' · ')}
+        </p>
+        <p className="text-xs text-slate-400">
+          {t.trophyRoutines}: {row.routinesCounted}
+        </p>
+      </div>
+      <div className="text-right shrink-0">
+        <p className={['text-xl font-bold tabular-nums print:text-sm', row.hasProvisional ? 'text-amber-600' : 'text-slate-800'].join(' ')}>
+          {row.sumTop3.toFixed(3)}
+        </p>
+        {row.hasProvisional && <span className="text-xs font-bold text-amber-500">{t.prov}</span>}
+      </div>
+    </div>
+  )
 }
 
 // ─── individual routine ranking ───────────────────────────────────────────────
@@ -492,12 +627,6 @@ const RULESET_ORDER = ['Escolar', 'Base', 'Nacional']
 
 // ─── main component ───────────────────────────────────────────────────────────
 
-function getRuleset(ageGroup: string): string {
-  if (ageGroup.includes('Escolar')) return 'Escolar'
-  if (ageGroup.includes('Base')) return 'Base'
-  return 'Nacional'
-}
-
 /** Stable key for public results sections (per category or merged group). */
 export function resultsSectionKey(p: ScoringPerformance): string {
   if (p.rankingMergeGroupId) return `${p.ageGroup}||__merge__${p.rankingMergeGroupId}`
@@ -525,9 +654,13 @@ export type ResultsViewProps = {
   results: Record<string, RoutineResult>
   lang: Lang
   clubAvatarByTeam?: Record<string, string | null>
+  /** Team → club (for Trofeo Gondomar–style club rankings). */
+  teamClubInfo?: Record<string, TeamClubInfo>
   agSortOrder?: Record<string, number>  // ageGroup label → sort_order
   /** Full competition document: all rulesets stacked, sections expanded, routine tabs all visible. */
   officialDocument?: boolean
+  /** When true, show Trofeo Gondomar Escolar/Base club rankings (single competition only). */
+  showTrofeoGondomarClubRanking?: boolean
 }
 
 export default function ResultsView({
@@ -535,8 +668,10 @@ export default function ResultsView({
   results,
   lang,
   clubAvatarByTeam = {},
+  teamClubInfo = {},
   agSortOrder = {},
   officialDocument = false,
+  showTrofeoGondomarClubRanking = false,
 }: ResultsViewProps) {
   const t = T[lang]
 
@@ -561,7 +696,7 @@ export default function ResultsView({
   const activeRulesets = RULESET_ORDER.filter(rs =>
     allCategoryKeys.some(ck => {
       const [ag] = ck.split('||')
-      return getRuleset(ag) === rs
+      return getResultsRuleset(ag) === rs
     })
   )
 
@@ -581,7 +716,7 @@ export default function ResultsView({
   const categoryKeys = resolvedRuleset
     ? allCategoryKeys.filter(ck => {
         const [ag] = ck.split('||')
-        return getRuleset(ag) === resolvedRuleset
+        return getResultsRuleset(ag) === resolvedRuleset
       })
     : allCategoryKeys
 
@@ -669,7 +804,7 @@ export default function ResultsView({
           {activeRulesets.map((rs, idx) => {
             const keys = allCategoryKeys.filter((ck) => {
               const [ag] = ck.split('||')
-              return getRuleset(ag) === rs
+              return getResultsRuleset(ag) === rs
             })
             if (keys.length === 0) return null
             return (
@@ -680,12 +815,32 @@ export default function ResultsView({
                   </div>
                 </div>
                 <div className="divide-y divide-slate-200">{renderSections(keys)}</div>
+                {showTrofeoGondomarClubRanking && (rs === 'Escolar' || rs === 'Base') && (
+                  <ClubTrophyBlock
+                    ruleset={rs}
+                    performances={performances}
+                    results={results}
+                    teamClubInfo={teamClubInfo}
+                    t={t}
+                  />
+                )}
               </div>
             )
           })}
         </>
       ) : (
-        <div className="divide-y divide-slate-200">{renderSections(categoryKeys)}</div>
+        <>
+          <div className="divide-y divide-slate-200">{renderSections(categoryKeys)}</div>
+          {showTrofeoGondomarClubRanking && (resolvedRuleset === 'Escolar' || resolvedRuleset === 'Base') && (
+            <ClubTrophyBlock
+              ruleset={resolvedRuleset}
+              performances={performances}
+              results={results}
+              teamClubInfo={teamClubInfo}
+              t={t}
+            />
+          )}
+        </>
       )}
     </div>
   )
