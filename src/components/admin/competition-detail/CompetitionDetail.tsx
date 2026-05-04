@@ -1194,7 +1194,10 @@ export default function CompetitionDetail({
         <TVTab
           lang={lang}
           competition={competition}
+          sections={sections}
+          panels={panels}
           sessions={sessions}
+          sessionOrders={sessionOrders}
           globalTeams={globalTeams}
           clubs={clubs}
           entries={entries}

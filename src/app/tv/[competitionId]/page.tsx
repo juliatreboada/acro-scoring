@@ -56,6 +56,7 @@ type CompetitionData = {
 const T = {
   en: {
     waiting: 'Waiting for results',
+    waitingHint: 'Scores will appear here when the competition team shows them on screen.',
     balance: 'Balance', dynamic: 'Dynamic', combined: 'Combined',
     e: 'E×2', a: 'A', d: 'D', pen: 'Pen.',
     total: 'TOTAL',
@@ -66,6 +67,7 @@ const T = {
   },
   es: {
     waiting: 'Esperando resultados',
+    waitingHint: 'Las puntuaciones aparecerán cuando el equipo de competición las muestre en pantalla.',
     balance: 'Equilibrio', dynamic: 'Dinámico', combined: 'Combinado',
     e: 'E×2', a: 'A', d: 'D', pen: 'Pen.',
     total: 'TOTAL',
@@ -297,22 +299,71 @@ export default function TVPage() {
 
   const totalPen = (result?.dif_penalty ?? 0) + (result?.cjp_penalty ?? 0)
 
-  // ── idle state ───────────────────────────────────────────────────────────────
+  // ── idle state (no team queued on TV, or team payload still loading) ─────────
 
   if (!tvState?.team_id || !team) {
     return (
-      <div className="w-screen h-screen bg-slate-950 flex flex-col items-center justify-center overflow-hidden">
-        {competition?.poster_url && (
-          <img
-            src={competition.poster_url}
-            alt={competition?.name ?? ''}
-            className="max-h-56 max-w-xs object-contain mb-10 opacity-80"
-          />
-        )}
-        <p className="text-white text-5xl font-bold text-center px-8 mb-4">
-          {competition?.name ?? ''}
-        </p>
-        <p className="text-slate-500 text-xl tracking-widest uppercase">{t.waiting}</p>
+      <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-slate-950">
+        {/* backdrop */}
+        <div
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_50%,rgba(99,102,241,0.16),transparent_60%),radial-gradient(ellipse_55%_70%_at_100%_30%,rgba(14,165,233,0.12),transparent_55%),linear-gradient(105deg,#020617_0%,#0f172a_50%,#020617_100%)]"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.35] bg-[linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] bg-[size:64px_64px]"
+          aria-hidden
+        />
+
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col lg:flex-row">
+          {/* Left: title + status */}
+          <div className="flex shrink-0 flex-col justify-center gap-7 border-b border-white/5 px-8 py-10 text-left sm:px-12 lg:w-[42%] lg:max-w-2xl lg:border-b-0 lg:border-r lg:py-12 xl:px-16">
+            <h1 className="text-balance bg-gradient-to-b from-white to-slate-400 bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl md:text-6xl xl:text-7xl">
+              {competition?.name ?? ''}
+            </h1>
+
+            <div className="inline-flex w-fit items-center gap-3.5 rounded-full border border-white/10 bg-white/[0.06] px-6 py-3 shadow-lg shadow-black/20 backdrop-blur-md">
+              <span className="relative flex h-3 w-3">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/70 opacity-75" />
+                <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-400" />
+              </span>
+              <span className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-200 sm:text-base md:text-lg">
+                {t.waiting}
+              </span>
+            </div>
+
+            <p className="max-w-lg text-pretty text-base leading-relaxed text-slate-500 sm:text-lg">
+              {t.waitingHint}
+            </p>
+          </div>
+
+          {/* Right: poster — uses remaining width & full height */}
+          <div className="relative flex min-h-[min(52vh,420px)] flex-1 flex-col items-center justify-center px-4 pb-8 pt-4 lg:min-h-0 lg:px-8 lg:py-8 xl:px-12">
+            {competition?.poster_url ? (
+              <div className="flex h-full max-h-full w-full min-h-0 flex-1 items-center justify-center">
+                <div className="relative flex max-h-full max-w-full flex-col items-center justify-center">
+                  <div className="rounded-[2rem] bg-gradient-to-br from-white/15 to-white/5 p-1 shadow-[0_25px_80px_-12px_rgba(0,0,0,0.65)] ring-1 ring-white/10 lg:rounded-[2.25rem]">
+                    <div className="overflow-hidden rounded-[1.85rem] bg-slate-900/80 lg:rounded-[2.1rem]">
+                      <img
+                        src={competition.poster_url}
+                        alt=""
+                        className="max-h-[min(88dvh,88vh)] w-auto max-w-[min(96vw,56rem)] object-contain lg:max-h-[min(90dvh,92vh)] lg:max-w-full"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="flex aspect-square max-h-[min(70dvh,560px)] w-full max-w-lg flex-1 items-center justify-center rounded-[2rem] bg-gradient-to-br from-indigo-500/20 to-cyan-500/10 ring-1 ring-white/10"
+                aria-hidden
+              >
+                <svg className="h-24 w-24 text-indigo-300/90 sm:h-32 sm:w-32" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.25}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     )
   }

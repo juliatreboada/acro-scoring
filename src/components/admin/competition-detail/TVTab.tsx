@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
-import type { Competition, Session, Team, Club, CompetitionEntry } from '@/components/admin/types'
+import type { Competition, Session, Team, Club, CompetitionEntry, Section, Panel, SessionOrder } from '@/components/admin/types'
+import { orderedTimelinePerformances } from '@/lib/timelinePerformances'
 import { categoryLabel } from '@/components/admin/types'
 
 // ─── translations ─────────────────────────────────────────────────────────────
@@ -33,6 +34,7 @@ const T = {
     team:         'Team',
     waitingScore: 'Waiting for judge score',
     dropout:      'Dropout',
+    clearTv:      'Clear screen (poster)',
   },
   es: {
     tvUrl:        'URL para la TV',
@@ -58,6 +60,7 @@ const T = {
     team:         'Equipo',
     waitingScore: 'Esperando puntuación del juez',
     dropout:      'Baja',
+    clearTv:      'Quitar de pantalla (cartel)',
   },
 }
 
@@ -77,8 +80,6 @@ type ApprovedResult = {
   status: string
 }
 
-type SessionOrderRow = { session_id: string; team_id: string; position: number }
-
 type ParticipantSlot = {
   session_id: string
   team_id: string
@@ -95,12 +96,83 @@ type ParticipantSlot = {
 
 // ─── component ────────────────────────────────────────────────────────────────
 
+function participantFromSessionTeam(
+  session: Session,
+  team: Team,
+  clubs: Club[],
+  entries: CompetitionEntry[],
+  results: ApprovedResult[],
+): ParticipantSlot {
+  const club = clubs.find(c => c.id === team.club_id)
+  const entry = entries.find(e => e.team_id === team.id)
+  return {
+    session_id:      session.id,
+    team_id:         team.id,
+    routine_type:    session.routine_type,
+    category:        session.category,
+    age_group:       session.age_group,
+    gymnast_display: team.gymnast_display,
+    dorsal:          entry?.dorsal ?? null,
+    photo_url:       team.photo_url,
+    club_name:       club?.club_name ?? '',
+    result:          results.find(r => r.session_id === session.id && r.team_id === team.id) ?? null,
+    is_dropout:      entry?.dropped_out ?? false,
+  }
+}
+
+/** Dropouts excluded from timeline slots; append in panel → session → starting-order order. */
+function appendSectionDropoutSlots(
+  sectionSessions: Session[],
+  panels: Panel[],
+  sessionOrders: SessionOrder[],
+  globalTeams: Team[],
+  droppedTeamIds: Set<string>,
+  added: Set<string>,
+  clubs: Club[],
+  entries: CompetitionEntry[],
+  results: ApprovedResult[],
+  out: ParticipantSlot[],
+) {
+  const sortedPanels = [...panels].sort((a, b) => a.panel_number - b.panel_number)
+  for (const panel of sortedPanels) {
+    const panelSessions = sectionSessions
+      .filter(s => s.panel_id === panel.id)
+      .sort((a, b) => a.order_index - b.order_index)
+    for (const session of panelSessions) {
+      const matchingTeams = globalTeams.filter(
+        t => t.age_group === session.age_group && t.category === session.category,
+      )
+      const orders = sessionOrders
+        .filter(o => o.session_id === session.id)
+        .sort((a, b) => a.position - b.position)
+      const orderedTeams: Team[] = []
+      for (const o of orders) {
+        const team = matchingTeams.find(tm => tm.id === o.team_id)
+        if (team && !orderedTeams.some(tm => tm.id === team.id)) orderedTeams.push(team)
+      }
+      for (const team of matchingTeams) {
+        if (!orderedTeams.some(tm => tm.id === team.id)) orderedTeams.push(team)
+      }
+      for (const team of orderedTeams) {
+        if (!droppedTeamIds.has(team.id)) continue
+        const key = `${session.id}:${team.id}`
+        if (added.has(key)) continue
+        added.add(key)
+        out.push(participantFromSessionTeam(session, team, clubs, entries, results))
+      }
+    }
+  }
+}
+
 export default function TVTab({
-  lang, competition, sessions, globalTeams, clubs, entries, agLabels,
+  lang, competition, sections, panels, sessions, sessionOrders, globalTeams, clubs, entries, agLabels,
 }: {
   lang: Lang
   competition: Competition
+  sections: Section[]
+  panels: Panel[]
   sessions: Session[]
+  sessionOrders: SessionOrder[]
   globalTeams: Team[]
   clubs: Club[]
   entries: CompetitionEntry[]
@@ -113,7 +185,6 @@ export default function TVTab({
   const [copied, setCopied]           = useState(false)
   const [tvState, setTvState]         = useState<TVState | null>(null)
   const [results, setResults]         = useState<ApprovedResult[]>([])
-  const [sessionOrders, setSessionOrders] = useState<SessionOrderRow[]>([])
   const [autoQueue, setAutoQueue]     = useState(true)
   const [busy, setBusy]               = useState(false)
 
@@ -164,18 +235,6 @@ export default function TVTab({
     return mapped
   }, [sessions]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── fetch session orders ─────────────────────────────────────────────────────
-
-  const fetchSessionOrders = useCallback(async () => {
-    const sessionIds = sessions.map((s) => s.id)
-    if (sessionIds.length === 0) return
-    const { data } = await supabase
-      .from('session_orders')
-      .select('session_id,team_id,position')
-      .in('session_id', sessionIds)
-    if (data) setSessionOrders(data as unknown as SessionOrderRow[])
-  }, [sessions]) // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── fetch tv_state ───────────────────────────────────────────────────────────
 
   const fetchTvState = useCallback(async (): Promise<TVState | null> => {
@@ -196,8 +255,7 @@ export default function TVTab({
   useEffect(() => {
     fetchTvState()
     fetchResults()
-    fetchSessionOrders()
-  }, [fetchTvState, fetchResults, fetchSessionOrders])
+  }, [fetchTvState, fetchResults])
 
   // ── realtime subscriptions ───────────────────────────────────────────────────
 
@@ -255,6 +313,23 @@ export default function TVTab({
     setBusy(false)
   }
 
+  /** Return the public TV to the idle poster + “waiting” screen (no team queued). */
+  async function clearTvQueue() {
+    setBusy(true)
+    await supabase.from('tv_state').upsert(
+      {
+        competition_id: competition.id,
+        session_id:     null,
+        team_id:        null,
+        revealed:       false,
+        updated_at:     new Date().toISOString(),
+      },
+      { onConflict: 'competition_id' },
+    )
+    await fetchTvState()
+    setBusy(false)
+  }
+
   async function handleCopy() {
     await navigator.clipboard.writeText(tvUrl)
     setCopied(true)
@@ -276,42 +351,44 @@ export default function TVTab({
   const droppedTeamIds = new Set(entries.filter(e => e.dropped_out).map(e => e.team_id))
 
   const participants: ParticipantSlot[] = []
-  const sortedSessions = [...sessions].sort((a, b) => a.order_index - b.order_index)
+  const addedKeys = new Set<string>()
+  const sortedSections = [...sections].sort((a, b) => a.section_number - b.section_number)
+  const sessionById = Object.fromEntries(sessions.map(s => [s.id, s]))
 
-  for (const session of sortedSessions) {
-    const matchingTeams = globalTeams.filter(
-      t => t.age_group === session.age_group && t.category === session.category
+  for (const section of sortedSections) {
+    const sectionSessions = sessions.filter(s => s.section_id === section.id)
+    if (sectionSessions.length === 0) continue
+
+    const timelineSlots = orderedTimelinePerformances(
+      section,
+      panels,
+      sectionSessions,
+      sessionOrders,
+      entries,
+      globalTeams,
     )
-    const orders = sessionOrders
-      .filter(o => o.session_id === session.id)
-      .sort((a, b) => a.position - b.position)
-
-    const orderedTeams: Team[] = []
-    for (const o of orders) {
-      const team = matchingTeams.find(tm => tm.id === o.team_id)
-      if (team && !orderedTeams.find(tm => tm.id === team.id)) orderedTeams.push(team)
-    }
-    for (const team of matchingTeams) {
-      if (!orderedTeams.find(tm => tm.id === team.id)) orderedTeams.push(team)
+    for (const slot of timelineSlots) {
+      const key = `${slot.session_id}:${slot.team_id}`
+      if (addedKeys.has(key)) continue
+      const session = sessionById[slot.session_id]
+      const team = globalTeams.find(t => t.id === slot.team_id)
+      if (!session || !team) continue
+      addedKeys.add(key)
+      participants.push(participantFromSessionTeam(session, team, clubs, entries, results))
     }
 
-    for (const team of orderedTeams) {
-      const club = clubs.find(c => c.id === team.club_id)
-      const entry = entries.find(e => e.team_id === team.id)
-      participants.push({
-        session_id:      session.id,
-        team_id:         team.id,
-        routine_type:    session.routine_type,
-        category:        session.category,
-        age_group:       session.age_group,
-        gymnast_display: team.gymnast_display,
-        dorsal:          entry?.dorsal ?? null,
-        photo_url:       team.photo_url,
-        club_name:       club?.club_name ?? '',
-        result:          results.find(r => r.session_id === session.id && r.team_id === team.id) ?? null,
-        is_dropout:      droppedTeamIds.has(team.id),
-      })
-    }
+    appendSectionDropoutSlots(
+      sectionSessions,
+      panels,
+      sessionOrders,
+      globalTeams,
+      droppedTeamIds,
+      addedKeys,
+      clubs,
+      entries,
+      results,
+      participants,
+    )
   }
 
   // ── render ───────────────────────────────────────────────────────────────────
@@ -388,6 +465,14 @@ export default function TVTab({
             {!queuedHasScore && (
               <p className="text-xs text-slate-400 text-center">{t.waitingScore}</p>
             )}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void clearTvQueue()}
+              className="w-full py-2.5 rounded-xl text-sm font-semibold border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              {t.clearTv}
+            </button>
           </div>
         )}
       </div>
