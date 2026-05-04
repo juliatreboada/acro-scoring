@@ -79,6 +79,7 @@ const T = {
     posterUpload: 'Upload image',
     posterReplace: 'Replace',
     posterUploading: 'Uploading…',
+    officialResultsPrint: 'Official results for printing (signatures)',
     djReviewOpen: 'DJ Review open',
     djReviewClosed: 'DJ Review closed',
     openDJReview: 'Open DJ review',
@@ -154,6 +155,7 @@ const T = {
     posterUpload: 'Subir imagen',
     posterReplace: 'Reemplazar',
     posterUploading: 'Subiendo…',
+    officialResultsPrint: 'Resultados oficiales para imprimir (firmas)',
     djReviewOpen: 'Revisión DJ abierta',
     djReviewClosed: 'Revisión DJ cerrada',
     openDJReview: 'Abrir revisión DJ',
@@ -979,13 +981,22 @@ export default function CompetitionDetail({
               </a>
             )}
             {(competition.status === 'active' || competition.status === 'finished') && (
-              <a href={`/results/${competition.id}`} target="_blank" rel="noopener noreferrer"
-                title="Results (public)"
-                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-4.5m-9 4.5v-4.5m0 0A2.25 2.25 0 019.75 12h4.5A2.25 2.25 0 0116.5 14.25m-9 0V12a4.5 4.5 0 119 0v2.25" />
-                </svg>
-              </a>
+              <>
+                <a href={`/results/${competition.id}`} target="_blank" rel="noopener noreferrer"
+                  title="Results (public)"
+                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-4.5m-9 4.5v-4.5m0 0A2.25 2.25 0 019.75 12h4.5A2.25 2.25 0 0116.5 14.25m-9 0V12a4.5 4.5 0 119 0v2.25" />
+                  </svg>
+                </a>
+                <a href={`/results/${competition.id}?official=1`} target="_blank" rel="noopener noreferrer"
+                  title={t.officialResultsPrint}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                  </svg>
+                </a>
+              </>
             )}
             {/* DJ review toggle */}
             {showDJReviewToggle && (
@@ -1183,7 +1194,10 @@ export default function CompetitionDetail({
         <TVTab
           lang={lang}
           competition={competition}
+          sections={sections}
+          panels={panels}
           sessions={sessions}
+          sessionOrders={sessionOrders}
           globalTeams={globalTeams}
           clubs={clubs}
           entries={entries}
