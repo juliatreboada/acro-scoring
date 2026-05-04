@@ -325,7 +325,7 @@ function RoutineTabs({ tabs, activeTab, onSelect }: {
 
 // ─── accordion section ────────────────────────────────────────────────────────
 
-function AccordionSection({ label, count, hasProvisional, isOpen, onToggle, children, t }: {
+function AccordionSection({ label, count, hasProvisional, isOpen, onToggle, children, t, forceExpanded }: {
   label: string
   count: number
   hasProvisional: boolean
@@ -333,7 +333,25 @@ function AccordionSection({ label, count, hasProvisional, isOpen, onToggle, chil
   onToggle: () => void
   children: React.ReactNode
   t: typeof T['en']
+  /** Official document: static heading, all sections visible (screen + print). */
+  forceExpanded?: boolean
 }) {
+  if (forceExpanded) {
+    return (
+      <div className="bg-white">
+        <div className="px-4 sm:px-6 py-3 border-b border-slate-100 flex items-center gap-3 flex-wrap print:border-slate-200">
+          <span className="font-bold text-slate-800 text-base sm:text-lg">{label}</span>
+          <span className="text-xs text-slate-400 shrink-0">{t.result(count)}</span>
+          {hasProvisional && (
+            <span className="text-xs font-semibold bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full shrink-0">
+              {t.someProvisional}
+            </span>
+          )}
+        </div>
+        {children}
+      </div>
+    )
+  }
   return (
     <div className="bg-white">
       <button
@@ -374,7 +392,7 @@ function AccordionSection({ label, count, hasProvisional, isOpen, onToggle, chil
 // ─── category block with optional tabs ───────────────────────────────────────
 
 function CategoryBlock({
-  ageGroup, category, performances, results, t, clubAvatarByTeam,
+  ageGroup, category, performances, results, t, clubAvatarByTeam, officialDocument,
 }: {
   ageGroup: string
   category: string
@@ -382,6 +400,7 @@ function CategoryBlock({
   results: Record<string, RoutineResult>
   t: typeof T['en']
   clubAvatarByTeam: Record<string, string | null>
+  officialDocument?: boolean
 }) {
   const routineLabel = (rt: string) =>
     ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
@@ -430,16 +449,19 @@ function CategoryBlock({
     const rows = performances
       .filter(p => p.routineType === rt && results[p.id])
       .sort((a, b) => (results[b.id]?.finalScore ?? 0) - (results[a.id]?.finalScore ?? 0))
-    return <GroupRanking rows={rows} results={results} t={t} clubAvatarByTeam={clubAvatarByTeam} />
+    return (
+      <GroupRanking rows={rows} results={results} t={t} clubAvatarByTeam={clubAvatarByTeam} />
+    )
   }
 
   // Multi-routine: show tab bar (hidden in print) + all panels always in DOM
   return (
     <>
-      <RoutineTabs tabs={tabs} activeTab={resolvedTab} onSelect={setActiveTab} />
-      {/* In print, show every tab panel one after another; on screen, show only active */}
+      {!officialDocument && <RoutineTabs tabs={tabs} activeTab={resolvedTab} onSelect={setActiveTab} />}
+      {/* In print, show every tab panel one after another; on screen, show only active (unless officialDocument) */}
       {tabs.map(tab => {
         const isActive = tab === resolvedTab
+        const panelVisible = officialDocument || isActive
         let content: React.ReactNode
         if (tab === t.allRound) {
           const entries = getAllRoundEntries()
@@ -452,9 +474,10 @@ function CategoryBlock({
           content = <GroupRanking rows={rows} results={results} t={t} clubAvatarByTeam={clubAvatarByTeam} />
         }
         return (
-          <div key={tab} className={['print:block', isActive ? '' : 'hidden'].join(' ')}>
-            {/* Tab label shown only in print */}
-            <p className="hidden print:block px-4 pt-3 pb-1 text-sm font-semibold text-slate-500">{tab}</p>
+          <div key={tab} className={['print:block', panelVisible ? '' : 'hidden'].join(' ')}>
+            <p className={['px-4 pt-3 pb-1 text-sm font-semibold text-slate-500', officialDocument ? 'block' : 'hidden print:block'].join(' ')}>
+              {tab}
+            </p>
             {content}
           </div>
         )
@@ -503,9 +526,18 @@ export type ResultsViewProps = {
   lang: Lang
   clubAvatarByTeam?: Record<string, string | null>
   agSortOrder?: Record<string, number>  // ageGroup label → sort_order
+  /** Full competition document: all rulesets stacked, sections expanded, routine tabs all visible. */
+  officialDocument?: boolean
 }
 
-export default function ResultsView({ performances, results, lang, clubAvatarByTeam = {}, agSortOrder = {} }: ResultsViewProps) {
+export default function ResultsView({
+  performances,
+  results,
+  lang,
+  clubAvatarByTeam = {},
+  agSortOrder = {},
+  officialDocument = false,
+}: ResultsViewProps) {
   const t = T[lang]
 
   const routineLabel = (rt: string) =>
@@ -563,7 +595,39 @@ export default function ResultsView({ performances, results, lang, clubAvatarByT
     })
   }
 
-  if (categoryKeys.length === 0) {
+  const renderSections = (keys: string[]) =>
+    keys.map((ck) => {
+      const catPerfs = performances.filter((p) => resultsSectionKey(p) === ck)
+      const ageGroup = catPerfs[0]?.ageGroup ?? ''
+      const category = catPerfs[0]?.category ?? ''
+      const totalResults = catPerfs.filter((p) => results[p.id]).length
+      const hasProvisional = catPerfs.some((p) => results[p.id]?.status === 'provisional')
+      const label = accordionLabelForSection(ck, performances, lang, t)
+      return (
+        <AccordionSection
+          key={ck}
+          label={label}
+          count={totalResults}
+          hasProvisional={hasProvisional}
+          isOpen={officialDocument || openSections.has(ck)}
+          onToggle={() => toggleSection(ck)}
+          t={t}
+          forceExpanded={officialDocument}
+        >
+          <CategoryBlock
+            ageGroup={ageGroup}
+            category={category}
+            performances={catPerfs}
+            results={results}
+            t={t}
+            clubAvatarByTeam={clubAvatarByTeam}
+            officialDocument={officialDocument}
+          />
+        </AccordionSection>
+      )
+    })
+
+  if (allCategoryKeys.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-3 px-6">
         <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center">
@@ -579,11 +643,10 @@ export default function ResultsView({ performances, results, lang, clubAvatarByT
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* ruleset tabs */}
-      {activeRulesets.length > 1 && (
+      {!officialDocument && activeRulesets.length > 1 && (
         <div className="bg-white border-b border-slate-200 sticky top-[49px] z-10 print:hidden">
           <div className="max-w-3xl mx-auto px-4 flex">
-            {activeRulesets.map(rs => (
+            {activeRulesets.map((rs) => (
               <button
                 key={rs}
                 onClick={() => setActiveRuleset(rs)}
@@ -601,39 +664,29 @@ export default function ResultsView({ performances, results, lang, clubAvatarByT
         </div>
       )}
 
-      <div className="divide-y divide-slate-200">
-      {categoryKeys.map(ck => {
-        const catPerfs = performances.filter(p => resultsSectionKey(p) === ck)
-        const ageGroup = catPerfs[0]?.ageGroup ?? ''
-        const category = catPerfs[0]?.category ?? ''
-
-        // Count: total number of results in this category
-        const totalResults = catPerfs.filter(p => results[p.id]).length
-        const hasProvisional = catPerfs.some(p => results[p.id]?.status === 'provisional')
-        const label = accordionLabelForSection(ck, performances, lang, t)
-
-        return (
-          <AccordionSection
-            key={ck}
-            label={label}
-            count={totalResults}
-            hasProvisional={hasProvisional}
-            isOpen={openSections.has(ck)}
-            onToggle={() => toggleSection(ck)}
-            t={t}
-          >
-            <CategoryBlock
-              ageGroup={ageGroup}
-              category={category}
-              performances={catPerfs}
-              results={results}
-              t={t}
-              clubAvatarByTeam={clubAvatarByTeam}
-            />
-          </AccordionSection>
-        )
-      })}
-      </div>
+      {officialDocument ? (
+        <>
+          {activeRulesets.map((rs, idx) => {
+            const keys = allCategoryKeys.filter((ck) => {
+              const [ag] = ck.split('||')
+              return getRuleset(ag) === rs
+            })
+            if (keys.length === 0) return null
+            return (
+              <div key={rs} className={idx > 0 ? 'print:break-before-page' : ''}>
+                <div className="bg-white border-b border-slate-200">
+                  <div className="max-w-3xl mx-auto px-4 py-3">
+                    <h2 className="text-lg font-bold text-slate-800">{rs}</h2>
+                  </div>
+                </div>
+                <div className="divide-y divide-slate-200">{renderSections(keys)}</div>
+              </div>
+            )
+          })}
+        </>
+      ) : (
+        <div className="divide-y divide-slate-200">{renderSections(categoryKeys)}</div>
+      )}
     </div>
   )
 }
