@@ -7,7 +7,7 @@ import { NEXT_STATUS } from '@/components/admin/types'
 import StructureTab from './StructureTab'
 import JudgesTab, { type JudgesTabProps, type PanelLock } from './JudgesTab'
 import RegistrationsTab, { type RegistrationsTabProps } from './RegistrationsTab'
-import StartingOrderTab, { type StartingOrderTabProps } from './StartingOrderTab'
+import StartingOrderTab from './StartingOrderTab'
 import CompetitionDayTab from './CompetitionDayTab'
 import LicenciasTab from './LicenciasTab'
 import TVTab from './TVTab'
@@ -1116,6 +1116,8 @@ export default function CompetitionDetail({
       {activeTab === 'startingOrder' && (
         <StartingOrderTab
           lang={lang}
+          competitionId={competition.id}
+          competitionName={competition.name}
           globalTeams={globalTeams}
           clubs={clubs}
           entries={entries}
