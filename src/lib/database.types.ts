@@ -556,6 +556,41 @@ export type Database = {
           },
         ]
       }
+      ranking_merge_groups: {
+        Row: {
+          competition_id: string
+          created_at: string
+          id: string
+          label_en: string | null
+          label_es: string | null
+          updated_at: string
+        }
+        Insert: {
+          competition_id: string
+          created_at?: string
+          id?: string
+          label_en?: string | null
+          label_es?: string | null
+          updated_at?: string
+        }
+        Update: {
+          competition_id?: string
+          created_at?: string
+          id?: string
+          label_en?: string | null
+          label_es?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ranking_merge_groups_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       routine_music: {
         Row: {
           competition_id: string
@@ -933,6 +968,7 @@ export type Database = {
           order_index: number
           order_locked: boolean
           panel_id: string
+          ranking_merge_group_id: string | null
           routine_type: Database["public"]["Enums"]["routine_type"]
           section_id: string
           status: Database["public"]["Enums"]["session_status"]
@@ -951,6 +987,7 @@ export type Database = {
           order_index?: number
           order_locked?: boolean
           panel_id: string
+          ranking_merge_group_id?: string | null
           routine_type: Database["public"]["Enums"]["routine_type"]
           section_id: string
           status?: Database["public"]["Enums"]["session_status"]
@@ -969,6 +1006,7 @@ export type Database = {
           order_index?: number
           order_locked?: boolean
           panel_id?: string
+          ranking_merge_group_id?: string | null
           routine_type?: Database["public"]["Enums"]["routine_type"]
           section_id?: string
           status?: Database["public"]["Enums"]["session_status"]
@@ -979,6 +1017,13 @@ export type Database = {
             columns: ["competition_id"]
             isOneToOne: false
             referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_ranking_merge_group_id_fkey"
+            columns: ["ranking_merge_group_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_merge_groups"
             referencedColumns: ["id"]
           },
           {

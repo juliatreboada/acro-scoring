@@ -303,14 +303,25 @@ function RankingTable({ performances, results, lang, selectedPerfId, onSelectPer
 }) {
   const t = T[lang]
 
-  const scored = Object.values(results)
-  if (scored.length === 0) return null
+  const hasAnyScored = performances.some((p) => results[p.id])
+  if (!hasAnyScored) return null
 
   const routineLabel = (rt: string) =>
     ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
 
-  const groupKey = (p: ScoringPerformance) => `${p.ageGroup}||${p.category}||${p.routineType}`
-  const groupLabel = (p: ScoringPerformance) => `${p.ageGroup} · ${categoryLabel(p.category, lang)} · ${routineLabel(p.routineType)}`
+  const groupKey = (p: ScoringPerformance) =>
+    p.rankingMergeGroupId
+      ? `${p.ageGroup}||mg:${p.rankingMergeGroupId}||${p.routineType}`
+      : `${p.ageGroup}||${p.category}||${p.routineType}`
+
+  const groupLabel = (p: ScoringPerformance) => {
+    if (p.rankingMergeGroupId) {
+      const raw = lang === 'en' ? p.mergeLabelEn : p.mergeLabelEs
+      if (raw?.trim()) return `${raw.trim()} · ${routineLabel(p.routineType)}`
+      return `${p.ageGroup} · ${routineLabel(p.routineType)}`
+    }
+    return `${p.ageGroup} · ${categoryLabel(p.category, lang)} · ${routineLabel(p.routineType)}`
+  }
 
   const perfById = Object.fromEntries(performances.map((p) => [p.id, p]))
 
@@ -420,6 +431,8 @@ export type CJPViewProps = {
   lang: Lang
   panelJudges: PanelJudge[]
   performances: ScoringPerformance[]
+  /** When set, CJP ranking pools these rows (merge group peers). Defaults to `performances`. */
+  rankingPerformances?: ScoringPerformance[]
   currentPerfId: string | null
   judgeScores: Record<string, JudgeScore[]>
   results: Record<string, RoutineResult>
@@ -432,10 +445,12 @@ export type CJPViewProps = {
 
 export default function CJPView({
   isCJP, lang, panelJudges, performances,
+  rankingPerformances,
   currentPerfId, judgeScores, results,
   onOpen, onSkip, onSubmit, onReopenScore, onEditScore,
 }: CJPViewProps) {
   const t = T[lang]
+  const rankPerfs = rankingPerformances ?? performances
   const [penaltyStates, setPenaltyStates] = useState<Record<string, PenaltyState>>({})
   const [reviewPerfId, setReviewPerfId] = useState<string | null>(null)
   const [leftOpen, setLeftOpen] = useState(true)
@@ -876,7 +891,7 @@ export default function CJPView({
 
             {/* ranking */}
             <RankingTable
-              performances={performances}
+              performances={rankPerfs}
               results={results}
               lang={lang}
               selectedPerfId={isReviewMode ? reviewPerfId : currentPerfId}

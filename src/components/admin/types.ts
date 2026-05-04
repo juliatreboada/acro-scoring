@@ -72,6 +72,14 @@ export type Session = {
   order_index: number   // order within the section
   dj_method:  ScoringMethod | null
   ej_method:  ScoringMethod | null
+  /** Pool sessions for a single public/TV/CJP ranking (optional). */
+  ranking_merge_group_id: string | null
+}
+
+export type RankingMergeGroup = {
+  id: string
+  label_es: string | null
+  label_en: string | null
 }
 
 export type Judge = {

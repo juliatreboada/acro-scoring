@@ -24,6 +24,7 @@ const T = {
     result: (n: number) => `${n} result${n !== 1 ? 's' : ''}`,
     noResults: 'No results yet',
     noResultsSub: 'Scores will appear here as they are submitted.',
+    combinedCategories: 'Combined categories',
   },
   es: {
     balance: 'Equilibrio',
@@ -41,6 +42,7 @@ const T = {
     result: (n: number) => `${n} resultado${n !== 1 ? 's' : ''}`,
     noResults: 'Sin resultados',
     noResultsSub: 'Las puntuaciones aparecerán aquí a medida que se envíen.',
+    combinedCategories: 'Categorías combinadas',
   },
 }
 
@@ -473,6 +475,28 @@ function getRuleset(ageGroup: string): string {
   return 'Nacional'
 }
 
+/** Stable key for public results sections (per category or merged group). */
+export function resultsSectionKey(p: ScoringPerformance): string {
+  if (p.rankingMergeGroupId) return `${p.ageGroup}||__merge__${p.rankingMergeGroupId}`
+  return `${p.ageGroup}||${p.category}`
+}
+
+function accordionLabelForSection(
+  sectionKey: string,
+  performances: ScoringPerformance[],
+  lang: Lang,
+  t: typeof T['en'],
+): string {
+  const sample = performances.find((p) => resultsSectionKey(p) === sectionKey)
+  if (!sample) return sectionKey
+  if (sample.rankingMergeGroupId) {
+    const raw = lang === 'en' ? sample.mergeLabelEn : sample.mergeLabelEs
+    if (raw?.trim()) return raw.trim()
+    return t.combinedCategories
+  }
+  return `${sample.ageGroup} · ${categoryLabel(sample.category, lang)}`
+}
+
 export type ResultsViewProps = {
   performances: ScoringPerformance[]
   results: Record<string, RoutineResult>
@@ -487,11 +511,11 @@ export default function ResultsView({ performances, results, lang, clubAvatarByT
   const routineLabel = (rt: string) =>
     ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
 
-  // Build unique ageGroup+category keys with at least one result, sorted by sort_order desc
+  // Build unique section keys with at least one result, sorted by sort_order desc
   const allCategoryKeys: string[] = []
   for (const p of performances) {
-    const ck = `${p.ageGroup}||${p.category}`
-    if (!allCategoryKeys.includes(ck) && performances.some(q => q.ageGroup === p.ageGroup && q.category === p.category && results[q.id])) {
+    const ck = resultsSectionKey(p)
+    if (!allCategoryKeys.includes(ck) && performances.some(q => resultsSectionKey(q) === ck && results[q.id])) {
       allCategoryKeys.push(ck)
     }
   }
@@ -521,7 +545,7 @@ export default function ResultsView({ performances, results, lang, clubAvatarByT
 
   const resolvedRuleset = activeRulesets.includes(activeRuleset) ? activeRuleset : (activeRulesets[0] ?? '')
 
-  // Filter category keys to the active ruleset tab
+  // Filter section keys to the active ruleset tab (first segment is always display age group)
   const categoryKeys = resolvedRuleset
     ? allCategoryKeys.filter(ck => {
         const [ag] = ck.split('||')
@@ -579,19 +603,14 @@ export default function ResultsView({ performances, results, lang, clubAvatarByT
 
       <div className="divide-y divide-slate-200">
       {categoryKeys.map(ck => {
-        const [ageGroup, category] = ck.split('||')
-        const catPerfs = performances.filter(p => p.ageGroup === ageGroup && p.category === category)
-
-        // Routine types with at least one result
-        const routineTypes = ROUTINE_ORDER.filter(rt =>
-          catPerfs.some(p => p.routineType === rt && results[p.id])
-        )
-        const hasAllRound = routineTypes.includes('Balance') && routineTypes.includes('Dynamic')
+        const catPerfs = performances.filter(p => resultsSectionKey(p) === ck)
+        const ageGroup = catPerfs[0]?.ageGroup ?? ''
+        const category = catPerfs[0]?.category ?? ''
 
         // Count: total number of results in this category
         const totalResults = catPerfs.filter(p => results[p.id]).length
         const hasProvisional = catPerfs.some(p => results[p.id]?.status === 'provisional')
-        const label = `${ageGroup} · ${categoryLabel(category, lang)}`
+        const label = accordionLabelForSection(ck, performances, lang, t)
 
         return (
           <AccordionSection

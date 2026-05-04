@@ -34,12 +34,17 @@ export default function Page() {
       setCompName(comp.name)
 
       // ── sessions + age group labels (parallel) ────────────────────────────
-      const [sessionsRes, ageGroupRulesRes] = await Promise.all([
-        supabase.from('sessions').select('id, age_group, category, routine_type').eq('competition_id', id),
+      const [sessionsRes, ageGroupRulesRes, mergeGroupsRes] = await Promise.all([
+        supabase
+          .from('sessions')
+          .select('id, age_group, category, routine_type, ranking_merge_group_id')
+          .eq('competition_id', id),
         supabase.from('age_group_rules').select('id, age_group, sort_order, ruleset'),
+        supabase.from('ranking_merge_groups').select('id, label_es, label_en').eq('competition_id', id),
       ])
       const sessions = sessionsRes.data
       const agRules = ageGroupRulesRes.data ?? []
+      const mergeById = Object.fromEntries((mergeGroupsRes.data ?? []).map((m) => [m.id, m]))
       const agLabelMap    = Object.fromEntries(agRules.map((r) => [r.id, r.age_group]))
       const agSortOrder = Object.fromEntries(agRules.map((r) => [r.age_group, r.sort_order ?? 0]))
 
@@ -94,6 +99,8 @@ export default function Page() {
       // ── build ScoringPerformance[] ───────────────────────────────────────────────────
       const perfs: ScoringPerformance[] = orders.map((o) => {
         const session = sessionMap[o.session_id]
+        const mgId = session?.ranking_merge_group_id ?? null
+        const mg = mgId ? mergeById[mgId] : null
         return {
           id:          `${o.session_id}_${o.team_id}`,
           teamId:      o.team_id,
@@ -104,6 +111,9 @@ export default function Page() {
           routineType: session?.routine_type ?? '',
           skipped:     dropoutSet.has(o.team_id),
           elements:    [],
+          rankingMergeGroupId: mgId ?? undefined,
+          mergeLabelEs:        mg?.label_es ?? undefined,
+          mergeLabelEn:        mg?.label_en ?? undefined,
         }
       })
 

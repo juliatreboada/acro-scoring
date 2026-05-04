@@ -532,11 +532,22 @@ export function RankingTable({ performances, results, lang, selectedPerfId, onSe
   onSelectPerf?: (perfId: string) => void
 }) {
   const t = T[lang]
-  if (Object.values(results).length === 0) return null
+  const hasAnyScored = performances.some((p) => results[p.id])
+  if (!hasAnyScored) return null
 
   const routineLabel = (rt: string) => ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
-  const groupKey = (p: ScoringPerformance) => `${p.ageGroup}||${p.category}||${p.routineType}`
-  const groupLabel = (p: ScoringPerformance) => `${p.ageGroup} · ${categoryLabel(p.category, lang)} · ${routineLabel(p.routineType)}`
+  const groupKey = (p: ScoringPerformance) =>
+    p.rankingMergeGroupId
+      ? `${p.ageGroup}||mg:${p.rankingMergeGroupId}||${p.routineType}`
+      : `${p.ageGroup}||${p.category}||${p.routineType}`
+  const groupLabel = (p: ScoringPerformance) => {
+    if (p.rankingMergeGroupId) {
+      const raw = lang === 'en' ? p.mergeLabelEn : p.mergeLabelEs
+      if (raw?.trim()) return `${raw.trim()} · ${routineLabel(p.routineType)}`
+      return `${p.ageGroup} · ${routineLabel(p.routineType)}`
+    }
+    return `${p.ageGroup} · ${categoryLabel(p.category, lang)} · ${routineLabel(p.routineType)}`
+  }
 
   const groupOrder: string[] = []
   for (const p of performances) {
@@ -621,6 +632,7 @@ export function RankingTable({ performances, results, lang, selectedPerfId, onSe
 export type CJPTabletShellProps = {
   lang: Lang
   performances: ScoringPerformance[]
+  rankingPerformances?: ScoringPerformance[]
   currentPerfId: string | null
   panelJudges: PanelJudge[]
   judgeScores: Record<string, JudgeScore[]>
@@ -637,11 +649,12 @@ export type CJPTabletShellProps = {
 }
 
 export default function CJPTabletShell({
-  lang, performances, currentPerfId, panelJudges, judgeScores, results,
+  lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results,
   penaltyStates, onOpen, onSkip, onSubmit, onReopenScore, onEditScore,
   renderRightPanel, rightPanelClassName = 'w-80',
 }: CJPTabletShellProps) {
   const t = T[lang]
+  const rankPerfs = rankingPerformances ?? performances
   const [reviewPerfId,    setReviewPerfId]    = useState<string | null>(null)
   const [leftOpen,        setLeftOpen]        = useState(true)
   const [bottomTab,       setBottomTab]       = useState<'ts' | 'ranking'>('ranking')
@@ -910,7 +923,7 @@ export default function CJPTabletShell({
         })()}
         {bottomTab === 'ranking' && (
           <div className="px-4 py-3">
-            <RankingTable performances={performances} results={results} lang={lang}
+            <RankingTable performances={rankPerfs} results={results} lang={lang}
               selectedPerfId={activePerfId}
               onSelectPerf={handleRankingRowClick} />
           </div>

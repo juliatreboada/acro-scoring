@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import CompetitionDetail from '@/components/admin/competition-detail/CompetitionDetail'
@@ -9,7 +9,7 @@ import type { Lang } from '@/components/scoring/types'
 import type {
   Competition, Panel, Section, Session, Judge, SectionPanelJudge,
   Role, Team, Club, CompetitionEntry, SessionOrder, AdminUser,
-  AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry,
+  AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry, RankingMergeGroup,
 } from '@/components/admin/types'
 import { ROLE_CONFIG, defaultSlots, NEXT_STATUS } from '@/components/admin/types'
 import type { PanelLock } from '@/components/admin/competition-detail/JudgesTab'
@@ -42,6 +42,23 @@ export default function Page() {
   const [competitionGymnasts, setCompetitionGymnasts] = useState<Gymnast[]>([])
   const [globalCoaches,       setGlobalCoaches]       = useState<Coach[]>([])
   const [competitionCoaches,  setCompetitionCoaches]  = useState<Coach[]>([])
+  const [rankingMergeGroups, setRankingMergeGroups]   = useState<RankingMergeGroup[]>([])
+
+  const sessionEligibleTeamCounts = useMemo(() => {
+    const map: Record<string, number> = {}
+    const teamById = new Map(globalTeams.map((t) => [t.id, t]))
+    for (const session of sessions) {
+      let n = 0
+      for (const e of entries) {
+        if (e.dropped_out) continue
+        const team = teamById.get(e.team_id)
+        if (!team) continue
+        if (team.age_group === session.age_group && team.category === session.category) n += 1
+      }
+      map[session.id] = n
+    }
+    return map
+  }, [sessions, entries, globalTeams])
 
   // ── initial load ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -49,13 +66,13 @@ export default function Page() {
       try {
         const [compRes, panelsRes, sectionsRes, sessionsRes, judgesRes,
           nominationsRes, entriesRes, rulesRes, adminsRes,
-          provisionalClubsRes, definitiveClubsRes] = await Promise.all([
+          provisionalClubsRes, definitiveClubsRes, mergeGroupsRes] = await Promise.all([
         supabase.from('competitions')
        .select('id,name,status,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,age_groups,poster_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine')
        .eq('id', id).single(),
         supabase.from('panels').select('id,competition_id,panel_number').eq('competition_id', id).order('panel_number'),
         supabase.from('sections').select('id,competition_id,section_number,label,starting_time,waiting_time_seconds,warmup_duration_minutes,timeline_order').eq('competition_id', id).order('section_number'),
-        supabase.from('sessions').select('id,competition_id,panel_id,section_id,name,age_group,category,routine_type,status,order_index,order_locked,dj_method,ej_method').eq('competition_id', id).order('order_index'),
+        supabase.from('sessions').select('id,competition_id,panel_id,section_id,name,age_group,category,routine_type,status,order_index,order_locked,dj_method,ej_method,ranking_merge_group_id').eq('competition_id', id).order('order_index'),
         supabase.from('judges').select('id,full_name,phone,licence,avatar_url'),
         supabase.from('competition_judge_nominations').select('id,competition_id,judge_id,club_id').eq('competition_id', id),
         supabase.from('competition_entries').select('id,competition_id,team_id,dorsal,dropped_out').eq('competition_id', id),
@@ -63,6 +80,7 @@ export default function Page() {
         supabase.from('profiles').select('id,email').eq('role', 'admin'),
         supabase.from('provisional_entries').select('club_id').eq('competition_id', id),
         supabase.from('definitive_entries').select('club_id').eq('competition_id', id),
+        supabase.from('ranking_merge_groups').select('id,label_es,label_en').eq('competition_id', id),
       ])
       // Check if competition exists
       if (!compRes.data || (compRes.data as any).error) { 
@@ -172,7 +190,13 @@ export default function Page() {
       setCompetition({ ...compRest, admin: admin_id ? (adminMap[admin_id] ?? null) : null } as Competition)
       setPanels((panelsRes.data ?? []) as unknown as Panel[])
       setSections((sectionsRes.data ?? []) as unknown as Section[])
-      setSessions(rawSessions.map(({ order_locked: _, ...s }) => s) as Session[])
+      setSessions(
+        rawSessions.map(({ order_locked: _, ...s }) => ({
+          ...s,
+          ranking_merge_group_id: (s as { ranking_merge_group_id?: string | null }).ranking_merge_group_id ?? null,
+        })) as Session[],
+      )
+      setRankingMergeGroups((mergeGroupsRes.data ?? []) as RankingMergeGroup[])
       setGlobalJudges(rawJudges.map(j => ({ ...j, email: judgeEmailMap[j.id] ?? null })))
       setNominations(rawNoms)
       setJudgePool(rawNoms.map(n => n.judge_id))
@@ -307,6 +331,57 @@ export default function Page() {
   async function handleDeleteSession(sessionId: string) {
     await supabase.from('sessions').delete().eq('id', sessionId)
     setSessions(prev => prev.filter(s => s.id !== sessionId))
+  }
+
+  async function handleAssignSessionMergeGroup(sessionId: string, mergeGroupId: string | null) {
+    const session = sessions.find((s) => s.id === sessionId)
+    if (!session) return
+    if (mergeGroupId) {
+      const others = sessions.filter((s) => s.ranking_merge_group_id === mergeGroupId && s.id !== sessionId)
+      const conflict = others.some(
+        (o) => o.age_group !== session.age_group || o.routine_type !== session.routine_type,
+      )
+      if (conflict) {
+        window.alert(
+          lang === 'en'
+            ? 'This merge group already has sessions with a different age group or routine type. Only sessions with the same age group and routine type can share a ranking.'
+            : 'Este grupo ya tiene sesiones con otro grupo de edad o tipo de rutina. Solo sesiones con el mismo grupo de edad y tipo de rutina pueden compartir clasificación.',
+        )
+        return
+      }
+    }
+    const { error } = await supabase
+      .from('sessions')
+      .update({ ranking_merge_group_id: mergeGroupId })
+      .eq('id', sessionId)
+    if (error) {
+      console.error(error)
+      window.alert(lang === 'en' ? 'Could not update session.' : 'No se pudo actualizar la sesión.')
+      return
+    }
+    setSessions((prev) =>
+      prev.map((s) => (s.id === sessionId ? { ...s, ranking_merge_group_id: mergeGroupId } : s)),
+    )
+  }
+
+  async function handleCreateRankingMergeGroup(labelEs: string, labelEn: string): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('ranking_merge_groups')
+      .insert({
+        competition_id: id,
+        label_es: labelEs || null,
+        label_en: labelEn || null,
+      })
+      .select('id,label_es,label_en')
+      .single()
+    if (error || !data) {
+      console.error(error)
+      window.alert(lang === 'en' ? 'Could not create merge group.' : 'No se pudo crear el grupo.')
+      return null
+    }
+    const row = data as RankingMergeGroup
+    setRankingMergeGroups((prev) => [...prev, row])
+    return row.id
   }
 
   // ── judges ───────────────────────────────────────────────────────────────────
@@ -598,6 +673,10 @@ export default function Page() {
         onDeleteSection={handleDeleteSection}
         onAddSession={handleAddSession}
         onDeleteSession={handleDeleteSession}
+        rankingMergeGroups={rankingMergeGroups}
+        sessionEligibleTeamCounts={sessionEligibleTeamCounts}
+        onAssignSessionMergeGroup={handleAssignSessionMergeGroup}
+        onCreateRankingMergeGroup={handleCreateRankingMergeGroup}
         globalJudges={globalJudges}
         judgePool={judgePool}
         nominations={nominations}
