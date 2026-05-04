@@ -71,7 +71,7 @@ function PerformanceHeader({ perf, lang, difficulty, djPenalty, cjpPenalty }: {
 // ─── tablet layout ────────────────────────────────────────────────────────────
 
 function TabletLayout({
-  lang, performances, currentPerfId, panelJudges, judgeScores, results,
+  lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results,
   elements, extraElements, flags, penaltyStates, incorrectTs,
   onFlagChange, onOpenRetry, onAddElement, onLabelChange, onTypeChange,
   onToggleIncorrectTs, onPenaltyChange, onOpen, onSkip,
@@ -79,6 +79,7 @@ function TabletLayout({
 }: {
   lang: Lang
   performances: ScoringPerformance[]
+  rankingPerformances?: ScoringPerformance[]
   currentPerfId: string | null
   panelJudges: PanelJudge[]
   judgeScores: Record<string, JudgeScore[]>
@@ -108,7 +109,8 @@ function TabletLayout({
 
   return (
     <CJPTabletShell
-      lang={lang} performances={performances} currentPerfId={currentPerfId}
+      lang={lang} performances={performances} rankingPerformances={rankingPerformances}
+      currentPerfId={currentPerfId}
       panelJudges={panelJudges} judgeScores={judgeScores} results={results}
       penaltyStates={penaltyStates} onOpen={onOpen} onSkip={onSkip}
       onSubmit={onSubmit} onReopenScore={onReopenScore}
@@ -302,6 +304,7 @@ function PhoneView({ perf, lang, djMode, elements, extraElements, flags, incorre
 export type CJPDJViewProps = {
   lang: Lang
   performances: ScoringPerformance[]
+  rankingPerformances?: ScoringPerformance[]
   currentPerfId: string | null
   panelJudges: PanelJudge[]
   judgeScores: Record<string, JudgeScore[]>
@@ -318,7 +321,7 @@ export type CJPDJViewProps = {
 }
 
 export default function CJPDJView({
-  lang, performances, currentPerfId, panelJudges, judgeScores, results,
+  lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results,
   elements, djMode = 'elements', onOpen, onSkip, onSubmitDJScore, onSubmit, onReopenScore, onEditScore, onPhoneSubmit,
 }: CJPDJViewProps) {
   const { flags, extraElements, incorrectTs,
@@ -357,7 +360,8 @@ export default function CJPDJView({
       </div>
 
       <div className="hidden md:block">
-        <TabletLayout lang={lang} performances={performances} currentPerfId={currentPerfId}
+        <TabletLayout lang={lang} performances={performances} rankingPerformances={rankingPerformances}
+          currentPerfId={currentPerfId}
           panelJudges={panelJudges} judgeScores={judgeScores} results={results}
           elements={elements} extraElements={extraElements} flags={flags}
           penaltyStates={penaltyStates} incorrectTs={incorrectTs}

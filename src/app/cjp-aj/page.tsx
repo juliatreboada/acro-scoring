@@ -11,7 +11,7 @@ export default function Page() {
   const [lang, setLang] = useState<Lang>('es')
   const {
     loading, sessionId,
-    assignedRoles, panelJudges, performances, currentPerfId, judgeScores, results,
+    assignedRoles, panelJudges, performances, rankingPerformances, currentPerfId, judgeScores, results,
     handleOpen, handleSkip, handleCJPSubmit, handleReopenScore, handleEditScore, handleJudgeScoreSubmit,
     submitError, clearSubmitError,
   } = useJudgeSession()
@@ -29,6 +29,7 @@ export default function Page() {
         lang={lang}
         panelJudges={panelJudges}
         performances={performances}
+        rankingPerformances={rankingPerformances}
         currentPerfId={currentPerfId}
         judgeScores={judgeScores}
         results={results}

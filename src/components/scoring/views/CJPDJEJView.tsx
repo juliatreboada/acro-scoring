@@ -261,7 +261,7 @@ function PhoneView({ lang, djMode, ejMode, elements, extraElements, flags, deduc
 // ─── tablet layout ────────────────────────────────────────────────────────────
 
 function TabletLayout({
-  lang, performances, currentPerfId, panelJudges, judgeScores, results,
+  lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results,
   elements, extraElements, flags, deductions, incorrectTs, penaltyStates,
   onFlagChange, onLock, onOpenRetry, onAddElement, onLabelChange, onTypeChange,
   onToggleIncorrectTs, onPenaltyChange, onOpen, onSkip,
@@ -269,6 +269,7 @@ function TabletLayout({
 }: {
   lang: Lang
   performances: ScoringPerformance[]
+  rankingPerformances?: ScoringPerformance[]
   currentPerfId: string | null
   panelJudges: PanelJudge[]
   judgeScores: Record<string, JudgeScore[]>
@@ -311,6 +312,7 @@ function TabletLayout({
     <CJPTabletShell
       lang={lang}
       performances={performances}
+      rankingPerformances={rankingPerformances}
       currentPerfId={currentPerfId}
       panelJudges={panelJudges}
       judgeScores={judgeScores}
@@ -393,6 +395,7 @@ function TabletLayout({
 export type CJPDJEJViewProps = {
   lang: Lang
   performances: ScoringPerformance[]
+  rankingPerformances?: ScoringPerformance[]
   currentPerfId: string | null
   panelJudges: PanelJudge[]
   judgeScores: Record<string, JudgeScore[]>
@@ -411,7 +414,7 @@ export type CJPDJEJViewProps = {
 }
 
 export default function CJPDJEJView({
-  lang, performances, currentPerfId, panelJudges, judgeScores, results, elements,
+  lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results, elements,
   djMode = 'elements', ejMode = 'elements',
   onOpen, onSkip, onSubmitDJScore, onSubmitEJScore, onSubmit, onReopenScore, onEditScore, onPhoneSubmit,
 }: CJPDJEJViewProps) {
@@ -468,6 +471,7 @@ export default function CJPDJEJView({
         <TabletLayout
           lang={lang}
           performances={performances}
+          rankingPerformances={rankingPerformances}
           currentPerfId={currentPerfId}
           panelJudges={panelJudges}
           judgeScores={judgeScores}

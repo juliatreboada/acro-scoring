@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase'
 import { useProfile } from '@/contexts/ProfileContext'
 import type { PanelJudge, ScoringPerformance, JudgeScore, RoutineResult, PenaltyState } from '@/components/scoring/types'
 import type { SessionStatus } from '@/components/judge/JudgeSession'
+import { fetchPeerSessionIdsForRanking } from '@/lib/rankingPeers'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -27,6 +28,8 @@ export type JudgeSessionData = {
   assignedRoles: PanelJudge[]
   panelJudges:   PanelJudge[]
   performances:  ScoringPerformance[]
+  /** Includes peer sessions when `ranking_merge_group_id` is set (CJP ranking only). */
+  rankingPerformances: ScoringPerformance[]
   judgeScores:   Record<string, JudgeScore[]>
   results:       Record<string, RoutineResult>
   djMethod:      string | null
@@ -54,6 +57,7 @@ export function useJudgeSession(): JudgeSessionData {
   const [assignedRoles, setAssignedRoles] = useState<PanelJudge[]>([])
   const [panelJudges,   setPanelJudges]   = useState<PanelJudge[]>([])
   const [performances,  setPerformances]  = useState<ScoringPerformance[]>([])
+  const [rankingPerformances, setRankingPerformances] = useState<ScoringPerformance[]>([])
   const [judgeScores,   setJudgeScores]   = useState<Record<string, JudgeScore[]>>({})
   const [results,       setResults]       = useState<Record<string, RoutineResult>>({})
   const [djMethod,      setDjMethod]      = useState<string | null>(null)
@@ -62,6 +66,9 @@ export function useJudgeSession(): JudgeSessionData {
 
   const sessionIdRef = useRef<string | null>(null)
   useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
+
+  /** Session IDs whose routine_results feed the CJP ranking table (includes peers when merged). */
+  const rankingPeerIdsRef = useRef<string[]>([])
 
   // ── #8: prevent back navigation while in an active session ───────────────────
   useEffect(() => {
@@ -94,7 +101,7 @@ export function useJudgeSession(): JudgeSessionData {
       const [{ data: allSessions }, { data: sectionRows }] = await Promise.all([
         supabase
           .from('sessions')
-          .select('id, name, status, section_id, panel_id, competition_id, current_team_id, age_group, category, routine_type, dj_method, ej_method, order_index')
+          .select('id, name, status, section_id, panel_id, competition_id, current_team_id, age_group, category, routine_type, dj_method, ej_method, order_index, ranking_merge_group_id')
           .in('section_id', sectionIds)
           .in('panel_id', panelIds),
         supabase
@@ -283,6 +290,113 @@ export function useJudgeSession(): JudgeSessionData {
         }
       }
 
+      let mergedResults: Record<string, RoutineResult> = { ...builtResults }
+      let rankingPerformancesForCjp: ScoringPerformance[] = builtPerfs
+
+      rankingPeerIdsRef.current = [session.id]
+
+      const mergeId = session.ranking_merge_group_id ?? null
+      if (mergeId) {
+        const { data: mgRow } = await supabase
+          .from('ranking_merge_groups')
+          .select('label_es, label_en')
+          .eq('id', mergeId)
+          .maybeSingle()
+
+        const peerIds = await fetchPeerSessionIdsForRanking(supabase, {
+          competition_id: session.competition_id,
+          age_group: session.age_group,
+          category: session.category,
+          routine_type: session.routine_type,
+          ranking_merge_group_id: mergeId,
+        })
+        rankingPeerIdsRef.current = peerIds
+
+        const { data: peerRoutineResults } = await supabase
+          .from('routine_results')
+          .select('*')
+          .in('session_id', peerIds)
+
+        for (const r of peerRoutineResults ?? []) {
+          if (r.session_id === session.id) continue
+          const perfId = `${r.session_id}_${r.team_id}`
+          mergedResults[perfId] = {
+            performanceId: perfId,
+            eScore:        r.e_score      ?? 0,
+            aScore:        r.a_score      ?? 0,
+            difScore:      r.dif_score    ?? 0,
+            difPenalty:    r.dif_penalty  ?? 0,
+            cjpPenalty:    r.cjp_penalty  ?? 0,
+            finalScore:    r.final_score  ?? 0,
+            status:        r.status as 'provisional' | 'approved',
+          }
+        }
+
+        const baseTagged: ScoringPerformance[] = builtPerfs.map((p) => ({
+          ...p,
+          rankingMergeGroupId: mergeId,
+          mergeLabelEs:        mgRow?.label_es ?? undefined,
+          mergeLabelEn:        mgRow?.label_en ?? undefined,
+        }))
+
+        const otherPeerIds = peerIds.filter((sid) => sid !== session.id)
+        if (otherPeerIds.length > 0) {
+          const { data: peerOrdersAll } = await supabase
+            .from('session_orders')
+            .select('session_id, team_id, position')
+            .in('session_id', peerIds)
+
+          const { data: peerSessionRows } = await supabase
+            .from('sessions')
+            .select('id, age_group, category, routine_type')
+            .in('id', peerIds)
+
+          const peerMeta = Object.fromEntries((peerSessionRows ?? []).map((s) => [s.id, s]))
+          const ordersBySession = new Map<string, { session_id: string; team_id: string; position: number }[]>()
+          for (const o of peerOrdersAll ?? []) {
+            if (!ordersBySession.has(o.session_id)) ordersBySession.set(o.session_id, [])
+            ordersBySession.get(o.session_id)!.push(o)
+          }
+          for (const rows of ordersBySession.values()) {
+            rows.sort((a, b) => a.position - b.position || a.team_id.localeCompare(b.team_id))
+          }
+
+          const peerTeamIds = [...new Set((peerOrdersAll ?? []).map((o) => o.team_id))]
+          const { data: peerTeamsData } = peerTeamIds.length > 0
+            ? await supabase.from('teams').select('id, gymnast_display, age_group, category').in('id', peerTeamIds)
+            : { data: [] as { id: string; gymnast_display: string; age_group: string; category: string }[] }
+          const peerTeamMap = Object.fromEntries((peerTeamsData ?? []).map((t) => [t.id, t]))
+
+          const extraPerfs: ScoringPerformance[] = []
+          for (const sid of peerIds) {
+            if (sid === session.id) continue
+            const sm = peerMeta[sid]
+            if (!sm) continue
+            for (const o of ordersBySession.get(sid) ?? []) {
+              const tm = peerTeamMap[o.team_id]
+              extraPerfs.push({
+                id:          `${sid}_${o.team_id}`,
+                teamId:      o.team_id,
+                position:    o.position,
+                gymnasts:    tm?.gymnast_display ?? '',
+                ageGroup:    agLabels[tm?.age_group ?? sm.age_group] ?? tm?.age_group ?? sm.age_group,
+                category:    tm?.category ?? sm.category,
+                routineType: sm.routine_type,
+                skipped:     false,
+                tsUrl:       null,
+                elements:    [],
+                rankingMergeGroupId: mergeId,
+                mergeLabelEs:        mgRow?.label_es ?? undefined,
+                mergeLabelEn:        mgRow?.label_en ?? undefined,
+              })
+            }
+          }
+          rankingPerformancesForCjp = [...baseTagged, ...extraPerfs]
+        } else {
+          rankingPerformancesForCjp = baseTagged
+        }
+      }
+
       const currentPerfIdVal = session.current_team_id
         ? `${session.id}_${session.current_team_id}`
         : null
@@ -293,8 +407,9 @@ export function useJudgeSession(): JudgeSessionData {
       setAssignedRoles(builtAssignedRoles)
       setPanelJudges(builtPanelJudges)
       setPerformances(builtPerfs)
+      setRankingPerformances(rankingPerformancesForCjp)
       setJudgeScores(builtJudgeScores)
-      setResults(builtResults)
+      setResults(mergedResults)
       setDjMethod((session as any).dj_method ?? null)
       setEjMethod((session as any).ej_method ?? null)
       setLoading(false)
@@ -351,39 +466,45 @@ export function useJudgeSession(): JudgeSessionData {
       })
       .subscribe()
 
-    const resultsCh = supabase
-      .channel(`js-results-${sessionId}`)
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'routine_results',
-        filter: `session_id=eq.${sessionId}`,
-      }, (payload) => {
-        const row = payload.new as {
-          session_id: string; team_id: string
-          e_score: number | null; a_score: number | null
-          dif_score: number | null; dif_penalty: number | null; cjp_penalty: number | null
-          final_score: number | null; status: 'provisional' | 'approved'
-        }
-        const perfId = `${row.session_id}_${row.team_id}`
-        setResults(prev => ({
-          ...prev,
-          [perfId]: {
-            performanceId: perfId,
-            eScore:     row.e_score     ?? 0,
-            aScore:     row.a_score     ?? 0,
-            difScore:   row.dif_score   ?? 0,
-            difPenalty: row.dif_penalty ?? 0,
-            cjpPenalty: row.cjp_penalty ?? 0,
-            finalScore: row.final_score ?? 0,
-            status:     row.status,
-          },
-        }))
-      })
-      .subscribe()
+    const resultSessionIds = rankingPeerIdsRef.current.length > 0
+      ? rankingPeerIdsRef.current
+      : [sessionId]
+
+    const resultsChannels = resultSessionIds.map((sid) =>
+      supabase
+        .channel(`js-results-${sessionId}-${sid}`)
+        .on('postgres_changes', {
+          event: '*', schema: 'public', table: 'routine_results',
+          filter: `session_id=eq.${sid}`,
+        }, (payload) => {
+          const row = payload.new as {
+            session_id: string; team_id: string
+            e_score: number | null; a_score: number | null
+            dif_score: number | null; dif_penalty: number | null; cjp_penalty: number | null
+            final_score: number | null; status: 'provisional' | 'approved'
+          }
+          const perfId = `${row.session_id}_${row.team_id}`
+          setResults(prev => ({
+            ...prev,
+            [perfId]: {
+              performanceId: perfId,
+              eScore:     row.e_score     ?? 0,
+              aScore:     row.a_score     ?? 0,
+              difScore:   row.dif_score   ?? 0,
+              difPenalty: row.dif_penalty ?? 0,
+              cjpPenalty: row.cjp_penalty ?? 0,
+              finalScore: row.final_score ?? 0,
+              status:     row.status,
+            },
+          }))
+        })
+        .subscribe(),
+    )
 
     return () => {
       supabase.removeChannel(sessionCh)
       supabase.removeChannel(scoresCh)
-      supabase.removeChannel(resultsCh)
+      for (const ch of resultsChannels) supabase.removeChannel(ch)
     }
   }, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -515,7 +636,7 @@ export function useJudgeSession(): JudgeSessionData {
 
   return {
     loading, sessionId, sessionStatus, currentPerfId, currentPerf,
-    assignedRoles, panelJudges, performances, judgeScores, results,
+    assignedRoles, panelJudges, performances, rankingPerformances, judgeScores, results,
     djMethod, ejMethod, submitError,
     handleOpen, handleSkip, handleCJPSubmit, handleReopenScore,
     handleJudgeScoreSubmit, handleEditScore, clearSubmitError,

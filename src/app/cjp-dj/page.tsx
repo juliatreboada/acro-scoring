@@ -11,7 +11,7 @@ export default function Page() {
   const [lang, setLang] = useState<Lang>('es')
   const {
     loading, sessionId,
-    assignedRoles, panelJudges, performances, currentPerfId, judgeScores, results,
+    assignedRoles, panelJudges, performances, rankingPerformances, currentPerfId, judgeScores, results,
     djMethod,
     handleOpen, handleSkip, handleCJPSubmit, handleReopenScore, handleEditScore, handleJudgeScoreSubmit,
     submitError, clearSubmitError,
@@ -32,6 +32,7 @@ export default function Page() {
         djMode={djMethod === 'keyboard' ? 'keyboard' : 'elements'}
         panelJudges={panelJudges}
         performances={performances}
+        rankingPerformances={rankingPerformances}
         currentPerfId={currentPerfId}
         judgeScores={judgeScores}
         results={results}

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react'
 import type { Lang } from '@/components/scoring/types'
-import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry } from '@/components/admin/types'
+import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry, RankingMergeGroup } from '@/components/admin/types'
 import { NEXT_STATUS } from '@/components/admin/types'
 import StructureTab from './StructureTab'
 import JudgesTab, { type JudgesTabProps, type PanelLock } from './JudgesTab'
@@ -876,6 +876,10 @@ export type CompetitionDetailProps = {
   onDeleteSection: (sectionId: string) => void
   onAddSession: (s: Omit<Session, 'id'>) => void
   onDeleteSession: (sessionId: string) => void
+  rankingMergeGroups: RankingMergeGroup[]
+  sessionEligibleTeamCounts: Record<string, number>
+  onAssignSessionMergeGroup: (sessionId: string, mergeGroupId: string | null) => void | Promise<void>
+  onCreateRankingMergeGroup: (labelEs: string, labelEn: string) => Promise<string | null>
   // judges
   globalJudges: Judge[]
   judgePool: string[]
@@ -922,6 +926,7 @@ export default function CompetitionDetail({
   lang, competition, panels, sections, sessions, onBack, onAdvanceStatus,
   onSetPanelCount, onAddSection, onUpdateSectionLabel, onUpdateSectionTimes,
   onDeleteSection, onAddSession, onDeleteSession,
+  rankingMergeGroups, sessionEligibleTeamCounts, onAssignSessionMergeGroup, onCreateRankingMergeGroup,
   globalJudges, judgePool, nominations, assignments,
   panelLocks, onAddToPool, onRemoveFromPool, onAssignJudge, onAddSlot, onRemoveSlot,
   onTogglePanelLock, onCreateJudge,
@@ -1063,12 +1068,16 @@ export default function CompetitionDetail({
           panels={panels}
           sections={sections}
           sessions={sessions}
+          rankingMergeGroups={rankingMergeGroups}
+          sessionEligibleTeamCounts={sessionEligibleTeamCounts}
           onAddSection={onAddSection}
           onUpdateSectionLabel={onUpdateSectionLabel}
           onUpdateSectionTimes={onUpdateSectionTimes}
           onDeleteSection={onDeleteSection}
           onAddSession={onAddSession}
           onDeleteSession={onDeleteSession}
+          onAssignSessionMergeGroup={onAssignSessionMergeGroup}
+          onCreateRankingMergeGroup={onCreateRankingMergeGroup}
         />
       )}
       {activeTab === 'overview' && (

@@ -304,7 +304,7 @@ function PhoneView({ perf, lang, djMode, ejMode, elements, extraElements, flags,
 // ─── tablet layout ────────────────────────────────────────────────────────────
 
 function TabletLayout({
-  lang, performances, currentPerfId, panelJudges, judgeScores, results,
+  lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results,
   elements, extraElements, flags, deductions, incorrectTs, penaltyStates,
   djMode, ejMode,
   onFlagChange, onLock, onOpenRetry, onAddElement, onLabelChange, onTypeChange,
@@ -313,6 +313,7 @@ function TabletLayout({
 }: {
   lang: Lang
   performances: ScoringPerformance[]
+  rankingPerformances?: ScoringPerformance[]
   currentPerfId: string | null
   panelJudges: PanelJudge[]
   judgeScores: Record<string, JudgeScore[]>
@@ -378,7 +379,7 @@ function TabletLayout({
 
   return (
     <CJPTabletShell
-      lang={lang} performances={performances} currentPerfId={currentPerfId}
+      lang={lang} performances={performances} rankingPerformances={rankingPerformances} currentPerfId={currentPerfId}
       panelJudges={panelJudges} judgeScores={judgeScores} results={results}
       penaltyStates={penaltyStates} onOpen={onOpen} onSkip={onSkip}
       onSubmit={onSubmit} onReopenScore={onReopenScore}
@@ -524,6 +525,7 @@ function TabletLayout({
 export type CJPDJEJAJViewProps = {
   lang: Lang
   performances: ScoringPerformance[]
+  rankingPerformances?: ScoringPerformance[]
   currentPerfId: string | null
   panelJudges: PanelJudge[]
   judgeScores: Record<string, JudgeScore[]>
@@ -543,7 +545,7 @@ export type CJPDJEJAJViewProps = {
 }
 
 export default function CJPDJEJAJView({
-  lang, performances, currentPerfId, panelJudges, judgeScores, results, elements,
+  lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results, elements,
   djMode = 'elements', ejMode = 'elements',
   onOpen, onSkip, onSubmitDJScore, onSubmitEJScore, onSubmitAJScore, onSubmit, onReopenScore, onEditScore, onPhoneSubmit,
 }: CJPDJEJAJViewProps) {
@@ -601,6 +603,7 @@ export default function CJPDJEJAJView({
         <TabletLayout
           lang={lang}
           performances={performances}
+          rankingPerformances={rankingPerformances}
           currentPerfId={currentPerfId}
           panelJudges={panelJudges}
           judgeScores={judgeScores}

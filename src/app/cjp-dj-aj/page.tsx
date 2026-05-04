@@ -11,7 +11,7 @@ export default function Page() {
   const [lang, setLang] = useState<Lang>('es')
   const {
     loading, sessionId,
-    assignedRoles, panelJudges, performances, currentPerfId, judgeScores, results,
+    assignedRoles, panelJudges, performances, rankingPerformances, currentPerfId, judgeScores, results,
     djMethod,
     handleOpen, handleSkip, handleCJPSubmit, handleReopenScore, handleEditScore, handleJudgeScoreSubmit,
     submitError, clearSubmitError,
@@ -34,7 +34,8 @@ export default function Page() {
       <CJPDJAJView
         lang={lang} elements={performances.find(p => p.id === currentPerfId)?.elements ?? []}
         djMode={djMethod === 'keyboard' ? 'keyboard' : 'elements'}
-        panelJudges={panelJudges} performances={performances}
+        panelJudges={panelJudges}         performances={performances}
+        rankingPerformances={rankingPerformances}
         currentPerfId={currentPerfId} judgeScores={judgeScores} results={results}
         onOpen={handleOpen} onSkip={handleSkip}
         onSubmitDJScore={handleSubmitDJScore} onSubmitAJScore={handleSubmitAJScore}

@@ -7,6 +7,7 @@ import type { PenaltyState } from '@/components/scoring/types'
 import { activePenalties, activeDJPenalties } from '@/lib/penaltyLabels'
 import type { ElementFlags } from '@/components/scoring/types'
 import { categoryLabel } from '@/components/admin/types'
+import { fetchPeerSessionIdsForRanking } from '@/lib/rankingPeers'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -187,7 +188,7 @@ export default function TVPage() {
           .single(),
         supabase
           .from('sessions')
-          .select('age_group, category, routine_type, competition_id, section_id, panel_id')
+          .select('age_group, category, routine_type, competition_id, section_id, panel_id, ranking_merge_group_id')
           .eq('id', session_id)
           .single(),
         supabase
@@ -234,17 +235,16 @@ export default function TVPage() {
           panel_id:        sess.panel_id,
         })
 
-        // Ranking: all approved results for same age_group + category + routine_type
-        const { data: peerSessions } = await supabase
-          .from('sessions')
-          .select('id')
-          .eq('competition_id', competitionId)
-          .eq('age_group', sess.age_group)
-          .eq('category', sess.category)
-          .eq('routine_type', sess.routine_type)
+        const peerIds = await fetchPeerSessionIdsForRanking(supabase, {
+          competition_id: sess.competition_id,
+          age_group: sess.age_group,
+          category: sess.category,
+          routine_type: sess.routine_type,
+          ranking_merge_group_id: sess.ranking_merge_group_id,
+        })
 
-        if (peerSessions && peerSessions.length > 0) {
-          const ids = peerSessions.map((s) => s.id)
+        if (peerIds.length > 0) {
+          const ids = peerIds
           const { data: allResults } = await supabase
             .from('routine_results')
             .select('team_id, final_score')
