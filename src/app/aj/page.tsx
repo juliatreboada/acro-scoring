@@ -12,7 +12,7 @@ export default function Page() {
   const {
     loading, sessionId,
     assignedRoles, panelJudges, currentPerfId, currentPerf, judgeScores, results,
-    handleJudgeScoreSubmit, submitError, clearSubmitError,
+    handleJudgeScoreSubmit, submitError, clearSubmitError, practiceMode,
   } = useJudgeSession()
 
   const myRole = assignedRoles.find(r => r.role === 'AJ')
@@ -28,7 +28,7 @@ export default function Page() {
   }
 
   return (
-    <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} className="min-h-[100dvh] flex flex-col md:h-[100dvh] md:overflow-hidden bg-slate-50" submitError={submitError} onClearError={clearSubmitError}>
+    <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} className="min-h-[100dvh] flex flex-col md:h-[100dvh] md:overflow-hidden bg-slate-50" submitError={submitError} onClearError={clearSubmitError} practiceMode={practiceMode}>
       <div className="flex-1 min-h-0 overflow-auto">
         <div className="max-w-lg mx-auto py-4">
           <AJView

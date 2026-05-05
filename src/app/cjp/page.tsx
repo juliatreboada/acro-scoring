@@ -12,11 +12,23 @@ export default function Page() {
     loading, sessionId,
     panelJudges, performances, rankingPerformances, currentPerfId, judgeScores, results,
     handleOpen, handleSkip, handleCJPSubmit, handleReopenScore, handleEditScore,
-    submitError, clearSubmitError,
+    submitError, clearSubmitError, practiceMode, startSectionPractice, stopSectionPractice,
   } = useJudgeSession()
 
   return (
-    <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} className="min-h-screen bg-slate-100" submitError={submitError} onClearError={clearSubmitError}>
+    <JudgeScoringShell
+      loading={loading}
+      sessionId={sessionId}
+      lang={lang}
+      onLangChange={setLang}
+      className="min-h-screen bg-slate-100"
+      submitError={submitError}
+      onClearError={clearSubmitError}
+      practiceMode={practiceMode}
+      canControlPractice
+      onStartPractice={() => { void startSectionPractice() }}
+      onStopPractice={() => { void stopSectionPractice() }}
+    >
       <CJPView
         isCJP={true}
         lang={lang}

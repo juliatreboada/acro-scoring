@@ -1254,6 +1254,78 @@ export type Database = {
           }
         ]
       }
+      section_practice_state: {
+        Row: {
+          id: string
+          section_id: string
+          competition_id: string
+          routine_session_id: string
+          routine_team_id: string
+          active: boolean
+          started_by: string | null
+          started_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          section_id: string
+          competition_id: string
+          routine_session_id: string
+          routine_team_id: string
+          active?: boolean
+          started_by?: string | null
+          started_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          section_id?: string
+          competition_id?: string
+          routine_session_id?: string
+          routine_team_id?: string
+          active?: boolean
+          started_by?: string | null
+          started_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "section_practice_state_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "section_practice_state_routine_session_id_fkey"
+            columns: ["routine_session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "section_practice_state_routine_team_id_fkey"
+            columns: ["routine_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "section_practice_state_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: true
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "section_practice_state_started_by_fkey"
+            columns: ["started_by"]
+            isOneToOne: false
+            referencedRelation: "judges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tv_state: {
         Row: {
           id: string

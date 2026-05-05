@@ -5,7 +5,7 @@ import AuthBar from './AuthBar'
 import type { Lang } from '../scoring/types'
 
 export function JudgeScoringShell({
-  loading, sessionId, lang, onLangChange, children, className, submitError, onClearError,
+  loading, sessionId, lang, onLangChange, children, className, submitError, onClearError, practiceMode, onStartPractice, onStopPractice, canControlPractice,
 }: {
   loading: boolean
   sessionId: string | null
@@ -15,6 +15,10 @@ export function JudgeScoringShell({
   className?: string
   submitError?: string | null
   onClearError?: () => void
+  practiceMode?: boolean
+  onStartPractice?: () => void
+  onStopPractice?: () => void
+  canControlPractice?: boolean
 }) {
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -42,6 +46,35 @@ export function JudgeScoringShell({
           <span className="text-sm text-red-700 flex-1">{submitError}</span>
           {onClearError && (
             <button onClick={onClearError} className="text-red-400 hover:text-red-600 text-lg leading-none shrink-0">×</button>
+          )}
+        </div>
+      )}
+      {practiceMode && (
+        <div className="bg-violet-50 border-b border-violet-200 px-4 py-2 text-sm text-violet-700">
+          {lang === 'en'
+            ? 'Practice mode active: this rehearsal does not save scores to official results.'
+            : 'Modo práctica activo: este ensayo no guarda puntuaciones en resultados oficiales.'}
+        </div>
+      )}
+      {canControlPractice && (
+        <div className="bg-white border-b border-slate-200 px-4 py-2.5 flex items-center justify-between">
+          <span className="text-sm text-slate-600">
+            {lang === 'en' ? 'Section rehearsal' : 'Ensayo de sección'}
+          </span>
+          {practiceMode ? (
+            <button
+              onClick={onStopPractice}
+              className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-slate-700 text-white hover:bg-slate-800"
+            >
+              {lang === 'en' ? 'Finish rehearsal' : 'Finalizar ensayo'}
+            </button>
+          ) : (
+            <button
+              onClick={onStartPractice}
+              className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-violet-600 text-white hover:bg-violet-700"
+            >
+              {lang === 'en' ? 'Start rehearsal' : 'Iniciar ensayo'}
+            </button>
           )}
         </div>
       )}
