@@ -7,6 +7,7 @@ import { useProfile } from '@/contexts/ProfileContext'
 import type { PanelJudge, ScoringPerformance, JudgeScore, RoutineResult, PenaltyState } from '@/components/scoring/types'
 import type { SessionStatus } from '@/components/judge/JudgeSession'
 import { fetchPeerSessionIdsForRanking } from '@/lib/rankingPeers'
+import { useSectionPractice } from '@/hooks/useSectionPractice'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,8 @@ export type JudgeSessionData = {
   djMethod:      string | null
   ejMethod:      string | null
   submitError:   string | null
+  practiceMode:  boolean
+  practiceRoutinePerfId: string | null
   handleOpen:              (perfId: string) => Promise<void>
   handleSkip:              (perfId: string) => void
   handleCJPSubmit:         (status: 'provisional' | 'approved', result: RoutineResult, penaltyDetail?: PenaltyState | null) => Promise<void>
@@ -42,6 +45,8 @@ export type JudgeSessionData = {
   handleJudgeScoreSubmit:  (score: JudgeScore) => Promise<void>
   handleEditScore:         (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
   clearSubmitError:        () => void
+  startSectionPractice:    () => Promise<void>
+  stopSectionPractice:     () => Promise<void>
 }
 
 // ─── hook ─────────────────────────────────────────────────────────────────────
@@ -63,6 +68,16 @@ export function useJudgeSession(): JudgeSessionData {
   const [djMethod,      setDjMethod]      = useState<string | null>(null)
   const [ejMethod,      setEjMethod]      = useState<string | null>(null)
   const [submitError,   setSubmitError]   = useState<string | null>(null)
+  const [sectionId,     setSectionId]     = useState<string | null>(null)
+  const [competitionId, setCompetitionId] = useState<string | null>(null)
+  const [judgeId,       setJudgeId]       = useState<string | null>(null)
+
+  const { practice, startPractice, stopPractice } = useSectionPractice(sectionId)
+  const practiceMode = !!practice?.active
+  const practiceRoutinePerfId =
+    practice && practice.active
+      ? `${practice.routineSessionId}_${practice.routineTeamId}`
+      : null
 
   const sessionIdRef = useRef<string | null>(null)
   useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
@@ -88,6 +103,7 @@ export function useJudgeSession(): JudgeSessionData {
       const { data: judge } = await supabase
         .from('judges').select('id').eq('id', activeProfile.id).single()
       if (!judge) { setLoading(false); return }
+      setJudgeId(judge.id)
 
       const { data: spjs } = await supabase
         .from('section_panel_judges')
@@ -402,6 +418,8 @@ export function useJudgeSession(): JudgeSessionData {
         : null
 
       setSessionId(session.id)
+      setSectionId(session.section_id)
+      setCompetitionId(session.competition_id)
       setSessionStatus(session.status as SessionStatus)
       setCurrentPerfId(currentPerfIdVal)
       setAssignedRoles(builtAssignedRoles)
@@ -416,6 +434,45 @@ export function useJudgeSession(): JudgeSessionData {
     }
     load()
   }, [activeProfile?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── practice mode broadcast (realtime without persistence) ──────────────────
+  useEffect(() => {
+    if (!sectionId) return
+    const ch = supabase.channel(`practice-broadcast-${sectionId}`)
+    ch
+      .on('broadcast', { event: 'practice_open' }, ({ payload }) => {
+        const p = payload as { perfId?: string }
+        if (p.perfId) setCurrentPerfId(p.perfId)
+      })
+      .on('broadcast', { event: 'practice_score' }, ({ payload }) => {
+        const p = payload as { perfId: string; score: JudgeScore }
+        if (!p?.perfId || !p?.score) return
+        setJudgeScores(prev => ({
+          ...prev,
+          [p.perfId]: [...(prev[p.perfId] ?? []).filter(s => s.panelJudgeId !== p.score.panelJudgeId), p.score],
+        }))
+      })
+      .on('broadcast', { event: 'practice_result' }, ({ payload }) => {
+        const p = payload as { perfId: string; result: RoutineResult }
+        if (!p?.perfId || !p?.result) return
+        setResults(prev => ({ ...prev, [p.perfId]: p.result }))
+      })
+      .on('broadcast', { event: 'practice_reset' }, () => {
+        setJudgeScores({})
+        setResults({})
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [sectionId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When rehearsal turns on/off, switch active performance safely.
+  useEffect(() => {
+    if (!practiceMode) return
+    if (practiceRoutinePerfId) {
+      setCurrentPerfId(practiceRoutinePerfId)
+      setJudgeScores(prev => prev[practiceRoutinePerfId] ? prev : { ...prev, [practiceRoutinePerfId]: [] })
+    }
+  }, [practiceMode, practiceRoutinePerfId])
 
   // ── Realtime ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -512,6 +569,17 @@ export function useJudgeSession(): JudgeSessionData {
 
   async function handleOpen(perfId: string) {
     if (!sessionId) return
+    if (practiceMode) {
+      setCurrentPerfId(perfId)
+      setJudgeScores(prev => prev[perfId] ? prev : { ...prev, [perfId]: [] })
+      if (sectionId) {
+        const ch = supabase.channel(`practice-open-tx-${sectionId}`)
+        await ch.subscribe()
+        await ch.send({ type: 'broadcast', event: 'practice_open', payload: { perfId } })
+        supabase.removeChannel(ch)
+      }
+      return
+    }
     const teamId = perfId.replace(`${sessionId}_`, '')
     await supabase.from('sessions').update({ current_team_id: teamId }).eq('id', sessionId)
     setCurrentPerfId(perfId)
@@ -525,6 +593,17 @@ export function useJudgeSession(): JudgeSessionData {
   async function handleCJPSubmit(status: 'provisional' | 'approved', result: RoutineResult, penaltyDetail?: PenaltyState | null) {
     if (!sessionId) return
     setSubmitError(null)
+    if (practiceMode) {
+      const next: RoutineResult = { ...result, status }
+      setResults(prev => ({ ...prev, [result.performanceId]: next }))
+      if (sectionId) {
+        const ch = supabase.channel(`practice-result-tx-${sectionId}`)
+        await ch.subscribe()
+        await ch.send({ type: 'broadcast', event: 'practice_result', payload: { perfId: result.performanceId, result: next } })
+        supabase.removeChannel(ch)
+      }
+      return
+    }
     try {
       const teamId = result.performanceId.replace(`${sessionId}_`, '')
 
@@ -561,6 +640,18 @@ export function useJudgeSession(): JudgeSessionData {
 
   async function handleReopenScore(perfId: string, panelJudgeId: string | 'all') {
     if (!sessionId) return
+    if (practiceMode) {
+      if (panelJudgeId === 'all') {
+        setJudgeScores(prev => ({ ...prev, [perfId]: [] }))
+        setResults(prev => { const next = { ...prev }; delete next[perfId]; return next })
+      } else {
+        setJudgeScores(prev => ({
+          ...prev,
+          [perfId]: (prev[perfId] ?? []).filter(s => s.panelJudgeId !== panelJudgeId),
+        }))
+      }
+      return
+    }
     const teamId = perfId.replace(`${sessionId}_`, '')
     if (panelJudgeId === 'all') {
       await supabase.from('scores').delete().eq('session_id', sessionId).eq('team_id', teamId)
@@ -580,6 +671,19 @@ export function useJudgeSession(): JudgeSessionData {
   async function handleJudgeScoreSubmit(score: JudgeScore) {
     if (!sessionId || !currentPerfId) return
     setSubmitError(null)
+    if (practiceMode) {
+      setJudgeScores(prev => ({
+        ...prev,
+        [currentPerfId]: [...(prev[currentPerfId] ?? []).filter(s => s.panelJudgeId !== score.panelJudgeId), score],
+      }))
+      if (sectionId) {
+        const ch = supabase.channel(`practice-score-tx-${sectionId}`)
+        await ch.subscribe()
+        await ch.send({ type: 'broadcast', event: 'practice_score', payload: { perfId: currentPerfId, score } })
+        supabase.removeChannel(ch)
+      }
+      return
+    }
     try {
       const teamId = currentPerfId.replace(`${sessionId}_`, '')
       const { error } = await supabase.from('scores').upsert({
@@ -632,13 +736,40 @@ export function useJudgeSession(): JudgeSessionData {
 
   function clearSubmitError() { setSubmitError(null) }
 
-  const currentPerf = currentPerfId ? (performances.find(p => p.id === currentPerfId) ?? null) : null
+  async function startSectionPractice() {
+    if (!sectionId || !competitionId || !judgeId || performances.length === 0 || !sessionId) return
+    const first = performances[0]
+    if (!first) return
+    await startPractice({
+      sectionId,
+      competitionId,
+      routineSessionId: sessionId,
+      routineTeamId: first.teamId,
+      startedByJudgeId: judgeId,
+    })
+    setCurrentPerfId(`${sessionId}_${first.teamId}`)
+    setJudgeScores({})
+    setResults({})
+    if (sectionId) {
+      const ch = supabase.channel(`practice-reset-tx-${sectionId}`)
+      await ch.subscribe()
+      await ch.send({ type: 'broadcast', event: 'practice_reset', payload: {} })
+      supabase.removeChannel(ch)
+    }
+  }
+
+  async function stopSectionPractice() {
+    await stopPractice()
+  }
+
+  const resolvedPerfId = practiceMode && practiceRoutinePerfId ? practiceRoutinePerfId : currentPerfId
+  const currentPerf = resolvedPerfId ? (performances.find(p => p.id === resolvedPerfId) ?? null) : null
 
   return {
-    loading, sessionId, sessionStatus, currentPerfId, currentPerf,
+    loading, sessionId, sessionStatus, currentPerfId: resolvedPerfId, currentPerf,
     assignedRoles, panelJudges, performances, rankingPerformances, judgeScores, results,
-    djMethod, ejMethod, submitError,
+    djMethod, ejMethod, submitError, practiceMode, practiceRoutinePerfId,
     handleOpen, handleSkip, handleCJPSubmit, handleReopenScore,
-    handleJudgeScoreSubmit, handleEditScore, clearSubmitError,
+    handleJudgeScoreSubmit, handleEditScore, clearSubmitError, startSectionPractice, stopSectionPractice,
   }
 }

@@ -14,7 +14,7 @@ export default function Page() {
     assignedRoles, panelJudges, performances, rankingPerformances, currentPerfId, judgeScores, results,
     djMethod,
     handleOpen, handleSkip, handleCJPSubmit, handleReopenScore, handleEditScore, handleJudgeScoreSubmit,
-    submitError, clearSubmitError,
+    submitError, clearSubmitError, practiceMode, startSectionPractice, stopSectionPractice,
   } = useJudgeSession()
 
   function handleSubmitDJScore(_p: string, difficulty: number, penalty: number, detail: ScoreDetail) {
@@ -30,7 +30,7 @@ export default function Page() {
   }
 
   return (
-    <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} className="min-h-screen bg-slate-100" submitError={submitError} onClearError={clearSubmitError}>
+    <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} className="min-h-screen bg-slate-100" submitError={submitError} onClearError={clearSubmitError} practiceMode={practiceMode} canControlPractice onStartPractice={() => { void startSectionPractice() }} onStopPractice={() => { void stopSectionPractice() }}>
       <CJPDJAJView
         lang={lang} elements={performances.find(p => p.id === currentPerfId)?.elements ?? []}
         djMode={djMethod === 'keyboard' ? 'keyboard' : 'elements'}

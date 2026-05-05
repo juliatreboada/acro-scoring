@@ -83,6 +83,8 @@ const T = {
     startingOrder: 'Starting order',
     noOrder: 'Starting order not yet published.',
     scoreButton: 'Score',
+    startRehearsalButton: 'Start rehearsal',
+    rehearsalButton: 'Join rehearsal',
     djReviewButton: 'Review TS sheets',
     loadingDetail: 'Loading…',
     profile: 'Profile',
@@ -119,6 +121,8 @@ const T = {
     startingOrder: 'Orden de salida',
     noOrder: 'El orden de salida aún no está publicado.',
     scoreButton: 'Puntuar',
+    startRehearsalButton: 'Iniciar ensayo',
+    rehearsalButton: 'Entrar en ensayo',
     djReviewButton: 'Revisar TS',
     loadingDetail: 'Cargando…',
     profile: 'Perfil',
@@ -215,6 +219,7 @@ function CompetitionDetail({ comp, lang, onBack }: {
   const [loading, setLoading] = useState(true)
   const [panels, setPanels] = useState<LobbyPanel[]>([])
   const [sessionIds, setSessionIds] = useState<string[]>([])
+  const [practiceActiveBySection, setPracticeActiveBySection] = useState<Record<string, boolean>>({})
 
   // Real-time: update session statuses and auto-navigate when a session becomes active
   useEffect(() => {
@@ -247,6 +252,24 @@ function CompetitionDetail({ comp, lang, onBack }: {
   }, [sessionIds]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    const sectionIds = [...new Set(panels.map((p) => p.sectionId))]
+    if (sectionIds.length === 0) return
+    const channels = sectionIds.map((sid) =>
+      supabase
+        .channel(`lobby-practice-${sid}`)
+        .on('postgres_changes', {
+          event: '*', schema: 'public', table: 'section_practice_state',
+          filter: `section_id=eq.${sid}`,
+        }, (payload) => {
+          const row = payload.new as { section_id: string; active: boolean }
+          setPracticeActiveBySection(prev => ({ ...prev, [sid]: !!row?.active }))
+        })
+        .subscribe(),
+    )
+    return () => { channels.forEach(ch => supabase.removeChannel(ch)) }
+  }, [panels, supabase])
+
+  useEffect(() => {
     async function load() {
       if (!activeProfile) return
       // 1. Get my SPJ entries for this competition's sections
@@ -257,6 +280,14 @@ function CompetitionDetail({ comp, lang, onBack }: {
       if (!sections?.length) { setLoading(false); return }
 
       const sectionIds = sections.map(s => s.id)
+
+      const { data: practiceRows } = await supabase
+        .from('section_practice_state')
+        .select('section_id, active')
+        .in('section_id', sectionIds)
+      setPracticeActiveBySection(
+        Object.fromEntries((practiceRows ?? []).map((r) => [r.section_id, !!r.active])),
+      )
 
       // 2. Get locked panels for these sections
       const { data: locks } = await (supabase as any)
@@ -390,6 +421,8 @@ function CompetitionDetail({ comp, lang, onBack }: {
             const sectionLabel = panel.sectionLabel ?? t.sectionN(panel.sectionNumber)
             const hasActiveSession = panel.sessions.some(s => s.status === 'active')
             const route = rolesToRoute(panel.roles.map(r => r.role))
+            const sectionPracticeActive = practiceActiveBySection[panel.sectionId] === true
+            const canStartPractice = panel.roles.some(r => r.role === 'CJP')
 
             return (
               <div key={`${panel.sectionId}|${panel.panelId}`}
@@ -400,6 +433,11 @@ function CompetitionDetail({ comp, lang, onBack }: {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-700">{sectionLabel}</p>
                     <p className="text-xs text-slate-400">{t.panelN(panel.panelNumber)}</p>
+                    {sectionPracticeActive && (
+                      <p className="text-xs font-semibold text-violet-600 mt-0.5">
+                        {lang === 'en' ? 'Rehearsal active' : 'Ensayo activo'}
+                      </p>
+                    )}
                   </div>
                   {/* role badges */}
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -437,13 +475,17 @@ function CompetitionDetail({ comp, lang, onBack }: {
                           <span className={['px-2 py-0.5 rounded-md text-xs font-semibold', SESSION_STATUS_BADGE[session.status]].join(' ')}>
                             {t.sessionStatus[session.status]}
                           </span>
-                          {session.status === 'active' && (
+                          {(session.status === 'active' || sectionPracticeActive || canStartPractice) && (
                             <button
                               onClick={() => router.push(route)}
                               className="px-3 py-1 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center gap-1.5"
                             >
-                              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />
-                              {t.scoreButton}
+                              {session.status === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />}
+                              {session.status === 'active'
+                                ? t.scoreButton
+                                : sectionPracticeActive
+                                  ? t.rehearsalButton
+                                  : t.startRehearsalButton}
                             </button>
                           )}
                         </div>

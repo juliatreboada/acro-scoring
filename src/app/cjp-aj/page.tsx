@@ -13,7 +13,7 @@ export default function Page() {
     loading, sessionId,
     assignedRoles, panelJudges, performances, rankingPerformances, currentPerfId, judgeScores, results,
     handleOpen, handleSkip, handleCJPSubmit, handleReopenScore, handleEditScore, handleJudgeScoreSubmit,
-    submitError, clearSubmitError,
+    submitError, clearSubmitError, practiceMode, startSectionPractice, stopSectionPractice,
   } = useJudgeSession()
 
   function handleSubmitAJScore(_perfId: string, score: number) {
@@ -24,7 +24,7 @@ export default function Page() {
   }
 
   return (
-    <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} className="min-h-screen bg-slate-50" submitError={submitError} onClearError={clearSubmitError}>
+    <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} className="min-h-screen bg-slate-50" submitError={submitError} onClearError={clearSubmitError} practiceMode={practiceMode} canControlPractice onStartPractice={() => { void startSectionPractice() }} onStopPractice={() => { void stopSectionPractice() }}>
       <CJPAJView
         lang={lang}
         panelJudges={panelJudges}
