@@ -8,6 +8,7 @@ import { activePenalties, activeDJPenalties } from '@/lib/penaltyLabels'
 import type { ElementFlags } from '@/components/scoring/types'
 import { categoryLabel } from '@/components/admin/types'
 import { fetchPeerSessionIdsForRanking } from '@/lib/rankingPeers'
+import { TV_SPONSOR_BUCKET, parseTvSponsorVideos, type TvSponsorClip } from '@/lib/tvSponsorVideos'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -17,6 +18,8 @@ type TVState = {
   session_id: string | null
   team_id: string | null
   revealed: boolean
+  sponsor_reel_enabled: boolean
+  sponsor_playlist_index: number
 }
 
 type TeamData = {
@@ -104,14 +107,19 @@ export default function TVPage() {
 
   // ── fetch competition info once ──────────────────────────────────────────────
 
+  const [sponsorClips, setSponsorClips] = useState<TvSponsorClip[]>([])
+
   useEffect(() => {
     async function load() {
       const { data } = await supabase
         .from('competitions')
-        .select('name, poster_url')
+        .select('name, poster_url, tv_sponsor_videos')
         .eq('id', competitionId)
         .single()
-      if (data) setCompetition({ name: data.name, poster_url: data.poster_url ?? null })
+      if (data) {
+        setCompetition({ name: data.name, poster_url: data.poster_url ?? null })
+        setSponsorClips(parseTvSponsorVideos(data.tv_sponsor_videos))
+      }
     }
     load()
   }, [competitionId]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -122,13 +130,15 @@ export default function TVPage() {
     async function load() {
       const { data } = await supabase
         .from('tv_state')
-        .select('session_id, team_id, revealed')
+        .select('session_id, team_id, revealed, sponsor_reel_enabled, sponsor_playlist_index')
         .eq('competition_id', competitionId)
         .maybeSingle()
       const state: TVState = {
         session_id: data?.session_id ?? null,
         team_id:    data?.team_id    ?? null,
         revealed:   data?.revealed   ?? false,
+        sponsor_reel_enabled: data?.sponsor_reel_enabled ?? false,
+        sponsor_playlist_index: typeof data?.sponsor_playlist_index === 'number' ? data.sponsor_playlist_index : 0,
       }
       setTvState(state)
       prevRevealedRef.current = state.revealed
@@ -142,16 +152,48 @@ export default function TVPage() {
         event: '*', schema: 'public', table: 'tv_state',
         filter: `competition_id=eq.${competitionId}`,
       }, (payload) => {
-        const row = payload.new as { session_id: string | null; team_id: string | null; revealed: boolean }
+        const row = payload.new as {
+          session_id: string | null
+          team_id: string | null
+          revealed: boolean
+          sponsor_reel_enabled?: boolean
+          sponsor_playlist_index?: number
+        }
         const next: TVState = {
           session_id: row.session_id ?? null,
           team_id:    row.team_id    ?? null,
           revealed:   row.revealed   ?? false,
+          sponsor_reel_enabled: row.sponsor_reel_enabled ?? false,
+          sponsor_playlist_index: typeof row.sponsor_playlist_index === 'number' ? row.sponsor_playlist_index : 0,
         }
         setTvState(next)
       })
       .subscribe()
 
+    return () => { supabase.removeChannel(ch) }
+  }, [competitionId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── sponsor playlist updates (admin uploads) ─────────────────────────────────
+
+  useEffect(() => {
+    const ch = supabase
+      .channel(`tv-comp-sponsors-${competitionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'competitions',
+          filter: `id=eq.${competitionId}`,
+        },
+        (payload) => {
+          const row = payload.new as { tv_sponsor_videos?: unknown }
+          if (row.tv_sponsor_videos !== undefined) {
+            setSponsorClips(parseTvSponsorVideos(row.tv_sponsor_videos))
+          }
+        },
+      )
+      .subscribe()
     return () => { supabase.removeChannel(ch) }
   }, [competitionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -299,9 +341,55 @@ export default function TVPage() {
 
   const totalPen = (result?.dif_penalty ?? 0) + (result?.cjp_penalty ?? 0)
 
-  // ── idle state (no team queued on TV, or team payload still loading) ─────────
+  const isTeamQueued = !!(tvState?.session_id && tvState?.team_id)
 
-  if (!tvState?.team_id || !team) {
+  // ── team scores loading ──────────────────────────────────────────────────────
+
+  if (isTeamQueued && !team) {
+    return (
+      <div className="w-screen h-screen bg-slate-950 flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-slate-600 border-t-white rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  // ── sponsor reel (team display has priority; index does not advance while queued) ──
+
+  if (!isTeamQueued && tvState?.sponsor_reel_enabled && sponsorClips.length > 0) {
+    const n = sponsorClips.length
+    const idx = Math.min(Math.max(0, tvState.sponsor_playlist_index ?? 0), n - 1)
+    const clip = sponsorClips[idx]
+    const { data: pub } = supabase.storage.from(TV_SPONSOR_BUCKET).getPublicUrl(clip.path)
+    return (
+      <div className="w-screen h-screen bg-black flex items-center justify-center overflow-hidden">
+        <video
+          key={`${clip.id}-${idx}`}
+          className="max-w-full max-h-full w-full h-full object-contain"
+          src={pub.publicUrl}
+          autoPlay
+          muted
+          playsInline
+          onEnded={() => {
+            const next = (idx + 1) % n
+            setTvState((prev) =>
+              prev ? { ...prev, sponsor_playlist_index: next } : prev,
+            )
+            void supabase
+              .from('tv_state')
+              .update({
+                sponsor_playlist_index: next,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('competition_id', competitionId)
+          }}
+        />
+      </div>
+    )
+  }
+
+  // ── idle state (poster + waiting) ───────────────────────────────────────────
+
+  if (!isTeamQueued) {
     return (
       <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-slate-950">
         {/* backdrop */}
@@ -368,7 +456,9 @@ export default function TVPage() {
     )
   }
 
-  // ── active state ─────────────────────────────────────────────────────────────
+  // ── active team / scores ─────────────────────────────────────────────────────
+
+  if (!team) return null
 
   const eScore     = result ? (result.e_score ?? 0) * 2 : null
   const aScore     = result?.a_score ?? null
