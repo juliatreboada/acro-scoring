@@ -4,7 +4,7 @@
  * 1. Paste the Supabase `competitions.id` UUID below, **or**
  * 2. Set `NEXT_PUBLIC_TROFEO_GONDOMAR_COMPETITION_ID` in `.env.local` (overrides the constant when non-empty).
  */
-export const TROFEO_GONDOMAR_COMPETITION_ID = ''
+export const TROFEO_GONDOMAR_COMPETITION_ID = '5da1f829-f0a7-4108-96bc-f74abe660c9a'
 
 export function showTrofeoGondomarClubRanking(competitionId: string): boolean {
   const fromEnv =

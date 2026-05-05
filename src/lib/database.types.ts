@@ -205,6 +205,7 @@ export type Database = {
           start_date: string | null
           status: Database["public"]["Enums"]["competition_status"]
           ts_music_deadline: string | null
+          tv_sponsor_videos: Json
           updated_at: string
         }
         Insert: {
@@ -226,6 +227,7 @@ export type Database = {
           start_date?: string | null
           status?: Database["public"]["Enums"]["competition_status"]
           ts_music_deadline?: string | null
+          tv_sponsor_videos?: Json
           updated_at?: string
         }
         Update: {
@@ -247,6 +249,7 @@ export type Database = {
           start_date?: string | null
           status?: Database["public"]["Enums"]["competition_status"]
           ts_music_deadline?: string | null
+          tv_sponsor_videos?: Json
           updated_at?: string
         }
         Relationships: [
@@ -1258,6 +1261,8 @@ export type Database = {
           session_id: string | null
           team_id: string | null
           revealed: boolean
+          sponsor_playlist_index: number
+          sponsor_reel_enabled: boolean
           updated_at: string
         }
         Insert: {
@@ -1266,6 +1271,8 @@ export type Database = {
           session_id?: string | null
           team_id?: string | null
           revealed?: boolean
+          sponsor_playlist_index?: number
+          sponsor_reel_enabled?: boolean
           updated_at?: string
         }
         Update: {
@@ -1274,6 +1281,8 @@ export type Database = {
           session_id?: string | null
           team_id?: string | null
           revealed?: boolean
+          sponsor_playlist_index?: number
+          sponsor_reel_enabled?: boolean
           updated_at?: string
         }
         Relationships: [
