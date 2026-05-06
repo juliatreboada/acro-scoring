@@ -1,9 +1,0 @@
-{
-  "/admin/competitions/[id]/page": "app/admin/competitions/[id]/page.js",
-  "/admin/page": "app/admin/page.js",
-  "/api/admin/users/route": "app/api/admin/users/route.js",
-  "/judge/page": "app/judge/page.js",
-  "/login/page": "app/login/page.js",
-  "/page": "app/page.js",
-  "/results/[id]/page": "app/results/[id]/page.js"
-}
