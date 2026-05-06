@@ -822,6 +822,7 @@ export type Database = {
         Row: {
           aj_score: number | null
           cjp_penalty: number | null
+          db_score: number | null
           dj_difficulty: number | null
           dj_extra_elements: Json | null
           dj_flags: Json | null
@@ -840,6 +841,7 @@ export type Database = {
         Insert: {
           aj_score?: number | null
           cjp_penalty?: number | null
+          db_score?: number | null
           dj_difficulty?: number | null
           dj_extra_elements?: Json | null
           dj_flags?: Json | null
@@ -858,6 +860,7 @@ export type Database = {
         Update: {
           aj_score?: number | null
           cjp_penalty?: number | null
+          db_score?: number | null
           dj_difficulty?: number | null
           dj_extra_elements?: Json | null
           dj_flags?: Json | null
