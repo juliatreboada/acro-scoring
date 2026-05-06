@@ -68,7 +68,7 @@ export default function Page() {
           nominationsRes, entriesRes, rulesRes, adminsRes,
           provisionalClubsRes, definitiveClubsRes, mergeGroupsRes] = await Promise.all([
         supabase.from('competitions')
-       .select('id,name,status,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,age_groups,poster_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine')
+       .select('id,name,status,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,age_groups,poster_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine,open_combinados_enabled')
        .eq('id', id).single(),
         supabase.from('panels').select('id,competition_id,panel_number').eq('competition_id', id).order('panel_number'),
         supabase.from('sections').select('id,competition_id,section_number,label,starting_time,waiting_time_seconds,warmup_duration_minutes,timeline_order').eq('competition_id', id).order('section_number'),

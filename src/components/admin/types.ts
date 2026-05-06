@@ -34,6 +34,7 @@ export type Competition = {
   fee_per_team: number | null          // fixed fee per team entry
   fee_per_gymnast: number | null       // fee × gymnast count per category (pair=2, trio=3, group=4)
   judge_missing_fine: number | null    // extra charge if club doesn't provide a judge
+  open_combinados_enabled?: boolean
 }
 
 export type Panel = {

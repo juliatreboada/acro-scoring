@@ -8,6 +8,7 @@ import type { PanelJudge, ScoringPerformance, JudgeScore, RoutineResult, Penalty
 import type { SessionStatus } from '@/components/judge/JudgeSession'
 import { fetchPeerSessionIdsForRanking } from '@/lib/rankingPeers'
 import { useSectionPractice } from '@/hooks/useSectionPractice'
+import { resolveRoutineTypeForTeamInSession, type SessionMapRow } from '@/lib/openCombinadosBracket'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -222,37 +223,68 @@ export function useJudgeSession(): JudgeSessionData {
       )
 
       const teamIds = orderedEntries.map(o => o.team_id)
+      const [phaseMapRes, choiceRes] = await Promise.all([
+        supabase
+          .from('open_combinados_phase_sessions')
+          .select('phase_key, session_id')
+          .eq('competition_id', (session as any).competition_id)
+          .eq('session_id', session.id),
+        teamIds.length > 0
+          ? supabase
+              .from('open_combinados_open_team_choices')
+              .select('phase_key, team_id, selected_routine_type')
+              .eq('competition_id', (session as any).competition_id)
+              .in('team_id', teamIds)
+          : Promise.resolve({ data: [] as { phase_key: string; team_id: string; selected_routine_type: 'Balance' | 'Dynamic' | 'Combined' }[] }),
+      ])
+      const phaseMappings = (phaseMapRes.data ?? []) as SessionMapRow[]
+      const openChoicesByPhaseAndTeam: Record<string, Record<string, 'Balance' | 'Dynamic' | 'Combined'>> = {}
+      for (const row of (choiceRes.data ?? [])) {
+        if (!openChoicesByPhaseAndTeam[row.phase_key]) openChoicesByPhaseAndTeam[row.phase_key] = {}
+        openChoicesByPhaseAndTeam[row.phase_key][row.team_id] = row.selected_routine_type as 'Balance' | 'Dynamic' | 'Combined'
+      }
+      const teamRoutineTypeMap: Record<string, 'Balance' | 'Dynamic' | 'Combined'> = {}
+      for (const teamId of teamIds) {
+        teamRoutineTypeMap[teamId] = resolveRoutineTypeForTeamInSession({
+          sessionId: session.id,
+          sessionRoutineType: session.routine_type,
+          teamId,
+          mappings: phaseMappings,
+          openChoicesByPhaseAndTeam,
+        })
+      }
+
       const [teamsRes, musicRes, elementsRes] = await Promise.all([
         teamIds.length > 0
           ? supabase.from('teams').select('id, gymnast_display, age_group, category').in('id', teamIds)
           : Promise.resolve({ data: [] as { id: string; gymnast_display: string; age_group: string; category: string }[] }),
         teamIds.length > 0
           ? supabase.from('routine_music')
-              .select('team_id, ts_path')
+              .select('team_id, routine_type, ts_path')
               .eq('competition_id', (session as any).competition_id)
-              .eq('routine_type', session.routine_type)
               .in('team_id', teamIds)
-          : Promise.resolve({ data: [] as { team_id: string; ts_path: string | null }[] }),
+          : Promise.resolve({ data: [] as { team_id: string; routine_type: 'Balance' | 'Dynamic' | 'Combined'; ts_path: string | null }[] }),
         teamIds.length > 0
           ? supabase.from('ts_elements')
-              .select('id, team_id, position, label, element_type, is_static, difficulty_value')
+              .select('id, team_id, routine_type, position, label, element_type, is_static, difficulty_value')
               .eq('competition_id', (session as any).competition_id)
-              .eq('routine_type', session.routine_type)
               .in('team_id', teamIds)
               .order('position')
-          : Promise.resolve({ data: [] as { id: string; team_id: string; position: number; label: string; element_type: string; is_static: boolean; difficulty_value: number }[] }),
+          : Promise.resolve({ data: [] as { id: string; team_id: string; routine_type: 'Balance' | 'Dynamic' | 'Combined'; position: number; label: string; element_type: string; is_static: boolean; difficulty_value: number }[] }),
       ])
 
       const teamMap: Record<string, { gymnast_display: string; age_group: string; category: string }> =
         Object.fromEntries((teamsRes.data ?? []).map(t => [t.id, t]))
 
-      const tsUrlMap: Record<string, string | null> = Object.fromEntries(
-        ((musicRes.data ?? []) as { team_id: string; ts_path: string | null }[])
-          .map(m => [m.team_id, m.ts_path ?? null])
-      )
+      const tsUrlMap: Record<string, string | null> = {}
+      for (const m of ((musicRes.data ?? []) as { team_id: string; routine_type: 'Balance' | 'Dynamic' | 'Combined'; ts_path: string | null }[])) {
+        if (teamRoutineTypeMap[m.team_id] !== m.routine_type) continue
+        tsUrlMap[m.team_id] = m.ts_path ?? null
+      }
 
       const elementsMap: Record<string, import('@/components/scoring/types').TsElement[]> = {}
-      for (const el of (elementsRes.data ?? []) as { id: string; team_id: string; position: number; label: string; element_type: string; is_static: boolean; difficulty_value: number }[]) {
+      for (const el of (elementsRes.data ?? []) as { id: string; team_id: string; routine_type: 'Balance' | 'Dynamic' | 'Combined'; position: number; label: string; element_type: string; is_static: boolean; difficulty_value: number }[]) {
+        if (teamRoutineTypeMap[el.team_id] !== el.routine_type) continue
         if (!elementsMap[el.team_id]) elementsMap[el.team_id] = []
         elementsMap[el.team_id].push({
           id:              el.id,
@@ -271,7 +303,7 @@ export function useJudgeSession(): JudgeSessionData {
         gymnasts:    teamMap[o.team_id]?.gymnast_display ?? '',
         ageGroup:    agLabels[teamMap[o.team_id]?.age_group ?? session.age_group] ?? teamMap[o.team_id]?.age_group ?? session.age_group,
         category:    teamMap[o.team_id]?.category  ?? session.category,
-        routineType: session.routine_type,
+        routineType: teamRoutineTypeMap[o.team_id] ?? session.routine_type,
         skipped:     false,
         tsUrl:       tsUrlMap[o.team_id] ?? null,
         elements:    elementsMap[o.team_id] ?? [],

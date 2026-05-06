@@ -9,6 +9,7 @@ import type { Lang } from '@/components/scoring/types'
 import type { ScoringPerformance, RoutineResult } from '@/components/scoring/types'
 import type { TeamClubInfo } from '@/lib/clubTrophyRanking'
 import { showTrofeoGondomarClubRanking } from '@/lib/trofeoGondomarCompetition'
+import type { OpenCombinadosActaData } from '@/lib/openCombinadosBracket'
 
 function ResultsPageInner() {
   const { id } = useParams<{ id: string }>()
@@ -23,6 +24,7 @@ function ResultsPageInner() {
   const [clubAvatarByTeam, setClubAvatarByTeam] = useState<Record<string, string | null>>({})
   const [teamClubInfo, setTeamClubInfo] = useState<Record<string, TeamClubInfo>>({})
   const [agSortOrder, setAgSortOrder] = useState<Record<string, number>>({})
+  const [openCombinadosActa, setOpenCombinadosActa] = useState<OpenCombinadosActaData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -38,6 +40,7 @@ function ResultsPageInner() {
       setClubAvatarByTeam(bundle.clubAvatarByTeam)
       setTeamClubInfo(bundle.teamClubInfo)
       setAgSortOrder(bundle.agSortOrder)
+      setOpenCombinadosActa(bundle.openCombinadosActa)
       setLoading(false)
     }
     load()
@@ -131,6 +134,7 @@ function ResultsPageInner() {
         agSortOrder={agSortOrder}
         officialDocument={isOfficial}
         showTrofeoGondomarClubRanking={trofeoGondomar}
+        openCombinadosActa={openCombinadosActa}
       />
 
       {isOfficial && (

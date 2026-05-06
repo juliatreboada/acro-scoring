@@ -199,6 +199,7 @@ export type Database = {
           judge_missing_fine: number | null
           location: string | null
           name: string
+          open_combinados_enabled: boolean
           poster_url: string | null
           provisional_entry_deadline: string | null
           registration_deadline: string | null
@@ -221,6 +222,7 @@ export type Database = {
           judge_missing_fine?: number | null
           location?: string | null
           name: string
+          open_combinados_enabled?: boolean
           poster_url?: string | null
           provisional_entry_deadline?: string | null
           registration_deadline?: string | null
@@ -243,6 +245,7 @@ export type Database = {
           judge_missing_fine?: number | null
           location?: string | null
           name?: string
+          open_combinados_enabled?: boolean
           poster_url?: string | null
           provisional_entry_deadline?: string | null
           registration_deadline?: string | null
@@ -1322,6 +1325,128 @@ export type Database = {
             columns: ["started_by"]
             isOneToOne: false
             referencedRelation: "judges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      open_combinados_bracket_config: {
+        Row: {
+          competition_id: string
+          combinados_semi_count: number
+          combinados_final_count: number
+          open_quarter_count: number
+          open_semi_count: number
+          open_final_count: number
+          updated_at: string
+        }
+        Insert: {
+          competition_id: string
+          combinados_semi_count?: number
+          combinados_final_count?: number
+          open_quarter_count?: number
+          open_semi_count?: number
+          open_final_count?: number
+          updated_at?: string
+        }
+        Update: {
+          competition_id?: string
+          combinados_semi_count?: number
+          combinados_final_count?: number
+          open_quarter_count?: number
+          open_semi_count?: number
+          open_final_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "open_combinados_bracket_config_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: true
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      open_combinados_open_team_choices: {
+        Row: {
+          id: string
+          competition_id: string
+          phase_key: string
+          team_id: string
+          selected_routine_type: Database["public"]["Enums"]["routine_type"]
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          competition_id: string
+          phase_key: string
+          team_id: string
+          selected_routine_type: Database["public"]["Enums"]["routine_type"]
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          competition_id?: string
+          phase_key?: string
+          team_id?: string
+          selected_routine_type?: Database["public"]["Enums"]["routine_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "open_combinados_open_team_choices_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "open_combinados_open_team_choices_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      open_combinados_phase_sessions: {
+        Row: {
+          id: string
+          competition_id: string
+          phase_key: string
+          group_key: string
+          routine_type: Database["public"]["Enums"]["routine_type"]
+          session_id: string
+        }
+        Insert: {
+          id?: string
+          competition_id: string
+          phase_key: string
+          group_key: string
+          routine_type: Database["public"]["Enums"]["routine_type"]
+          session_id: string
+        }
+        Update: {
+          id?: string
+          competition_id?: string
+          phase_key?: string
+          group_key?: string
+          routine_type?: Database["public"]["Enums"]["routine_type"]
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "open_combinados_phase_sessions_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "open_combinados_phase_sessions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "sessions"
             referencedColumns: ["id"]
           },
         ]

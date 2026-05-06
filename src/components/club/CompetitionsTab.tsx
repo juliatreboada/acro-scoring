@@ -510,6 +510,7 @@ function CompetitionDetailView({
 }) {
   const t = T[lang]
   const isOpen = competition.status === 'registration_open'
+  const canRegisterNow = competition.status === 'registration_open' || competition.status === 'definitive_entry'
   const dateStr = formatDateRange(competition.start_date, competition.end_date)
   const today = new Date().toISOString().slice(0, 10)
   const isFileEditLocked = !!competition.ts_music_deadline && today > competition.ts_music_deadline
@@ -519,9 +520,9 @@ function CompetitionDetailView({
   const [ageError, setAgeError] = useState<{ teamId: string; messages: string[] } | null>(null)
 
   // registration gate: check if this club is in competition_allowed_clubs
-  const [allowed, setAllowed] = useState<boolean | null>(isOpen ? null : true)
+  const [allowed, setAllowed] = useState<boolean | null>(canRegisterNow ? null : true)
   useEffect(() => {
-    if (!isOpen) return
+    if (!canRegisterNow) return
     const supabase = createClient()
     supabase
       .from('competition_allowed_clubs')
@@ -530,7 +531,7 @@ function CompetitionDetailView({
       .eq('club_id', clubId)
       .maybeSingle()
       .then(({ data }) => setAllowed(!!data))
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [canRegisterNow, competition.id, clubId])
 
   // Fix eligible teams filter: match by UUID (ag_group = rule.id) OR by label name (legacy)
   const eligibleTeams = teams.filter((team) =>
@@ -831,11 +832,11 @@ function CompetitionDetailView({
       <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-3">{t.teamsTitle}</p>
 
       {/* registration gate */}
-      {isOpen && allowed === null ? (
+      {canRegisterNow && allowed === null ? (
         <div className="flex justify-center py-10">
           <div className="w-5 h-5 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />
         </div>
-      ) : isOpen && allowed === false ? (
+      ) : canRegisterNow && allowed === false ? (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-6 text-center space-y-1">
           <p className="text-sm font-semibold text-amber-800">{t.notAllowedTitle}</p>
           <p className="text-xs text-amber-600">{t.notAllowedHint}</p>
@@ -899,7 +900,7 @@ function CompetitionDetailView({
                           {entry.dropped_out ? t.undoDropout : t.toggleDropout}
                         </button>
                       </div>
-                    ) : isOpen ? (() => {
+                    ) : canRegisterNow ? (() => {
                       const qi = getQuotaInfo(team)
                       const atLimit = qi !== null && qi.used >= qi.limit
                       if (atLimit) {

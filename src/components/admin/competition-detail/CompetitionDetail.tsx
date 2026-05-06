@@ -11,6 +11,8 @@ import StartingOrderTab from './StartingOrderTab'
 import CompetitionDayTab from './CompetitionDayTab'
 import LicenciasTab from './LicenciasTab'
 import TVTab from './TVTab'
+import OpenCombinadosTab from './OpenCombinadosTab'
+import { isOpenCombinadosCompetitionName } from '@/lib/openCombinadosCompetition'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -26,6 +28,7 @@ const T = {
       day:           'Competition day',
       licencias:     'Licencias',
       tv:            'TV',
+      bracket:       'Bracket',
     },
     soon: 'Coming soon',
     soonSub: 'This section is not built yet.',
@@ -105,6 +108,7 @@ const T = {
       day:           'Día de competición',
       licencias:     'Licencias',
       tv:            'TV',
+      bracket:       'Bracket',
     },
     soon: 'Próximamente',
     soonSub: 'Esta jornada aún no está construida.',
@@ -193,7 +197,7 @@ const ACTION_STYLE: Partial<Record<CompetitionStatus, string>> = {
   active:               'border-red-200 text-red-600 hover:bg-red-50',
 }
 
-type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias' | 'tv'
+type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias' | 'tv' | 'bracket'
 
 function formatDateRange(start: string | null, end: string | null): string {
   const fmt = (d: string) =>
@@ -939,6 +943,8 @@ export default function CompetitionDetail({
 }: CompetitionDetailProps) {
   const t = T[lang]
   const [activeTab, setActiveTab] = useState<Tab>('structure')
+  const openCombinadosEnabled =
+    isOpenCombinadosCompetitionName(competition.name) || Boolean(competition.open_combinados_enabled)
 
   const today = new Date().toISOString().slice(0, 10)
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
@@ -953,6 +959,7 @@ export default function CompetitionDetail({
     { key: 'licencias',     label: t.tabs.licencias     },
     { key: 'day',           label: t.tabs.day, live: competition.status === 'active' },
     { key: 'tv',            label: t.tabs.tv            },
+    ...(openCombinadosEnabled ? [{ key: 'bracket' as const, label: t.tabs.bracket }] : []),
     { key: 'overview',      label: t.tabs.overview      },
   ]
 
@@ -1202,6 +1209,16 @@ export default function CompetitionDetail({
           clubs={clubs}
           entries={entries}
           agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, r.age_group]))}
+        />
+      )}
+      {activeTab === 'bracket' && openCombinadosEnabled && (
+        <OpenCombinadosTab
+          lang={lang}
+          competitionId={competition.id}
+          sessions={sessions}
+          sessionOrders={sessionOrders}
+          teams={globalTeams}
+          entries={entries}
         />
       )}
     </div>
