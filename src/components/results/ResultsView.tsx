@@ -6,6 +6,7 @@ import type { ScoringPerformance, RoutineResult } from '../scoring/types'
 import { categoryLabel } from '@/components/admin/types'
 import { getResultsRuleset } from '@/lib/resultsRuleset'
 import { computeClubTrophyRanking, type TeamClubInfo, type ClubTrophyRow } from '@/lib/clubTrophyRanking'
+import type { OpenCombinadosActaData } from '@/lib/openCombinadosBracket'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -661,6 +662,7 @@ export type ResultsViewProps = {
   officialDocument?: boolean
   /** When true, show Trofeo Gondomar Escolar/Base club rankings (single competition only). */
   showTrofeoGondomarClubRanking?: boolean
+  openCombinadosActa?: OpenCombinadosActaData | null
 }
 
 export default function ResultsView({
@@ -672,6 +674,7 @@ export default function ResultsView({
   agSortOrder = {},
   officialDocument = false,
   showTrofeoGondomarClubRanking = false,
+  openCombinadosActa = null,
 }: ResultsViewProps) {
   const t = T[lang]
 
@@ -762,6 +765,34 @@ export default function ResultsView({
       )
     })
 
+  const teamNameById = Object.fromEntries(performances.map((p) => [p.teamId, p.gymnasts]))
+  const renderOpenCombinadosTable = (title: string, rows?: Array<{ rank: number; teamId: string; score: number }>) => {
+    if (!rows?.length) return null
+    return (
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="px-4 py-2 border-b border-slate-200 font-semibold text-slate-800">{title}</div>
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 text-slate-500">
+            <tr>
+              <th className="text-left px-4 py-2">#</th>
+              <th className="text-left px-4 py-2">{lang === 'en' ? 'Team' : 'Equipo'}</th>
+              <th className="text-right px-4 py-2">{lang === 'en' ? 'Score' : 'Puntuación'}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.teamId} className="border-t border-slate-100">
+                <td className="px-4 py-2">{r.rank}</td>
+                <td className="px-4 py-2">{teamNameById[r.teamId] ?? r.teamId}</td>
+                <td className="px-4 py-2 text-right font-semibold">{r.score.toFixed(3)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
   if (allCategoryKeys.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-3 px-6">
@@ -827,6 +858,18 @@ export default function ResultsView({
               </div>
             )
           })}
+          {openCombinadosActa && (
+            <div className="max-w-3xl mx-auto px-4 py-6 space-y-3">
+              <h2 className="text-lg font-bold text-slate-800">OPEN / COMBINADOS</h2>
+              {renderOpenCombinadosTable('OPEN Qualification', openCombinadosActa.openQualification)}
+              {renderOpenCombinadosTable('COMBINADOS Qualification', openCombinadosActa.combinadosQualification)}
+              {renderOpenCombinadosTable('OPEN Quarter', openCombinadosActa.openQuarter)}
+              {renderOpenCombinadosTable('OPEN Semi', openCombinadosActa.openSemi)}
+              {renderOpenCombinadosTable('OPEN Final', openCombinadosActa.openFinal)}
+              {renderOpenCombinadosTable('COMBINADOS Semi', openCombinadosActa.combinadosSemi)}
+              {renderOpenCombinadosTable('COMBINADOS Final', openCombinadosActa.combinadosFinal)}
+            </div>
+          )}
         </>
       ) : (
         <>
@@ -839,6 +882,18 @@ export default function ResultsView({
               teamClubInfo={teamClubInfo}
               t={t}
             />
+          )}
+          {openCombinadosActa && (
+            <div className="max-w-3xl mx-auto px-4 py-6 space-y-3">
+              <h2 className="text-lg font-bold text-slate-800">OPEN / COMBINADOS</h2>
+              {renderOpenCombinadosTable('OPEN Qualification', openCombinadosActa.openQualification)}
+              {renderOpenCombinadosTable('COMBINADOS Qualification', openCombinadosActa.combinadosQualification)}
+              {renderOpenCombinadosTable('OPEN Quarter', openCombinadosActa.openQuarter)}
+              {renderOpenCombinadosTable('OPEN Semi', openCombinadosActa.openSemi)}
+              {renderOpenCombinadosTable('OPEN Final', openCombinadosActa.openFinal)}
+              {renderOpenCombinadosTable('COMBINADOS Semi', openCombinadosActa.combinadosSemi)}
+              {renderOpenCombinadosTable('COMBINADOS Final', openCombinadosActa.combinadosFinal)}
+            </div>
           )}
         </>
       )}

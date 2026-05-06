@@ -2,12 +2,15 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/database.types'
 import type { ScoringPerformance, RoutineResult } from '@/components/scoring/types'
 import type { TeamClubInfo } from '@/lib/clubTrophyRanking'
+import { computeOpenCombinadosActaFromRows, type OpenCombinadosActaData } from '@/lib/openCombinadosBracket'
+import { isOpenCombinadosCompetitionName } from '@/lib/openCombinadosCompetition'
 
 export type ResultsPageCompetitionMeta = {
   name: string
   location: string | null
   start_date: string | null
   end_date: string | null
+  open_combinados_enabled?: boolean
 }
 
 export type ResultsPageBundle = {
@@ -18,6 +21,7 @@ export type ResultsPageBundle = {
   /** Per team: club id/name/avatar for club-level rankings (e.g. Trofeo Gondomar). */
   teamClubInfo: Record<string, TeamClubInfo>
   agSortOrder: Record<string, number>
+  openCombinadosActa: OpenCombinadosActaData | null
 }
 
 /**
@@ -34,21 +38,26 @@ export async function loadResultsPageBundle(
     clubAvatarByTeam: {},
     teamClubInfo: {},
     agSortOrder: {},
+    openCombinadosActa: null,
   }
 
   const { data: comp } = await supabase
     .from('competitions')
-    .select('name, location, start_date, end_date')
+    .select('name, location, start_date, end_date, open_combinados_enabled')
     .eq('id', competitionId)
     .single()
 
   if (!comp) return empty
+
+  const openCombinadosEnabled =
+    isOpenCombinadosCompetitionName(comp.name) || Boolean(comp.open_combinados_enabled)
 
   const competition: ResultsPageCompetitionMeta = {
     name: comp.name,
     location: comp.location,
     start_date: comp.start_date,
     end_date: comp.end_date,
+    open_combinados_enabled: openCombinadosEnabled,
   }
 
   const [sessionsRes, ageGroupRulesRes, mergeGroupsRes] = await Promise.all([
@@ -66,7 +75,7 @@ export async function loadResultsPageBundle(
   const agSortOrder = Object.fromEntries(agRules.map((r) => [r.age_group, r.sort_order ?? 0]))
 
   if (!sessions?.length) {
-    return { competition, performances: [], results: {}, clubAvatarByTeam: {}, teamClubInfo: {}, agSortOrder }
+    return { competition, performances: [], results: {}, clubAvatarByTeam: {}, teamClubInfo: {}, agSortOrder, openCombinadosActa: null }
   }
 
   const sessionIds = sessions.map((s) => s.id)
@@ -174,6 +183,20 @@ export async function loadResultsPageBundle(
     }
   }
 
+  let openCombinadosActa: OpenCombinadosActaData | null = null
+  if (openCombinadosEnabled) {
+    const { data: mappings } = await supabase
+      .from('open_combinados_phase_sessions')
+      .select('phase_key,session_id')
+      .eq('competition_id', competitionId)
+    if ((mappings ?? []).length > 0) {
+      openCombinadosActa = computeOpenCombinadosActaFromRows(
+        (mappings ?? []) as Array<{ phase_key: any; session_id: string }>,
+        (rawRes ?? []) as Array<{ session_id: string; team_id: string; final_score: number | null }>,
+      )
+    }
+  }
+
   return {
     competition,
     performances: perfs,
@@ -181,5 +204,6 @@ export async function loadResultsPageBundle(
     clubAvatarByTeam: teamClubAvatars,
     teamClubInfo,
     agSortOrder,
+    openCombinadosActa,
   }
 }

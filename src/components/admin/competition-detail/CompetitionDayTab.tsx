@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, Section, Panel, Session, SessionOrder, Team, Club, CompetitionEntry, ScoringMethod } from '@/components/admin/types'
+import { resolveRoutineTypeForTeamInSession, type SessionMapRow } from '@/lib/openCombinadosBracket'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -368,6 +369,7 @@ export default function CompetitionDayTab({
   const [cjpCurrentTeamIds, setCjpCurrentTeamIds] = useState<Record<string, string | null>>({})
   // team_id|routine_type → music public URL
   const [allMusicPaths, setAllMusicPaths] = useState<Array<{ team_id: string; routine_type: string; music_path: string | null }>>([])
+  const [teamRoutineBySessionTeam, setTeamRoutineBySessionTeam] = useState<Record<string, 'Balance' | 'Dynamic' | 'Combined'>>({})
 
   // Local optimistic state for scoring config (so toggling reflects immediately without prop round-trip)
   const [localConfig, setLocalConfig] = useState<Record<string, Partial<Pick<Session, 'dj_method' | 'ej_method'>>>>({})
@@ -382,6 +384,7 @@ export default function CompetitionDayTab({
 
     const ids     = activeSessions.map(s => s.id)
     const teamIds = [...new Set(sessionOrders.filter(o => ids.includes(o.session_id)).map(o => o.team_id))]
+    const sessionById = Object.fromEntries(activeSessions.map((s) => [s.id, s]))
 
     // fetch initial CJP current_team_id
     supabase.from('sessions').select('id, current_team_id').in('id', ids)
@@ -394,11 +397,43 @@ export default function CompetitionDayTab({
 
     // fetch music URLs
     if (teamIds.length) {
-      supabase.from('routine_music')
-        .select('team_id, routine_type, music_path')
-        .eq('competition_id', competition.id)
-        .in('team_id', teamIds)
-        .then(({ data }) => setAllMusicPaths((data ?? []) as typeof allMusicPaths))
+      Promise.all([
+        supabase.from('routine_music')
+          .select('team_id, routine_type, music_path')
+          .eq('competition_id', competition.id)
+          .in('team_id', teamIds),
+        supabase
+          .from('open_combinados_phase_sessions')
+          .select('phase_key, session_id')
+          .eq('competition_id', competition.id)
+          .in('session_id', ids),
+        supabase
+          .from('open_combinados_open_team_choices')
+          .select('phase_key, team_id, selected_routine_type')
+          .eq('competition_id', competition.id)
+          .in('team_id', teamIds),
+      ]).then(([musicRes, phaseRes, choiceRes]) => {
+        setAllMusicPaths((musicRes.data ?? []) as typeof allMusicPaths)
+        const mappings = (phaseRes.data ?? []) as SessionMapRow[]
+        const openChoicesByPhaseAndTeam: Record<string, Record<string, 'Balance' | 'Dynamic' | 'Combined'>> = {}
+        for (const row of (choiceRes.data ?? [])) {
+          if (!openChoicesByPhaseAndTeam[row.phase_key]) openChoicesByPhaseAndTeam[row.phase_key] = {}
+          openChoicesByPhaseAndTeam[row.phase_key][row.team_id] = row.selected_routine_type as 'Balance' | 'Dynamic' | 'Combined'
+        }
+        const nextMap: Record<string, 'Balance' | 'Dynamic' | 'Combined'> = {}
+        for (const o of sessionOrders.filter((ord) => ids.includes(ord.session_id))) {
+          const session = sessionById[o.session_id]
+          if (!session) continue
+          nextMap[`${o.session_id}:${o.team_id}`] = resolveRoutineTypeForTeamInSession({
+            sessionId: o.session_id,
+            sessionRoutineType: session.routine_type,
+            teamId: o.team_id,
+            mappings,
+            openChoicesByPhaseAndTeam,
+          })
+        }
+        setTeamRoutineBySessionTeam(nextMap)
+      })
     }
 
     // subscribe to session updates (CJP indicator)
@@ -435,11 +470,14 @@ export default function CompetitionDayTab({
   const multiPanel      = panels.length > 1
 
   function getMusicPaths(session: Session): Record<string, string | null> {
-    return Object.fromEntries(
-      allMusicPaths
-        .filter(m => m.routine_type === session.routine_type)
-        .map(m => [m.team_id, m.music_path])
-    )
+    const byTeamAndRoutine = new Map<string, string | null>()
+    for (const row of allMusicPaths) byTeamAndRoutine.set(`${row.team_id}:${row.routine_type}`, row.music_path)
+    const out: Record<string, string | null> = {}
+    for (const o of sessionOrders.filter((ord) => ord.session_id === session.id)) {
+      const routine = teamRoutineBySessionTeam[`${session.id}:${o.team_id}`] ?? session.routine_type
+      out[o.team_id] = byTeamAndRoutine.get(`${o.team_id}:${routine}`) ?? null
+    }
+    return out
   }
 
   async function handleConfigChange(sessionId: string, patch: Partial<Pick<Session, 'dj_method' | 'ej_method'>>) {
