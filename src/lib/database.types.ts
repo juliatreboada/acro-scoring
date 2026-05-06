@@ -1451,6 +1451,42 @@ export type Database = {
           },
         ]
       }
+      competition_music_unlocks: {
+        Row: {
+          competition_id: string
+          team_id: string
+          enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          competition_id: string
+          team_id: string
+          enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          competition_id?: string
+          team_id?: string
+          enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_music_unlocks_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competition_music_unlocks_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tv_state: {
         Row: {
           id: string

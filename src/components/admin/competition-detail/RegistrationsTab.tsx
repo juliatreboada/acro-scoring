@@ -27,6 +27,8 @@ const T = {
     tsWarningFull: 'No TS uploaded.',
     musicWarning: 'Missing music',
     musicWarningFull: 'No music file uploaded.',
+    reopenMusic: 'Reopen music upload',
+    closeMusicReopen: 'Close music reopen',
     expandAll: 'Expand all',
     collapseAll: 'Collapse all',
     // sub-tabs
@@ -89,6 +91,8 @@ const T = {
     tsWarningFull: 'No se ha subido la TS.',
     musicWarning: 'Falta música',
     musicWarningFull: 'No se ha subido el archivo de música.',
+    reopenMusic: 'Reabrir subida música',
+    closeMusicReopen: 'Cerrar reapertura música',
     expandAll: 'Expandir todo',
     collapseAll: 'Contraer todo',
     // sub-tabs
@@ -747,7 +751,7 @@ function DefinitiveSubTab({ lang, competitionId, definitiveEntries, allowedClubs
 
 type GroupItem = { entry: CompetitionEntry; team: Team; club: Club | undefined; missingLicencia: boolean; missingTS: boolean; missingMusic: boolean }
 
-function RegistrationGroup({ age_group, category, items, lang, agLabels, open, onToggle, onToggleDropout }: {
+function RegistrationGroup({ age_group, category, items, lang, agLabels, open, onToggle, onToggleDropout, musicUnlockByTeam, onToggleMusicUnlock }: {
   age_group: string
   category: string
   items: GroupItem[]
@@ -756,6 +760,8 @@ function RegistrationGroup({ age_group, category, items, lang, agLabels, open, o
   open: boolean
   onToggle: () => void
   onToggleDropout: (entryId: string) => void
+  musicUnlockByTeam: Record<string, boolean>
+  onToggleMusicUnlock: (teamId: string, enabled: boolean) => Promise<void> | void
 }) {
   const t = T[lang]
   const activeCount = items.filter((i) => !i.entry.dropped_out).length
@@ -826,13 +832,26 @@ function RegistrationGroup({ age_group, category, items, lang, agLabels, open, o
               </span>
             )}
 
-            <button
-              onClick={() => onToggleDropout(entry.id)}
-              className={['shrink-0 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all',
-                entry.dropped_out ? 'border-slate-200 text-slate-500 hover:bg-white' : 'border-red-100 text-red-500 hover:bg-red-50'].join(' ')}
-            >
-              {entry.dropped_out ? t.undoDropout : t.markDropout}
-            </button>
+            <div className="shrink-0 flex items-center gap-2">
+              <button
+                onClick={() => void onToggleMusicUnlock(team.id, !musicUnlockByTeam[team.id])}
+                className={[
+                  'text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all',
+                  musicUnlockByTeam[team.id]
+                    ? 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                    : 'border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100',
+                ].join(' ')}
+              >
+                {musicUnlockByTeam[team.id] ? t.closeMusicReopen : t.reopenMusic}
+              </button>
+              <button
+                onClick={() => onToggleDropout(entry.id)}
+                className={['text-xs font-medium px-3 py-1.5 rounded-lg border transition-all',
+                  entry.dropped_out ? 'border-slate-200 text-slate-500 hover:bg-white' : 'border-red-100 text-red-500 hover:bg-red-50'].join(' ')}
+              >
+                {entry.dropped_out ? t.undoDropout : t.markDropout}
+              </button>
+            </div>
           </div>
         ))}
       </div>}
@@ -880,6 +899,7 @@ export default function RegistrationsTab({
   const [openLevels,  setOpenLevels]  = useState<Set<string>>(new Set())
   const [openGroups,  setOpenGroups]  = useState<Set<string>>(new Set())
   const [routineMusic, setRoutineMusic] = useState<Array<{ team_id: string; music_path: string | null; ts_path: string | null }>>([])
+  const [musicUnlockByTeam, setMusicUnlockByTeam] = useState<Record<string, boolean>>({})
 
   // ── provisional / definitive / allowed clubs state ──────────────────────────
   const [provisionalEntries, setProvisionalEntries] = useState<ProvisionalEntry[]>([])
@@ -898,7 +918,34 @@ export default function RegistrationsTab({
       .eq('competition_id', competitionId)
       .in('team_id', teamIds)
       .then(({ data }) => { if (data) setRoutineMusic(data) })
+    supabase
+      .from('competition_music_unlocks')
+      .select('team_id, enabled')
+      .eq('competition_id', competitionId)
+      .in('team_id', teamIds)
+      .then(({ data }) => {
+        const map: Record<string, boolean> = {}
+        for (const row of data ?? []) map[row.team_id] = !!row.enabled
+        setMusicUnlockByTeam(map)
+      })
   }, [competitionId, entries])
+
+  async function toggleMusicUnlock(teamId: string, enabled: boolean) {
+    const supabase = createClient()
+    if (enabled) {
+      await supabase
+        .from('competition_music_unlocks')
+        .upsert({ competition_id: competitionId, team_id: teamId, enabled: true }, { onConflict: 'competition_id,team_id' })
+      setMusicUnlockByTeam((prev) => ({ ...prev, [teamId]: true }))
+    } else {
+      await supabase
+        .from('competition_music_unlocks')
+        .delete()
+        .eq('competition_id', competitionId)
+        .eq('team_id', teamId)
+      setMusicUnlockByTeam((prev) => ({ ...prev, [teamId]: false }))
+    }
+  }
 
   async function fetchEntryData() {
     const supabase = createClient()
@@ -1021,6 +1068,8 @@ export default function RegistrationsTab({
           openGroups={openGroups}
           setOpenLevels={setOpenLevels}
           setOpenGroups={setOpenGroups}
+          musicUnlockByTeam={musicUnlockByTeam}
+          onToggleMusicUnlock={toggleMusicUnlock}
           onShowImport={() => setShowImport(true)}
           competitionId={competitionId}
           competitionAgeGroups={competitionAgeGroups}
@@ -1033,7 +1082,7 @@ export default function RegistrationsTab({
 
 // ─── nominative view (extracted) ─────────────────────────────────────────────
 
-function NominativeView({ lang, globalTeams, clubs, gymnasts, entries, agLabels, onToggleDropout, ageGroupRules, routineMusic, openLevels, openGroups, setOpenLevels, setOpenGroups, onShowImport }: {
+function NominativeView({ lang, globalTeams, clubs, gymnasts, entries, agLabels, onToggleDropout, ageGroupRules, routineMusic, openLevels, openGroups, setOpenLevels, setOpenGroups, musicUnlockByTeam, onToggleMusicUnlock, onShowImport }: {
   lang: Lang
   globalTeams: Team[]
   clubs: Club[]
@@ -1047,6 +1096,8 @@ function NominativeView({ lang, globalTeams, clubs, gymnasts, entries, agLabels,
   openGroups: Set<string>
   setOpenLevels: React.Dispatch<React.SetStateAction<Set<string>>>
   setOpenGroups: React.Dispatch<React.SetStateAction<Set<string>>>
+  musicUnlockByTeam: Record<string, boolean>
+  onToggleMusicUnlock: (teamId: string, enabled: boolean) => Promise<void> | void
   onShowImport: () => void
   competitionId: string
   competitionAgeGroups: string[]
@@ -1157,6 +1208,8 @@ function NominativeView({ lang, globalTeams, clubs, gymnasts, entries, agLabels,
                           open={isGroupOpen(key)}
                           onToggle={() => toggleGroup(key)}
                           onToggleDropout={onToggleDropout}
+                          musicUnlockByTeam={musicUnlockByTeam}
+                          onToggleMusicUnlock={onToggleMusicUnlock}
                         />
                       )
                     })}
