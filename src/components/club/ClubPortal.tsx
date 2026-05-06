@@ -2,9 +2,8 @@
 
 import { useState } from 'react'
 import type { Lang } from '@/components/scoring/types'
-import type { Club, Gymnast, Coach, CompetitionCoach, Team, Competition, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination } from '@/components/admin/types'
+import type { Club, Gymnast, Coach, CompetitionCoach, Team, Competition, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule, Apparatus, ApparatusRule } from '@/components/admin/types'
 import ClickableImg from '@/components/shared/ClickableImg'
-import type { AgeGroupRule } from '@/components/admin/types'
 import GymnastsTab from './GymnastsTab'
 import CoachesTab from './CoachesTab'
 import TeamsTab from './TeamsTab'
@@ -48,6 +47,8 @@ export type ClubPortalProps = {
   music: RoutineMusic[]
   agLabels: Record<string, string>
   ageGroupRules: AgeGroupRule[]
+  apparatus: Apparatus[]
+  apparatusRules: ApparatusRule[]
   tsReviewStatuses: { team_id: string; competition_id: string; routine_type: string; status: string; final_comment: string | null }[]
   // gymnasts
   onAddGymnast: (g: Omit<Gymnast, 'id' | 'club_id'>) => void
@@ -91,7 +92,7 @@ export type ClubPortalProps = {
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function ClubPortal({
-  lang, club, gymnasts, coaches, competitionCoaches, teams, judges, nominations, competitions, entries, music, agLabels, ageGroupRules, tsReviewStatuses,
+  lang, club, gymnasts, coaches, competitionCoaches, teams, judges, nominations, competitions, entries, music, agLabels, ageGroupRules, apparatus, apparatusRules, tsReviewStatuses,
   onAddGymnast, onAddGymnastsBulk, onUpdateGymnast, onDeleteGymnast, onUploadGymnastPhoto, onUploadLicencia, onRemoveLicencia,
   onAddCoach, onUpdateCoach, onDeleteCoach, onUploadCoachPhoto, onUploadCoachLicencia, onRegisterCoach, onUnregisterCoach,
   onAddTeam, onUpdateTeam, onDeleteTeam, onUploadTeamPhoto,
@@ -186,6 +187,7 @@ export default function ClubPortal({
         {activeTab === 'teams' && (
           <TeamsTab lang={lang} gymnasts={gymnasts} teams={teams}
             ageGroupRules={ageGroupRules} agLabels={agLabels}
+            apparatus={apparatus} apparatusRules={apparatusRules}
             onAdd={onAddTeam} onUpdate={onUpdateTeam} onDelete={onDeleteTeam}
             onUploadPhoto={onUploadTeamPhoto} />
         )}

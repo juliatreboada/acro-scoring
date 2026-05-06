@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import type { Lang } from '@/components/scoring/types'
 import type { Judge, Panel, Section, SectionPanelJudge, Role, Club, CompetitionJudgeNomination } from '@/components/admin/types'
-import ClickableImg from '@/components/shared/ClickableImg'
 import { ROLE_CONFIG } from '@/components/admin/types'
+import { JudgeAvatar } from '@/components/admin/Avatar'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -68,20 +68,6 @@ const ROLE_ORDER: Role[] = ['CJP', 'DJ', 'EJ', 'AJ']
 const PANEL_HEADER: Record<number, string> = {
   1: 'bg-blue-50 text-blue-700 border-blue-200',
   2: 'bg-violet-50 text-violet-700 border-violet-200',
-}
-
-// ─── avatar ───────────────────────────────────────────────────────────────────
-
-function Avatar({ judge, size = 'md' }: { judge: Judge; size?: 'sm' | 'md' }) {
-  const initials = judge.full_name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
-  const sz = size === 'sm' ? 'w-7 h-7 text-xs' : 'w-10 h-10 text-sm'
-  return judge.avatar_url ? (
-    <ClickableImg src={judge.avatar_url} alt={judge.full_name} className={[sz, 'rounded-full object-cover'].join(' ')} />
-  ) : (
-    <div className={[sz, 'rounded-full bg-slate-200 text-slate-600 font-semibold flex items-center justify-center shrink-0'].join(' ')}>
-      {initials}
-    </div>
-  )
 }
 
 // ─── judge pool ───────────────────────────────────────────────────────────────
@@ -150,7 +136,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
             </h2>
             {collapsed && judges.length > 0 && (
               <div className="flex items-center gap-1 mt-0.5">
-                {judges.slice(0, 5).map(j => <Avatar key={j.id} judge={j} size="sm" />)}
+                {judges.slice(0, 5).map(j => <JudgeAvatar key={j.id} judge={j} size="sm" />)}
                 {judges.length > 5 && <span className="text-xs text-slate-400">+{judges.length - 5}</span>}
               </div>
             )}
@@ -181,7 +167,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
                     {available.map((j) => (
                       <button key={j.id} onClick={() => { onAdd(j.id); setShowPicker(false) }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors text-left">
-                        <Avatar judge={j} size="sm" />
+                        <JudgeAvatar judge={j} size="sm" />
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-slate-700 truncate">{j.full_name}</p>
                           {j.email && <p className="text-xs text-slate-400 truncate">{j.email}</p>}
@@ -262,7 +248,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
             const nominatingClub = nom?.club_id ? clubById[nom.club_id] : null
             return (
               <div key={j.id} className="flex items-center gap-2 pl-1 pr-3 py-1 bg-white border border-slate-200 rounded-xl">
-                <Avatar judge={j} size="sm" />
+                <JudgeAvatar judge={j} size="sm" />
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-slate-700 leading-tight">{j.full_name}</p>
                   {nominatingClub && (
@@ -300,7 +286,7 @@ function SlotCell({ label, slot, poolJudges, locked, selectPlaceholder, onAssign
       <span className="text-xs font-bold text-slate-400">{label}</span>
       <div className="flex items-center gap-1.5">
         {assigned
-          ? <Avatar judge={assigned} size="sm" />
+          ? <JudgeAvatar judge={assigned} size="sm" />
           : <div className="w-7 h-7 rounded-full bg-slate-100 border-2 border-dashed border-slate-300 shrink-0" />
         }
         <select
@@ -361,7 +347,7 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
         {cjpSlots[0] && (
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
             <span className="text-xs font-bold opacity-70 shrink-0">CJP</span>
-            {(() => { const assigned = poolJudges.find(j => j.id === cjpSlots[0].judge_id); return assigned ? <Avatar judge={assigned} size="sm" /> : <div className="w-7 h-7 rounded-full bg-white/50 border-2 border-dashed border-current opacity-40 shrink-0" /> })()}
+            {(() => { const assigned = poolJudges.find(j => j.id === cjpSlots[0].judge_id); return assigned ? <JudgeAvatar judge={assigned} size="sm" /> : <div className="w-7 h-7 rounded-full bg-white/50 border-2 border-dashed border-current opacity-40 shrink-0" /> })()}
             <select
               value={cjpSlots[0].judge_id ?? ''}
               disabled={locked}

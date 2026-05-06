@@ -8,6 +8,7 @@ export type AgeGroupRule = {
   max_age: number | null   // null = no upper limit (e.g. Senior)
   routine_count: number    // 1=Combined only, 2=Balance+Dynamic, 3=all three
   sort_order: number
+  sport_type: string       // 'acro' | 'rg'
 }
 
 export type AdminUser = {
@@ -34,6 +35,7 @@ export type Competition = {
   fee_per_team: number | null          // fixed fee per team entry
   fee_per_gymnast: number | null       // fee × gymnast count per category (pair=2, trio=3, group=4)
   judge_missing_fine: number | null    // extra charge if club doesn't provide a judge
+  sport_type: string                   // 'acro' | 'rg'
 }
 
 export type Panel = {
@@ -67,7 +69,7 @@ export type Session = {
   name: string
   age_group: string
   category: string
-  routine_type: 'Balance' | 'Dynamic' | 'Combined'
+  routine_type: 'Balance' | 'Dynamic' | 'Combined' | 'Free' | 'Hoop' | 'Ball' | 'Clubs' | 'Ribbon' | 'Rope'
   status: 'waiting' | 'active' | 'finished'
   order_index: number   // order within the section
   dj_method:  ScoringMethod | null
@@ -138,21 +140,55 @@ export const CATEGORY_SIZE: Record<string, number> = {
   'Groups 4': 4,
 }
 
+export type Apparatus = {
+  id: string
+  name: string
+  name_es: string | null
+  sort_order: number
+}
+
+export type ApparatusRule = {
+  id: string
+  age_group_rule_id: string
+  year: number
+  apparatus_id: string
+  is_mandatory: boolean
+  sort_order: number
+}
+
 export type Team = {
   id: string
   club_id: string
   gymnast_ids?: string[]    // references to Gymnast.id
-  category: string          // from ACRO_CATEGORIES
+  category: string          // Acro: category key | RG: 'Individual' | 'Group'
   age_group: string
   gymnast_display: string   // e.g. "Fernández / Ruiz"
   photo_url: string | null
+  sport_type?: string       // 'acro' | 'rg' (defaults to 'acro')
+  apparatus_ids?: string[]  // RG only — from team_apparatus
+}
+
+export type RGRegistrationStatus = 'pending' | 'inscription_approved' | 'payment_pending' | 'registered'
+
+export type RGRegistration = {
+  id: string
+  team_id: string
+  competition_id: string
+  status: RGRegistrationStatus
+  payment_document_url: string | null
+  notes: string | null
+  approved_by: string | null
+  approved_at: string | null
+  payment_approved_by: string | null
+  payment_approved_at: string | null
+  created_at: string
 }
 
 export type RoutineMusic = {
   id: string
   team_id: string
   competition_id: string
-  routine_type: 'Balance' | 'Dynamic' | 'Combined'
+  routine_type: 'Balance' | 'Dynamic' | 'Combined' | 'Free' | 'Hoop' | 'Ball' | 'Clubs' | 'Ribbon' | 'Rope'
   music_filename: string | null
   ts_filename: string | null   // technical sheet (PDF)
   uploaded_at: string
@@ -177,7 +213,7 @@ export type SectionPanelJudge = {
   section_id: string
   panel_id: string
   judge_id: string | null   // null = slot exists but unassigned
-  role: 'CJP' | 'EJ' | 'AJ' | 'DJ'
+  role: 'CJP' | 'EJ' | 'AJ' | 'DJ' | 'RJ' | 'E' | 'A' | 'DA' | 'DB'
   role_number: number
 }
 
@@ -188,7 +224,16 @@ export const ROLE_CONFIG = {
   DJ:  { min: 1, max: 2 },
 } as const
 
+export const RG_ROLE_CONFIG = {
+  RJ: { min: 1, max: 1 },
+  E:  { min: 1, max: 2 },
+  A:  { min: 1, max: 2 },
+  DA: { min: 1, max: 1 },
+  DB: { min: 1, max: 1 },
+} as const
+
 export type Role = keyof typeof ROLE_CONFIG
+export type RGRole = keyof typeof RG_ROLE_CONFIG
 
 // Generate default assignment slots for a section × panel
 export function defaultSlots(sectionId: string, panelId: string): Omit<SectionPanelJudge, 'id'>[] {
@@ -216,9 +261,11 @@ export const CATEGORY_LABELS: Record<string, Record<string, string>> = {
     "Mixed Pair":    "Mixed Pair",
     "Women's Group": "Women's Group",
     "Mixed Group":   "Mixed Group",
-    'Pairs':    'Pairs',
-    'Groups 3': 'Groups 3',
-    'Groups 4': 'Groups 4',
+    'Pairs':       'Pairs',
+    'Groups 3':    'Groups 3',
+    'Groups 4':    'Groups 4',
+    'Individual':  'Individual',
+    'Group':       'Group',
   },
   es: {
     "Women's Pair":  'Pareja Femenina',
@@ -226,9 +273,11 @@ export const CATEGORY_LABELS: Record<string, Record<string, string>> = {
     "Mixed Pair":    'Pareja Mixta',
     "Women's Group": 'Grupo Femenino',
     "Mixed Group":   'Grupo Mixto',
-    'Pairs':    'Parejas',
-    'Groups 3': 'Tríos',
-    'Groups 4': 'Cuartetos',
+    'Pairs':       'Parejas',
+    'Groups 3':    'Tríos',
+    'Groups 4':    'Cuartetos',
+    'Individual':  'Individual',
+    'Group':       'Grupo',
   },
 }
 
@@ -268,6 +317,7 @@ export function sortByAgeGroupAndCategory<T extends { age_group: string; categor
 }
 
 export const ROUTINE_TYPES = ['Balance', 'Dynamic', 'Combined'] as const
+//export const ROUTINE_TYPES = ['Balance', 'Dynamic', 'Combined', 'Free', 'Hoop', 'Ball', 'Clubs', 'Ribbon', 'Rope'] as const
 
 export type CompetitionStatus = 'draft' | 'provisional_entry' | 'definitive_entry' | 'registration_open' | 'registration_closed' | 'published' | 'active' | 'finished'
 
@@ -279,4 +329,40 @@ export const NEXT_STATUS: Partial<Record<CompetitionStatus, CompetitionStatus>> 
   registration_closed:  'published',
   published:            'active',
   active:               'finished',
+}
+
+// ─── provisional / definitive entry types ────────────────────────────────────
+
+export type ProvisionalEntry = {
+  id: string
+  club_id: string
+  teams_per_category: Record<string, number>
+  created_at: string
+}
+
+export type DefinitiveEntry = {
+  id: string
+  club_id: string
+  contact_name: string
+  contact_phone: string
+  contact_email: string
+  teams_per_category: Record<string, number>
+  judge_name: string | null
+  total_amount: number
+  status: 'pending' | 'payment_uploaded' | 'approved' | 'rejected'
+  payment_document_url: string | null
+  admin_notes: string | null
+  created_at: string
+}
+
+// ─── level grouping helpers ───────────────────────────────────────────────────
+
+export type Level = 'Escolar' | 'Base' | 'Nacional'
+export const LEVEL_ORDER: Level[] = ['Escolar', 'Base', 'Nacional']
+
+export function getLevel(ageGroupId: string, rules: AgeGroupRule[]): Level {
+  const ag = rules.find(r => r.id === ageGroupId)?.age_group ?? ''
+  if (ag.includes('Escolar')) return 'Escolar'
+  if (ag.includes('Base'))    return 'Base'
+  return 'Nacional'
 }
