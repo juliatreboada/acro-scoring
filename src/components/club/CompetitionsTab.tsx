@@ -283,12 +283,13 @@ function MusicPlayerModal({ url, title, onClose }: { url: string; title: string;
 // ─── routine row ──────────────────────────────────────────────────────────────
 
 function RoutineRow({
-  lang, routineType, record, locked, reviewStatus, reviewComment, onSet,
+  lang, routineType, record, locked, musicUnlocked, reviewStatus, reviewComment, onSet,
 }: {
   lang: Lang
   routineType: 'Balance' | 'Dynamic' | 'Combined'
   record: RoutineMusic | undefined
   locked: boolean
+  musicUnlocked?: boolean
   reviewStatus?: string
   reviewComment?: string | null
   onSet: (field: 'music' | 'ts', file: File | null) => void
@@ -317,7 +318,7 @@ function RoutineRow({
           )}
           <FileChip label={t.music} filename={record?.music_filename}
             accept="audio/*,.mp3,.wav,.aac,.m4a"
-            locked={locked}
+            locked={locked && !musicUnlocked}
             onPreview={record?.music_filename ? () => setMusicPreviewUrl(record.music_filename!) : undefined}
             onUpload={(file) => onSet('music', file)}
             onRemove={() => onSet('music', null)} />
@@ -518,6 +519,7 @@ function CompetitionDetailView({
     ? new Date(competition.start_date + 'T00:00:00').getFullYear()
     : new Date().getFullYear()
   const [ageError, setAgeError] = useState<{ teamId: string; messages: string[] } | null>(null)
+  const [musicUnlockedByTeam, setMusicUnlockedByTeam] = useState<Record<string, boolean>>({})
 
   // registration gate: check if this club is in competition_allowed_clubs
   const [allowed, setAllowed] = useState<boolean | null>(canRegisterNow ? null : true)
@@ -532,6 +534,32 @@ function CompetitionDetailView({
       .maybeSingle()
       .then(({ data }) => setAllowed(!!data))
   }, [canRegisterNow, competition.id, clubId])
+
+  useEffect(() => {
+    const supabase = createClient()
+    const teamIds = teams
+      .filter((team) =>
+        competition.age_groups.some(agId =>
+          agId === team.age_group ||
+          (agLabels[agId] && agLabels[agId] === team.age_group),
+        ),
+      )
+      .map((t) => t.id)
+    if (!teamIds.length) {
+      setMusicUnlockedByTeam({})
+      return
+    }
+    supabase
+      .from('competition_music_unlocks')
+      .select('team_id, enabled')
+      .eq('competition_id', competition.id)
+      .in('team_id', teamIds)
+      .then(({ data }) => {
+        const map: Record<string, boolean> = {}
+        for (const row of data ?? []) map[row.team_id] = !!row.enabled
+        setMusicUnlockedByTeam(map)
+      })
+  }, [competition.id, competition.age_groups, teams, agLabels])
 
   // Fix eligible teams filter: match by UUID (ag_group = rule.id) OR by label name (legacy)
   const eligibleTeams = teams.filter((team) =>
@@ -948,6 +976,7 @@ function CompetitionDetailView({
                           <RoutineRow key={rt} lang={lang} routineType={rt}
                             record={recordFor(team.id, rt)}
                             locked={isFileEditLocked}
+                            musicUnlocked={!!musicUnlockedByTeam[team.id]}
                             reviewStatus={review?.status}
                             reviewComment={review?.final_comment}
                             onSet={(field, filename) => onSetFile(team.id, rt, field, filename)} />

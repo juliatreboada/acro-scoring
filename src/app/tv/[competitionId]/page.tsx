@@ -108,6 +108,7 @@ export default function TVPage() {
   // ── fetch competition info once ──────────────────────────────────────────────
 
   const [sponsorClips, setSponsorClips] = useState<TvSponsorClip[]>([])
+  const sponsorPlaybackByClipRef = useRef<Record<string, number>>({})
 
   useEffect(() => {
     async function load() {
@@ -363,13 +364,23 @@ export default function TVPage() {
     return (
       <div className="w-screen h-screen bg-black flex items-center justify-center overflow-hidden">
         <video
-          key={`${clip.id}-${idx}`}
+          key={clip.id}
           className="max-w-full max-h-full w-full h-full object-contain"
           src={pub.publicUrl}
           autoPlay
           muted
           playsInline
+          onLoadedMetadata={(e) => {
+            const saved = sponsorPlaybackByClipRef.current[clip.id] ?? 0
+            if (saved > 0 && saved < e.currentTarget.duration - 0.25) {
+              e.currentTarget.currentTime = saved
+            }
+          }}
+          onTimeUpdate={(e) => {
+            sponsorPlaybackByClipRef.current[clip.id] = e.currentTarget.currentTime
+          }}
           onEnded={() => {
+            sponsorPlaybackByClipRef.current[clip.id] = 0
             const next = (idx + 1) % n
             setTvState((prev) =>
               prev ? { ...prev, sponsor_playlist_index: next } : prev,
