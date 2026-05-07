@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect } from 'react'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry, RankingMergeGroup } from '@/components/admin/types'
-import { NEXT_STATUS } from '@/components/admin/types'
+import { NEXT_STATUS, PREV_STATUS } from '@/components/admin/types'
 import StructureTab from './StructureTab'
 import JudgesTab, { type JudgesTabProps, type PanelLock } from './JudgesTab'
 import RegistrationsTab, { type RegistrationsTabProps } from './RegistrationsTab'
@@ -75,9 +75,27 @@ const T = {
       published:            'Start competition',
       active:               'Finish competition',
     } as Partial<Record<CompetitionStatus, string>>,
+    actionBack: {
+      provisional_entry:    'Back to draft',
+      definitive_entry:     'Back to provisional entry',
+      registration_open:    'Back to definitive entry',
+      registration_closed:  'Reopen registration',
+      published:            'Back to registration closed',
+      active:               'Back to published',
+      finished:             'Back to live',
+    } as Partial<Record<CompetitionStatus, string>>,
     confirmAction: {
       published:  'This will start the competition and enable scoring. Continue?',
       active:     'This will mark the competition as finished. Continue?',
+    } as Partial<Record<CompetitionStatus, string>>,
+    confirmBackAction: {
+      provisional_entry:    'Move competition back to draft?',
+      definitive_entry:     'Move competition back to provisional entry?',
+      registration_open:    'Move competition back to definitive entry?',
+      registration_closed:  'Reopen registration?',
+      published:            'Move competition back to registration closed?',
+      active:               'Move competition back to published?',
+      finished:             'Re-open competition as live?',
     } as Partial<Record<CompetitionStatus, string>>,
     posterUpload: 'Upload image',
     posterReplace: 'Replace',
@@ -152,9 +170,27 @@ const T = {
       published:            'Iniciar competición',
       active:               'Finalizar competición',
     } as Partial<Record<CompetitionStatus, string>>,
+    actionBack: {
+      provisional_entry:    'Volver a borrador',
+      definitive_entry:     'Volver a inscripción provisional',
+      registration_open:    'Volver a inscripción definitiva',
+      registration_closed:  'Reabrir inscripción',
+      published:            'Volver a inscripción cerrada',
+      active:               'Volver a publicada',
+      finished:             'Volver a en vivo',
+    } as Partial<Record<CompetitionStatus, string>>,
     confirmAction: {
       published:  '¿Iniciar la competición y habilitar la puntuación?',
       active:     '¿Marcar la competición como finalizada?',
+    } as Partial<Record<CompetitionStatus, string>>,
+    confirmBackAction: {
+      provisional_entry:    '¿Volver la competición a borrador?',
+      definitive_entry:     '¿Volver la competición a inscripción provisional?',
+      registration_open:    '¿Volver la competición a inscripción definitiva?',
+      registration_closed:  '¿Reabrir la inscripción?',
+      published:            '¿Volver la competición a inscripción cerrada?',
+      active:               '¿Volver la competición a publicada?',
+      finished:             '¿Reabrir la competición en vivo?',
     } as Partial<Record<CompetitionStatus, string>>,
     posterUpload: 'Subir imagen',
     posterReplace: 'Reemplazar',
@@ -875,6 +911,7 @@ export type CompetitionDetailProps = {
   sessions: Session[]
   onBack: () => void
   onAdvanceStatus: () => void
+  onRevertStatus: () => void
   onSetPanelCount: (count: 1 | 2) => void
   onAddSection: () => void
   onUpdateSectionLabel: (sectionId: string, label: string) => void
@@ -922,6 +959,7 @@ export type CompetitionDetailProps = {
   // competition day
   onStartSession: (sessionId: string) => void
   onFinishSession: (sessionId: string) => void
+  onRevertSession: (sessionId: string) => void
   // licencias
   competitionGymnasts: Gymnast[]
   competitionCoaches: Coach[]
@@ -929,7 +967,7 @@ export type CompetitionDetailProps = {
 }
 
 export default function CompetitionDetail({
-  lang, competition, panels, sections, sessions, onBack, onAdvanceStatus,
+  lang, competition, panels, sections, sessions, onBack, onAdvanceStatus, onRevertStatus,
   onSetPanelCount, onAddSection, onUpdateSectionLabel, onUpdateSectionTimes,
   onDeleteSection, onAddSession, onDeleteSession,
   rankingMergeGroups, sessionEligibleTeamCounts, onAssignSessionMergeGroup, onCreateRankingMergeGroup,
@@ -938,7 +976,7 @@ export default function CompetitionDetail({
   onTogglePanelLock, onCreateJudge,
   globalTeams, clubs, entries, onToggleDropout, onRemoveClubEntries, sessionOrders, lockedSessions, onReorder, onToggleLock, onReorderTimeline,
   availableAdmins, ageGroupRules, onUpdateCompetition, onUploadPoster, onUpdateFees,
-  onSetDJReviewDeadline, onStartSession, onFinishSession,
+  onSetDJReviewDeadline, onStartSession, onFinishSession, onRevertSession,
   competitionGymnasts, competitionCoaches, globalCoaches,
 }: CompetitionDetailProps) {
   const t = T[lang]
@@ -1040,6 +1078,18 @@ export default function CompetitionDetail({
               {t.status[competition.status]}
             </span>
             {/* advance button */}
+            {PREV_STATUS[competition.status] && (
+              <button
+                onClick={() => {
+                  const confirmMsg = t.confirmBackAction[competition.status]
+                  if (confirmMsg && !confirm(confirmMsg)) return
+                  onRevertStatus()
+                }}
+                className="px-3 py-1 rounded-lg text-xs font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all"
+              >
+                {t.actionBack[competition.status]}
+              </button>
+            )}
             {NEXT_STATUS[competition.status] && (
               <button
                 onClick={() => {
@@ -1195,6 +1245,7 @@ export default function CompetitionDetail({
           entries={entries}
           onStartSession={onStartSession}
           onFinishSession={onFinishSession}
+          onRevertSession={onRevertSession}
         />
       )}
       {activeTab === 'tv' && (

@@ -19,8 +19,11 @@ const T = {
     finished: 'Finished',
     start: 'Start session',
     finish: 'Finish session',
+    back: 'Back',
     confirmStart: 'Start this session? Judges will be able to submit scores.',
     confirmFinish: 'Mark this session as finished?',
+    confirmBackToWaiting: 'Move this session back to waiting?',
+    confirmBackToActive: 'Re-open this session as live?',
     noTeams: 'No teams assigned.',
     dropout: 'Dropout',
     noOrder: 'Starting order not published.',
@@ -40,8 +43,11 @@ const T = {
     finished: 'Finalizada',
     start: 'Iniciar sesión',
     finish: 'Finalizar sesión',
+    back: 'Volver',
     confirmStart: '¿Iniciar esta sesión? Los jueces podrán enviar puntuaciones.',
     confirmFinish: '¿Marcar esta sesión como finalizada?',
+    confirmBackToWaiting: '¿Volver esta sesión a espera?',
+    confirmBackToActive: '¿Reabrir esta sesión en curso?',
     noTeams: 'Sin equipos asignados.',
     dropout: 'Baja',
     noOrder: 'Orden de salida no publicado.',
@@ -61,11 +67,16 @@ const SESSION_BADGE: Record<Session['status'], string> = {
   finished: 'bg-green-100 text-green-700',
 }
 
+// Keep one audio player per session so playback can persist across tab switches.
+const sharedSessionAudio = new Map<string, HTMLAudioElement>()
+const sharedSessionIdx = new Map<string, number>()
+const sharedSessionPlaying = new Map<string, boolean>()
+
 // ─── session card ─────────────────────────────────────────────────────────────
 
 function SessionCard({
   lang, session, sessionOrders, globalTeams, clubs, entries,
-  canControl, showStart, cjpCurrentTeamId, musicPaths, onStart, onFinish, onConfigChange,
+  canControl, showStart, cjpCurrentTeamId, musicPaths, onStart, onFinish, onRevert, onConfigChange,
 }: {
   lang: Lang
   session: Session
@@ -79,6 +90,7 @@ function SessionCard({
   musicPaths: Record<string, string | null>
   onStart: () => void
   onFinish: () => void
+  onRevert: () => void
   onConfigChange: (patch: Partial<Pick<Session, 'dj_method' | 'ej_method'>>) => void
 }) {
   const t = T[lang]
@@ -105,21 +117,48 @@ function SessionCard({
   const isFinished = session.status === 'finished'
 
   // ── music player state ────────────────────────────────────────────────────────
-  const [currentIdx, setCurrentIdx] = useState(0)
-  const [isPlaying,  setIsPlaying]  = useState(false)
+  const [currentIdx, setCurrentIdx] = useState(() => sharedSessionIdx.get(session.id) ?? 0)
+  const [isPlaying,  setIsPlaying]  = useState(() => {
+    const remembered = sharedSessionPlaying.get(session.id)
+    if (typeof remembered === 'boolean') return remembered
+    const existing = sharedSessionAudio.get(session.id)
+    return !!existing && !existing.paused && !!existing.src
+  })
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const currentIdxRef = useRef(0)
+  const isPlayingRef = useRef(false)
+  const prevIsActiveRef = useRef(isActive)
 
   // Init audio element once (client-only)
   useEffect(() => {
-    const audio = new Audio()
+    const existing = sharedSessionAudio.get(session.id)
+    const audio = existing ?? new Audio()
+    if (!existing) sharedSessionAudio.set(session.id, audio)
     audio.onended = () => setIsPlaying(false)
     audioRef.current = audio
-    return () => { audio.pause(); audioRef.current = null }
-  }, [])
+    return () => {
+      sharedSessionIdx.set(session.id, currentIdxRef.current)
+      sharedSessionPlaying.set(session.id, isPlayingRef.current)
+      audioRef.current = null
+    }
+  }, [session.id])
 
-  // Reset player when session goes active
+  useEffect(() => { currentIdxRef.current = currentIdx }, [currentIdx])
   useEffect(() => {
-    if (isActive) { setCurrentIdx(0); setIsPlaying(false); audioRef.current?.pause() }
+    isPlayingRef.current = isPlaying
+    sharedSessionPlaying.set(session.id, isPlaying)
+  }, [isPlaying, session.id])
+
+  // Reset player only when status transitions into active (not on tab remount).
+  useEffect(() => {
+    if (!prevIsActiveRef.current && isActive) {
+      setCurrentIdx(0)
+      setIsPlaying(false)
+      sharedSessionIdx.set(session.id, 0)
+      sharedSessionPlaying.set(session.id, false)
+      audioRef.current?.pause()
+    }
+    prevIsActiveRef.current = isActive
   }, [isActive])
 
   const activeTeamIds      = orderedTeamIds.filter(id => !droppedOutIds.has(id))
@@ -133,6 +172,10 @@ function SessionCard({
     if (!audio) return
 
     if (!currentMusicUrl) {
+      const rememberedPlaying = sharedSessionPlaying.get(session.id) ?? isPlayingRef.current
+      const hasLoadedSource = audio.src.length > 0
+      // Ignore transient remount/data-refresh gaps while an active session track is playing.
+      if (isActive && rememberedPlaying && hasLoadedSource) return
       audio.pause()
       audio.src = ''
       if (isPlaying) setIsPlaying(false)
@@ -150,17 +193,25 @@ function SessionCard({
     } else {
       audio.pause()
     }
-  }, [currentMusicTeamId, isPlaying, currentMusicUrl]) // eslint-disable-line
+  }, [currentMusicTeamId, isPlaying, currentMusicUrl, isActive, session.id]) // eslint-disable-line
 
   function prev() {
     audioRef.current?.pause()
-    setCurrentIdx(i => Math.max(0, i - 1))
+    setCurrentIdx(i => {
+      const next = Math.max(0, i - 1)
+      sharedSessionIdx.set(session.id, next)
+      return next
+    })
   }
 
   function next() {
     if (clampedIdx < activeTeamIds.length - 1) {
       audioRef.current?.pause()
-      setCurrentIdx(i => i + 1)
+      setCurrentIdx(i => {
+        const next = i + 1
+        sharedSessionIdx.set(session.id, next)
+        return next
+      })
     } else {
       setIsPlaying(false)
     }
@@ -191,9 +242,25 @@ function SessionCard({
               </button>
             )}
             {isActive && (
-              <button onClick={() => { if (confirm(t.confirmFinish)) onFinish() }}
-                className="px-3 py-1.5 text-xs font-semibold border border-green-200 text-green-700 rounded-xl hover:bg-green-50 transition-all">
-                {t.finish}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { if (confirm(t.confirmBackToWaiting)) onRevert() }}
+                  className="px-3 py-1.5 text-xs font-semibold border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-all"
+                >
+                  {t.back}
+                </button>
+                <button onClick={() => { if (confirm(t.confirmFinish)) onFinish() }}
+                  className="px-3 py-1.5 text-xs font-semibold border border-green-200 text-green-700 rounded-xl hover:bg-green-50 transition-all">
+                  {t.finish}
+                </button>
+              </div>
+            )}
+            {isFinished && (
+              <button
+                onClick={() => { if (confirm(t.confirmBackToActive)) onRevert() }}
+                className="px-3 py-1.5 text-xs font-semibold border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-all"
+              >
+                {t.back}
               </button>
             )}
           </div>
@@ -347,7 +414,7 @@ function SessionCard({
 export default function CompetitionDayTab({
   lang, competition, sections, panels, sessions,
   sessionOrders, globalTeams, clubs, entries,
-  onStartSession, onFinishSession,
+  onStartSession, onFinishSession, onRevertSession,
 }: {
   lang: Lang
   competition: Competition
@@ -360,6 +427,7 @@ export default function CompetitionDayTab({
   entries: CompetitionEntry[]
   onStartSession: (sessionId: string) => void
   onFinishSession: (sessionId: string) => void
+  onRevertSession: (sessionId: string) => void
 }) {
   const t = T[lang]
   const supabase = createClient()
@@ -516,6 +584,7 @@ export default function CompetitionDayTab({
                 musicPaths={getMusicPaths(session)}
                 onStart={() => onStartSession(session.id)}
                 onFinish={() => onFinishSession(session.id)}
+                onRevert={() => onRevertSession(session.id)}
                 onConfigChange={(patch) => handleConfigChange(session.id, patch)} />
             ) })}
         </div>
@@ -565,6 +634,7 @@ export default function CompetitionDayTab({
                           musicPaths={getMusicPaths(session)}
                           onStart={() => {}}
                           onFinish={() => {}}
+                          onRevert={() => {}}
                           onConfigChange={(patch) => handleConfigChange(session.id, patch)} />
                       ) })}
                     </div>

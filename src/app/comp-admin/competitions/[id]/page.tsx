@@ -11,7 +11,7 @@ import type {
   Role, Team, Club, CompetitionEntry, SessionOrder, AdminUser,
   AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry, RankingMergeGroup,
 } from '@/components/admin/types'
-import { ROLE_CONFIG, defaultSlots, NEXT_STATUS } from '@/components/admin/types'
+import { ROLE_CONFIG, defaultSlots, NEXT_STATUS, PREV_STATUS } from '@/components/admin/types'
 import type { PanelLock } from '@/components/admin/competition-detail/JudgesTab'
 
 // ─── page ─────────────────────────────────────────────────────────────────────
@@ -220,6 +220,14 @@ export default function Page() {
     if (!next) return
     await supabase.from('competitions').update({ status: next }).eq('id', id)
     setCompetition(prev => prev ? { ...prev, status: next } : prev)
+  }
+
+  async function handleRevertStatus() {
+    if (!competition) return
+    const prev = PREV_STATUS[competition.status]
+    if (!prev) return
+    await supabase.from('competitions').update({ status: prev }).eq('id', id)
+    setCompetition(prevComp => prevComp ? { ...prevComp, status: prev } : prevComp)
   }
 
   // ── panel count ───────────────────────────────────────────────────────────────
@@ -537,6 +545,19 @@ export default function Page() {
     setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status: 'finished' as const } : s))
   }
 
+  async function handleRevertSession(sessionId: string) {
+    const session = sessions.find((s) => s.id === sessionId)
+    if (!session) return
+    const prevStatus = session.status === 'finished'
+      ? 'active'
+      : session.status === 'active'
+        ? 'waiting'
+        : null
+    if (!prevStatus) return
+    await supabase.from('sessions').update({ status: prevStatus }).eq('id', sessionId)
+    setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status: prevStatus } : s))
+  }
+
   async function handleSetDJReviewDeadline(date: string | null) {
     await supabase.from('competitions').update({ ts_music_deadline: date }).eq('id', id)
     setCompetition(prev => prev ? { ...prev, ts_music_deadline: date } : prev)
@@ -614,6 +635,7 @@ export default function Page() {
         sessions={sessions}
         onBack={() => router.push('/comp-admin')}
         onAdvanceStatus={handleAdvanceStatus}
+        onRevertStatus={handleRevertStatus}
         onSetPanelCount={handleSetPanelCount}
         onAddSection={handleAddSection}
         onUpdateSectionLabel={handleUpdateSectionLabel}
@@ -653,6 +675,7 @@ export default function Page() {
         onUpdateFees={handleUpdateFees}
         onStartSession={handleStartSession}
         onFinishSession={handleFinishSession}
+        onRevertSession={handleRevertSession}
         onSetDJReviewDeadline={handleSetDJReviewDeadline}
         competitionGymnasts={competitionGymnasts}
         globalCoaches={globalCoaches}

@@ -163,7 +163,7 @@ function formatDateRange(start: string | null, end: string | null): string {
 // ─── session order card ───────────────────────────────────────────────────────
 
 function SessionOrderCard({
-  session, sessionOrders, isLocked, entries, globalTeams, clubs, lang, timesMap, agLabels,
+  session, sessionOrders, isLocked, entries, globalTeams, clubs, lang, timesMap, agLabels, globalOrderMap,
 }: {
   session: Session
   sessionOrders: SessionOrder[]
@@ -174,6 +174,7 @@ function SessionOrderCard({
   lang: Lang
   timesMap: Map<string, SlotTimes>
   agLabels: Record<string, string>
+  globalOrderMap?: Record<string, number>
 }) {
   const t = T[lang]
 
@@ -280,7 +281,7 @@ function SessionOrderCard({
               )}
               <span className={['w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0',
                 isDropout ? 'bg-slate-100 text-slate-400' : 'bg-blue-50 text-blue-600'].join(' ')}>
-                {idx + 1}
+                {globalOrderMap?.[`${session.id}:${teamId}`] ?? (idx + 1)}
               </span>
               {dorsal != null && (
                 <span className={['text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
@@ -332,13 +333,14 @@ const PANEL_COLORS: Record<number, { badge: string; num: string }> = {
 }
 
 function buildPanelSlots(
-  panel: Panel,
+  panel: Panel | undefined,
   sessions: Session[],
   sessionOrders: SessionOrder[],
   lockedSessions: string[],
   entries: CompetitionEntry[],
   globalTeams: Team[],
 ): PerfSlot[] {
+  if (!panel) return []
   const panelSessions = sessions
     .filter((s) => s.panel_id === panel.id)
     .sort((a, b) => a.order_index - b.order_index)
@@ -610,6 +612,37 @@ export default function StartingOrderView({
   const dateStr = formatDateRange(competition.start_date, competition.end_date)
   const currentSection = sections.find((s) => s.id === activeSection)
   const sectionSessions = sessions.filter((s) => s.section_id === activeSection)
+  const panelSessions = sectionSessions.filter((s) => s.panel_id === panels[0]?.id).sort((a, b) => a.order_index - b.order_index)
+
+  const onePanelGlobalOrderMap: Record<string, number> = {}
+  if (panels.length === 1) {
+    let globalPos = 1
+    for (const session of panelSessions) {
+      if (!lockedSessions.includes(session.id)) continue
+      const matchingTeams = globalTeams.filter(
+        (team) => team.age_group === session.age_group && team.category === session.category,
+      )
+      const enteredTeamIds = new Set(
+        entries.filter((e) => !e.dropped_out).map((e) => e.team_id).filter((id) =>
+          matchingTeams.some((t) => t.id === id),
+        ),
+      )
+      const droppedOutIds = new Set(
+        entries.filter((e) => e.dropped_out).map((e) => e.team_id).filter((id) =>
+          matchingTeams.some((t) => t.id === id),
+        ),
+      )
+      const orders = sessionOrders.filter((o) => o.session_id === session.id)
+      const orderedIds = orders.sort((a, b) => a.position - b.position).map((o) => o.team_id)
+      const activeIds = orderedIds.filter((id) => !droppedOutIds.has(id))
+      const unorderedActive = [...enteredTeamIds].filter((id) => !orderedIds.includes(id))
+      const fullOrder = orderedIds.length > 0 ? orderedIds : [...activeIds, ...[...droppedOutIds]]
+      for (const teamId of fullOrder) {
+        onePanelGlobalOrderMap[`${session.id}:${teamId}`] = globalPos
+        globalPos += 1
+      }
+    }
+  }
 
   return (
     <div className="so-print-area min-h-screen bg-slate-50">
@@ -676,35 +709,31 @@ export default function StartingOrderView({
       {/* content */}
       <div className="max-w-4xl mx-auto px-4 py-6">
         {panels.length === 1 ? (
-          // single panel — full width
           (() => {
-            const panelSessions = sectionSessions.filter((s) => s.panel_id === panels[0].id)
             const timesMap = currentSection
               ? calcPanelTimes(currentSection, panelSessions, sessionOrders, ageGroupRules)
               : new Map<string, SlotTimes>()
             return (
               <div className="space-y-4">
-                {panelSessions
-                  .sort((a, b) => a.order_index - b.order_index)
-                  .map((session) => (
-                    <SessionOrderCard
-                      key={session.id}
-                      session={session}
-                      sessionOrders={sessionOrders}
-                      isLocked={lockedSessions.includes(session.id)}
-                      entries={entries}
-                      globalTeams={globalTeams}
-                      clubs={clubs}
-                      lang={lang}
-                      timesMap={timesMap}
-                      agLabels={agLabels}
-                    />
-                  ))}
+                {panelSessions.map((session) => (
+                  <SessionOrderCard
+                    key={session.id}
+                    session={session}
+                    sessionOrders={sessionOrders}
+                    isLocked={lockedSessions.includes(session.id)}
+                    entries={entries}
+                    globalTeams={globalTeams}
+                    clubs={clubs}
+                    lang={lang}
+                    timesMap={timesMap}
+                    agLabels={agLabels}
+                    globalOrderMap={onePanelGlobalOrderMap}
+                  />
+                ))}
               </div>
             )
           })()
         ) : (
-          // two panels — single interleaved timeline
           <InterleavedTimeline
             lang={lang}
             panels={panels}
