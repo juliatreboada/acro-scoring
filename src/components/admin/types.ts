@@ -289,3 +289,13 @@ export const NEXT_STATUS: Partial<Record<CompetitionStatus, CompetitionStatus>> 
   published:            'active',
   active:               'finished',
 }
+
+export const PREV_STATUS: Partial<Record<CompetitionStatus, CompetitionStatus>> = {
+  provisional_entry:   'draft',
+  definitive_entry:    'provisional_entry',
+  registration_open:   'definitive_entry',
+  registration_closed: 'registration_open',
+  published:           'registration_closed',
+  active:              'published',
+  finished:            'active',
+}
