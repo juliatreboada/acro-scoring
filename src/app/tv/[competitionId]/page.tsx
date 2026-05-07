@@ -498,7 +498,24 @@ export default function TVPage() {
       <div className="flex-1 flex min-h-0">
 
         {/* team photo — falls back to club logo */}
-        <div className="w-[38%] shrink-0 flex items-center justify-center p-8">
+        <div className="relative w-[38%] shrink-0 flex items-center justify-center p-8">
+          {rank !== null && rankTotal > 0 && (
+            <div
+              className="absolute left-10 right-10 top-8 z-10 flex items-center gap-3 rounded-xl border border-white/15 bg-slate-950/70 px-4 py-2.5 backdrop-blur-sm transition-opacity duration-300"
+              style={{ transitionDelay: scoreVisible ? '700ms' : '0ms', opacity: scoreVisible ? 1 : 0 }}
+            >
+              <div className={[
+                'w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold shrink-0',
+                rank === 1 ? 'bg-yellow-400 text-slate-900'
+                : rank === 2 ? 'bg-slate-300 text-slate-900'
+                : rank === 3 ? 'bg-amber-600 text-white'
+                : 'bg-slate-700 text-white',
+              ].join(' ')}>
+                {rank}
+              </div>
+              <span className="text-slate-200 text-xl font-medium">{t.rank(rank, rankTotal)}</span>
+            </div>
+          )}
           {team.photo_url ? (
             <img
               src={team.photo_url}
@@ -526,12 +543,12 @@ export default function TVPage() {
           {/* gymnast names */}
           <div>
             <p className="text-white font-bold leading-tight"
-              style={{ fontSize: 'clamp(2rem, 4.5vw, 5rem)' }}>
+              style={{ fontSize: 'clamp(1.5rem, 3.4vw, 3.8rem)' }}>
               {team.gymnast_display}
             </p>
-            {dorsal !== null && (
+            {/* {dorsal !== null && (
               <p className="text-slate-400 text-xl mt-1">{t.dorsal(dorsal)}</p>
-            )}
+            )} */}
           </div>
 
           {/* club */}
@@ -553,111 +570,98 @@ export default function TVPage() {
           <div
             key={`${tvState.session_id}-${tvState.team_id}`}
             className={[
-              'flex flex-col gap-4 transition-opacity duration-300',
+              'grid grid-cols-[minmax(0,1fr)_minmax(17rem,24rem)] gap-8 items-start transition-opacity duration-300',
               scoreVisible ? 'opacity-100' : 'opacity-0',
             ].join(' ')}
           >
-            {/* partial scores row */}
-            {result && (
-              <div className="flex items-center gap-6 flex-wrap">
-                {([
-                  { label: t.e,   value: eScore,     delay: 0   },
-                  { label: t.a,   value: aScore,     delay: 100 },
-                  { label: t.d,   value: dScore,     delay: 200 },
-                  ...(penDisplay !== null
-                    ? [{ label: t.pen, value: penDisplay, delay: 300 }]
-                    : []),
-                ] as { label: string; value: number | null; delay: number }[]).map(({ label, value, delay }) => (
-                  <div
-                    key={label}
-                    className="flex flex-col items-center transition-all duration-300"
-                    style={{ transitionDelay: scoreVisible ? `${delay}ms` : '0ms' }}
-                  >
-                    <span className="text-slate-400 text-sm uppercase tracking-widest">{label}</span>
-                    <span className={[
-                      'tabular-nums font-bold',
-                      label === t.pen ? 'text-red-400' : 'text-white',
-                    ].join(' ')}
-                      style={{ fontSize: 'clamp(1.5rem, 2.5vw, 2.5rem)' }}>
-                      {value != null
-                        ? label === t.pen
-                          ? value.toFixed(1)
-                          : value.toFixed(3)
-                        : '—'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* provisional badge */}
-            {result?.status === 'provisional' && (
-              <div
-                className="flex items-center gap-2.5 transition-opacity duration-300"
-                style={{ transitionDelay: scoreVisible ? '350ms' : '0ms' }}
-              >
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
-                <span className="text-amber-400 text-lg font-bold uppercase tracking-widest">
-                  {t.provisional}
-                </span>
-              </div>
-            )}
-
-            {/* final score */}
-            {final !== null && (
-              <div
-                className="flex items-baseline gap-4 transition-all duration-500"
-                style={{
-                  transitionDelay: scoreVisible ? '400ms' : '0ms',
-                  transform: scoreVisible ? 'scale(1)' : 'scale(0.7)',
-                  transformOrigin: 'left center',
-                }}
-              >
-                <span className="text-slate-400 text-2xl uppercase tracking-widest">{t.total}</span>
-                <span
-                  className="text-white font-black tabular-nums"
-                  style={{ fontSize: 'clamp(3rem, 7vw, 7rem)' }}
-                >
-                  {final.toFixed(3)}
-                </span>
-              </div>
-            )}
-
-            {/* ranking */}
-            {rank !== null && rankTotal > 0 && (
-              <div
-                className="flex items-center gap-3 transition-all duration-300"
-                style={{ transitionDelay: scoreVisible ? '700ms' : '0ms' }}
-              >
-                <div className={[
-                  'w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold shrink-0',
-                  rank === 1 ? 'bg-yellow-400 text-slate-900'
-                  : rank === 2 ? 'bg-slate-300 text-slate-900'
-                  : rank === 3 ? 'bg-amber-600 text-white'
-                  : 'bg-slate-700 text-white',
-                ].join(' ')}>
-                  {rank}
-                </div>
-                <span className="text-slate-400 text-xl">{t.rank(rank, rankTotal)}</span>
-              </div>
-            )}
-
-            {/* penalty reasons */}
-            {scoreVisible && allPenalties.length > 0 && (
-              <div
-                className="transition-opacity duration-300"
-                style={{ transitionDelay: scoreVisible ? '900ms' : '0ms' }}
-              >
-                <p className="text-slate-500 text-xs uppercase tracking-widest mb-1">{t.penLabel}</p>
-                <ul className="space-y-0.5">
-                  {allPenalties.map((p, i) => (
-                    <li key={i} className="text-red-400 text-sm">
-                      {'−'}{p.value.toFixed(1)} · {p.label}
-                    </li>
+            {/* left: scores summary */}
+            <div className="min-w-0 flex flex-col gap-4">
+              {/* partial scores row */}
+              {result && (
+                <div className="flex items-center gap-6 flex-wrap">
+                  {([
+                    { label: t.e,   value: eScore,     delay: 0   },
+                    { label: t.a,   value: aScore,     delay: 100 },
+                    { label: t.d,   value: dScore,     delay: 200 },
+                    ...(penDisplay !== null
+                      ? [{ label: t.pen, value: penDisplay, delay: 300 }]
+                      : []),
+                  ] as { label: string; value: number | null; delay: number }[]).map(({ label, value, delay }) => (
+                    <div
+                      key={label}
+                      className="flex flex-col items-center transition-all duration-300"
+                      style={{ transitionDelay: scoreVisible ? `${delay}ms` : '0ms' }}
+                    >
+                      <span className="text-slate-400 text-sm uppercase tracking-widest">{label}</span>
+                      <span className={[
+                        'tabular-nums font-bold',
+                        label === t.pen ? 'text-red-400' : 'text-white',
+                      ].join(' ')}
+                        style={{ fontSize: 'clamp(1.5rem, 2.5vw, 2.5rem)' }}>
+                        {value != null
+                          ? label === t.pen
+                            ? value.toFixed(1)
+                            : value.toFixed(3)
+                          : '—'}
+                      </span>
+                    </div>
                   ))}
-                </ul>
-              </div>
-            )}
+                </div>
+              )}
+
+              {/* provisional badge */}
+              {result?.status === 'provisional' && (
+                <div
+                  className="flex items-center gap-2.5 transition-opacity duration-300"
+                  style={{ transitionDelay: scoreVisible ? '350ms' : '0ms' }}
+                >
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                  <span className="text-amber-400 text-lg font-bold uppercase tracking-widest">
+                    {t.provisional}
+                  </span>
+                </div>
+              )}
+
+              {/* final score */}
+              {final !== null && (
+                <div
+                  className="flex items-baseline gap-4 transition-all duration-500"
+                  style={{
+                    transitionDelay: scoreVisible ? '400ms' : '0ms',
+                    transform: scoreVisible ? 'scale(1)' : 'scale(0.7)',
+                    transformOrigin: 'left center',
+                  }}
+                >
+                  <span className="text-slate-400 text-2xl uppercase tracking-widest">{t.total}</span>
+                  <span
+                    className="text-white font-black tabular-nums"
+                    style={{ fontSize: 'clamp(3rem, 7vw, 7rem)' }}
+                  >
+                    {final.toFixed(3)}
+                  </span>
+                </div>
+              )}
+
+            </div>
+
+            {/* right: penalty reasons */}
+            <div className="min-w-0">
+              {scoreVisible && allPenalties.length > 0 && (
+                <div
+                  className="rounded-xl border border-red-500/30 bg-red-950/20 px-4 py-3 transition-opacity duration-300"
+                  style={{ transitionDelay: scoreVisible ? '900ms' : '0ms' }}
+                >
+                  <p className="text-slate-400 text-sm uppercase tracking-[0.2em] mb-2">{t.penLabel}</p>
+                  <ul className="space-y-1.5">
+                    {allPenalties.map((p, i) => (
+                      <li key={i} className="text-red-300 text-base leading-snug break-words">
+                        {'−'}{p.value.toFixed(1)} · {p.label}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
