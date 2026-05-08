@@ -51,7 +51,7 @@ export function useClubData() {
             .neq('status', 'draft')
             .order('start_date', { ascending: false }),
           supabase.from('competition_judge_nominations').select('id,competition_id,judge_id,club_id').eq('club_id', cid),
-          supabase.from('age_group_rules').select('id,age_group,ruleset,min_age,max_age,routine_count,sport_type').order('sort_order'),
+          supabase.from('age_group_rules').select('id,age_group,level,ruleset,min_age,max_age,routine_count,sport_type').order('sort_order'),
           supabase.from('apparatus').select('id,name,name_es,sort_order').order('sort_order'),
           supabase.from('apparatus_rules').select('id,age_group_rule_id,apparatus_id,is_mandatory,sort_order').order('sort_order'),
         ])
@@ -72,7 +72,7 @@ export function useClubData() {
           teamIds.length > 0
             ? supabase.from('routine_music').select('id,team_id,competition_id,routine_type,music_path,ts_path,uploaded_at').in('team_id', teamIds)
             : Promise.resolve({ data: [] }),
-          supabase.from('judges').select('id,full_name,phone,licence,avatar_url'),
+          supabase.from('judges').select('id,full_name,phone,licence,avatar_url,sport_type'),
           teamIds.length > 0
             ? supabase.from('ts_review_status').select('team_id,competition_id,routine_type,status,final_comment').in('team_id', teamIds)
             : Promise.resolve({ data: [] }),
@@ -123,7 +123,7 @@ export function useClubData() {
         setCompetitions((compsRes.data ?? []).map(c => ({ ...c, admin: null })) as Competition[])
         setEntries(entriesRes.data ?? [])
         setMusicState(mappedMusic)
-        setJudges(rawJudges.map((j: { id: string; full_name: string; phone: string | null; licence: string | null; avatar_url: string | null }) => ({ ...j, email: judgeEmailMap[j.id] ?? null })))
+        setJudges(rawJudges.map((j: { id: string; full_name: string; phone: string | null; licence: string | null; avatar_url: string | null; sport_type: string }) => ({ ...j, email: judgeEmailMap[j.id] ?? null })))
         setNominations(nomsRes.data ?? [])
         setAgLabels(agLabelsMap)
         setAgeGroupRules((rulesRes.data ?? []) as unknown as AgeGroupRule[])

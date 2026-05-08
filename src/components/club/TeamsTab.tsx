@@ -111,7 +111,7 @@ function TeamForm({
     if (initial.sport_type === 'acro') {
       const acroRules = ageGroupRules.filter(r => r.sport_type !== 'rg')
       const rule = acroRules.find(r => r.id === initial.age_group)
-      const cats = rule ? categoriesForRuleset(rule.age_group) : []
+      const cats = rule ? categoriesForRuleset(rule.level) : []
       const cat = initial.category && cats.includes(initial.category) ? initial.category : ''
       return { ...initial, category: cat }
     }
@@ -129,7 +129,7 @@ function TeamForm({
   function acroCategories(ageGroupId: string): string[] {
     if (!ageGroupId) return []
     const rule = acroRules.find(r => r.id === ageGroupId)
-    return rule ? categoriesForRuleset(rule.age_group) : []
+    return rule ? categoriesForRuleset(rule.level) : []
   }
 
   const availableAcroCategories = acroCategories(form.age_group)

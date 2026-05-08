@@ -74,8 +74,9 @@ const PANEL_HEADER: Record<number, string> = {
 
 const EMPTY_FORM = { full_name: '', email: '', phone: '', licence: '' }
 
-function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs, onAdd, onRemove, onCreateJudge }: {
+function JudgePool({ lang, sportType, judges, globalJudges, assignments, nominations, clubs, onAdd, onRemove, onCreateJudge }: {
   lang: Lang
+  sportType: string
   judges: Judge[]
   globalJudges: Judge[]
   assignments: SectionPanelJudge[]
@@ -106,7 +107,7 @@ function JudgePool({ lang, judges, globalJudges, assignments, nominations, clubs
     if (!form.full_name.trim() || !form.email.trim()) return
     const email = form.email.trim()
     try {
-      await onCreateJudge?.({ full_name: form.full_name.trim(), email, phone: form.phone.trim() || null, licence: form.licence.trim() || null })
+      await onCreateJudge?.({ full_name: form.full_name.trim(), email, phone: form.phone.trim() || null, licence: form.licence.trim() || null, sport_type: sportType })
       setForm(EMPTY_FORM)
       setInviteState({ ok: true, email })
       setShowCreateForm(false)
@@ -509,6 +510,7 @@ export type PanelLock = { section_id: string; panel_id: string; locked: boolean 
 
 export type JudgesTabProps = {
   lang: Lang
+  sportType: string
   globalJudges: Judge[]
   judgePool: string[]             // judge IDs in this competition's pool
   nominations: CompetitionJudgeNomination[]
@@ -527,7 +529,7 @@ export type JudgesTabProps = {
 }
 
 export default function JudgesTab({
-  lang, globalJudges, judgePool, nominations, clubs, assignments, sections, panels,
+  lang, sportType, globalJudges, judgePool, nominations, clubs, assignments, sections, panels,
   panelLocks, onAddToPool, onRemoveFromPool, onAssignJudge, onAddSlot, onRemoveSlot,
   onTogglePanelLock, onCreateJudge,
 }: JudgesTabProps) {
@@ -546,6 +548,7 @@ export default function JudgesTab({
     <div className="space-y-10">
       <JudgePool
         lang={lang}
+        sportType={sportType}
         judges={poolJudges}
         globalJudges={globalJudges}
         assignments={assignments}

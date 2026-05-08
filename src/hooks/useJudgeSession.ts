@@ -114,7 +114,7 @@ export function useJudgeSession(): JudgeSessionData {
         supabase.from('session_orders').select('position, team_id').eq('session_id', session.id).order('position'),
         supabase.from('scores').select('*').eq('session_id', session.id),
         supabase.from('routine_results').select('*').eq('session_id', session.id),
-        supabase.from('age_group_rules').select('id, age_group, ruleset'),
+        supabase.from('age_group_rules').select('id, age_group, level, ruleset'),
       ])
 
       const agLabels: Record<string, string> = Object.fromEntries(

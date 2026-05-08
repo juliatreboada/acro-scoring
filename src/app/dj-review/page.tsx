@@ -172,7 +172,7 @@ function DJReviewPage() {
         supabase.from('routine_music')
           .select('team_id, competition_id, routine_type, ts_path')
           .in('team_id', teamIds).in('competition_id', [...validCompIds]),
-        supabase.from('age_group_rules').select('id, age_group, ruleset'),
+        supabase.from('age_group_rules').select('id, age_group, level, ruleset'),
         supabase.from('ts_elements')
           .select('id, team_id, competition_id, routine_type, position, label, element_type, is_static, difficulty_value')
           .in('team_id', teamIds).in('competition_id', [...validCompIds])

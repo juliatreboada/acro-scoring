@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
     full_name?: string
     licence?: string
     phone?: string
+    sport_type?: string
     club_id?: string       // use existing club
     club_name?: string     // create new club
     contact_name?: string
@@ -66,9 +67,10 @@ export async function POST(req: NextRequest) {
 
     const { error } = await db.from('judges').insert({
       id: newProfileId,
-      full_name: body.full_name ?? '',
-      licence:   body.licence   ?? null,
-      phone:     body.phone     ?? null,
+      full_name:  body.full_name  ?? '',
+      licence:    body.licence    ?? null,
+      phone:      body.phone      ?? null,
+      sport_type: body.sport_type ?? 'acro',
     })
     if (error) {
       await db.from('profiles').delete().eq('id', newProfileId)

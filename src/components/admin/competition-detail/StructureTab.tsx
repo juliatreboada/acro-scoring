@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import type { Lang } from '@/components/scoring/types'
-import type { Panel, Section, Session, AgeGroupRule } from '@/components/admin/types'
-import { ROUTINE_TYPES, categoriesForRuleset, CATEGORY_LABELS } from '@/components/admin/types'
+import type { Panel, Section, Session, AgeGroupRule, Apparatus, ApparatusRule } from '@/components/admin/types'
+import { ROUTINE_TYPES, categoriesForRuleset, CATEGORY_LABELS, rgRulesetLabel } from '@/components/admin/types'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -23,8 +23,10 @@ const T = {
     noSessions: 'No sessions in this section yet.',
     panelLabel: 'Panel',
     ageGroup: 'Age group',
+    ruleset: 'Modality',
     category: 'Category',
     routineType: 'Routine type',
+    apparatus: 'Apparatus',
     save: 'Add',
     cancel: 'Cancel',
     deleteSession: 'Remove',
@@ -48,8 +50,10 @@ const T = {
     noSessions: 'Sin sesiones en esta jornada.',
     panelLabel: 'Panel',
     ageGroup: 'Grupo de edad',
+    ruleset: 'Modalidad',
     category: 'Categoría',
     routineType: 'Tipo de rutina',
+    apparatus: 'Aparato',
     save: 'Añadir',
     cancel: 'Cancelar',
     deleteSession: 'Eliminar',
@@ -71,29 +75,76 @@ const PANEL_STYLES: Record<number, { badge: string; border: string }> = {
 
 type AddSessionFormProps = {
   lang: Lang
-  panel: Panel          // always pre-determined (from column or single-panel context)
+  panel: Panel
+  sportType: string
+  competitionYear: number
   ageGroups: string[]
   agLabels: Record<string, string>
   ageGroupRules: AgeGroupRule[]
+  apparatus: Apparatus[]
+  apparatusRules: ApparatusRule[]
   sectionId: string
   nextOrderIndex: number
   onAdd: (s: Omit<Session, 'id'>) => void
   onCancel: () => void
 }
 
-function AddSessionForm({ lang, panel, ageGroups, agLabels, ageGroupRules, sectionId, nextOrderIndex, onAdd, onCancel }: AddSessionFormProps) {
+function AddSessionForm({ lang, panel, sportType, competitionYear, ageGroups, agLabels, ageGroupRules, apparatus, apparatusRules, sectionId, nextOrderIndex, onAdd, onCancel }: AddSessionFormProps) {
   const t = T[lang]
+  const isRG = sportType === 'rg'
 
+  // Acro state
   const [ageGroup, setAgeGroupState] = useState('')
   const [category, setCategory] = useState('')
   const [routineType, setRoutineType] = useState<'Balance' | 'Dynamic' | 'Combined' | ''>('')
 
+  // RG state: first selector = unique age_group+level combos; second = ruleset; third = apparatus
+  const [rgBaseKey, setRgBaseKey] = useState('')   // "{age_group}||{level}"
+  const [rgRuleset, setRgRuleset] = useState('')   // Individual | Group | Equipos
+  const [rgApparatus, setRgApparatus] = useState('')
+
+  // Build unique {age_group}||{level} options for RG from the competition's selected age groups
+  const rgBaseOptions: { key: string; label: string }[] = (() => {
+    if (!isRG) return []
+    const seen = new Set<string>()
+    const out: { key: string; label: string }[] = []
+    for (const agId of ageGroups) {
+      const rule = ageGroupRules.find(r => r.id === agId)
+      if (!rule) continue
+      const key = `${rule.age_group}||${rule.level}`
+      if (!seen.has(key)) {
+        seen.add(key)
+        out.push({ key, label: `${rule.age_group} ${rule.level}` })
+      }
+    }
+    return out
+  })()
+
+  // Build ruleset options from rules matching the selected rgBaseKey
+  const rgRulesetOptions: string[] = (() => {
+    if (!isRG || !rgBaseKey) return []
+    const [ag, lv] = rgBaseKey.split('||')
+    const seen = new Set<string>()
+    for (const agId of ageGroups) {
+      const rule = ageGroupRules.find(r => r.id === agId)
+      if (!rule || rule.age_group !== ag || rule.level !== lv) continue
+      if (!seen.has(rule.ruleset)) seen.add(rule.ruleset)
+    }
+    return Array.from(seen)
+  })()
+
+  // Resolve the actual AgeGroupRule UUID from rgBaseKey + rgRuleset
+  const resolvedRuleId: string = (() => {
+    if (!isRG || !rgBaseKey || !rgRuleset) return ''
+    const [ag, lv] = rgBaseKey.split('||')
+    return ageGroupRules.find(r =>
+      ageGroups.includes(r.id) && r.age_group === ag && r.level === lv && r.ruleset === rgRuleset
+    )?.id ?? ''
+  })()
+
+  // Acro helpers
   const selectedRule = ageGroupRules.find(r => r.id === ageGroup)
-
-  const availableCategories: string[] = ageGroup
-    ? categoriesForRuleset(selectedRule?.age_group ?? '')
-    : []
-
+  const availableCategories: string[] = ageGroup ? categoriesForRuleset(selectedRule?.level ?? '') : []
   const availableRoutineTypes: (typeof ROUTINE_TYPES[number])[] = (() => {
     const count = selectedRule?.routine_count ?? 3
     if (count === 1) return ['Combined']
@@ -101,72 +152,147 @@ function AddSessionForm({ lang, panel, ageGroups, agLabels, ageGroupRules, secti
     return ['Balance', 'Dynamic', 'Combined']
   })()
 
-  function handleAgeGroupChange(ag: string) {
-    setAgeGroupState(ag)
-    setCategory('')
-    setRoutineType('')
-  }
+  // RG apparatus derived from apparatus_rules for the resolved rule + competition year
+  const availableApparatus: Apparatus[] = (() => {
+    if (!isRG || !resolvedRuleId) return []
+    const rules = apparatusRules
+      .filter(r => r.age_group_rule_id === resolvedRuleId && r.year === competitionYear)
+      .sort((a, b) => a.sort_order - b.sort_order)
+    return rules.map(r => apparatus.find(a => a.id === r.apparatus_id)).filter((a): a is Apparatus => !!a)
+  })()
 
-  function handleCategoryChange(cat: string) {
-    setCategory(cat)
-    setRoutineType('')
-  }
+  // Chain: auto-select first item in each RG selector as options become available
+  useEffect(() => {
+    if (rgBaseOptions.length > 0) setRgBaseKey(rgBaseOptions[0].key)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (rgRulesetOptions.length > 0) setRgRuleset(rgRulesetOptions[0])
+    else setRgRuleset('')
+  }, [rgBaseKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (availableApparatus.length > 0) setRgApparatus(availableApparatus[0].name)
+    else setRgApparatus('')
+  }, [resolvedRuleId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleAgeGroupChange(ag: string) { setAgeGroupState(ag); setCategory(''); setRoutineType('') }
+  function handleCategoryChange(cat: string) { setCategory(cat); setRoutineType('') }
+  function handleRgBaseChange(key: string) { setRgBaseKey(key); setRgRuleset(''); setRgApparatus('') }
+  function handleRgRulesetChange(rs: string) { setRgRuleset(rs); setRgApparatus('') }
 
   function handleAdd() {
-    if (!ageGroup || !category || !routineType) return
-    onAdd({
-      competition_id: panel.competition_id,
-      panel_id: panel.id,
-      section_id: sectionId,
-      name: t.sessionName(agLabels[ageGroup] ?? ageGroup, category, routineType),
-      age_group: ageGroup,
-      category,
-      routine_type: routineType,
-      status: 'waiting',
-      order_index: nextOrderIndex,
-      dj_method: null,
-      ej_method: null,
-    })
+    if (isRG) {
+      if (!resolvedRuleId || !rgRuleset || !rgApparatus) return
+      const [ag, lv] = rgBaseKey.split('||')
+      const sessionAg = `${ag} ${lv}`
+      onAdd({
+        competition_id: panel.competition_id,
+        panel_id: panel.id,
+        section_id: sectionId,
+        name: t.sessionName(sessionAg, rgRulesetLabel(rgRuleset), rgApparatus),
+        age_group: resolvedRuleId,
+        category: rgRuleset,
+        routine_type: rgApparatus as Session['routine_type'],
+        status: 'waiting',
+        order_index: nextOrderIndex,
+        dj_method: null,
+        ej_method: null,
+      })
+    } else {
+      if (!ageGroup || !category || !routineType) return
+      onAdd({
+        competition_id: panel.competition_id,
+        panel_id: panel.id,
+        section_id: sectionId,
+        name: t.sessionName(agLabels[ageGroup] ?? ageGroup, category, routineType),
+        age_group: ageGroup,
+        category,
+        routine_type: routineType,
+        status: 'waiting',
+        order_index: nextOrderIndex,
+        dj_method: null,
+        ej_method: null,
+      })
+    }
   }
 
+  const canAdd = isRG ? !!(resolvedRuleId && rgRuleset && rgApparatus) : !!(ageGroup && category && routineType)
   const selectCls = 'w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
 
   return (
     <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
       <div className="space-y-2">
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-slate-500">{t.ageGroup}</label>
-          <select value={ageGroup} onChange={(e) => handleAgeGroupChange(e.target.value)} className={selectCls}>
-            <option value="">—</option>
-            {ageGroups.map((ag) => <option key={ag} value={ag}>{agLabels[ag] ?? ag}</option>)}
-          </select>
-        </div>
-        {ageGroup && (
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-500">{t.category}</label>
-            <select value={category} onChange={(e) => handleCategoryChange(e.target.value)} className={selectCls}>
-              <option value="">—</option>
-              {availableCategories.map((c) => (
-                <option key={c} value={c}>{CATEGORY_LABELS[lang]?.[c] ?? c}</option>
-              ))}
-            </select>
-          </div>
-        )}
-        {ageGroup && category && (
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-slate-500">{t.routineType}</label>
-            <select value={routineType} onChange={(e) => setRoutineType(e.target.value as typeof routineType)} className={selectCls}>
-              <option value="">—</option>
-              {availableRoutineTypes.map((r) => <option key={r} value={r}>{r}</option>)}
-            </select>
-          </div>
+        {isRG ? (
+          <>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-500">{t.ageGroup}</label>
+              <select value={rgBaseKey} onChange={(e) => handleRgBaseChange(e.target.value)} className={selectCls}>
+                <option value="">—</option>
+                {rgBaseOptions.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+              </select>
+            </div>
+            {rgBaseKey && (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-slate-500">{t.ruleset}</label>
+                <select value={rgRuleset} onChange={(e) => handleRgRulesetChange(e.target.value)} className={selectCls}>
+                  <option value="">—</option>
+                  {rgRulesetOptions.map(rs => <option key={rs} value={rs}>{rgRulesetLabel(rs)}</option>)}
+                </select>
+              </div>
+            )}
+            {rgBaseKey && rgRuleset && (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-slate-500">{t.apparatus}</label>
+                {availableApparatus.length === 1 ? (
+                  <div className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-500 bg-slate-50">
+                    {availableApparatus[0].name}
+                  </div>
+                ) : (
+                  <select value={rgApparatus} onChange={(e) => setRgApparatus(e.target.value)} className={selectCls}>
+                    {availableApparatus.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
+                  </select>
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-500">{t.ageGroup}</label>
+              <select value={ageGroup} onChange={(e) => handleAgeGroupChange(e.target.value)} className={selectCls}>
+                <option value="">—</option>
+                {ageGroups.map((ag) => <option key={ag} value={ag}>{agLabels[ag] ?? ag}</option>)}
+              </select>
+            </div>
+            {ageGroup && (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-slate-500">{t.category}</label>
+                <select value={category} onChange={(e) => handleCategoryChange(e.target.value)} className={selectCls}>
+                  <option value="">—</option>
+                  {availableCategories.map((c) => (
+                    <option key={c} value={c}>{CATEGORY_LABELS[lang]?.[c] ?? c}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {ageGroup && category && (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-slate-500">{t.routineType}</label>
+                <select value={routineType} onChange={(e) => setRoutineType(e.target.value as 'Balance' | 'Dynamic' | 'Combined')} className={selectCls}>
+                  <option value="">—</option>
+                  {availableRoutineTypes.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+            )}
+          </>
         )}
       </div>
       <div className="flex gap-2">
         <button onClick={onCancel} className="flex-1 py-1.5 text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all">
           {t.cancel}
         </button>
-        <button onClick={handleAdd} disabled={!ageGroup || !category || !routineType}
+        <button onClick={handleAdd} disabled={!canAdd}
           className="flex-1 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 transition-all">
           {t.save}
         </button>
@@ -199,13 +325,17 @@ function SessionRow({ session, borderStyle, onDelete, lang }: {
 
 // ─── panel column ─────────────────────────────────────────────────────────────
 
-function PanelColumn({ lang, panel, sessions, ageGroups, agLabels, ageGroupRules, sectionId, onAddSession, onDeleteSession }: {
+function PanelColumn({ lang, panel, sportType, competitionYear, sessions, ageGroups, agLabels, ageGroupRules, apparatus, apparatusRules, sectionId, onAddSession, onDeleteSession }: {
   lang: Lang
   panel: Panel
+  sportType: string
+  competitionYear: number
   sessions: Session[]
   ageGroups: string[]
   agLabels: Record<string, string>
   ageGroupRules: AgeGroupRule[]
+  apparatus: Apparatus[]
+  apparatusRules: ApparatusRule[]
   sectionId: string
   onAddSession: (s: Omit<Session, 'id'>) => void
   onDeleteSession: (id: string) => void
@@ -237,9 +367,13 @@ function PanelColumn({ lang, panel, sessions, ageGroups, agLabels, ageGroupRules
         <AddSessionForm
           lang={lang}
           panel={panel}
+          sportType={sportType}
+          competitionYear={competitionYear}
           ageGroups={ageGroups}
           agLabels={agLabels}
           ageGroupRules={ageGroupRules}
+          apparatus={apparatus}
+          apparatusRules={apparatusRules}
           sectionId={sectionId}
           nextOrderIndex={sessions.length + 1}
           onAdd={(s) => { onAddSession(s); setShowForm(false) }}
@@ -271,9 +405,13 @@ type SectionBlockProps = {
   section: Section
   sessions: Session[]
   panels: Panel[]
+  sportType: string
+  competitionYear: number
   ageGroups: string[]
   agLabels: Record<string, string>
   ageGroupRules: AgeGroupRule[]
+  apparatus: Apparatus[]
+  apparatusRules: ApparatusRule[]
   onUpdateLabel: (label: string) => void
   onUpdateTimes: (times: SectionTimes) => void
   onDelete: () => void
@@ -282,7 +420,8 @@ type SectionBlockProps = {
 }
 
 function SectionBlock({
-  lang, section, sessions, panels, ageGroups, agLabels, ageGroupRules,
+  lang, section, sessions, panels, sportType, competitionYear, ageGroups, agLabels, ageGroupRules,
+  apparatus, apparatusRules,
   onUpdateLabel, onUpdateTimes, onDelete, onAddSession, onDeleteSession,
 }: SectionBlockProps) {
   const t = T[lang]
@@ -363,10 +502,14 @@ function SectionBlock({
                 key={panel.id}
                 lang={lang}
                 panel={panel}
+                sportType={sportType}
+                competitionYear={competitionYear}
                 sessions={sessions.filter((s) => s.panel_id === panel.id)}
                 ageGroups={ageGroups}
                 agLabels={agLabels}
                 ageGroupRules={ageGroupRules}
+                apparatus={apparatus}
+                apparatusRules={apparatusRules}
                 sectionId={section.id}
                 onAddSession={onAddSession}
                 onDeleteSession={onDeleteSession}
@@ -391,9 +534,13 @@ function SectionBlock({
               <AddSessionForm
                 lang={lang}
                 panel={panels[0]}
+                sportType={sportType}
+                competitionYear={competitionYear}
                 ageGroups={ageGroups}
                 agLabels={agLabels}
                 ageGroupRules={ageGroupRules}
+                apparatus={apparatus}
+                apparatusRules={apparatusRules}
                 sectionId={section.id}
                 nextOrderIndex={sessions.length + 1}
                 onAdd={(s) => { onAddSession(s); setShowForm(false) }}
@@ -421,9 +568,13 @@ function SectionBlock({
 export type StructureTabProps = {
   lang: Lang
   competitionId: string
+  sportType: string
+  competitionYear: number
   ageGroups: string[]          // age group IDs enabled for this competition
   agLabels: Record<string, string>  // UUID → display label
   ageGroupRules: AgeGroupRule[]
+  apparatus: Apparatus[]
+  apparatusRules: ApparatusRule[]
   panels: Panel[]
   sections: Section[]
   sessions: Session[]
@@ -436,7 +587,8 @@ export type StructureTabProps = {
 }
 
 export default function StructureTab({
-  lang, competitionId, ageGroups, agLabels, ageGroupRules, panels, sections, sessions,
+  lang, competitionId, sportType, competitionYear, ageGroups, agLabels, ageGroupRules,
+  apparatus, apparatusRules, panels, sections, sessions,
   onAddSection, onUpdateSectionLabel, onUpdateSectionTimes, onDeleteSection,
   onAddSession, onDeleteSession,
 }: StructureTabProps) {
@@ -519,9 +671,13 @@ export default function StructureTab({
             .filter(s => s.section_id === activeSection.id)
             .sort((a, b) => a.order_index - b.order_index)}
           panels={panels}
+          sportType={sportType}
+          competitionYear={competitionYear}
           ageGroups={ageGroups}
           agLabels={agLabels}
           ageGroupRules={ageGroupRules}
+          apparatus={apparatus}
+          apparatusRules={apparatusRules}
           onUpdateLabel={(label) => onUpdateSectionLabel(activeSection.id, label)}
           onUpdateTimes={(times) => onUpdateSectionTimes(activeSection.id, times)}
           onDelete={() => handleDelete(activeSection)}

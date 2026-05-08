@@ -200,7 +200,7 @@ export default function HomePage() {
           .select('id, name, status, location, start_date, end_date, age_groups, poster_url')
           .neq('status', 'draft')
           .order('start_date', { ascending: false }),
-        supabase.from('age_group_rules').select('id, age_group, ruleset').order('sort_order'),
+        supabase.from('age_group_rules').select('id, age_group, level, ruleset').order('sort_order'),
       ])
       setComps(data ?? [])
       setAgLabel(Object.fromEntries(((rulesData ?? []) as unknown as { id: string; age_group: string; ruleset: string }[]).map(r => [r.id, `${r.age_group} (${r.ruleset})`])))

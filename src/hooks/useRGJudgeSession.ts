@@ -108,7 +108,7 @@ export function useRGJudgeSession(): RGJudgeSessionData {
         supabase.from('session_orders').select('position, team_id').eq('session_id', session.id).order('position'),
         supabase.from('scores').select('section_panel_judge_id,ej_score,aj_score,dj_difficulty,db_score').eq('session_id', session.id),
         supabase.from('routine_results').select('team_id,e_score,a_score,da_score,db_score,rj_penalty,final_score,status').eq('session_id', session.id),
-        supabase.from('age_group_rules').select('id, age_group, ruleset'),
+        supabase.from('age_group_rules').select('id, age_group, level, ruleset'),
       ])
 
       const agLabels: Record<string, string> = Object.fromEntries(

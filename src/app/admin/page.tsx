@@ -18,20 +18,22 @@ export default function Page() {
   const [ageGroupRules, setAgeGroupRules] = useState<AgeGroupRule[]>([])
   const [availableAdmins, setAvailableAdmins] = useState<AdminUser[]>([])
   const [loading, setLoading]         = useState(true)
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
   const router   = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
     async function load() {
       // ── parallel: age_group_rules + competitions + comp_admin profiles ─────
-      const [rulesRes, compsRes, adminsRes] = await Promise.all([
-        supabase.from('age_group_rules').select('id, age_group, ruleset, min_age, max_age, sort_order, sport_type').order('sort_order'),
+      const [rulesRes, compsRes, adminsRes, roleRes] = await Promise.all([
+        supabase.from('age_group_rules').select('id, age_group, level, ruleset, min_age, max_age, sort_order, sport_type').order('sort_order'),
         supabase.from('competitions')
           .select('id, name, status, sport_type, location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, admin_id, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
           .order('created_at', { ascending: false }),
         supabase.from('profiles')
           .select('id, email')
           .eq('role', 'admin'),
+        supabase.rpc('get_my_role'),
       ])
 
       // ── fetch emails for comp_admin users via API route ─────────────────────
@@ -64,6 +66,7 @@ export default function Page() {
       setAgeGroupRules((rulesRes.data ?? []) as unknown as AgeGroupRule[])
       setAvailableAdmins(adminsWithEmail)
       setCompetitions(mapped)
+      setIsSuperAdmin(roleRes.data === 'super_admin')
       setLoading(false)
     }
     load()
@@ -117,6 +120,7 @@ export default function Page() {
           ageGroupRules={ageGroupRules}
           availableAdmins={availableAdmins}
           competitions={competitions}
+          canCreate={isSuperAdmin}
           onCreate={handleCreate}
           onManage={(id) => router.push(`/admin/competitions/${id}`)}
         />

@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry, ProvisionalEntry, DefinitiveEntry } from '@/components/admin/types'
-import { NEXT_STATUS } from '@/components/admin/types'
+import { NEXT_STATUS, ageGroupLabel } from '@/components/admin/types'
+import type { Apparatus, ApparatusRule } from '@/components/admin/types'
 import StructureTab from './StructureTab'
 import JudgesTab, { type JudgesTabProps, type PanelLock } from './JudgesTab'
 import RegistrationsTab, { type RegistrationsTabProps } from './RegistrationsTab'
@@ -194,6 +195,8 @@ export type CompetitionDetailProps = {
   // overview
   availableAdmins: AdminUser[]
   ageGroupRules: AgeGroupRule[]
+  apparatus: Apparatus[]
+  apparatusRules: ApparatusRule[]
   onUpdateCompetition: (updates: OverviewUpdate) => void
   onUploadPoster: (file: File) => Promise<void>
   onUpdateFees: (fees: { fee_per_team: number | null; fee_per_gymnast: number | null; judge_missing_fine: number | null }) => void
@@ -216,7 +219,7 @@ export default function CompetitionDetail({
   panelLocks, onAddToPool, onRemoveFromPool, onAssignJudge, onAddSlot, onRemoveSlot,
   onTogglePanelLock, onCreateJudge,
   globalTeams, clubs, entries, provisionalEntries, definitiveEntries, onToggleDropout, onRemoveClubEntries, sessionOrders, lockedSessions, onReorder, onToggleLock, onReorderTimeline,
-  availableAdmins, ageGroupRules, onUpdateCompetition, onUploadPoster, onUpdateFees,
+  availableAdmins, ageGroupRules, apparatus, apparatusRules, onUpdateCompetition, onUploadPoster, onUpdateFees,
   onSetDJReviewDeadline, onStartSession, onFinishSession,
   competitionGymnasts, competitionCoaches, globalCoaches,
 }: CompetitionDetailProps) {
@@ -347,9 +350,13 @@ export default function CompetitionDetail({
         <StructureTab
           lang={lang}
           competitionId={competition.id}
+          sportType={competition.sport_type}
+          competitionYear={competition.start_date ? new Date(competition.start_date).getFullYear() : new Date().getFullYear()}
           ageGroups={competition.age_groups}
-          agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group} (${r.ruleset})`]))}
+          agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, ageGroupLabel(r)]))}
           ageGroupRules={ageGroupRules}
+          apparatus={apparatus}
+          apparatusRules={apparatusRules}
           panels={panels}
           sections={sections}
           sessions={sessions}
@@ -377,6 +384,7 @@ export default function CompetitionDetail({
       {activeTab === 'judges' && (
         <JudgesTab
           lang={lang}
+          sportType={competition.sport_type}
           globalJudges={globalJudges}
           judgePool={judgePool}
           nominations={nominations}

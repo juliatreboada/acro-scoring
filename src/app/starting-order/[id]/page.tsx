@@ -49,7 +49,7 @@ export default function Page() {
           .select('id, competition_id, team_id, dorsal, dropped_out')
           .eq('competition_id', id),
         supabase.from('age_group_rules')
-          .select('id, age_group, ruleset, min_age, max_age, routine_count')
+          .select('id, age_group, level, ruleset, min_age, max_age, routine_count')
           .order('sort_order'),
       ])
 

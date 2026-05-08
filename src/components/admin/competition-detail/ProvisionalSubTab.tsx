@@ -25,7 +25,7 @@ export function ProvisionalSubTab({ lang, provisionalEntries, clubs, ageGroupRul
   const rawRows: CatRow[] = competitionAgeGroups.flatMap(agId => {
     const rule = ageGroupRules.find(r => r.id === agId)
     if (!rule) return []
-    return categoriesForRuleset(rule.age_group).map(cat => ({
+    return categoriesForRuleset(rule.level).map(cat => ({
       ageGroupId: agId, age_group: agId, ageGroupName: rule.age_group, category: cat,
     }))
   })

@@ -6,7 +6,7 @@ import type {
   Competition, Panel, Section, Session, Judge, SectionPanelJudge,
   Role, Team, Club, CompetitionEntry, SessionOrder, AdminUser,
   AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry,
-  ProvisionalEntry, DefinitiveEntry,
+  ProvisionalEntry, DefinitiveEntry, Apparatus, ApparatusRule,
 } from '@/components/admin/types'
 import { ROLE_CONFIG, defaultSlots, NEXT_STATUS } from '@/components/admin/types'
 import type { PanelLock } from '@/components/admin/competition-detail/JudgesTab'
@@ -31,6 +31,8 @@ export function useCompetitionPage(id: string) {
   const [panelLocks, setPanelLocks]       = useState<PanelLock[]>([])
   const [availableAdmins, setAvailableAdmins] = useState<AdminUser[]>([])
   const [ageGroupRules, setAgeGroupRules] = useState<AgeGroupRule[]>([])
+  const [apparatus, setApparatus] = useState<Apparatus[]>([])
+  const [apparatusRules, setApparatusRules] = useState<ApparatusRule[]>([])
   const [competitionGymnasts, setCompetitionGymnasts] = useState<Gymnast[]>([])
   const [globalCoaches,      setGlobalCoaches]        = useState<Coach[]>([])
   const [competitionCoaches, setCompetitionCoaches]   = useState<Coach[]>([])
@@ -43,20 +45,23 @@ export function useCompetitionPage(id: string) {
     async function load() {
       try {
         const [compRes, panelsRes, sectionsRes, sessionsRes, judgesRes,
-               nominationsRes, entriesRes, rulesRes, adminsRes, provRes, defRes] = await Promise.all([
+               nominationsRes, entriesRes, rulesRes, adminsRes, provRes, defRes,
+               apparatusRes, apparatusRulesRes] = await Promise.all([
           supabase.from('competitions')
             .select('id,name,status,sport_type,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,age_groups,poster_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine')
             .eq('id', id).single(),
           supabase.from('panels').select('id,competition_id,panel_number').eq('competition_id', id).order('panel_number'),
           supabase.from('sections').select('id,competition_id,section_number,label,starting_time,waiting_time_seconds,warmup_duration_minutes,timeline_order').eq('competition_id', id).order('section_number'),
           supabase.from('sessions').select('id,competition_id,panel_id,section_id,name,age_group,category,routine_type,status,order_index,order_locked,dj_method,ej_method').eq('competition_id', id).order('order_index'),
-          supabase.from('judges').select('id,full_name,phone,licence,avatar_url'),
+          supabase.from('judges').select('id,full_name,phone,licence,avatar_url,sport_type'),
           supabase.from('competition_judge_nominations').select('id,competition_id,judge_id,club_id').eq('competition_id', id),
           supabase.from('competition_entries').select('id,competition_id,team_id,dorsal,dropped_out').eq('competition_id', id),
-          supabase.from('age_group_rules').select('id,age_group,ruleset,min_age,max_age,routine_count,sort_order,sport_type').order('sort_order'),
+          supabase.from('age_group_rules').select('id,age_group,level,ruleset,min_age,max_age,routine_count,sort_order,sport_type').order('sort_order'),
           supabase.from('profiles').select('id,email').eq('role', 'admin'),
           supabase.from('provisional_entries').select('id,club_id,teams_per_category,created_at').eq('competition_id', id),
           supabase.from('definitive_entries').select('id,club_id,contact_name,contact_phone,contact_email,teams_per_category,judge_name,total_amount,status,payment_document_url,admin_notes,created_at').eq('competition_id', id),
+          supabase.from('apparatus').select('id,name,name_es,sort_order').order('sort_order'),
+          supabase.from('apparatus_rules').select('id,age_group_rule_id,year,apparatus_id,is_mandatory,sort_order').order('sort_order'),
         ])
 
         if (!compRes.data) { setLoading(false); return }
@@ -156,7 +161,12 @@ export function useCompetitionPage(id: string) {
         setPanels((panelsRes.data ?? []) as unknown as Panel[])
         setSections((sectionsRes.data ?? []) as unknown as Section[])
         setSessions(rawSessions.map(({ order_locked: _, ...s }) => s) as Session[])
-        setGlobalJudges(rawJudges.map(j => ({ ...j, email: judgeEmailMap[j.id] ?? null })))
+        const compSportType = compRes.data.sport_type ?? 'acro'
+        setGlobalJudges(
+          rawJudges
+            .filter(j => (j as any).sport_type === compSportType)
+            .map(j => ({ ...j, email: judgeEmailMap[j.id] ?? null }))
+        )
         setNominations(rawNoms)
         setJudgePool(rawNoms.map(n => n.judge_id))
         setAssignments(assignmentsRes.data ?? [])
@@ -171,6 +181,8 @@ export function useCompetitionPage(id: string) {
         setSessionOrders(ordersData ?? [])
         setAvailableAdmins(adminsWithEmail)
         setAgeGroupRules((rulesRes.data ?? []) as unknown as AgeGroupRule[])
+        setApparatus((apparatusRes.data ?? []) as Apparatus[])
+        setApparatusRules((apparatusRulesRes.data ?? []) as ApparatusRule[])
         setProvisionalEntries((provRes.data ?? []) as ProvisionalEntry[])
         setDefinitiveEntries((defRes.data ?? []) as DefinitiveEntry[])
       } finally {
@@ -456,7 +468,7 @@ export function useCompetitionPage(id: string) {
     loading, competition, panels, sections, sessions,
     globalJudges, judgePool, nominations, assignments, panelLocks,
     globalTeams, clubs, entries, sessionOrders, lockedSessions,
-    availableAdmins, ageGroupRules, competitionGymnasts, globalCoaches, competitionCoaches,
+    availableAdmins, ageGroupRules, apparatus, apparatusRules, competitionGymnasts, globalCoaches, competitionCoaches,
     provisionalEntries, definitiveEntries, actionError,
     // setters exposed for local overrides (e.g. admin's extended handleToggleLock)
     setLockedSessions: setLockedSessions as Dispatch<SetStateAction<string[]>>,

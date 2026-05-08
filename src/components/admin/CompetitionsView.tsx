@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, AgeGroupRule, AdminUser } from './types'
+import { groupByLevel, rgRulesetLabel } from './types'
 import ClickableImg from '@/components/shared/ClickableImg'
 import { formatDateRange } from '@/lib/formatDate'
 
@@ -268,31 +269,52 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
         <div>
           <label className="block text-xs font-medium text-slate-500 mb-1">{t.ageGroups}</label>
           <p className="text-xs text-slate-400 mb-2.5">{t.ageGroupsHint}</p>
-          <div className="flex flex-wrap gap-2">
-            {filteredAGs.map((rule) => {
-              const active = selectedAGs.has(rule.id)
-              const rangeLabel = rule.max_age
-                ? `${rule.min_age}–${rule.max_age}`
-                : `${rule.min_age}+`
-              return (
-                <button
-                  type="button"
-                  key={rule.id}
-                  onClick={() => toggleAG(rule.id)}
-                  className={[
-                    'flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all',
-                    active
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400',
-                  ].join(' ')}
-                >
-                  <span>{rule.age_group} ({rule.ruleset})</span>
-                  <span className={['text-xs', active ? 'text-blue-200' : 'text-slate-400'].join(' ')}>
-                    {rangeLabel}
-                  </span>
-                </button>
-              )
-            })}
+          <div className="space-y-2">
+            {groupByLevel(filteredAGs).map(({ level, rules }) => (
+              <div key={level} className="bg-slate-50 rounded-xl border border-slate-100 p-3">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">{level}</p>
+                {sportType === 'rg' ? (
+                  <div className="space-y-2">
+                    {(['Individual', 'Group', 'Equipos'] as const).map((rs) => {
+                      const sub = rules.filter((r) => r.ruleset === rs)
+                      if (sub.length === 0) return null
+                      return (
+                        <div key={rs}>
+                          <p className="text-xs text-slate-400 italic mb-1">{rgRulesetLabel(rs)}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {sub.map((rule) => {
+                              const active = selectedAGs.has(rule.id)
+                              const rangeLabel = rule.max_age ? `${rule.min_age}–${rule.max_age}` : `${rule.min_age}+`
+                              return (
+                                <button type="button" key={rule.id} onClick={() => toggleAG(rule.id)}
+                                  className={['flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all', active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'].join(' ')}>
+                                  <span>{rule.age_group}</span>
+                                  <span className={['text-xs', active ? 'text-blue-200' : 'text-slate-400'].join(' ')}>{rangeLabel}</span>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {rules.map((rule) => {
+                      const active = selectedAGs.has(rule.id)
+                      const rangeLabel = rule.max_age ? `${rule.min_age}–${rule.max_age}` : `${rule.min_age}+`
+                      return (
+                        <button type="button" key={rule.id} onClick={() => toggleAG(rule.id)}
+                          className={['flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all', active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'].join(' ')}>
+                          <span>{rule.age_group}</span>
+                          <span className={['text-xs', active ? 'text-blue-200' : 'text-slate-400'].join(' ')}>{rangeLabel}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 

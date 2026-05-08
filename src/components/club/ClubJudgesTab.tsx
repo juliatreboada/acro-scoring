@@ -91,7 +91,7 @@ export default function ClubJudgesTab({ lang, judges, onInvite, onUpdate, onDele
   }
 
   function saveEdit(judge: Judge) {
-    onUpdate(judge.id, { full_name: editForm.full_name, email: judge.email, phone: editForm.phone || null, licence: editForm.licence || null })
+    onUpdate(judge.id, { full_name: editForm.full_name, email: judge.email, phone: editForm.phone || null, licence: editForm.licence || null, sport_type: judge.sport_type })
     setEditingId(null)
   }
 

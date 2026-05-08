@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, AdminUser, AgeGroupRule, Panel, Session } from '@/components/admin/types'
+import { groupByLevel, ageGroupLabel, rgRulesetLabel } from '@/components/admin/types'
 import { formatDateRange } from '@/lib/formatDate'
 
 // ─── translations ─────────────────────────────────────────────────────────────
@@ -81,7 +82,8 @@ export default function OverviewTab({ competition, lang, availableAdmins, ageGro
   onUploadPoster: (file: File) => Promise<void>
 }) {
   const t = T[lang]
-  const agLabels = Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group} (${r.ruleset})`]))
+  const filteredAGs = ageGroupRules.filter(r => r.sport_type === competition.sport_type)
+  const agLabels = Object.fromEntries(ageGroupRules.map(r => [r.id, ageGroupLabel(r)]))
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const posterInputRef = useRef<HTMLInputElement>(null)
@@ -347,24 +349,56 @@ export default function OverviewTab({ competition, lang, availableAdmins, ageGro
             </div>
             <div className="p-4">
               {editingAgeGroups ? (
-                <div className="space-y-3">
-                  <div className="flex flex-wrap gap-2">
-                    {ageGroupRules.map((rule) => {
-                      const active = ageGroupsForm.has(rule.id)
-                      return (
-                        <button type="button" key={rule.id}
-                          onClick={() => {
-                            const next = new Set(ageGroupsForm)
-                            active ? next.delete(rule.id) : next.add(rule.id)
-                            setAgeGroupsForm(next)
-                          }}
-                          className={['px-3 py-1.5 rounded-xl border text-sm font-medium transition-all', active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'].join(' ')}
-                        >
-                          {rule.age_group} ({rule.ruleset})
-                        </button>
-                      )
-                    })}
-                  </div>
+                <div className="space-y-4">
+                  {groupByLevel(filteredAGs).map(({ level, rules }) => (
+                    <div key={level} className="bg-slate-50 rounded-xl border border-slate-100 p-3">
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">{level}</p>
+                      {competition.sport_type === 'rg' ? (
+                        <div className="space-y-2">
+                          {(['Individual', 'Group', 'Equipos'] as const).map((rs) => {
+                            const sub = rules.filter((r) => r.ruleset === rs)
+                            if (sub.length === 0) return null
+                            return (
+                              <div key={rs}>
+                                <p className="text-xs text-slate-400 italic mb-1">{rgRulesetLabel(rs)}</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {sub.map((rule) => {
+                                    const active = ageGroupsForm.has(rule.id)
+                                    const rangeLabel = rule.max_age ? `${rule.min_age}–${rule.max_age}` : `${rule.min_age}+`
+                                    return (
+                                      <button type="button" key={rule.id}
+                                        onClick={() => { const next = new Set(ageGroupsForm); active ? next.delete(rule.id) : next.add(rule.id); setAgeGroupsForm(next) }}
+                                        className={['flex items-center gap-2 px-3 py-1.5 rounded-xl border text-sm font-medium transition-all', active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'].join(' ')}
+                                      >
+                                        <span>{rule.age_group}</span>
+                                        <span className={['text-xs', active ? 'text-blue-200' : 'text-slate-400'].join(' ')}>{rangeLabel}</span>
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {rules.map((rule) => {
+                            const active = ageGroupsForm.has(rule.id)
+                            const rangeLabel = rule.max_age ? `${rule.min_age}–${rule.max_age}` : `${rule.min_age}+`
+                            return (
+                              <button type="button" key={rule.id}
+                                onClick={() => { const next = new Set(ageGroupsForm); active ? next.delete(rule.id) : next.add(rule.id); setAgeGroupsForm(next) }}
+                                className={['flex items-center gap-2 px-3 py-1.5 rounded-xl border text-sm font-medium transition-all', active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'].join(' ')}
+                              >
+                                <span>{rule.age_group}</span>
+                                <span className={['text-xs', active ? 'text-blue-200' : 'text-slate-400'].join(' ')}>{rangeLabel}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                   <div className="flex gap-2 justify-end">
                     <button onClick={saveAgeGroups} className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg">Save</button>
                     <button onClick={() => setEditingAgeGroups(false)} className="px-3 py-1.5 text-sm bg-slate-200 rounded-lg">Cancel</button>

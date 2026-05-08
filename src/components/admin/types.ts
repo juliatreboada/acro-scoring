@@ -2,13 +2,46 @@
 
 export type AgeGroupRule = {
   id: string
-  age_group: string
-  ruleset: string
+  age_group: string        // base name only, e.g. 'Alevín', 'Senior'
+  level: string            // Acro: 'Escolar'|'Base'|'Nacional'|'FIG'; RG: 'Escolar'|'Promoción'|'Prebase'|'Base'|'Copa Base'|'Federado'|'Honor'
+  ruleset: string          // Acro: 'FIG'|'RFEG'|'FGX'; RG: 'Individual'|'Group'|'Equipos'
   min_age: number
   max_age: number | null   // null = no upper limit (e.g. Senior)
   routine_count: number    // 1=Combined only, 2=Balance+Dynamic, 3=all three
   sort_order: number
   sport_type: string       // 'acro' | 'rg'
+}
+
+// Groups age group rules by level, preserving insertion order (driven by sort_order).
+// Section headers show the level: Escolar / Base / Nacional / FIG for Acro;
+// Escolar / Promoción / … / Honor for RG.
+export function groupByLevel(rules: AgeGroupRule[]): { level: string; rules: AgeGroupRule[] }[] {
+  const order: string[] = []
+  const map: Record<string, AgeGroupRule[]> = {}
+  for (const rule of rules) {
+    if (!map[rule.level]) {
+      map[rule.level] = []
+      order.push(rule.level)
+    }
+    map[rule.level].push(rule)
+  }
+  return order.map((l) => ({ level: l, rules: map[l] }))
+}
+
+// Full display label for an age group badge (read-only view).
+// Acro: "{age_group} {level}" — e.g. "Alevín Base", "Senior FIG"
+// RG: "{age_group} {level} {gymnast_type}" — e.g. "Benjamín Prebase Individual", "Alevín Escolar Conjuntos"
+export function ageGroupLabel(rule: AgeGroupRule): string {
+  if (rule.sport_type === 'rg') {
+    const rs = rule.ruleset === 'Group' ? 'Conjuntos' : rule.ruleset
+    return `${rule.age_group} ${rule.level} ${rs}`
+  }
+  return `${rule.age_group} ${rule.level}`
+}
+
+// Returns the Spanish display label for an RG gymnast type (ruleset value).
+export function rgRulesetLabel(ruleset: string): string {
+  return ruleset === 'Group' ? 'Conjuntos' : ruleset
 }
 
 export type AdminUser = {
@@ -83,6 +116,7 @@ export type Judge = {
   phone: string | null
   licence: string | null
   avatar_url: string | null
+  sport_type: string
 }
 
 // Club nominates a judge for a specific competition.
@@ -246,10 +280,10 @@ export function defaultSlots(sectionId: string, panelId: string): Omit<SectionPa
   return slots
 }
 
-// Categories available depending on age_group name ('Escolar'/'Base' → 3 cats, otherwise 5)
-export function categoriesForRuleset(ageGroup: string): string[] {
-  const r = ageGroup.toLowerCase()
-  if (r.includes('escolar') || r.includes('base')) return ['Pairs', 'Groups 3', 'Groups 4']
+// Categories available for an Acro age group, determined by its level.
+export function categoriesForRuleset(level: string): string[] {
+  const l = level.toLowerCase()
+  if (l === 'escolar' || l === 'base') return ['Pairs', 'Groups 3', 'Groups 4']
   return ["Women's Pair", "Men's Pair", "Mixed Pair", "Women's Group", "Mixed Group"]
 }
 
@@ -316,8 +350,8 @@ export function sortByAgeGroupAndCategory<T extends { age_group: string; categor
   })
 }
 
-export const ROUTINE_TYPES = ['Balance', 'Dynamic', 'Combined'] as const
-//export const ROUTINE_TYPES = ['Balance', 'Dynamic', 'Combined', 'Free', 'Hoop', 'Ball', 'Clubs', 'Ribbon', 'Rope'] as const
+export const ROUTINE_TYPES    = ['Balance', 'Dynamic', 'Combined'] as const
+export const RG_ROUTINE_TYPES = ['Free', 'Hoop', 'Ball', 'Clubs', 'Ribbon', 'Rope'] as const
 
 export type CompetitionStatus = 'draft' | 'provisional_entry' | 'definitive_entry' | 'registration_open' | 'registration_closed' | 'published' | 'active' | 'finished'
 

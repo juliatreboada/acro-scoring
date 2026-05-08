@@ -348,7 +348,7 @@ export default function DefinitiveEntryForm({ lang, competition, clubId, clubNam
             <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">{t.teams}</p>
             <div className="space-y-4">
               {competitionRules.map(rule => {
-                const categories = categoriesForRuleset(rule.age_group)
+                const categories = categoriesForRuleset(rule.level)
                 return (
                   <div key={rule.id}>
                     <p className="text-xs font-medium text-slate-500 mb-1.5">{rule.age_group}</p>

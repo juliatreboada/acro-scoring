@@ -36,7 +36,7 @@ export default function Page() {
       // ── sessions + age group labels (parallel) ────────────────────────────
       const [sessionsRes, ageGroupRulesRes] = await Promise.all([
         supabase.from('sessions').select('id, age_group, category, routine_type').eq('competition_id', id),
-        supabase.from('age_group_rules').select('id, age_group, sort_order, ruleset'),
+        supabase.from('age_group_rules').select('id, age_group, level, sort_order, ruleset'),
       ])
       const sessions = sessionsRes.data
       const agRules = ageGroupRulesRes.data ?? []

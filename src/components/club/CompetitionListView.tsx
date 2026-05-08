@@ -119,7 +119,7 @@ export function CompetitionListView({
     return comp.age_groups.flatMap(agId => {
       const rule = ageGroupRules.find(r => r.id === agId)
       if (!rule) return []
-      return categoriesForRuleset(rule.age_group)
+      return categoriesForRuleset(rule.level)
         .map(cat => ({ label: `${rule.age_group} · ${cat}`, count: tpc[`${agId}|${cat}`] ?? 0 }))
         .filter(r => r.count > 0)
     })

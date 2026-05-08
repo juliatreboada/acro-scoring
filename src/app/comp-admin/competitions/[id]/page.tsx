@@ -18,7 +18,7 @@ export default function Page() {
     loading, competition, panels, sections, sessions,
     globalJudges, judgePool, nominations, assignments, panelLocks,
     globalTeams, clubs, entries, sessionOrders, lockedSessions,
-    availableAdmins, ageGroupRules, competitionGymnasts, globalCoaches, competitionCoaches,
+    availableAdmins, ageGroupRules, apparatus, apparatusRules, competitionGymnasts, globalCoaches, competitionCoaches,
     provisionalEntries, definitiveEntries, actionError, clearActionError,
     setLockedSessions,
     handleAdvanceStatus, handleSetPanelCount,
@@ -99,6 +99,8 @@ export default function Page() {
         onReorderTimeline={handleReorderTimeline}
         availableAdmins={availableAdmins}
         ageGroupRules={ageGroupRules}
+        apparatus={apparatus}
+        apparatusRules={apparatusRules}
         onUpdateCompetition={handleUpdateCompetition}
         onUploadPoster={handleUploadPoster}
         onUpdateFees={handleUpdateFees}

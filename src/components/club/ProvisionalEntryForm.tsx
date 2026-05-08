@@ -124,7 +124,7 @@ export default function ProvisionalEntryForm({ lang, competition, clubId, clubNa
           <p className="text-xs text-slate-500">{t.instructions} {t.zeroHint}</p>
 
           {competitionRules.map(rule => {
-            const categories = categoriesForRuleset(rule.age_group)
+            const categories = categoriesForRuleset(rule.level)
             return (
               <div key={rule.id}>
                 <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">

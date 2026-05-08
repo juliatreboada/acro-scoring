@@ -113,6 +113,7 @@ export type Database = {
         Row: {
           age_group: string
           id: string
+          level: string
           max_age: number | null
           min_age: number
           routine_count: number
@@ -123,6 +124,7 @@ export type Database = {
         Insert: {
           age_group: string
           id?: string
+          level: string
           max_age?: number | null
           min_age: number
           routine_count?: number
@@ -133,6 +135,7 @@ export type Database = {
         Update: {
           age_group?: string
           id?: string
+          level?: string
           max_age?: number | null
           min_age?: number
           routine_count?: number
@@ -536,6 +539,7 @@ export type Database = {
           id: string
           licence: string | null
           phone: string | null
+          sport_type: string
         }
         Insert: {
           avatar_url?: string | null
@@ -543,6 +547,7 @@ export type Database = {
           id: string
           licence?: string | null
           phone?: string | null
+          sport_type?: string
         }
         Update: {
           avatar_url?: string | null
@@ -550,6 +555,7 @@ export type Database = {
           id?: string
           licence?: string | null
           phone?: string | null
+          sport_type?: string
         }
         Relationships: [
           {

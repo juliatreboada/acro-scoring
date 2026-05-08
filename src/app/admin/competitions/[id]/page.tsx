@@ -19,7 +19,7 @@ export default function Page() {
     loading, competition, panels, sections, sessions,
     globalJudges, judgePool, nominations, assignments, panelLocks,
     globalTeams, clubs, entries, sessionOrders, lockedSessions,
-    availableAdmins, ageGroupRules, competitionGymnasts, globalCoaches, competitionCoaches,
+    availableAdmins, ageGroupRules, apparatus, apparatusRules, competitionGymnasts, globalCoaches, competitionCoaches,
     provisionalEntries, definitiveEntries,
     setLockedSessions, setSessionOrders,
     handleAdvanceStatus, handleSetPanelCount,
@@ -35,12 +35,12 @@ export default function Page() {
 
   // ── admin-only: create judge via invite API ───────────────────────────────────
   async function handleCreateJudge(data: Omit<Judge, 'id' | 'avatar_url'>) {
-    const { full_name, email, phone, licence } = data
+    const { full_name, email, phone, licence, sport_type } = data
     if (!email) return
     const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
     const token = session?.access_token
-    const body: Record<string, string> = { role: 'judge', email, full_name }
+    const body: Record<string, string> = { role: 'judge', email, full_name, sport_type: sport_type ?? 'acro' }
     if (phone)   body.phone   = phone
     if (licence) body.licence = licence
     const res = await fetch('/api/admin/invite', {
@@ -144,6 +144,8 @@ export default function Page() {
         onReorderTimeline={handleReorderTimeline}
         availableAdmins={availableAdmins}
         ageGroupRules={ageGroupRules}
+        apparatus={apparatus}
+        apparatusRules={apparatusRules}
         onUpdateCompetition={handleUpdateCompetition}
         onUploadPoster={handleUploadPoster}
         onUpdateFees={handleUpdateFees}
