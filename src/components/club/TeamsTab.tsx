@@ -2,42 +2,55 @@
 
 import { useState } from 'react'
 import type { Lang } from '@/components/scoring/types'
-import type { Gymnast, Team, AgeGroupRule } from '@/components/admin/types'
+import type { Gymnast, Team, AgeGroupRule, Apparatus, ApparatusRule } from '@/components/admin/types'
 import { CATEGORY_SIZE, categoriesForRuleset, CATEGORY_LABELS } from '@/components/admin/types'
 import { gymnastFullName, PhotoAvatar } from './GymnastsTab'
 
 const T = {
   en: {
     addTeam: 'Add team',
+    sportType: 'Sport',
+    acro: 'Acro',
+    rg: 'RG',
     category: 'Category',
     ageGroup: 'Age group',
+    apparatus: 'Apparatus',
+    groupSize: 'Group size',
     gymnast: (n: number) => `Gymnast ${n}`,
     save: 'Save',
     cancel: 'Cancel',
     empty: 'No teams yet.',
-    noGymnasts: 'Add at least 2 gymnasts to your roster before creating a team.',
+    noGymnasts: 'Add gymnasts to your roster before creating a team.',
     confirmDelete: 'Remove this team?',
     selectCategory: 'Select category',
     selectAgeGroup: 'Select age group',
     selectGymnast: '— select gymnast —',
+    individual: 'Individual',
+    group: 'Group',
   },
   es: {
     addTeam: 'Añadir equipo',
+    sportType: 'Deporte',
+    acro: 'Acro',
+    rg: 'GR',
     category: 'Categoría',
     ageGroup: 'Grupo de edad',
+    apparatus: 'Aparatos',
+    groupSize: 'Tamaño del grupo',
     gymnast: (n: number) => `Gimnasta ${n}`,
     save: 'Guardar',
     cancel: 'Cancelar',
     empty: 'Aún no hay equipos.',
-    noGymnasts: 'Añade al menos 2 gimnastas antes de crear un equipo.',
+    noGymnasts: 'Añade gimnastas antes de crear un equipo.',
     confirmDelete: '¿Eliminar este equipo?',
     selectCategory: 'Seleccionar categoría',
     selectAgeGroup: 'Seleccionar grupo de edad',
     selectGymnast: '— seleccionar gimnasta —',
+    individual: 'Individual',
+    group: 'Grupo',
   },
 }
 
-// Uses birth year only (not exact date) so birthday month doesn't affect eligibility
 function birthYear(g: Gymnast): number {
   return parseInt(g.date_of_birth.slice(0, 4), 10)
 }
@@ -50,7 +63,6 @@ function ageRangeStr(rule: AgeGroupRule): string {
   return rule.max_age != null ? `${rule.min_age}–${rule.max_age}` : `${rule.min_age}+`
 }
 
-// Build gymnast_display from selected gymnasts: "Fernández García / Ruiz López"
 function buildDisplay(gymnasts: Gymnast[], ids: string[]): string {
   return ids
     .map((id) => gymnasts.find((g) => g.id === id))
@@ -59,91 +71,201 @@ function buildDisplay(gymnasts: Gymnast[], ids: string[]): string {
     .join(' / ')
 }
 
-type FormState = { category: string; age_group: string; gymnast_ids: string[] }
-const EMPTY_FORM: FormState = { category: '', age_group: '', gymnast_ids: [] }
+function apparatusName(app: Apparatus, lang: Lang): string {
+  return lang === 'es' && app.name_es ? app.name_es : app.name
+}
+
+type FormState = {
+  sport_type: 'acro' | 'rg'
+  category: string
+  age_group: string
+  gymnast_ids: string[]
+  apparatus_ids: string[]
+  group_size: number
+}
+
+const EMPTY_FORM: FormState = {
+  sport_type: 'acro', category: '', age_group: '', gymnast_ids: [], apparatus_ids: [], group_size: 5,
+}
+
+type SaveData = Omit<Team, 'id' | 'club_id' | 'photo_url'>
 
 function TeamForm({
-  lang, gymnasts, ageGroupRules, agLabels, usedInOtherTeams, initial, onSave, onCancel,
+  lang, gymnasts, ageGroupRules, agLabels, apparatus, apparatusRules, usedInOtherTeams, initial, onSave, onCancel,
 }: {
   lang: Lang
   gymnasts: Gymnast[]
   ageGroupRules: AgeGroupRule[]
   agLabels: Record<string, string>
+  apparatus: Apparatus[]
+  apparatusRules: ApparatusRule[]
   usedInOtherTeams: Set<string>
   initial: FormState
-  onSave: (f: FormState & { gymnast_display: string }) => void
+  onSave: (data: SaveData) => void
   onCancel: () => void
 }) {
   const t = T[lang]
-
-  function getCategoriesForAgeGroup(ageGroupId: string): string[] {
-    if (!ageGroupId) return []   // hide category until age group is chosen
-    const rule = ageGroupRules.find(r => r.id === ageGroupId)
-    if (!rule) return []
-    return categoriesForRuleset(rule.age_group)
-  }
+  const isEditing = initial !== EMPTY_FORM
 
   const [form, setForm] = useState<FormState>(() => {
-    const cats = getCategoriesForAgeGroup(initial.age_group)
-    const cat = initial.category && cats.includes(initial.category) ? initial.category : ''
-    return { ...initial, category: cat }
+    if (initial.sport_type === 'acro') {
+      const acroRules = ageGroupRules.filter(r => r.sport_type !== 'rg')
+      const rule = acroRules.find(r => r.id === initial.age_group)
+      const cats = rule ? categoriesForRuleset(rule.age_group) : []
+      const cat = initial.category && cats.includes(initial.category) ? initial.category : ''
+      return { ...initial, category: cat }
+    }
+    return {
+      ...initial,
+      group_size: initial.gymnast_ids.length > 1 ? initial.gymnast_ids.length : initial.group_size,
+    }
   })
 
-  const availableCategories = getCategoriesForAgeGroup(form.age_group)
-  const slotCount = form.category ? (CATEGORY_SIZE[form.category] ?? 2) : 2
-  // ensure gymnast_ids array has exactly slotCount entries (pad with '' or trim)
-  const slots: string[] = Array.from({ length: slotCount }, (_, i) => form.gymnast_ids[i] ?? '')
+  const acroRules = ageGroupRules.filter(r => r.sport_type !== 'rg')
+  const rgRules   = ageGroupRules.filter(r => r.sport_type === 'rg')
 
-  function setSlot(idx: number, value: string) {
-    setForm((f) => {
-      const next = Array.from({ length: slotCount }, (_, i) => f.gymnast_ids[i] ?? '') as string[]
-      next[idx] = value
-      return { ...f, gymnast_ids: next }
-    })
+  // ── Acro helpers ──────────────────────────────────────────────────────────────
+
+  function acroCategories(ageGroupId: string): string[] {
+    if (!ageGroupId) return []
+    const rule = acroRules.find(r => r.id === ageGroupId)
+    return rule ? categoriesForRuleset(rule.age_group) : []
   }
 
-  // when age group changes, recompute available categories and reset category + slots
-  function setAgeGroup(ageGroupId: string) {
-    setForm((f) => ({ ...f, age_group: ageGroupId, category: '', gymnast_ids: [] }))
-  }
+  const availableAcroCategories = acroCategories(form.age_group)
+  const acroSlotCount = form.category ? (CATEGORY_SIZE[form.category] ?? 2) : 2
+  const acroSlots: string[] = Array.from({ length: acroSlotCount }, (_, i) => form.gymnast_ids[i] ?? '')
 
-  // when category changes, reset slots
-  function setCategory(cat: string) {
-    setForm((f) => ({ ...f, category: cat, gymnast_ids: [] }))
-  }
+  // ── RG helpers ────────────────────────────────────────────────────────────────
 
-  // Age validation: get the selected rule's min/max age
+  const rgApparatusRules = apparatusRules.filter(r => r.age_group_rule_id === form.age_group)
+  const rgSlotCount = form.category === 'Individual' ? 1 : form.group_size
+  const rgSlots: string[] = Array.from({ length: rgSlotCount }, (_, i) => form.gymnast_ids[i] ?? '')
+
+  // ── shared helpers ────────────────────────────────────────────────────────────
+
   const selectedRule = ageGroupRules.find(r => r.id === form.age_group)
 
   function isAgeEligible(g: Gymnast): boolean {
     if (!selectedRule) return true
-    // Year-based only: birth year determines eligibility, birthday month is irrelevant
     const age = new Date().getFullYear() - birthYear(g)
     if (age < selectedRule.min_age) return false
     if (selectedRule.max_age !== null && age > selectedRule.max_age) return false
     return true
   }
 
-  const isComplete = form.category && form.age_group && slots.every((s) => s !== '')
+  function setSportType(st: 'acro' | 'rg') {
+    setForm({ ...EMPTY_FORM, sport_type: st })
+  }
 
-  const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+  function setAgeGroup(ageGroupId: string) {
+    setForm(f => ({ ...f, age_group: ageGroupId, category: '', gymnast_ids: [], apparatus_ids: [] }))
+  }
+
+  function setCategory(cat: string) {
+    setForm(f => ({ ...f, category: cat, gymnast_ids: [] }))
+  }
+
+  function setSlot(idx: number, value: string, slots: string[], slotCount: number) {
+    setForm(f => {
+      const next = Array.from({ length: slotCount }, (_, i) => f.gymnast_ids[i] ?? '') as string[]
+      next[idx] = value
+      return { ...f, gymnast_ids: next }
+    })
+  }
+
+  function toggleApparatus(id: string) {
+    setForm(f => ({
+      ...f,
+      apparatus_ids: f.apparatus_ids.includes(id)
+        ? f.apparatus_ids.filter(a => a !== id)
+        : [...f.apparatus_ids, id],
+    }))
+  }
 
   const sortedGymnasts = [...gymnasts].sort((a, b) => (a.last_name_1 ?? '').localeCompare(b.last_name_1 ?? ''))
+
+  // ── validation ────────────────────────────────────────────────────────────────
+
+  const slots = form.sport_type === 'acro' ? acroSlots : rgSlots
+  const isComplete = form.sport_type === 'acro'
+    ? !!(form.category && form.age_group && acroSlots.every(s => s !== ''))
+    : !!(form.age_group && form.category && form.apparatus_ids.length > 0 && rgSlots.every(s => s !== ''))
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!isComplete) return
-    onSave({ ...form, gymnast_ids: slots, gymnast_display: buildDisplay(gymnasts, slots) })
+    onSave({
+      sport_type:      form.sport_type,
+      category:        form.category,
+      age_group:       form.age_group,
+      gymnast_ids:     slots,
+      apparatus_ids:   form.apparatus_ids,
+      gymnast_display: buildDisplay(gymnasts, slots),
+    })
+  }
+
+  const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+
+  function GymnastSlots({ theSlots, slotCount }: { theSlots: string[]; slotCount: number }) {
+    return (
+      <>
+        {theSlots.map((selectedId, idx) => {
+          const candidates = sortedGymnasts.filter(g =>
+            !usedInOtherTeams.has(g.id) && !theSlots.some((s, j) => j !== idx && s === g.id)
+          )
+          return (
+            <div key={idx}>
+              <label className="block text-xs font-medium text-slate-500 mb-1">{t.gymnast(idx + 1)} *</label>
+              <select required value={selectedId}
+                onChange={(e) => setSlot(idx, e.target.value, theSlots, slotCount)}
+                className={inputCls}>
+                <option value="">{t.selectGymnast}</option>
+                {candidates.map(g => {
+                  const eligible = isAgeEligible(g)
+                  return (
+                    <option key={g.id} value={g.id} disabled={!eligible}>
+                      {gymnastFullName(g)} ({gymAgeThisYear(g)}){!eligible ? ' ✕' : ''}
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
+          )
+        })}
+      </>
+    )
   }
 
   return (
     <form onSubmit={handleSubmit} className="bg-blue-50 border border-blue-200 rounded-2xl p-4 space-y-3">
+
+      {/* sport type toggle — disabled when editing */}
+      {!isEditing && (
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.sportType}</label>
+          <div className="flex gap-1 bg-white border border-slate-200 rounded-xl p-1 w-fit">
+            {(['acro', 'rg'] as const).map(st => (
+              <button key={st} type="button" onClick={() => setSportType(st)}
+                className={[
+                  'px-4 py-1.5 rounded-lg text-sm font-semibold transition-all',
+                  form.sport_type === st
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700',
+                ].join(' ')}>
+                {t[st]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* age group */}
       <div>
         <label className="block text-xs font-medium text-slate-500 mb-1">{t.ageGroup} *</label>
-        <select required value={form.age_group} onChange={(e) => setAgeGroup(e.target.value)} className={inputCls}>
+        <select required value={form.age_group} onChange={e => setAgeGroup(e.target.value)} className={inputCls}>
           <option value="">{t.selectAgeGroup}</option>
-          {ageGroupRules.map((rule) => (
+          {(form.sport_type === 'acro' ? acroRules : rgRules).map(rule => (
             <option key={rule.id} value={rule.id}>
               {agLabels[rule.id] ?? rule.age_group} ({ageRangeStr(rule)})
             </option>
@@ -151,43 +273,82 @@ function TeamForm({
         </select>
       </div>
 
-      {/* category — only shown after age group is chosen */}
-      {form.age_group && (
+      {/* ── ACRO-specific fields ─────────────────────────────────────────────── */}
+      {form.sport_type === 'acro' && form.age_group && (
         <div>
           <label className="block text-xs font-medium text-slate-500 mb-1">{t.category} *</label>
-          <select required value={form.category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
+          <select required value={form.category} onChange={e => setCategory(e.target.value)} className={inputCls}>
             <option value="">{t.selectCategory}</option>
-            {availableCategories.map((c) => (
+            {availableAcroCategories.map(c => (
               <option key={c} value={c}>{CATEGORY_LABELS[lang]?.[c] ?? c}</option>
             ))}
           </select>
         </div>
       )}
 
-      {/* gymnast slots — only shown after category is chosen */}
-      {form.age_group && form.category && slots.map((selectedId, idx) => {
-        // show all gymnasts not used elsewhere / not in another slot; disable ineligible by age
-        const candidates = sortedGymnasts.filter((g) =>
-          !usedInOtherTeams.has(g.id) &&
-          !slots.some((s, j) => j !== idx && s === g.id)
-        )
-        return (
-          <div key={idx}>
-            <label className="block text-xs font-medium text-slate-500 mb-1">{t.gymnast(idx + 1)} *</label>
-            <select required value={selectedId} onChange={(e) => setSlot(idx, e.target.value)} className={inputCls}>
-              <option value="">{t.selectGymnast}</option>
-              {candidates.map((g) => {
-                const eligible = isAgeEligible(g)
-                return (
-                  <option key={g.id} value={g.id} disabled={!eligible}>
-                    {gymnastFullName(g)} ({gymAgeThisYear(g)}){!eligible ? ' ✕' : ''}
-                  </option>
-                )
-              })}
-            </select>
+      {form.sport_type === 'acro' && form.age_group && form.category && (
+        <GymnastSlots theSlots={acroSlots} slotCount={acroSlotCount} />
+      )}
+
+      {/* ── RG-specific fields ───────────────────────────────────────────────── */}
+      {form.sport_type === 'rg' && form.age_group && rgApparatusRules.length > 0 && (
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.apparatus} *</label>
+          <div className="flex flex-wrap gap-2">
+            {rgApparatusRules.map(rule => {
+              const app = apparatus.find(a => a.id === rule.apparatus_id)
+              if (!app) return null
+              const checked = form.apparatus_ids.includes(app.id)
+              return (
+                <button key={app.id} type="button" onClick={() => toggleApparatus(app.id)}
+                  className={[
+                    'px-3 py-1.5 rounded-lg text-sm font-medium border transition-all',
+                    checked
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300',
+                  ].join(' ')}>
+                  {apparatusName(app, lang)}
+                  {rule.is_mandatory && <span className="ml-1 text-xs opacity-70">*</span>}
+                </button>
+              )
+            })}
           </div>
-        )
-      })}
+        </div>
+      )}
+
+      {form.sport_type === 'rg' && form.age_group && (
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.category} *</label>
+          <div className="flex gap-1 bg-white border border-slate-200 rounded-xl p-1 w-fit">
+            {(['Individual', 'Group'] as const).map(cat => (
+              <button key={cat} type="button" onClick={() => setCategory(cat)}
+                className={[
+                  'px-4 py-1.5 rounded-lg text-sm font-semibold transition-all',
+                  form.category === cat
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700',
+                ].join(' ')}>
+                {cat === 'Individual' ? t.individual : t.group}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {form.sport_type === 'rg' && form.category === 'Group' && (
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.groupSize} *</label>
+          <select value={form.group_size}
+            onChange={e => setForm(f => ({ ...f, group_size: Number(e.target.value), gymnast_ids: [] }))}
+            className={inputCls}>
+            {[2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </div>
+      )}
+
+      {form.sport_type === 'rg' && form.age_group && form.category && (
+        <GymnastSlots theSlots={rgSlots} slotCount={rgSlotCount} />
+      )}
 
       {/* actions */}
       <div className="flex justify-end gap-2 pt-1">
@@ -205,15 +366,17 @@ function TeamForm({
 }
 
 export default function TeamsTab({
-  lang, gymnasts, teams, ageGroupRules, agLabels, onAdd, onUpdate, onDelete, onUploadPhoto,
+  lang, gymnasts, teams, ageGroupRules, agLabels, apparatus, apparatusRules, onAdd, onUpdate, onDelete, onUploadPhoto,
 }: {
   lang: Lang
   gymnasts: Gymnast[]
   teams: Team[]
   ageGroupRules: AgeGroupRule[]
   agLabels: Record<string, string>
-  onAdd: (f: FormState & { gymnast_display: string }) => void
-  onUpdate: (id: string, f: FormState & { gymnast_display: string }) => void
+  apparatus: Apparatus[]
+  apparatusRules: ApparatusRule[]
+  onAdd: (data: SaveData) => void
+  onUpdate: (id: string, data: SaveData) => void
   onDelete: (id: string) => void
   onUploadPhoto: (id: string, file: File) => Promise<void>
 }) {
@@ -221,26 +384,46 @@ export default function TeamsTab({
   const [showAdd, setShowAdd] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 
-  if (gymnasts.length < 2 && teams.length === 0) {
+  if (gymnasts.length === 0 && teams.length === 0) {
     return <p className="text-sm text-slate-400 text-center py-16">{t.noGymnasts}</p>
   }
 
-  // gymnasts used in any existing team
-  const allUsed = new Set(teams.flatMap((t) => t.gymnast_ids ?? []))
-  // gymnasts used in teams other than the one being edited
+  const allUsed = new Set(teams.flatMap(tm => tm.gymnast_ids ?? []))
   function usedExcluding(teamId: string | null) {
-    return new Set(teams.filter((t) => t.id !== teamId).flatMap((t) => t.gymnast_ids ?? []))
+    return new Set(teams.filter(tm => tm.id !== teamId).flatMap(tm => tm.gymnast_ids ?? []))
+  }
+
+  function initialForTeam(team: Team): FormState {
+    return {
+      sport_type:    (team.sport_type ?? 'acro') as 'acro' | 'rg',
+      category:      team.category,
+      age_group:     team.age_group,
+      gymnast_ids:   team.gymnast_ids ?? [],
+      apparatus_ids: team.apparatus_ids ?? [],
+      group_size:    team.gymnast_ids && team.gymnast_ids.length > 1 ? team.gymnast_ids.length : 5,
+    }
+  }
+
+  function teamApparatusLabel(team: Team): string {
+    const ids = team.apparatus_ids ?? []
+    if (!ids.length) return ''
+    return ids
+      .map(id => apparatus.find(a => a.id === id))
+      .filter(Boolean)
+      .map(a => apparatusName(a!, lang))
+      .join(', ')
   }
 
   const grouped = teams.reduce<Record<string, Team[]>>((acc, team) => {
-    ;(acc[team.category] ??= []).push(team)
+    const key = team.category
+    ;(acc[key] ??= []).push(team)
     return acc
   }, {})
 
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
-        <p className="text-sm text-slate-500">{teams.length} team{teams.length !== 1 ? 's' : ''}</p>
+        <p className="text-sm text-slate-500">{teams.length} equipo{teams.length !== 1 ? 's' : ''}</p>
         {!showAdd && !editingId && (
           <button onClick={() => setShowAdd(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-all">
@@ -255,9 +438,10 @@ export default function TeamsTab({
       {showAdd && (
         <div className="mb-4">
           <TeamForm lang={lang} gymnasts={gymnasts} ageGroupRules={ageGroupRules} agLabels={agLabels}
+            apparatus={apparatus} apparatusRules={apparatusRules}
             usedInOtherTeams={allUsed} initial={EMPTY_FORM}
             onCancel={() => setShowAdd(false)}
-            onSave={(f) => { onAdd(f); setShowAdd(false) }} />
+            onSave={data => { onAdd(data); setShowAdd(false) }} />
         </div>
       )}
 
@@ -271,26 +455,32 @@ export default function TeamsTab({
                 {CATEGORY_LABELS[lang]?.[category] ?? category}
               </p>
               <div className="space-y-2">
-                {catTeams.map((team) =>
+                {catTeams.map(team =>
                   editingId === team.id ? (
                     <TeamForm key={team.id} lang={lang} gymnasts={gymnasts}
                       ageGroupRules={ageGroupRules} agLabels={agLabels}
+                      apparatus={apparatus} apparatusRules={apparatusRules}
                       usedInOtherTeams={usedExcluding(team.id)}
-                      initial={{ category: team.category, age_group: team.age_group, gymnast_ids: team.gymnast_ids ?? [] }}
+                      initial={initialForTeam(team)}
                       onCancel={() => setEditingId(null)}
-                      onSave={(f) => { onUpdate(team.id, f); setEditingId(null) }} />
+                      onSave={data => { onUpdate(team.id, data); setEditingId(null) }} />
                   ) : (
                     <div key={team.id} className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3">
                       <PhotoAvatar
                         photoUrl={team.photo_url}
                         initials={team.gymnast_display.charAt(0)}
                         size="md"
-                        onUpload={(file) => onUploadPhoto(team.id, file)}
+                        onUpload={file => onUploadPhoto(team.id, file)}
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-slate-800">{team.gymnast_display}</p>
                         <p className="text-xs text-slate-400">
-                          {agLabels[team.age_group] ?? team.age_group} · {CATEGORY_LABELS[lang]?.[team.category] ?? team.category}
+                          {agLabels[team.age_group] ?? team.age_group}
+                          {' · '}
+                          {CATEGORY_LABELS[lang]?.[team.category] ?? team.category}
+                          {team.sport_type === 'rg' && teamApparatusLabel(team) && (
+                            <> · {teamApparatusLabel(team)}</>
+                          )}
                         </p>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">

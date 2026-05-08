@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import type { Lang } from '@/components/scoring/types'
-import type { Team, Club, CompetitionEntry, Gymnast, Coach, AgeGroupRule, CompetitionStatus } from '@/components/admin/types'
+import type { Team, Club, CompetitionEntry, Gymnast, Coach, AgeGroupRule, CompetitionStatus, ProvisionalEntry, DefinitiveEntry } from '@/components/admin/types'
 import { categoryLabel, sortByAgeGroupAndCategory, CATEGORY_SIZE } from '@/components/admin/types'
+import { SubTabSwitcher } from './SubTabSwitcher'
 import { createClient } from '@/lib/supabase'
 
 // ─── translations ─────────────────────────────────────────────────────────────
@@ -74,34 +75,13 @@ const DEF_STATUS_BADGE: Record<string, string> = {
   rejected:         'bg-red-50 text-red-500 border-red-200',
 }
 
-// ─── local DB types ───────────────────────────────────────────────────────────
-
-type ProvisionalEntry = {
-  id: string
-  club_id: string
-  teams_per_category: Record<string, number>
-  created_at: string
-}
-
-type DefinitiveEntry = {
-  id: string
-  club_id: string
-  contact_name: string
-  contact_phone: string
-  contact_email: string
-  judge_name: string | null
-  total_amount: number
-  status: string
-  payment_document_url: string | null
-  created_at: string
-}
-
 // ─── props ────────────────────────────────────────────────────────────────────
 
 type Props = {
   lang: Lang
-  competitionId: string
   competitionStatus: CompetitionStatus
+  provisionalEntries: ProvisionalEntry[]
+  definitiveEntries: DefinitiveEntry[]
   globalTeams: Team[]
   clubs: Club[]
   entries: CompetitionEntry[]
@@ -121,28 +101,10 @@ function defaultSubTab(status: CompetitionStatus): SubTab {
 
 // ─── component ────────────────────────────────────────────────────────────────
 
-export default function LicenciasTab({ lang, competitionId, competitionStatus, globalTeams, clubs, entries, competitionGymnasts, competitionCoaches, globalCoaches, ageGroupRules }: Props) {
+export default function LicenciasTab({ lang, competitionStatus, provisionalEntries, definitiveEntries, globalTeams, clubs, entries, competitionGymnasts, competitionCoaches, globalCoaches, ageGroupRules }: Props) {
   const t = T[lang]
   const supabase = createClient()
   const [activeSubTab, setActiveSubTab] = useState<SubTab>(() => defaultSubTab(competitionStatus))
-  const [provisionalEntries, setProvisionalEntries] = useState<ProvisionalEntry[]>([])
-  const [definitiveEntries,  setDefinitiveEntries]  = useState<DefinitiveEntry[]>([])
-
-  useEffect(() => {
-    Promise.all([
-      supabase.from('provisional_entries').select('id,club_id,teams_per_category,created_at').eq('competition_id', competitionId),
-      supabase.from('definitive_entries').select('id,club_id,contact_name,contact_phone,contact_email,judge_name,total_amount,status,payment_document_url,created_at').eq('competition_id', competitionId),
-    ]).then(([provRes, defRes]) => {
-      if (provRes.data)  setProvisionalEntries(provRes.data as ProvisionalEntry[])
-      if (defRes.data)   setDefinitiveEntries(defRes.data as DefinitiveEntry[])
-    })
-  }, [competitionId]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const SUB_TABS: { key: SubTab; label: string }[] = [
-    { key: 'provisional', label: t.subTabs.provisional },
-    { key: 'definitive',  label: t.subTabs.definitive  },
-    { key: 'nominative',  label: t.subTabs.nominative  },
-  ]
 
   function statusLabel(s: string): string {
     if (s === 'pending')          return t.statusPending
@@ -166,23 +128,15 @@ export default function LicenciasTab({ lang, competitionId, competitionStatus, g
 
   return (
     <div>
-      {/* sub-tab bar */}
-      <div className="flex border-b border-slate-200 mb-5 gap-0">
-        {SUB_TABS.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setActiveSubTab(key)}
-            className={[
-              'px-4 py-2 text-sm font-semibold border-b-2 transition-all whitespace-nowrap',
-              activeSubTab === key
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-slate-400 hover:text-slate-600',
-            ].join(' ')}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <SubTabSwitcher
+        tabs={[
+          { key: 'provisional', label: t.subTabs.provisional },
+          { key: 'definitive',  label: t.subTabs.definitive  },
+          { key: 'nominative',  label: t.subTabs.nominative  },
+        ] as const}
+        active={activeSubTab}
+        onChange={setActiveSubTab}
+      />
 
       {/* provisional sub-tab */}
       {activeSubTab === 'provisional' && (
@@ -276,7 +230,7 @@ export default function LicenciasTab({ lang, competitionId, competitionStatus, g
 
 // ─── nominative view (existing content extracted) ─────────────────────────────
 
-function NominativeView({ lang, globalTeams, clubs, entries, competitionGymnasts, competitionCoaches, globalCoaches, ageGroupRules }: Omit<Props, 'competitionId' | 'competitionStatus'>) {
+function NominativeView({ lang, globalTeams, clubs, entries, competitionGymnasts, competitionCoaches, globalCoaches, ageGroupRules }: Omit<Props, 'competitionStatus' | 'provisionalEntries' | 'definitiveEntries'>) {
   const t = T[lang]
 
   const clubMap    = Object.fromEntries(clubs.map(c => [c.id, c]))
