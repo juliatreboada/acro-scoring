@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, Section, Panel, Session, SessionOrder, Team, Club, CompetitionEntry, AgeGroupRule } from '@/components/admin/types'
 import { categoryLabel } from '@/components/admin/types'
@@ -117,6 +117,10 @@ const T = {
     pendingSession: 'Order not yet published',
     print: 'Print',
     breakLabel: 'Break',
+    searchPlaceholder: 'Highlight text...',
+    previousMatch: 'Previous match',
+    nextMatch: 'Next match',
+    matchesCount: (current: number, total: number) => `${current}/${total}`,
   },
   es: {
     title: 'Orden de salida',
@@ -131,6 +135,10 @@ const T = {
     pendingSession: 'Orden no publicado aún',
     print: 'Imprimir',
     breakLabel: 'Pausa',
+    searchPlaceholder: 'Resaltar texto...',
+    previousMatch: 'Coincidencia anterior',
+    nextMatch: 'Siguiente coincidencia',
+    matchesCount: (current: number, total: number) => `${current}/${total}`,
   },
 }
 
@@ -160,10 +168,29 @@ function formatDateRange(start: string | null, end: string | null): string {
   return ''
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function highlightText(text: string, query: string): ReactNode {
+  if (!query.trim()) return text
+  const rx = new RegExp(`(${escapeRegExp(query)})`, 'gi')
+  const parts = text.split(rx)
+  return parts.map((part, idx) =>
+    part.toLowerCase() === query.toLowerCase() ? (
+      <mark key={`${part}-${idx}`} className="search-highlight bg-yellow-200 text-slate-900 rounded px-0.5 transition-colors">
+        {part}
+      </mark>
+    ) : (
+      <span key={`${part}-${idx}`}>{part}</span>
+    ),
+  )
+}
+
 // ─── session order card ───────────────────────────────────────────────────────
 
 function SessionOrderCard({
-  session, sessionOrders, isLocked, entries, globalTeams, clubs, lang, timesMap, agLabels, globalOrderMap,
+  session, sessionOrders, isLocked, entries, globalTeams, clubs, lang, timesMap, agLabels, globalOrderMap, highlightQuery, completedRoutineKeys, ongoingRoutineKey,
 }: {
   session: Session
   sessionOrders: SessionOrder[]
@@ -175,6 +202,9 @@ function SessionOrderCard({
   timesMap: Map<string, SlotTimes>
   agLabels: Record<string, string>
   globalOrderMap?: Record<string, number>
+  highlightQuery: string
+  completedRoutineKeys: Set<string>
+  ongoingRoutineKey: string | null
 }) {
   const t = T[lang]
 
@@ -214,8 +244,10 @@ function SessionOrderCard({
     return (
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100">
-          <p className="text-sm font-semibold text-slate-700">{(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · {categoryLabel(session.category, lang)}</p>
-          <p className="text-xs text-slate-400 mt-0.5">{session.routine_type}</p>
+          <p className="text-sm font-semibold text-slate-700">
+            {highlightText(`${(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · ${categoryLabel(session.category, lang)}`, highlightQuery)}
+          </p>
+          <p className="text-xs text-slate-400 mt-0.5">{highlightText(session.routine_type, highlightQuery)}</p>
         </div>
         <div className="px-4 py-8 flex flex-col items-center text-center gap-1.5">
           <svg className="w-8 h-8 text-slate-200 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -237,8 +269,10 @@ function SessionOrderCard({
     return (
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100">
-          <p className="text-sm font-semibold text-slate-700">{(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · {categoryLabel(session.category, lang)}</p>
-          <p className="text-xs text-slate-400 mt-0.5">{session.routine_type}</p>
+          <p className="text-sm font-semibold text-slate-700">
+            {highlightText(`${(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · ${categoryLabel(session.category, lang)}`, highlightQuery)}
+          </p>
+          <p className="text-xs text-slate-400 mt-0.5">{highlightText(session.routine_type, highlightQuery)}</p>
         </div>
         <p className="px-4 py-6 text-sm text-slate-300 text-center">{t.noSessions}</p>
       </div>
@@ -249,8 +283,10 @@ function SessionOrderCard({
     <div className="bg-white rounded-2xl border-2 border-blue-200 overflow-hidden">
       <div className="px-4 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-slate-700">{(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · {categoryLabel(session.category, lang)}</p>
-          <p className="text-xs text-slate-400 mt-0.5">{session.routine_type}</p>
+          <p className="text-sm font-semibold text-slate-700">
+            {highlightText(`${(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · ${categoryLabel(session.category, lang)}`, highlightQuery)}
+          </p>
+          <p className="text-xs text-slate-400 mt-0.5">{highlightText(session.routine_type, highlightQuery)}</p>
         </div>
         <span className="flex items-center gap-1.5 text-xs font-semibold text-blue-600">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -269,8 +305,16 @@ function SessionOrderCard({
           const team = globalTeams.find(t => t.id === teamId)
           const photoUrl = team?.photo_url
           const club = team ? clubs.find(c => c.id === team.club_id) : undefined
+          const routineKey = `${session.id}:${teamId}`
+          const isCompleted = completedRoutineKeys.has(routineKey)
+          const isOngoing = ongoingRoutineKey === routineKey
           return (
-            <li key={teamId} className={['flex items-center gap-3 px-4 py-3', isDropout ? 'opacity-50' : ''].join(' ')}>
+            <li key={teamId} className={[
+              'flex items-center gap-3 px-4 py-3',
+              isDropout ? 'opacity-50' : '',
+              isCompleted ? 'bg-emerald-50/70' : '',
+              isOngoing ? 'bg-amber-50 ring-2 ring-amber-300 ring-inset' : '',
+            ].join(' ')}>
               {times && !isDropout ? (
                 <div className="flex flex-col shrink-0 w-14 gap-0">
                   <span className="text-[10px] text-slate-400 leading-tight">⏰ {times.warmup}</span>
@@ -299,12 +343,12 @@ function SessionOrderCard({
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className={['text-sm font-medium text-slate-800 truncate', isDropout ? 'line-through text-slate-400' : ''].join(' ')}>
-                  {info.gymnasts}
+                <p className={['text-sm font-medium text-slate-800 truncate', (isDropout || isCompleted) ? 'line-through text-slate-400' : ''].join(' ')}>
+                  {highlightText(info.gymnasts, highlightQuery)}
                 </p>
                 <p className="flex items-center gap-1 text-xs text-slate-400 truncate">
                   <ClubAvatar club={club} />
-                  {info.club}
+                  {highlightText(info.club, highlightQuery)}
                 </p>
               </div>
               {isDropout && (
@@ -410,7 +454,7 @@ function calcTimeFromMerged(
 }
 
 function InterleavedTimeline({
-  lang, panels, sessions, sessionOrders, lockedSessions, entries, globalTeams, clubs, section, ageGroupRules,
+  lang, panels, sessions, sessionOrders, lockedSessions, entries, globalTeams, clubs, section, ageGroupRules, highlightQuery, completedRoutineKeys, ongoingRoutineKey,
 }: {
   lang: Lang
   panels: Panel[]
@@ -422,6 +466,9 @@ function InterleavedTimeline({
   clubs: Club[]
   section: Section
   ageGroupRules: AgeGroupRule[]
+  highlightQuery: string
+  completedRoutineKeys: Set<string>
+  ongoingRoutineKey: string | null
 }) {
   const t = T[lang]
   const [p1, p2] = panels.slice(0, 2)
@@ -500,7 +547,7 @@ function InterleavedTimeline({
                   —
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold text-amber-700">{slot.label ?? t.breakLabel}</p>
+                  <p className="text-xs font-semibold text-amber-700">{highlightText(slot.label ?? t.breakLabel, highlightQuery)}</p>
                   <p className="text-xs text-amber-500">{slot.duration_minutes} min</p>
                 </div>
               </li>
@@ -517,7 +564,7 @@ function InterleavedTimeline({
                   P{slot.panelNumber}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-slate-400 truncate">{slot.sessionName}</p>
+                  <p className="text-xs text-slate-400 truncate">{highlightText(slot.sessionName, highlightQuery)}</p>
                   <p className="text-xs text-slate-300 italic">{t.pendingSession}</p>
                 </div>
               </li>
@@ -529,10 +576,18 @@ function InterleavedTimeline({
           const club = team ? clubById[team.club_id] : null
           const slotTimes = combinedTimes.get(`${slot.sessionId}:${slot.teamId}`)
           const dorsal = entries.find(e => e.team_id === slot.teamId)?.dorsal
+          const routineKey = `${slot.sessionId}:${slot.teamId}`
+          const isCompleted = completedRoutineKeys.has(routineKey)
+          const isOngoing = ongoingRoutineKey === routineKey
 
           return (
             <li key={`${slot.panelNumber}-${slot.teamId}-${i}`}
-              className={['flex items-center gap-3 px-4 py-3', slot.isDropout ? 'opacity-50' : ''].join(' ')}>
+              className={[
+                'flex items-center gap-3 px-4 py-3',
+                slot.isDropout ? 'opacity-50' : '',
+                isCompleted ? 'bg-emerald-50/70' : '',
+                isOngoing ? 'bg-amber-50 ring-2 ring-amber-300 ring-inset' : '',
+              ].join(' ')}>
               {slotTimes && !slot.isDropout ? (
                 <div className="flex flex-col shrink-0 w-14 gap-0">
                   <span className="text-[10px] text-slate-400 leading-tight">⏰ {slotTimes.warmup}</span>
@@ -563,12 +618,12 @@ function InterleavedTimeline({
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <p className={['text-sm font-medium text-slate-800 truncate', slot.isDropout ? 'line-through text-slate-400' : ''].join(' ')}>
-                  {team?.gymnast_display ?? slot.teamId}
+                <p className={['text-sm font-medium text-slate-800 truncate', (slot.isDropout || isCompleted) ? 'line-through text-slate-400' : ''].join(' ')}>
+                  {highlightText(team?.gymnast_display ?? slot.teamId, highlightQuery)}
                 </p>
                 <p className="flex items-center gap-1 text-xs text-slate-400 truncate">
                   <ClubAvatar club={club} />
-                  {club?.club_name ?? ''} · {slot.sessionName}
+                  {highlightText(`${club?.club_name ?? ''} · ${slot.sessionName}`, highlightQuery)}
                 </p>
               </div>
               {slot.isDropout && (
@@ -598,14 +653,21 @@ export type StartingOrderViewProps = {
   clubs: Club[]
   entries: CompetitionEntry[]
   ageGroupRules: AgeGroupRule[]
+  completedRoutineKeys: string[]
+  ongoingRoutineKey: string | null
 }
 
 export default function StartingOrderView({
   lang, competition, sections, panels, sessions,
-  sessionOrders, lockedSessions, globalTeams, clubs, entries, ageGroupRules,
+  sessionOrders, lockedSessions, globalTeams, clubs, entries, ageGroupRules, completedRoutineKeys, ongoingRoutineKey,
 }: StartingOrderViewProps) {
+  const completedRoutineSet = new Set(completedRoutineKeys)
   const t = T[lang]
   const [activeSection, setActiveSection] = useState<string>(sections[0]?.id ?? '')
+  const [highlightQuery, setHighlightQuery] = useState('')
+  const [matchCount, setMatchCount] = useState(0)
+  const [activeMatchIndex, setActiveMatchIndex] = useState(0)
+  const rootRef = useRef<HTMLDivElement | null>(null)
 
   const agLabels: Record<string, string> = Object.fromEntries(ageGroupRules.map(r => [r.id, r.age_group]))
 
@@ -644,19 +706,56 @@ export default function StartingOrderView({
     }
   }
 
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    const matches = Array.from(root.querySelectorAll<HTMLElement>('mark.search-highlight'))
+    setMatchCount(matches.length)
+    if (matches.length === 0) {
+      setActiveMatchIndex(0)
+      return
+    }
+    setActiveMatchIndex((prev) => Math.min(prev, matches.length - 1))
+  }, [highlightQuery, activeSection, panels.length, sectionSessions.length, sessionOrders, lockedSessions, entries, globalTeams, clubs])
+
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    const matches = Array.from(root.querySelectorAll<HTMLElement>('mark.search-highlight'))
+    matches.forEach((el, idx) => {
+      if (idx === activeMatchIndex) {
+        el.classList.add('bg-amber-300')
+        el.classList.remove('bg-yellow-200')
+      } else {
+        el.classList.add('bg-yellow-200')
+        el.classList.remove('bg-amber-300')
+      }
+    })
+  }, [activeMatchIndex, highlightQuery, activeSection])
+
+  function jumpToMatch(nextIndex: number) {
+    const root = rootRef.current
+    if (!root) return
+    const matches = Array.from(root.querySelectorAll<HTMLElement>('mark.search-highlight'))
+    if (matches.length === 0) return
+    const normalized = ((nextIndex % matches.length) + matches.length) % matches.length
+    setActiveMatchIndex(normalized)
+    matches[normalized]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
   return (
-    <div className="so-print-area min-h-screen bg-slate-50">
+    <div ref={rootRef} className="so-print-area h-screen bg-slate-50 flex flex-col overflow-hidden print:h-auto print:block">
       {/* header */}
       <div className="bg-white border-b border-slate-200">
-        <div className="max-w-4xl mx-auto px-4 py-5">
-          <div className="flex items-start justify-between gap-4">
+        <div className="max-w-4xl mx-auto px-4 py-3.5">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-widest text-blue-500 mb-1">{t.title}</p>
-              <h1 className="text-xl font-bold text-slate-800 leading-snug">{competition.name}</h1>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-500 mb-0.5">{t.title}</p>
+              <h1 className="text-lg font-bold text-slate-800 leading-snug">{competition.name}</h1>
             </div>
             <button
               onClick={() => window.print()}
-              className="print:hidden shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors mt-1"
+              className="print:hidden shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -664,7 +763,7 @@ export default function StartingOrderView({
               {t.print}
             </button>
           </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5">
             {competition.location && (
               <span className="flex items-center gap-1 text-xs text-slate-400">
                 <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -693,7 +792,7 @@ export default function StartingOrderView({
                 key={sec.id}
                 onClick={() => setActiveSection(sec.id)}
                 className={[
-                  'px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 transition-all',
+                  'px-3 py-2 text-sm font-semibold whitespace-nowrap border-b-2 transition-all',
                   activeSection === sec.id
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-slate-400 hover:text-slate-600',
@@ -704,11 +803,53 @@ export default function StartingOrderView({
             ))}
           </div>
         )}
+        <div className="max-w-4xl mx-auto px-4 pb-3 print:hidden">
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/80 bg-white/95 px-2.5 py-1.5 shadow-sm backdrop-blur">
+            <label className="relative block max-w-sm flex-1 min-w-[14rem]">
+              <span className="sr-only">{t.searchPlaceholder}</span>
+              <input
+                type="text"
+                value={highlightQuery}
+                onChange={(e) => setHighlightQuery(e.target.value)}
+                placeholder={t.searchPlaceholder}
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              />
+            </label>
+            <span className="text-xs font-semibold text-slate-500 px-2">
+              {t.matchesCount(matchCount > 0 ? activeMatchIndex + 1 : 0, matchCount)}
+            </span>
+            <button
+              type="button"
+              onClick={() => jumpToMatch(activeMatchIndex - 1)}
+              disabled={matchCount === 0}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label={t.previousMatch}
+              title={t.previousMatch}
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => jumpToMatch(activeMatchIndex + 1)}
+              disabled={matchCount === 0}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              aria-label={t.nextMatch}
+              title={t.nextMatch}
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* content */}
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        {panels.length === 1 ? (
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          {panels.length === 1 ? (
           (() => {
             const timesMap = currentSection
               ? calcPanelTimes(currentSection, panelSessions, sessionOrders, ageGroupRules)
@@ -728,6 +869,9 @@ export default function StartingOrderView({
                     timesMap={timesMap}
                     agLabels={agLabels}
                     globalOrderMap={onePanelGlobalOrderMap}
+                    highlightQuery={highlightQuery}
+                    completedRoutineKeys={completedRoutineSet}
+                    ongoingRoutineKey={ongoingRoutineKey}
                   />
                 ))}
               </div>
@@ -745,12 +889,16 @@ export default function StartingOrderView({
             clubs={clubs}
             section={currentSection ?? sections[0]}
             ageGroupRules={ageGroupRules}
-          />
-        )}
+            highlightQuery={highlightQuery}
+            completedRoutineKeys={completedRoutineSet}
+            ongoingRoutineKey={ongoingRoutineKey}
+            />
+          )}
 
-        {panels.length === 1 && sectionSessions.length === 0 && (
-          <p className="text-center text-sm text-slate-400 py-16">{t.noSessions}</p>
-        )}
+          {panels.length === 1 && sectionSessions.length === 0 && (
+            <p className="text-center text-sm text-slate-400 py-16">{t.noSessions}</p>
+          )}
+        </div>
       </div>
     </div>
   )
