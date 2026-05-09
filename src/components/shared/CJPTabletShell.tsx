@@ -23,7 +23,7 @@ const T = {
     ej: 'EJ', aj: 'AJ', dj: 'DJ',
     avg: 'Avg', djDif: 'DJ Dif.', djPen: 'Pen.',
     cjpPen: 'CJP Pen.',
-    reopenAll: 'Re-open all', reopen: 'Re-open', editScore: 'Edit score',
+    reopenAll: 'Re-open all', reopen: 'Re-open', editScore: 'Edit score', addScore: 'Add score',
     scoreE: 'E', scoreA: 'A', scoreD: 'D', scorePen: 'Pen.', scoreTotal: 'Total',
     ranking: 'Ranking', rankCol: '#', teamCol: 'Team',
     balance: 'Balance', dynamic: 'Dynamic', combined: 'Combined',
@@ -42,7 +42,7 @@ const T = {
     ej: 'EJ', aj: 'AJ', dj: 'DJ',
     avg: 'Media', djDif: 'DJ Dif.', djPen: 'Pen.',
     cjpPen: 'CJP Pen.',
-    reopenAll: 'Reabrir todo', reopen: 'Reabrir', editScore: 'Editar puntuación',
+    reopenAll: 'Reabrir todo', reopen: 'Reabrir', editScore: 'Editar puntuación', addScore: 'Añadir puntuación',
     scoreE: 'E', scoreA: 'A', scoreD: 'D', scorePen: 'Pen.', scoreTotal: 'Total',
     ranking: 'Clasificación', rankCol: '#', teamCol: 'Equipo',
     balance: 'Balance', dynamic: 'Dinámico', combined: 'Combinado',
@@ -174,6 +174,12 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, res
     </svg>
   )
 
+  const PlusIcon = () => (
+    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+  )
+
   function DjFieldRow({ label, judgeId, field, value }: { label: string; judgeId: string; field: 'djDifficulty' | 'djPenalty'; value: number | null | undefined }) {
     const isEditing = editState?.judgeId === judgeId && editState?.field === field
     const displayValue = field === 'djPenalty' && value != null ? -value : value
@@ -233,10 +239,11 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, res
     </button>
   )
 
-  const EditBtn = ({ judgeId, field, value }: { judgeId: string; field: EditField; value: number }) => (
-    <button onClick={() => setEditState({ judgeId, field, value: String(value) })} title={t.editScore}
+  const EditBtn = ({ judgeId, field, value }: { judgeId: string; field: EditField; value?: number }) => (
+    <button onClick={() => setEditState({ judgeId, field, value: value != null ? String(value) : '' })}
+      title={value != null ? t.editScore : t.addScore}
       className="w-5 h-5 rounded text-slate-300 hover:text-blue-500 hover:bg-blue-50 transition-colors flex items-center justify-center">
-      <PencilIcon />
+      {value != null ? <PencilIcon /> : <PlusIcon />}
     </button>
   )
 
@@ -321,7 +328,7 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, res
                         <div className="flex items-center gap-1">
                           <ScoreCell value={s?.djDifficulty} />
                           {canReopen && s?.djDifficulty != null && <ReopenBtn judgeId={j.id} />}
-                          {canEdit && s?.djDifficulty != null && <EditBtn judgeId={j.id} field="djDifficulty" value={s.djDifficulty!} />}
+                          {canEdit && <EditBtn judgeId={j.id} field="djDifficulty" value={s?.djDifficulty ?? undefined} />}
                         </div>
                       )}
                     </td>
@@ -331,7 +338,7 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, res
                       {isEditingPen ? <EditInput judgeId={j.id} field="djPenalty" /> : (
                         <div className="flex items-center gap-1">
                           <ScoreCell value={s?.djPenalty != null ? -s.djPenalty : null} />
-                          {canEdit && s?.djPenalty != null && <EditBtn judgeId={j.id} field="djPenalty" value={s.djPenalty!} />}
+                          {canEdit && <EditBtn judgeId={j.id} field="djPenalty" value={s?.djPenalty ?? undefined} />}
                         </div>
                       )}
                     </td>
@@ -374,7 +381,7 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, res
                       <div className="flex items-center gap-1">
                         <ScoreCell value={ejVals[i]} dropped={ejDropped.has(i)} />
                         {canReopen && ejVals[i] != null && <ReopenBtn judgeId={j.id} />}
-                        {canEdit && ejVals[i] != null && <EditBtn judgeId={j.id} field="ejScore" value={ejVals[i]!} />}
+                        {canEdit && <EditBtn judgeId={j.id} field="ejScore" value={ejVals[i] ?? undefined} />}
                       </div>
                     )}
                   </td>
@@ -420,7 +427,7 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, res
                       <div className="flex items-center gap-1">
                         <ScoreCell value={ajVals[i]} dropped={ajDropped.has(i)} />
                         {canReopen && ajVals[i] != null && <ReopenBtn judgeId={j.id} />}
-                        {canEdit && ajVals[i] != null && <EditBtn judgeId={j.id} field="ajScore" value={ajVals[i]!} />}
+                        {canEdit && <EditBtn judgeId={j.id} field="ajScore" value={ajVals[i] ?? undefined} />}
                       </div>
                     )}
                   </td>
