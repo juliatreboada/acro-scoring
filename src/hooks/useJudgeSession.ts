@@ -254,7 +254,7 @@ export function useJudgeSession(): JudgeSessionData {
         })
       }
 
-      const [teamsRes, musicRes, elementsRes] = await Promise.all([
+      const [teamsRes, musicRes, elementsRes, entryDisplayRes] = await Promise.all([
         teamIds.length > 0
           ? supabase.from('teams').select('id, gymnast_display, age_group, category').in('id', teamIds)
           : Promise.resolve({ data: [] as { id: string; gymnast_display: string; age_group: string; category: string }[] }),
@@ -271,10 +271,14 @@ export function useJudgeSession(): JudgeSessionData {
               .in('team_id', teamIds)
               .order('position')
           : Promise.resolve({ data: [] as { id: string; team_id: string; routine_type: 'Balance' | 'Dynamic' | 'Combined'; position: number; label: string; element_type: string; is_static: boolean; difficulty_value: number }[] }),
+        teamIds.length > 0
+          ? supabase.from('competition_entries').select('team_id, gymnast_display').eq('competition_id', (session as any).competition_id).in('team_id', teamIds)
+          : Promise.resolve({ data: [] as { team_id: string; gymnast_display: string | null }[] }),
       ])
 
+      const entryDisplay = Object.fromEntries((entryDisplayRes.data ?? []).map(e => [e.team_id, e.gymnast_display]))
       const teamMap: Record<string, { gymnast_display: string; age_group: string; category: string }> =
-        Object.fromEntries((teamsRes.data ?? []).map(t => [t.id, t]))
+        Object.fromEntries((teamsRes.data ?? []).map(t => [t.id, { ...t, gymnast_display: entryDisplay[t.id] ?? t.gymnast_display }]))
 
       const tsUrlMap: Record<string, string | null> = {}
       for (const m of ((musicRes.data ?? []) as { team_id: string; routine_type: 'Balance' | 'Dynamic' | 'Combined'; ts_path: string | null }[])) {

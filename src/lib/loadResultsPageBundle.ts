@@ -92,7 +92,7 @@ export async function loadResultsPageBundle(
       .in('session_id', sessionIds),
     supabase
       .from('competition_entries')
-      .select('team_id, dropped_out')
+      .select('team_id, dropped_out, gymnast_display')
       .eq('competition_id', competitionId),
   ])
 
@@ -106,7 +106,8 @@ export async function loadResultsPageBundle(
       ? await supabase.from('teams').select('id, gymnast_display, club_id').in('id', teamIds)
       : { data: [] }
 
-  const teamMap = Object.fromEntries((teams ?? []).map((t) => [t.id, t.gymnast_display]))
+  const entryDisplayMap = Object.fromEntries(entries.map(e => [e.team_id, (e as any).gymnast_display as string | null]))
+  const teamMap = Object.fromEntries((teams ?? []).map((t) => [t.id, entryDisplayMap[t.id] ?? t.gymnast_display]))
 
   const clubIds = [
     ...new Set(

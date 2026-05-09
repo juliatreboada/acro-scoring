@@ -173,6 +173,8 @@ export type CompetitionEntry = {
   team_id: string
   dorsal: number | null
   dropped_out: boolean
+  gymnast_display: string | null
+  gymnast_ids: string[] | null
 }
 
 export type SessionOrder = {

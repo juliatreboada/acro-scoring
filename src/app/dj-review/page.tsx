@@ -168,7 +168,7 @@ function DJReviewPage() {
         }
       }
 
-      const [teamsRes, musicRes, rulesRes, elementsRes, reviewRes] = await Promise.all([
+      const [teamsRes, musicRes, rulesRes, elementsRes, reviewRes, entryDisplayRes] = await Promise.all([
         supabase.from('teams').select('id, gymnast_display, age_group, category').in('id', teamIds),
         supabase.from('routine_music')
           .select('team_id, competition_id, routine_type, ts_path')
@@ -181,7 +181,16 @@ function DJReviewPage() {
         supabase.from('ts_review_status')
           .select('team_id, competition_id, routine_type, status, dj1_id, dj1_decision, dj1_comment, dj2_id, final_comment')
           .in('team_id', teamIds).in('competition_id', [...validCompIds]),
+        supabase.from('competition_entries')
+          .select('team_id, competition_id, gymnast_display')
+          .in('competition_id', [...validCompIds]).in('team_id', teamIds),
       ])
+
+      // keyed by `${competition_id}:${team_id}` for per-competition snapshot
+      const entryDisplayMap: Record<string, string | null> = {}
+      for (const e of (entryDisplayRes.data ?? []) as { team_id: string; competition_id: string; gymnast_display: string | null }[]) {
+        entryDisplayMap[`${e.competition_id}:${e.team_id}`] = e.gymnast_display
+      }
 
       const agLabels: Record<string, string> = Object.fromEntries(
         ((rulesRes.data ?? []) as unknown as { id: string; age_group: string; ruleset: string }[])
@@ -257,7 +266,7 @@ function DJReviewPage() {
           id:            key,
           teamId:        o.team_id,
           competitionId: session.competition_id,
-          gymnasts:      team.gymnast_display,
+          gymnasts:      entryDisplayMap[`${session.competition_id}:${o.team_id}`] ?? team.gymnast_display,
           ageGroup:      agLabels[team.age_group] ?? team.age_group,
           category:      team.category,
           routineType:   session.routine_type,

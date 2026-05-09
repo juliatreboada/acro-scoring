@@ -238,7 +238,7 @@ export default function TVPage() {
           .single(),
         supabase
           .from('competition_entries')
-          .select('dorsal')
+          .select('dorsal, gymnast_display')
           .eq('competition_id', competitionId)
           .eq('team_id', team_id)
           .maybeSingle(),
@@ -255,7 +255,7 @@ export default function TVPage() {
           ? teamRes.data.clubs[0]
           : teamRes.data.clubs
         setTeam({
-          gymnast_display: teamRes.data.gymnast_display,
+          gymnast_display: (entryRes.data as any)?.gymnast_display ?? teamRes.data.gymnast_display,
           photo_url:       teamRes.data.photo_url ?? null,
           club: {
             club_name:  club?.club_name  ?? '',

@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
     if (!existingEntry) {
       const { error: entryErr } = await supabaseAdmin
         .from('competition_entries')
-        .insert({ competition_id: competitionId, team_id: teamId! })
+        .insert({ competition_id: competitionId, team_id: teamId!, gymnast_display, gymnast_ids })
 
       if (entryErr) {
         errors.push(`Entry for ${gymnast_display}: ${entryErr.message}`)
