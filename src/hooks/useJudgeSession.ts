@@ -760,10 +760,14 @@ export function useJudgeSession(): JudgeSessionData {
     perfId: string, panelJudgeId: string,
     field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number,
   ) {
-    setJudgeScores(prev => ({
-      ...prev,
-      [perfId]: (prev[perfId] ?? []).map(s => s.panelJudgeId === panelJudgeId ? { ...s, [field]: value } : s),
-    }))
+    setJudgeScores(prev => {
+      const existing = prev[perfId] ?? []
+      if (existing.some(s => s.panelJudgeId === panelJudgeId)) {
+        return { ...prev, [perfId]: existing.map(s => s.panelJudgeId === panelJudgeId ? { ...s, [field]: value } : s) }
+      }
+      const blank = { panelJudgeId, ejScore: null, ajScore: null, djDifficulty: null, djPenalty: null, cjpPenalty: null }
+      return { ...prev, [perfId]: [...existing, { ...blank, [field]: value }] }
+    })
   }
 
   function clearSubmitError() { setSubmitError(null) }
