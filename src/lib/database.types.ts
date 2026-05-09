@@ -105,6 +105,8 @@ export type Database = {
           competition_id: string
           dorsal: number | null
           dropped_out: boolean
+          gymnast_display: string | null
+          gymnast_ids: string[] | null
           id: string
           registered_at: string
           team_id: string
@@ -113,6 +115,8 @@ export type Database = {
           competition_id: string
           dorsal?: number | null
           dropped_out?: boolean
+          gymnast_display?: string | null
+          gymnast_ids?: string[] | null
           id?: string
           registered_at?: string
           team_id: string
@@ -121,6 +125,8 @@ export type Database = {
           competition_id?: string
           dorsal?: number | null
           dropped_out?: boolean
+          gymnast_display?: string | null
+          gymnast_ids?: string[] | null
           id?: string
           registered_at?: string
           team_id?: string

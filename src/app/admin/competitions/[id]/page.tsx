@@ -75,7 +75,7 @@ export default function Page() {
         supabase.from('sessions').select('id,competition_id,panel_id,section_id,name,age_group,category,routine_type,status,order_index,order_locked,dj_method,ej_method,ranking_merge_group_id').eq('competition_id', id).order('order_index'),
         supabase.from('judges').select('id,full_name,phone,licence,avatar_url'),
         supabase.from('competition_judge_nominations').select('id,competition_id,judge_id,club_id').eq('competition_id', id),
-        supabase.from('competition_entries').select('id,competition_id,team_id,dorsal,dropped_out').eq('competition_id', id),
+        supabase.from('competition_entries').select('id,competition_id,team_id,dorsal,dropped_out,gymnast_display,gymnast_ids').eq('competition_id', id),
         supabase.from('age_group_rules').select('id, age_group, ruleset, min_age, max_age, routine_count, sort_order').order('sort_order'),
         supabase.from('profiles').select('id,email').eq('role', 'admin'),
         supabase.from('provisional_entries').select('club_id').eq('competition_id', id),

@@ -46,14 +46,15 @@ const T = {
   },
 }
 
-// ─── phone view (3 tabs: CJP | EJ | AJ) ──────────────────────────────────────
+// ─── phone view (CJP | EJ | [AJ]) ────────────────────────────────────────────
 
-function PhoneView({ perf, lang, ejMode, elements, extraElements, deductions, penaltyState,
+function PhoneView({ perf, lang, ejMode, includeAJ, elements, extraElements, deductions, penaltyState,
   onLock, onAddElement, onLabelChange, onTypeChange,
   onPenaltyChange, onSubmit }: {
   perf: Performance
   lang: Lang
   ejMode: 'elements' | 'keyboard'
+  includeAJ: boolean
   elements: TsElement[]
   extraElements: TsElement[]
   deductions: Deductions
@@ -74,14 +75,18 @@ function PhoneView({ perf, lang, ejMode, elements, extraElements, deductions, pe
   const ejScore = calcEJScore(deductions)
 
   function tryFireSubmit(ej: number | null, aj: number | null, cjp: boolean) {
-    if (ej !== null && aj !== null && cjp) {
+    if (!cjp || ej === null) return
+    if (includeAJ) {
+      if (aj === null) return
       onSubmit(ej, aj, calcCjpPenalty(penaltyState))
+    } else {
+      onSubmit(ej, 0, calcCjpPenalty(penaltyState))
     }
   }
 
   function handleEJSubmit(score: number) {
     setEjSubmitted(score)
-    tryFireSubmit(score, ajSubmitted, cjpSubmitted)
+    tryFireSubmit(score, includeAJ ? ajSubmitted : null, cjpSubmitted)
   }
 
   function handleAJSubmit(score: number) {
@@ -91,7 +96,7 @@ function PhoneView({ perf, lang, ejMode, elements, extraElements, deductions, pe
 
   function handleCJPSubmit() {
     setCjpSubmitted(true)
-    tryFireSubmit(ejSubmitted, ajSubmitted, true)
+    tryFireSubmit(ejSubmitted, includeAJ ? ajSubmitted : null, true)
   }
 
   const cjpContent = cjpSubmitted ? (
@@ -142,10 +147,12 @@ function PhoneView({ perf, lang, ejMode, elements, extraElements, deductions, pe
     </div>
   )
 
+  const phoneTabs = (includeAJ ? ['cjp', 'ej', 'aj'] : ['cjp', 'ej']) as ('cjp' | 'ej' | 'aj')[]
+
   return (
     <div>
       <div className="flex gap-0.5 bg-slate-100 rounded-xl p-1 mx-4 mb-4">
-        {(['cjp', 'ej', 'aj'] as const).map((tabId) => (
+        {phoneTabs.map((tabId) => (
           <button key={tabId} onClick={() => setTab(tabId)}
             className={['flex-1 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1',
               tab === tabId ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'].join(' ')}>
@@ -189,7 +196,7 @@ function PhoneView({ perf, lang, ejMode, elements, extraElements, deductions, pe
         )
       )}
 
-      {tab === 'aj' && ajContent}
+      {includeAJ && tab === 'aj' && ajContent}
     </div>
   )
 }
@@ -199,7 +206,7 @@ function PhoneView({ perf, lang, ejMode, elements, extraElements, deductions, pe
 function TabletLayout({
   lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results,
   elements, extraElements, deductions, penaltyStates,
-  ejMode,
+  ejMode, includeAJ,
   onLock, onAddElement, onLabelChange, onTypeChange,
   onPenaltyChange, onOpen, onSkip,
   onSubmitEJScore, onSubmitAJScore, onSubmit, onReopenScore, onEditScore,
@@ -216,6 +223,7 @@ function TabletLayout({
   deductions: Deductions
   penaltyStates: Record<string, PenaltyState>
   ejMode: 'elements' | 'keyboard'
+  includeAJ: boolean
   onLock: (elementId: string, attemptNumber: number, value: number) => void
   onAddElement: () => void
   onLabelChange: (id: string, label: string) => void
@@ -269,11 +277,13 @@ function TabletLayout({
           </div>
         )
 
+        const tabletTabs = (includeAJ ? ['cjp', 'ej', 'aj'] : ['cjp', 'ej']) as ('cjp' | 'ej' | 'aj')[]
+
         return (
           <>
             <div className="px-3 pt-2.5 pb-0 border-b border-slate-200 shrink-0">
               <div className="flex gap-0.5 bg-slate-100 rounded-xl p-1">
-                {(['cjp', 'ej', 'aj'] as const).map((tabId) => (
+                {tabletTabs.map((tabId) => (
                   <button key={tabId} onClick={() => setRightTab(tabId)}
                     className={['flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1',
                       rightTab === tabId ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'].join(' ')}>
@@ -319,7 +329,7 @@ function TabletLayout({
                 )
               )}
 
-              {rightTab === 'aj' && ajContent}
+              {includeAJ && rightTab === 'aj' && ajContent}
             </div>
           </>
         )
@@ -340,6 +350,8 @@ export type CJPEJAJViewProps = {
   results: Record<string, RoutineResult>
   elements: TsElement[]
   ejMode?: 'elements' | 'keyboard'
+  /** When false, only CJP + EJ (e.g. `/cjp-ej`). Default true. */
+  includeAJ?: boolean
   onOpen: (perfId: string) => void
   onSkip?: (perfId: string) => void
   onSubmitEJScore?: (perfId: string, ejScore: number) => void
@@ -353,6 +365,7 @@ export type CJPEJAJViewProps = {
 export default function CJPEJAJView({
   lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results, elements,
   ejMode = 'elements',
+  includeAJ = true,
   onOpen, onSkip, onSubmitEJScore, onSubmitAJScore, onSubmit, onReopenScore, onEditScore, onPhoneSubmit,
 }: CJPEJAJViewProps) {
   const { extraElements, deductions,
@@ -382,6 +395,7 @@ export default function CJPEJAJView({
             perf={currentPerf as Performance}
             lang={lang}
             ejMode={ejMode}
+            includeAJ={includeAJ}
             elements={elements}
             extraElements={extraElements}
             deductions={deductions}
@@ -411,6 +425,7 @@ export default function CJPEJAJView({
           deductions={deductions}
           penaltyStates={penaltyStates}
           ejMode={ejMode}
+          includeAJ={includeAJ}
           onLock={handleLock}
           onAddElement={handleAddElement}
           onLabelChange={handleLabelChange}

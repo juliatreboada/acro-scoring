@@ -48,7 +48,7 @@ export default function Page() {
           .eq('competition_id', id)
           .order('order_index'),
         supabase.from('competition_entries')
-          .select('id, competition_id, team_id, dorsal, dropped_out')
+          .select('id, competition_id, team_id, dorsal, dropped_out, gymnast_display, gymnast_ids')
           .eq('competition_id', id),
         supabase.from('age_group_rules')
           .select('id, age_group, ruleset, min_age, max_age, routine_count')
@@ -68,6 +68,7 @@ export default function Page() {
       const comp: Competition = { ...compRes.data, admin: null }
       const rawSessions = sessionsRes.data ?? []
       const rawEntries  = entriesRes.data  ?? []
+      const entryDisplayMap = Object.fromEntries(rawEntries.map(e => [e.team_id, (e as any).gymnast_display as string | null]))
 
       const locked    = rawSessions.filter((s) => s.order_locked).map((s) => s.id)
       const teamIds   = rawEntries.map((e) => e.team_id)
@@ -82,7 +83,10 @@ export default function Page() {
           : Promise.resolve({ data: [] as Team[] }),
       ])
 
-      const rawTeams = teamsRes.data ?? []
+      const rawTeams = (teamsRes.data ?? []).map(t => ({
+        ...t,
+        gymnast_display: entryDisplayMap[t.id] ?? t.gymnast_display,
+      }))
       const clubIds  = [...new Set(rawTeams.map((t) => t.club_id))]
 
       // ── third wave: clubs ─────────────────────────────────────────────────────

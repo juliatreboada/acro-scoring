@@ -63,7 +63,7 @@ export default function Page() {
           ? supabase.from('team_gymnasts').select('team_id,gymnast_id').in('team_id', teamIds)
           : Promise.resolve({ data: [] as { team_id: string; gymnast_id: string }[] }),
         teamIds.length > 0
-          ? supabase.from('competition_entries').select('id,competition_id,team_id,dorsal,dropped_out').in('team_id', teamIds)
+          ? supabase.from('competition_entries').select('id,competition_id,team_id,dorsal,dropped_out,gymnast_display,gymnast_ids').in('team_id', teamIds)
           : Promise.resolve({ data: [] }),
         teamIds.length > 0
           ? supabase.from('routine_music').select('id,team_id,competition_id,routine_type,music_path,ts_path,uploaded_at').in('team_id', teamIds)
@@ -247,8 +247,15 @@ export default function Page() {
   // ── registrations ─────────────────────────────────────────────────────────────
   async function handleRegister(competitionId: string, teamId: string) {
     if (entries.some(e => e.competition_id === competitionId && e.team_id === teamId)) return
+    const team = teams.find(t => t.id === teamId)
     const { data } = await supabase.from('competition_entries')
-      .insert({ competition_id: competitionId, team_id: teamId, dropped_out: false }).select().single()
+      .insert({
+        competition_id: competitionId,
+        team_id: teamId,
+        dropped_out: false,
+        gymnast_display: team?.gymnast_display ?? null,
+        gymnast_ids: team?.gymnast_ids ?? null,
+      }).select().single()
     if (data) setEntries(prev => [...prev, data as CompetitionEntry])
   }
 
