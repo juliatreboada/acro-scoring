@@ -55,7 +55,7 @@ export type JudgeSessionData = {
 export function useJudgeSession(): JudgeSessionData {
   const supabase = useMemo(() => createClient(), []) // eslint-disable-line react-hooks/exhaustive-deps
   const router = useRouter()
-  const { activeProfile } = useProfile()
+  const { activeProfile, profileLoading } = useProfile()
   const [loading,       setLoading]       = useState(true)
   const [sessionId,     setSessionId]     = useState<string | null>(null)
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>('waiting')
@@ -100,7 +100,8 @@ export function useJudgeSession(): JudgeSessionData {
   // ── initial load ─────────────────────────────────────────────────────────────
   useEffect(() => {
     async function load() {
-      if (!activeProfile) return
+      if (profileLoading) return
+      if (!activeProfile) { setLoading(false); return }
       const { data: judge } = await supabase
         .from('judges').select('id').eq('id', activeProfile.id).single()
       if (!judge) { setLoading(false); return }
@@ -469,7 +470,7 @@ export function useJudgeSession(): JudgeSessionData {
       setLoading(false)
     }
     load()
-  }, [activeProfile?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeProfile?.id, profileLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── practice mode broadcast (realtime without persistence) ──────────────────
   useEffect(() => {
