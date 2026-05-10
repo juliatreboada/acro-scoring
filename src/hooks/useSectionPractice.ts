@@ -60,15 +60,29 @@ export function useSectionPractice(sectionId: string | null) {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'section_practice_state', filter: `section_id=eq.${sectionId}` },
-        () => {
-          void fetchState()
+        (payload) => {
+          if (payload.eventType === 'DELETE') {
+            setPractice(null)
+            return
+          }
+          const d = payload.new as {
+            section_id: string; competition_id: string
+            routine_session_id: string; routine_team_id: string; active: boolean
+          }
+          setPractice({
+            active:           d.active,
+            sectionId:        d.section_id,
+            competitionId:    d.competition_id,
+            routineSessionId: d.routine_session_id,
+            routineTeamId:    d.routine_team_id,
+          })
         },
       )
       .subscribe()
     return () => {
       supabase.removeChannel(ch)
     }
-  }, [sectionId, fetchState, supabase])
+  }, [sectionId, supabase])
 
   const startPractice = useCallback(
     async (input: StartPracticeInput) => {
