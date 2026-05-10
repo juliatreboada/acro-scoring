@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import AuthBar from '@/components/shared/AuthBar'
 import { useRouter } from 'next/navigation'
+import { useProfile } from '@/contexts/ProfileContext'
 import type { Lang } from '@/components/scoring/types'
 
 // ─── types ─────────────────────────────────────────────────────────────────────
@@ -92,6 +93,11 @@ const roleBadgeClass: Record<Role, string> = {
 export default function Page() {
   const supabase = createClient()
   const router   = useRouter()
+  const { activeProfile } = useProfile()
+
+  useEffect(() => {
+    if (activeProfile && activeProfile.role !== 'super_admin') router.replace('/admin')
+  }, [activeProfile]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function getToken(): Promise<string | undefined> {
     const { data: { session } } = await supabase.auth.getSession()
