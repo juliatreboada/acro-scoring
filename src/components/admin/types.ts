@@ -28,7 +28,8 @@ export type Competition = {
   registration_deadline: string | null // last day clubs can register
   ts_music_deadline: string | null     // after this date clubs cannot upload/modify/delete TS or music
   age_groups: string[]                 // selected age groups for this competition
-  poster_url: string | null            // event poster / logo
+  poster_url: string | null            // event poster (marketing, home, TV idle)
+  logo_url: string | null              // brand mark; printed public results (same storage bucket as poster)
   admin: AdminUser | null              // assigned competition-admin
   created_at: string
   fee_per_team: number | null          // fixed fee per team entry

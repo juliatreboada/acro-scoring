@@ -20,6 +20,7 @@ const T = {
     live: 'Live',
     published: 'Starting order published',
     finished: 'Finished',
+    finishedCompetition: 'Finished competition',
     viewOrder: 'View starting order',
     noCompetitions: 'No competitions available.',
     location: 'Location',
@@ -31,6 +32,7 @@ const T = {
     live: 'En vivo',
     published: 'Orden de salida publicada',
     finished: 'Finalizada',
+    finishedCompetition: 'Competición finalizada',
     viewOrder: 'Ver orden de salida',
     noCompetitions: 'No hay competiciones disponibles.',
     location: 'Sede',
@@ -112,7 +114,14 @@ export default function Page() {
             {visible.map((comp) => {
               const dateStr = formatDateRange(comp.start_date, comp.end_date)
               const badgeCls = STATUS_BADGE[comp.status] ?? ''
-              const statusLabel = comp.status === 'active' ? t.live : comp.status === 'published' ? t.published : t.finished
+              const statusLabel =
+                comp.status === 'active'
+                  ? t.live
+                  : comp.status === 'published'
+                    ? t.published
+                    : comp.status === 'finished'
+                      ? t.finishedCompetition
+                      : t.finished
 
               return (
                 <button

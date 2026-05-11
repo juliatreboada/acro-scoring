@@ -30,7 +30,7 @@ export default function Page() {
 
       const compsQuery = supabase
         .from('competitions')
-        .select('id, name, status, location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, admin_id, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
+        .select('id, name, status, location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, logo_url, admin_id, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
         .order('created_at', { ascending: false })
 
       // admin sees only their assigned competitions
@@ -86,9 +86,10 @@ export default function Page() {
         registration_deadline: data.registration_deadline,
         age_groups:            data.age_groups,
         poster_url:            data.poster_url,
+        logo_url:              data.logo_url ?? null,
         admin_id:              data.admin?.id ?? null,
       })
-      .select('id, name, status, location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, admin_id, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
+      .select('id, name, status, location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, logo_url, admin_id, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
       .single()
 
     if (error || !created) return

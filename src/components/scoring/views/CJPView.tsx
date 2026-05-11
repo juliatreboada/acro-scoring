@@ -37,6 +37,7 @@ const T = {
     submitProv: 'Submit provisional',
     submitFinal: 'Submit final',
     confirmFinal: 'Confirm final',
+    modifyFinal: 'Modify',
     nextPerf: 'Next performance',
     ranking: 'Ranking',
     rankCol: '#',
@@ -76,6 +77,7 @@ const T = {
     submitProv: 'Enviar provisional',
     submitFinal: 'Enviar final',
     confirmFinal: 'Confirmar final',
+    modifyFinal: 'Modificar',
     nextPerf: 'Siguiente actuación',
     ranking: 'Clasificación',
     rankCol: '#',
@@ -440,6 +442,7 @@ export type CJPViewProps = {
   onSkip: (perfId: string) => void
   onSubmit: (status: 'provisional' | 'approved', result: RoutineResult, penaltyDetail?: PenaltyState | null) => void
   onReopenScore: (perfId: string, panelJudgeId: string | 'all') => void
+  onUnpublishResult?: (perfId: string) => void
   onEditScore?: (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
 }
 
@@ -447,7 +450,7 @@ export default function CJPView({
   isCJP, lang, panelJudges, performances,
   rankingPerformances,
   currentPerfId, judgeScores, results,
-  onOpen, onSkip, onSubmit, onReopenScore, onEditScore,
+  onOpen, onSkip, onSubmit, onReopenScore, onUnpublishResult, onEditScore,
 }: CJPViewProps) {
   const t = T[lang]
   const rankPerfs = rankingPerformances ?? performances
@@ -791,8 +794,16 @@ export default function CJPView({
                 )}
 
                 {isCJP && reviewResult?.status === 'approved' && (
-                  <div className="py-2.5 rounded-xl bg-emerald-50 border-2 border-emerald-200 text-center">
+                  <div className="py-2.5 px-4 rounded-xl bg-emerald-50 border-2 border-emerald-200 flex items-center justify-between">
                     <span className="text-sm font-semibold text-emerald-700">✓ {t.final} · {reviewResult.finalScore.toFixed(3)}</span>
+                    {onUnpublishResult && (
+                      <button
+                        onClick={() => onUnpublishResult(reviewPerfId!)}
+                        className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 underline underline-offset-2"
+                      >
+                        {t.modifyFinal}
+                      </button>
+                    )}
                   </div>
                 )}
               </>
@@ -871,8 +882,16 @@ export default function CJPView({
                       )}
                       {currentResult?.status === 'approved' && (
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 py-2.5 rounded-xl bg-emerald-50 border-2 border-emerald-200 text-center">
+                          <div className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-50 border-2 border-emerald-200 flex items-center justify-between">
                             <span className="text-sm font-semibold text-emerald-700">✓ {t.final} · {currentResult.finalScore.toFixed(3)}</span>
+                            {onUnpublishResult && (
+                              <button
+                                onClick={() => onUnpublishResult(currentPerfId!)}
+                                className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 underline underline-offset-2 ml-2 shrink-0"
+                              >
+                                {t.modifyFinal}
+                              </button>
+                            )}
                           </div>
                           {nextPending && (
                             <button onClick={() => onOpen(nextPending.id)}

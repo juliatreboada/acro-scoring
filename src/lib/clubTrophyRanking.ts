@@ -7,6 +7,17 @@ export type TeamClubInfo = {
   clubAvatar: string | null
 }
 
+/** One routine that counts toward a club’s top-3 sum (with context for display). */
+export type ClubTrophyTopEntry = {
+  score: number
+  isProvisional: boolean
+  /** Team display name (gymnasts string). */
+  gymnasts: string
+  ageGroup: string
+  /** `Balance` | `Dynamic` | `Combined` (from performance). */
+  routineType: string
+}
+
 export type ClubTrophyRow = {
   rank: number
   clubId: string
@@ -14,8 +25,8 @@ export type ClubTrophyRow = {
   clubAvatar: string | null
   /** Sum of up to three highest routine `final_score` values for this club in the ruleset. */
   sumTop3: number
-  /** The scores that count toward the sum (length 1–3), highest first. */
-  topScores: number[]
+  /** The routines that count toward the sum (length 1–3), highest score first. */
+  topEntries: ClubTrophyTopEntry[]
   hasProvisional: boolean
   /** Total routines with a score for this club in the ruleset (may exceed 3). */
   routinesCounted: number
@@ -31,10 +42,17 @@ export function computeClubTrophyRanking(
   teamClubInfo: Record<string, TeamClubInfo>,
   ruleset: 'Escolar' | 'Base',
 ): ClubTrophyRow[] {
+  type ScoreLine = {
+    score: number
+    prov: boolean
+    gymnasts: string
+    ageGroup: string
+    routineType: string
+  }
   type Bucket = {
     clubName: string
     clubAvatar: string | null
-    scores: { score: number; prov: boolean }[]
+    scores: ScoreLine[]
   }
   const byClub = new Map<string, Bucket>()
 
@@ -53,12 +71,18 @@ export function computeClubTrophyRanking(
       b = { clubName: info.clubName, clubAvatar: info.clubAvatar, scores: [] }
       byClub.set(info.clubId, b)
     }
-    b.scores.push({ score, prov: res.status === 'provisional' })
+    b.scores.push({
+      score,
+      prov: res.status === 'provisional',
+      gymnasts: p.gymnasts,
+      ageGroup: p.ageGroup,
+      routineType: p.routineType,
+    })
   }
 
   const rows: ClubTrophyRow[] = []
   for (const [clubId, b] of byClub) {
-    const sorted = [...b.scores].sort((a, x) => x.score - a.score)
+    const sorted = [...b.scores].sort((a, b) => b.score - a.score || a.gymnasts.localeCompare(b.gymnasts))
     const top = sorted.slice(0, 3)
     if (top.length === 0) continue
     rows.push({
@@ -67,7 +91,13 @@ export function computeClubTrophyRanking(
       clubName: b.clubName,
       clubAvatar: b.clubAvatar,
       sumTop3: top.reduce((s, x) => s + x.score, 0),
-      topScores: top.map((x) => x.score),
+      topEntries: top.map((x) => ({
+        score: x.score,
+        isProvisional: x.prov,
+        gymnasts: x.gymnasts,
+        ageGroup: x.ageGroup,
+        routineType: x.routineType,
+      })),
       hasProvisional: top.some((x) => x.prov),
       routinesCounted: b.scores.length,
     })

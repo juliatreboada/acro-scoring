@@ -31,6 +31,7 @@ const T = {
     viewAll: 'All results',
     publicAccess: 'Public access',
     publicHint: 'Starting order and live results are publicly available — no sign-in needed.',
+    finishedCompetition: 'Finished competition',
   },
   es: {
     appName: 'Nosa Acro Suite',
@@ -48,6 +49,7 @@ const T = {
     viewAll: 'Todos los resultados',
     publicAccess: 'Acceso público',
     publicHint: 'El orden de salida y los resultados en directo son públicos — sin necesidad de iniciar sesión.',
+    finishedCompetition: 'Competición finalizada',
   },
 }
 
@@ -98,6 +100,11 @@ function CompCard({
           <span className="absolute top-2.5 left-2.5 flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-100/90 backdrop-blur-sm px-2 py-0.5 rounded-full">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             {t.liveNow}
+          </span>
+        )}
+        {isFinished && (
+          <span className="absolute top-2.5 left-2.5 text-xs font-semibold text-slate-700 bg-slate-200/90 backdrop-blur-sm px-2 py-0.5 rounded-full">
+            {t.finishedCompetition}
           </span>
         )}
         {isPublished && (

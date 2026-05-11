@@ -181,7 +181,7 @@ function PhoneView({ perf, lang, penaltyState, onPenaltyChange, onSubmit }: {
 
 function TabletLayout({
   lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results,
-  penaltyStates, onPenaltyChange, onOpen, onSkip, onSubmitAJScore, onSubmit, onReopenScore, onEditScore,
+  penaltyStates, onPenaltyChange, onOpen, onSkip, onSubmitAJScore, onSubmit, onReopenScore, onUnpublishResult, onEditScore,
 }: {
   lang: Lang
   performances: ScoringPerformance[]
@@ -197,6 +197,7 @@ function TabletLayout({
   onSubmitAJScore?: (perfId: string, score: number) => void
   onSubmit?: (status: 'provisional' | 'approved', result: RoutineResult) => void
   onReopenScore?: (perfId: string, panelJudgeId: string | 'all') => void
+  onUnpublishResult?: (perfId: string) => void
   onEditScore?: (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
 }) {
   const t = T[lang]
@@ -221,7 +222,7 @@ function TabletLayout({
       onOpen={onOpen}
       onSkip={onSkip}
       onSubmit={onSubmit}
-      onReopenScore={onReopenScore}
+      onReopenScore={onReopenScore} onUnpublishResult={onUnpublishResult}
       onEditScore={onEditScore}
       renderRightPanel={(activePerfId, _isReviewMode) => {
         const penalty = activePerfId ? (penaltyStates[activePerfId] ?? DEFAULT_PENALTY) : DEFAULT_PENALTY
@@ -294,13 +295,14 @@ export type CJPAJViewProps = {
   onSubmitAJScore?: (perfId: string, score: number) => void
   onSubmit?: (status: 'provisional' | 'approved', result: RoutineResult) => void
   onReopenScore?: (perfId: string, panelJudgeId: string | 'all') => void
+  onUnpublishResult?: (perfId: string) => void
   onEditScore?: (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
   onPhoneSubmit?: (ajScore: number, cjpPenalty: number) => void
 }
 
 export default function CJPAJView({
   lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results,
-  onOpen, onSkip, onSubmitAJScore, onSubmit, onReopenScore, onEditScore, onPhoneSubmit,
+  onOpen, onSkip, onSubmitAJScore, onSubmit, onReopenScore, onUnpublishResult, onEditScore, onPhoneSubmit,
 }: CJPAJViewProps) {
   const [penaltyStates, setPenaltyStates] = useState<Record<string, PenaltyState>>({})
 
@@ -356,7 +358,7 @@ export default function CJPAJView({
           onSkip={onSkip}
           onSubmitAJScore={onSubmitAJScore}
           onSubmit={onSubmit}
-          onReopenScore={onReopenScore}
+          onReopenScore={onReopenScore} onUnpublishResult={onUnpublishResult}
           onEditScore={onEditScore}
         />
       </div>

@@ -43,6 +43,7 @@ export type JudgeSessionData = {
   handleSkip:              (perfId: string) => void
   handleCJPSubmit:         (status: 'provisional' | 'approved', result: RoutineResult, penaltyDetail?: PenaltyState | null) => Promise<void>
   handleReopenScore:       (perfId: string, panelJudgeId: string | 'all') => Promise<void>
+  handleUnpublishResult:   (perfId: string) => Promise<void>
   handleJudgeScoreSubmit:  (score: JudgeScore) => Promise<void>
   handleEditScore:         (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
   clearSubmitError:        () => void
@@ -705,6 +706,16 @@ export function useJudgeSession(): JudgeSessionData {
     setResults(prev => { const next = { ...prev }; delete next[perfId]; return next })
   }
 
+  async function handleUnpublishResult(perfId: string) {
+    if (!sessionId || practiceMode) return
+    const teamId = perfId.replace(`${sessionId}_`, '')
+    await supabase.from('routine_results')
+      .update({ status: 'provisional' })
+      .eq('session_id', sessionId)
+      .eq('team_id', teamId)
+    setResults(prev => prev[perfId] ? { ...prev, [perfId]: { ...prev[perfId]!, status: 'provisional' } } : prev)
+  }
+
   async function handleJudgeScoreSubmit(score: JudgeScore) {
     if (!sessionId || !currentPerfId) return
     setSubmitError(null)
@@ -810,7 +821,7 @@ export function useJudgeSession(): JudgeSessionData {
     loading, sessionId, sessionStatus, currentPerfId: resolvedPerfId, currentPerf,
     assignedRoles, panelJudges, performances, rankingPerformances, judgeScores, results,
     djMethod, ejMethod, submitError, practiceMode, practiceRoutinePerfId,
-    handleOpen, handleSkip, handleCJPSubmit, handleReopenScore,
+    handleOpen, handleSkip, handleCJPSubmit, handleReopenScore, handleUnpublishResult,
     handleJudgeScoreSubmit, handleEditScore, clearSubmitError, startSectionPractice, stopSectionPractice,
   }
 }
