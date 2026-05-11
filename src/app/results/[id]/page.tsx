@@ -103,6 +103,11 @@ function ResultsPageInner() {
                 : 'Resultados'}
           </p>
           <h1 className="text-xl font-bold text-slate-800">{competitionName}</h1>
+          {competitionMeta?.status === 'finished' && (
+            <p className="mt-2 text-xs font-semibold text-slate-600">
+              {lang === 'en' ? 'Finished competition' : 'Competición finalizada'}
+            </p>
+          )}
           {isOfficial && competitionMeta && (
             <div className="mt-3 text-sm text-slate-600 space-y-0.5 print:text-slate-700">
               {competitionMeta.location ? <p>{competitionMeta.location}</p> : null}

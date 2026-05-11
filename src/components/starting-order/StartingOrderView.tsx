@@ -121,6 +121,7 @@ const T = {
     previousMatch: 'Previous match',
     nextMatch: 'Next match',
     matchesCount: (current: number, total: number) => `${current}/${total}`,
+    finishedCompetition: 'Finished competition',
   },
   es: {
     title: 'Orden de salida',
@@ -139,6 +140,7 @@ const T = {
     previousMatch: 'Coincidencia anterior',
     nextMatch: 'Siguiente coincidencia',
     matchesCount: (current: number, total: number) => `${current}/${total}`,
+    finishedCompetition: 'Competición finalizada',
   },
 }
 
@@ -752,6 +754,9 @@ export default function StartingOrderView({
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-500 mb-0.5">{t.title}</p>
               <h1 className="text-lg font-bold text-slate-800 leading-snug">{competition.name}</h1>
+              {competition.status === 'finished' && (
+                <p className="mt-1.5 text-xs font-semibold text-slate-600">{t.finishedCompetition}</p>
+              )}
             </div>
             <button
               onClick={() => window.print()}

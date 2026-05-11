@@ -42,6 +42,7 @@ const T = {
     trophyTop3: 'Total (best 3)',
     trophyBreakdown: 'Top scores',
     trophyRoutines: 'Routines',
+    finishedCompetition: 'Finished competition',
   },
   es: {
     balance: 'Equilibrio',
@@ -68,6 +69,7 @@ const T = {
     trophyTop3: 'Total (3 mejores)',
     trophyBreakdown: 'Puntuaciones',
     trophyRoutines: 'Rutinas',
+    finishedCompetition: 'Competición finalizada',
   },
 }
 
@@ -165,6 +167,9 @@ function ResultsPrintSectionBanner({
               ? 'Official results — approved scores only'
               : 'Resultados oficiales — solo puntuaciones aprobadas'}
           </p>
+        ) : null}
+        {competitionMeta?.status === 'finished' ? (
+          <p className="text-xs font-semibold text-slate-600 mt-2">{t.finishedCompetition}</p>
         ) : null}
       </div>
     </div>

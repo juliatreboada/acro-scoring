@@ -7,6 +7,7 @@ import { isOpenCombinadosCompetitionName } from '@/lib/openCombinadosCompetition
 
 export type ResultsPageCompetitionMeta = {
   name: string
+  status: Database['public']['Enums']['competition_status']
   location: string | null
   start_date: string | null
   end_date: string | null
@@ -45,7 +46,7 @@ export async function loadResultsPageBundle(
 
   const { data: comp } = await supabase
     .from('competitions')
-    .select('name, location, start_date, end_date, open_combinados_enabled, logo_url')
+    .select('name, status, location, start_date, end_date, open_combinados_enabled, logo_url')
     .eq('id', competitionId)
     .single()
 
@@ -56,6 +57,7 @@ export async function loadResultsPageBundle(
 
   const competition: ResultsPageCompetitionMeta = {
     name: comp.name,
+    status: comp.status,
     location: comp.location,
     start_date: comp.start_date,
     end_date: comp.end_date,
