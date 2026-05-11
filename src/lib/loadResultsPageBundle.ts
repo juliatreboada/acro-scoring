@@ -10,6 +10,8 @@ export type ResultsPageCompetitionMeta = {
   location: string | null
   start_date: string | null
   end_date: string | null
+  /** Public URL for print header (admin “Logo” upload, `competition-posters` bucket). */
+  logo_url: string | null
   open_combinados_enabled?: boolean
 }
 
@@ -43,7 +45,7 @@ export async function loadResultsPageBundle(
 
   const { data: comp } = await supabase
     .from('competitions')
-    .select('name, location, start_date, end_date, open_combinados_enabled')
+    .select('name, location, start_date, end_date, open_combinados_enabled, logo_url')
     .eq('id', competitionId)
     .single()
 
@@ -57,6 +59,7 @@ export async function loadResultsPageBundle(
     location: comp.location,
     start_date: comp.start_date,
     end_date: comp.end_date,
+    logo_url: comp.logo_url ?? null,
     open_combinados_enabled: openCombinadosEnabled,
   }
 

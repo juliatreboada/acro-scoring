@@ -42,7 +42,12 @@ const T = {
     tsMusicDeadline: 'TS & Music deadline',
     admin: 'Competition admin',
     ageGroups: 'Age groups',
-    poster: 'Poster / logo',
+    poster: 'Poster',
+    logoTitle: 'Logo',
+    logoHint: 'Used on printed public results. Square PNG/SVG recommended.',
+    logoUpload: 'Upload logo',
+    logoReplace: 'Replace logo',
+    logoUploading: 'Uploading logo…',
     panels: 'Judging panels',
     panelN: (n: number) => `${n} panel${n !== 1 ? 's' : ''}`,
     warningPanelChange: 'Changing to 1 panel will reassign all sessions to Panel 1.',
@@ -139,7 +144,12 @@ const T = {
     tsMusicDeadline: 'Fecha límite de TS y música',
     admin: 'Admin de competición',
     ageGroups: 'Grupos de edad',
-    poster: 'Póster / logo',
+    poster: 'Póster',
+    logoTitle: 'Logo',
+    logoHint: 'Se usa en los resultados públicos impresos. Recomendado PNG/SVG cuadrado.',
+    logoUpload: 'Subir logo',
+    logoReplace: 'Cambiar logo',
+    logoUploading: 'Subiendo logo…',
     panels: 'Paneles de jueces',
     panelN: (n: number) => `${n} panel${n !== 1 ? 'es' : ''}`,
     warningPanelChange: 'Cambiar a 1 panel reasignará todas las sesiones al Panel 1.',
@@ -275,6 +285,7 @@ type OverviewUpdate = {
   provisional_entry_deadline: string | null
   definitive_entry_deadline: string | null
   poster_url: string | null
+  logo_url: string | null
   admin: AdminUser | null
   age_groups: string[]
   fee_per_team: number | null
@@ -282,7 +293,7 @@ type OverviewUpdate = {
   judge_missing_fine: number | null
 }
 
-function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels, sessions, onUpdate, onSetPanelCount, onUploadPoster }: {
+function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels, sessions, onUpdate, onSetPanelCount, onUploadPoster, onUploadLogo }: {
   competition: Competition
   lang: Lang
   availableAdmins: AdminUser[]
@@ -292,12 +303,14 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
   onUpdate: (updates: OverviewUpdate) => void
   onSetPanelCount: (count: 1 | 2) => void
   onUploadPoster: (file: File) => Promise<void>
+  onUploadLogo: (file: File) => Promise<void>
 }) {
   const t = T[lang]
   const agLabels = Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group} (${r.ruleset})`]))
-  const [uploading, setUploading] = useState(false)
+  const [uploadBusy, setUploadBusy] = useState<null | 'poster' | 'logo'>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const posterInputRef = useRef<HTMLInputElement>(null)
+  const logoInputRef = useRef<HTMLInputElement>(null)
   
   // Individual edit states for each card
   const [editingName, setEditingName] = useState(false)
@@ -344,16 +357,32 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
   async function handlePosterFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    setUploading(true)
+    setUploadBusy('poster')
     setUploadError(null)
-    try { 
+    try {
       await onUploadPoster(file)
     } catch (err) {
       console.error('Upload error:', err)
       setUploadError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
-      setUploading(false)
+      setUploadBusy(null)
       if (posterInputRef.current) posterInputRef.current.value = ''
+    }
+  }
+
+  async function handleLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadBusy('logo')
+    setUploadError(null)
+    try {
+      await onUploadLogo(file)
+    } catch (err) {
+      console.error('Upload error:', err)
+      setUploadError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setUploadBusy(null)
+      if (logoInputRef.current) logoInputRef.current.value = ''
     }
   }
 
@@ -374,6 +403,7 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
       provisional_entry_deadline: competition.provisional_entry_deadline,
       definitive_entry_deadline: competition.definitive_entry_deadline,
       poster_url: competition.poster_url,
+      logo_url: competition.logo_url,
       admin: competition.admin,
       age_groups: competition.age_groups,
       fee_per_team: competition.fee_per_team,
@@ -399,6 +429,7 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
       provisional_entry_deadline: competition.provisional_entry_deadline,
       definitive_entry_deadline: competition.definitive_entry_deadline,
       poster_url: competition.poster_url,
+      logo_url: competition.logo_url,
       admin: competition.admin,
       age_groups: competition.age_groups,
       fee_per_team: competition.fee_per_team,
@@ -420,6 +451,7 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
       provisional_entry_deadline: competition.provisional_entry_deadline,
       definitive_entry_deadline: competition.definitive_entry_deadline,
       poster_url: competition.poster_url,
+      logo_url: competition.logo_url,
       admin: competition.admin,
       age_groups: competition.age_groups,
       fee_per_team: competition.fee_per_team,
@@ -442,6 +474,7 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
       provisional_entry_deadline: competition.provisional_entry_deadline,
       definitive_entry_deadline: competition.definitive_entry_deadline,
       poster_url: competition.poster_url,
+      logo_url: competition.logo_url,
       admin,
       age_groups: competition.age_groups,
       fee_per_team: competition.fee_per_team,
@@ -463,6 +496,7 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
       provisional_entry_deadline: competition.provisional_entry_deadline,
       definitive_entry_deadline: competition.definitive_entry_deadline,
       poster_url: competition.poster_url,
+      logo_url: competition.logo_url,
       admin: competition.admin,
       age_groups: [...ageGroupsForm],
       fee_per_team: competition.fee_per_team,
@@ -486,6 +520,7 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
       provisional_entry_deadline: competition.provisional_entry_deadline,
       definitive_entry_deadline: competition.definitive_entry_deadline,
       poster_url: competition.poster_url,
+      logo_url: competition.logo_url,
       admin: competition.admin,
       age_groups: competition.age_groups,
       fee_per_team,
@@ -507,6 +542,7 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
       provisional_entry_deadline: provisionalDeadlineForm || null,
       definitive_entry_deadline: definitiveDeadlineForm || null,
       poster_url: competition.poster_url,
+      logo_url: competition.logo_url,
       admin: competition.admin,
       age_groups: competition.age_groups,
       fee_per_team: competition.fee_per_team,
@@ -653,12 +689,13 @@ const dateCls = 'border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate
         </div>
       </div>
 
-      {/* Two-column layout: Poster + Info Cards */}
+      {/* Two-column layout: Poster + Logo + Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {/* Poster - Left column - full height */}
-      <div className="md:col-span-1">
-        <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden sticky top-6 h-full">
-          <div className="aspect-[3/4] bg-slate-100 flex items-center justify-center">
+      <div className="md:col-span-1 space-y-4 md:sticky md:top-6 md:self-start">
+        {/* Poster — marketing / home / TV */}
+        <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 px-3 pt-3">{t.poster}</p>
+          <div className="aspect-[3/4] bg-slate-100 flex items-center justify-center mt-2">
             {competition.poster_url ? (
               <img src={competition.poster_url} alt="poster" className="w-full h-full object-cover" />
             ) : (
@@ -668,9 +705,29 @@ const dateCls = 'border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate
             )}
           </div>
           <div className="p-3 text-center border-t border-slate-200">
-            <button type="button" disabled={uploading} onClick={() => posterInputRef.current?.click()}
+            <button type="button" disabled={uploadBusy !== null} onClick={() => posterInputRef.current?.click()}
               className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-50 transition-all w-full">
-              {uploading ? t.posterUploading : (competition.poster_url ? t.posterReplace : t.posterUpload)}
+              {uploadBusy === 'poster' ? t.posterUploading : (competition.poster_url ? t.posterReplace : t.posterUpload)}
+            </button>
+          </div>
+        </div>
+        {/* Logo — printed results */}
+        <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 px-3 pt-3">{t.logoTitle}</p>
+          <p className="text-[11px] text-slate-400 px-3 mt-1 leading-snug">{t.logoHint}</p>
+          <div className="aspect-square max-h-44 mx-auto mt-2 mb-1 bg-slate-100 flex items-center justify-center">
+            {competition.logo_url ? (
+              <img src={competition.logo_url} alt="" className="max-w-full max-h-full object-contain p-2" />
+            ) : (
+              <svg className="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+              </svg>
+            )}
+          </div>
+          <div className="p-3 text-center border-t border-slate-200">
+            <button type="button" disabled={uploadBusy !== null} onClick={() => logoInputRef.current?.click()}
+              className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 disabled:opacity-50 transition-all w-full">
+              {uploadBusy === 'logo' ? t.logoUploading : (competition.logo_url ? t.logoReplace : t.logoUpload)}
             </button>
             {uploadError && <p className="text-xs text-red-500 mt-2">{uploadError}</p>}
           </div>
@@ -897,6 +954,7 @@ const dateCls = 'border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate
       </div>
 
       <input ref={posterInputRef} type="file" accept="image/*" className="hidden" onChange={handlePosterFile} />
+      <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoFile} />
     </div>
   )
 }
@@ -953,6 +1011,7 @@ export type CompetitionDetailProps = {
   ageGroupRules: AgeGroupRule[]
   onUpdateCompetition: (updates: OverviewUpdate) => void
   onUploadPoster: (file: File) => Promise<void>
+  onUploadLogo: (file: File) => Promise<void>
   onUpdateFees: (fees: { fee_per_team: number | null; fee_per_gymnast: number | null; judge_missing_fine: number | null }) => void
   // dj review
   onSetDJReviewDeadline: (date: string | null) => void
@@ -975,7 +1034,7 @@ export default function CompetitionDetail({
   panelLocks, onAddToPool, onRemoveFromPool, onAssignJudge, onAddSlot, onRemoveSlot,
   onTogglePanelLock, onCreateJudge,
   globalTeams, clubs, entries, onToggleDropout, onRemoveClubEntries, sessionOrders, lockedSessions, onReorder, onToggleLock, onReorderTimeline,
-  availableAdmins, ageGroupRules, onUpdateCompetition, onUploadPoster, onUpdateFees,
+  availableAdmins, ageGroupRules, onUpdateCompetition, onUploadPoster, onUploadLogo, onUpdateFees,
   onSetDJReviewDeadline, onStartSession, onFinishSession, onRevertSession,
   competitionGymnasts, competitionCoaches, globalCoaches,
 }: CompetitionDetailProps) {
@@ -1158,6 +1217,7 @@ export default function CompetitionDetail({
           sessions={sessions}
           onUpdate={onUpdateCompetition}
           onUploadPoster={onUploadPoster}
+          onUploadLogo={onUploadLogo}
           onSetPanelCount={onSetPanelCount}
         />
       )}

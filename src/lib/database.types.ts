@@ -204,6 +204,7 @@ export type Database = {
           id: string
           judge_missing_fine: number | null
           location: string | null
+          logo_url: string | null
           name: string
           open_combinados_enabled: boolean
           poster_url: string | null
@@ -227,6 +228,7 @@ export type Database = {
           id?: string
           judge_missing_fine?: number | null
           location?: string | null
+          logo_url?: string | null
           name: string
           open_combinados_enabled?: boolean
           poster_url?: string | null
@@ -250,6 +252,7 @@ export type Database = {
           id?: string
           judge_missing_fine?: number | null
           location?: string | null
+          logo_url?: string | null
           name?: string
           open_combinados_enabled?: boolean
           poster_url?: string | null

@@ -68,7 +68,7 @@ export default function Page() {
           nominationsRes, entriesRes, rulesRes, adminsRes,
           provisionalClubsRes, definitiveClubsRes, mergeGroupsRes] = await Promise.all([
         supabase.from('competitions')
-       .select('id,name,status,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,age_groups,poster_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine,open_combinados_enabled')
+       .select('id,name,status,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,age_groups,poster_url,logo_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine,open_combinados_enabled')
        .eq('id', id).single(),
         supabase.from('panels').select('id,competition_id,panel_number').eq('competition_id', id).order('panel_number'),
         supabase.from('sections').select('id,competition_id,section_number,label,starting_time,waiting_time_seconds,warmup_duration_minutes,timeline_order').eq('competition_id', id).order('section_number'),
@@ -551,6 +551,7 @@ export default function Page() {
     ts_music_deadline: string | null
     age_groups: string[]
     poster_url: string | null
+    logo_url: string | null
     admin: AdminUser | null
     fee_per_team: number | null
     fee_per_gymnast: number | null
@@ -567,6 +568,7 @@ export default function Page() {
       ts_music_deadline: updates.ts_music_deadline,
       age_groups: updates.age_groups,
       poster_url: updates.poster_url,
+      logo_url: updates.logo_url,
       admin_id: updates.admin?.id ?? null,
       fee_per_team: updates.fee_per_team,
       fee_per_gymnast: updates.fee_per_gymnast,
@@ -590,6 +592,16 @@ export default function Page() {
     const url = data.publicUrl + `?t=${Date.now()}`
     await supabase.from('competitions').update({ poster_url: url }).eq('id', id)
     setCompetition(prev => prev ? { ...prev, poster_url: url } : prev)
+  }
+
+  async function handleUploadLogo(file: File) {
+    const ext = file.name.split('.').pop() ?? 'png'
+    const path = `${id}/logo.${ext}`
+    await supabase.storage.from('competition-posters').upload(path, file, { upsert: true })
+    const { data } = supabase.storage.from('competition-posters').getPublicUrl(path)
+    const url = data.publicUrl + `?t=${Date.now()}`
+    await supabase.from('competitions').update({ logo_url: url }).eq('id', id)
+    setCompetition(prev => prev ? { ...prev, logo_url: url } : prev)
   }
 
   // ── dj review deadline ────────────────────────────────────────────────────────
@@ -725,6 +737,7 @@ export default function Page() {
         ageGroupRules={ageGroupRules}
         onUpdateCompetition={handleUpdateCompetition}
         onUploadPoster={handleUploadPoster}
+        onUploadLogo={handleUploadLogo}
         onUpdateFees={handleUpdateFees}
         onSetDJReviewDeadline={handleSetDJReviewDeadline}
         onStartSession={handleStartSession}
