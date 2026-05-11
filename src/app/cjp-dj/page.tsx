@@ -13,7 +13,7 @@ export default function Page() {
     loading, sessionId,
     assignedRoles, panelJudges, performances, rankingPerformances, currentPerfId, judgeScores, results,
     djMethod,
-    handleOpen, handleSkip, handleCJPSubmit, handleReopenScore, handleEditScore, handleJudgeScoreSubmit,
+    handleOpen, handleSkip, handleCJPSubmit, handleReopenScore, handleUnpublishResult, handleEditScore, handleJudgeScoreSubmit,
     submitError, clearSubmitError, practiceMode, startSectionPractice, stopSectionPractice,
   } = useJudgeSession()
 
@@ -40,7 +40,7 @@ export default function Page() {
         onSkip={handleSkip}
         onSubmitDJScore={handleSubmitDJScore}
         onSubmit={handleCJPSubmit}
-        onReopenScore={handleReopenScore}
+        onReopenScore={handleReopenScore} onUnpublishResult={handleUnpublishResult}
         onEditScore={handleEditScore}
       />
     </JudgeScoringShell>

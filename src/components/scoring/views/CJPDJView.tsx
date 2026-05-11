@@ -75,7 +75,7 @@ function TabletLayout({
   elements, extraElements, flags, penaltyStates, incorrectTs,
   onFlagChange, onOpenRetry, onAddElement, onLabelChange, onTypeChange,
   onToggleIncorrectTs, onPenaltyChange, onOpen, onSkip,
-  onSubmitDJScore, onSubmit, onReopenScore, onEditScore,
+  onSubmitDJScore, onSubmit, onReopenScore, onUnpublishResult, onEditScore,
 }: {
   lang: Lang
   performances: ScoringPerformance[]
@@ -101,6 +101,7 @@ function TabletLayout({
   onSubmitDJScore?: (perfId: string, difficulty: number, djPenalty: number, detail: ScoreDetail) => void
   onSubmit?: (status: 'provisional' | 'approved', result: RoutineResult) => void
   onReopenScore?: (perfId: string, panelJudgeId: string | 'all') => void
+  onUnpublishResult?: (perfId: string) => void
   onEditScore?: (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
 }) {
   const t = T[lang]
@@ -113,7 +114,7 @@ function TabletLayout({
       currentPerfId={currentPerfId}
       panelJudges={panelJudges} judgeScores={judgeScores} results={results}
       penaltyStates={penaltyStates} onOpen={onOpen} onSkip={onSkip}
-      onSubmit={onSubmit} onReopenScore={onReopenScore}
+      onSubmit={onSubmit} onReopenScore={onReopenScore} onUnpublishResult={onUnpublishResult}
       onEditScore={onEditScore}
       renderRightPanel={(activePerfId, _isReviewMode) => {
         const penalty = activePerfId ? (penaltyStates[activePerfId] ?? DEFAULT_PENALTY) : DEFAULT_PENALTY
@@ -316,13 +317,14 @@ export type CJPDJViewProps = {
   onSubmitDJScore?: (perfId: string, difficulty: number, djPenalty: number, detail: ScoreDetail) => void
   onSubmit?: (status: 'provisional' | 'approved', result: RoutineResult) => void
   onReopenScore?: (perfId: string, panelJudgeId: string | 'all') => void
+  onUnpublishResult?: (perfId: string) => void
   onEditScore?: (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
   onPhoneSubmit?: (difficulty: number, djPenalty: number, cjpPenalty: number) => void
 }
 
 export default function CJPDJView({
   lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results,
-  elements, djMode = 'elements', onOpen, onSkip, onSubmitDJScore, onSubmit, onReopenScore, onEditScore, onPhoneSubmit,
+  elements, djMode = 'elements', onOpen, onSkip, onSubmitDJScore, onSubmit, onReopenScore, onUnpublishResult, onEditScore, onPhoneSubmit,
 }: CJPDJViewProps) {
   const { flags, extraElements, incorrectTs,
     handleFlagChange, handleOpenRetry,
@@ -369,7 +371,7 @@ export default function CJPDJView({
           onAddElement={handleAddElement} onLabelChange={handleLabelChange}
           onTypeChange={handleTypeChange} onToggleIncorrectTs={toggleIncorrectTs}
           onPenaltyChange={setPenaltyState} onOpen={onOpen} onSkip={onSkip}
-          onSubmitDJScore={onSubmitDJScore} onSubmit={onSubmit} onReopenScore={onReopenScore}
+          onSubmitDJScore={onSubmitDJScore} onSubmit={onSubmit} onReopenScore={onReopenScore} onUnpublishResult={onUnpublishResult}
           onEditScore={onEditScore} />
       </div>
     </>

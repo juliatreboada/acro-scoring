@@ -17,7 +17,7 @@ const T = {
     noPerfSub: 'Select a performance from the list to open it.',
     reviewing: 'Reviewing', backToLive: 'Back to live',
     submitProv: 'Submit provisional', submitFinal: 'Submit final',
-    confirmFinal: 'Confirm final', nextPerf: 'Next performance',
+    confirmFinal: 'Confirm final', modifyFinal: 'Modify', nextPerf: 'Next performance',
     updateProv: 'Update provisional',
     tsPdfTitle: 'Tariff Sheet', pdfNote: 'PDF will appear here once uploaded',
     ej: 'EJ', aj: 'AJ', dj: 'DJ',
@@ -36,7 +36,7 @@ const T = {
     noPerfSub: 'Selecciona una actuación de la lista para abrirla.',
     reviewing: 'Revisando', backToLive: 'Volver en directo',
     submitProv: 'Enviar provisional', submitFinal: 'Enviar final',
-    confirmFinal: 'Confirmar final', nextPerf: 'Siguiente actuación',
+    confirmFinal: 'Confirmar final', modifyFinal: 'Modificar', nextPerf: 'Siguiente actuación',
     updateProv: 'Actualizar provisional',
     tsPdfTitle: 'TS', pdfNote: 'El PDF aparecerá aquí una vez subido',
     ej: 'EJ', aj: 'AJ', dj: 'DJ',
@@ -649,6 +649,7 @@ export type CJPTabletShellProps = {
   onSkip?: (perfId: string) => void
   onSubmit?: (status: 'provisional' | 'approved', result: RoutineResult, penaltyDetail?: PenaltyState) => void
   onReopenScore?: (perfId: string, panelJudgeId: string | 'all') => void
+  onUnpublishResult?: (perfId: string) => void
   onEditScore?: (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
   /** Render the right panel. activePerfId = reviewed perf during review mode, else currentPerfId. */
   renderRightPanel: (activePerfId: string | null, isReviewMode: boolean) => ReactNode
@@ -657,7 +658,7 @@ export type CJPTabletShellProps = {
 
 export default function CJPTabletShell({
   lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results,
-  penaltyStates, onOpen, onSkip, onSubmit, onReopenScore, onEditScore,
+  penaltyStates, onOpen, onSkip, onSubmit, onReopenScore, onUnpublishResult, onEditScore,
   renderRightPanel, rightPanelClassName = 'w-80',
 }: CJPTabletShellProps) {
   const t = T[lang]
@@ -828,8 +829,14 @@ export default function CJPTabletShell({
                 </div>
               )}
               {reviewResult?.status === 'approved' && (
-                <div className="py-2 rounded-xl bg-emerald-50 border-2 border-emerald-200 text-center">
+                <div className="py-2 px-3 rounded-xl bg-emerald-50 border-2 border-emerald-200 flex items-center justify-between">
                   <span className="text-sm font-semibold text-emerald-700">✓ {t.final} · {reviewResult.finalScore.toFixed(3)}</span>
+                  {onUnpublishResult && (
+                    <button onClick={() => onUnpublishResult(reviewPerfId!)}
+                      className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 underline underline-offset-2 ml-2 shrink-0">
+                      {t.modifyFinal}
+                    </button>
+                  )}
                 </div>
               )}
             </>
@@ -875,8 +882,14 @@ export default function CJPTabletShell({
               )}
               {currentResult?.status === 'approved' && (
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 py-2 rounded-xl bg-emerald-50 border-2 border-emerald-200 text-center">
+                  <div className="flex-1 py-2 px-3 rounded-xl bg-emerald-50 border-2 border-emerald-200 flex items-center justify-between">
                     <span className="text-sm font-semibold text-emerald-700">✓ {t.final} · {currentResult.finalScore.toFixed(3)}</span>
+                    {onUnpublishResult && currentPerfId && (
+                      <button onClick={() => onUnpublishResult(currentPerfId)}
+                        className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 underline underline-offset-2 ml-2 shrink-0">
+                        {t.modifyFinal}
+                      </button>
+                    )}
                   </div>
                   {nextPending && (
                     <button onClick={() => onOpen(nextPending.id)}
