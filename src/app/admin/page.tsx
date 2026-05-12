@@ -80,6 +80,7 @@ export default function Page() {
       .insert({
         name:                  data.name,
         status:                data.status,
+        sport_type:            data.sport_type,
         location:              data.location,
         start_date:            data.start_date,
         end_date:              data.end_date,

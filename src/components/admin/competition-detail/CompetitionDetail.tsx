@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry, RankingMergeGroup } from '@/components/admin/types'
 import { NEXT_STATUS, PREV_STATUS } from '@/components/admin/types'
@@ -13,6 +13,8 @@ import LicenciasTab from './LicenciasTab'
 import TVTab from './TVTab'
 import OpenCombinadosTab from './OpenCombinadosTab'
 import { isOpenCombinadosCompetitionName } from '@/lib/openCombinadosCompetition'
+import OverviewTab, { type OverviewUpdate } from './OverviewTab'
+import RGRegistrationsTab from './RGRegistrationsTab'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -69,8 +71,7 @@ const T = {
       published:            'Published',
       active:               'Live',
       finished:             'Finished',
-      },
-    // status advance actions
+    },
     action: {
       draft:                'Open provisional entry',
       provisional_entry:    'Open definitive entry',
@@ -111,14 +112,6 @@ const T = {
     openDJReview: 'Open DJ review',
     closeDJReview: 'Close DJ review',
     confirmCloseDJReview: 'Close the DJ review period? DJs will no longer be able to access the review.',
-    //Fees
-    feesTitle: 'Entry fees',
-    feeType: 'Fee type',
-    feePerTeam: 'Per team',
-    feePerGymnast: 'Per gymnast',
-    feeAmount: 'Amount (€)',
-    judgeMissingFine: 'Missing judge fine (€)',
-    feeHint: 'Choose to charge per team or per gymnast. Gymnast counts: pair=2, trio=3, group=4.',  
   },
   es: {
     back: 'Competiciones',
@@ -211,14 +204,6 @@ const T = {
     openDJReview: 'Abrir revisión DJ',
     closeDJReview: 'Cerrar revisión DJ',
     confirmCloseDJReview: '¿Cerrar el período de revisión DJ? Los jueces DJ ya no podrán acceder.',
-    //Fees
-    feesTitle: 'Tasas de inscripción',
-    feeType: 'Tipo de tasa',
-    feePerTeam: 'Por equipo',
-    feePerGymnast: 'Por gimnasta',
-    feeAmount: 'Importe (€)',
-    judgeMissingFine: 'Penalización sin juez (€)',
-    feeHint: 'Elige cobrar por equipo o por gimnasta. Recuento: pareja=2, trío=3, grupo=4.',
   },
 }
 
@@ -245,16 +230,6 @@ const ACTION_STYLE: Partial<Record<CompetitionStatus, string>> = {
 
 type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias' | 'tv' | 'bracket'
 
-function formatDateRange(start: string | null, end: string | null): string {
-  const fmt = (d: string) =>
-    new Date(d + 'T00:00:00').toLocaleDateString(undefined, {
-      day: 'numeric', month: 'short', year: 'numeric',
-    })
-  if (start && end) return `${fmt(start)} – ${fmt(end)}`
-  if (start) return fmt(start)
-  if (end)   return fmt(end)
-  return ''
-}
 
 // ─── placeholder tab ──────────────────────────────────────────────────────────
 
@@ -998,6 +973,8 @@ export type CompetitionDetailProps = {
   globalTeams: Team[]
   clubs: Club[]
   entries: CompetitionEntry[]
+  provisionalEntries: ProvisionalEntry[]
+  definitiveEntries: DefinitiveEntry[]
   onToggleDropout: (entryId: string) => void
   onRemoveClubEntries?: (clubId: string) => void
   // starting order
@@ -1261,7 +1238,10 @@ export default function CompetitionDetail({
           onReorderTimeline={onReorderTimeline}
         />
       )}
-      {activeTab === 'registrations' && (
+      {activeTab === 'registrations' && competition.sport_type === 'rg' && (
+        <RGRegistrationsTab lang={lang} competition={competition} />
+      )}
+      {activeTab === 'registrations' && competition.sport_type !== 'rg' && (
         <RegistrationsTab
           lang={lang}
           globalTeams={globalTeams}
@@ -1276,13 +1256,16 @@ export default function CompetitionDetail({
           competitionAgeGroups={competition.age_groups}
           competitionYear={competition.start_date ? new Date(competition.start_date + 'T00:00:00').getFullYear() : new Date().getFullYear()}
           competitionStatus={competition.status}
+          provisionalEntries={provisionalEntries}
+          definitiveEntries={definitiveEntries}
         />
       )}
       {activeTab === 'licencias' && (
         <LicenciasTab
           lang={lang}
-          competitionId={competition.id}
           competitionStatus={competition.status}
+          provisionalEntries={provisionalEntries}
+          definitiveEntries={definitiveEntries}
           globalTeams={globalTeams}
           clubs={clubs}
           entries={entries}

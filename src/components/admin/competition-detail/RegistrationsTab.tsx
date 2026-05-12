@@ -2,18 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import type { Lang } from '@/components/scoring/types'
-import type { Team, Club, Gymnast, CompetitionEntry, AgeGroupRule, CompetitionStatus } from '@/components/admin/types'
-import { categoryLabel, sortByAgeGroupAndCategory, categoriesForRuleset, CATEGORY_LABELS } from '@/components/admin/types'
-import ClickableImg from '@/components/shared/ClickableImg'
+import type { Team, Club, Gymnast, CompetitionEntry, AgeGroupRule, CompetitionStatus, ProvisionalEntry, DefinitiveEntry } from '@/components/admin/types'
+import { SubTabSwitcher } from './SubTabSwitcher'
 import ImportTab from './ImportTab'
 import { createClient } from '@/lib/supabase'
-
-// ─── translations ─────────────────────────────────────────────────────────────
+import { ProvisionalSubTab } from './ProvisionalSubTab'
+import { DefinitiveSubTab, type AllowedClub } from './DefinitiveSubTab'
+import { NominativeView } from './NominativeSubTab'
 
 const T = {
   en: {
-    noRegistrations: 'No teams registered yet.',
-    import: 'Import',
     backToList: 'Back to registrations',
     registered: (n: number) => `${n} registered`,
     dropout: (n: number) => `${n} dropout`,
@@ -33,51 +31,8 @@ const T = {
     collapseAll: 'Collapse all',
     // sub-tabs
     subTabs: { provisional: 'Provisional', definitive: 'Definitive', nominative: 'Nominative' },
-    // provisional sub-tab
-    noProvisional: 'No provisional entries yet.',
-    total: 'Total',
-    teams: 'teams',
-    // definitive sub-tab
-    noDefinitive: 'No definitive entries yet.',
-    contact: 'Contact',
-    totalAmount: 'Total',
-    judgeProvided: 'Judge',
-    noJudge: 'No judge',
-    statusPending: 'Pending',
-    statusPaymentUploaded: 'Payment uploaded',
-    statusApproved: 'Approved',
-    statusRejected: 'Rejected',
-    approve: 'Approve',
-    reject: 'Reject',
-    viewPayment: 'View payment',
-    allowedClubs: 'Allowed clubs',
-    noAllowedClubs: 'No clubs allowed yet.',
-    addManually: 'Add club',
-    removeAllowed: 'Remove',
-    sourceAuto: 'Auto',
-    sourceManual: 'Manual',
-    selectClub: 'Select a club…',
-    add: 'Add',
-    cancel: 'Cancel',
-    confirmRemoveWithEntries: (name: string, n: number) =>
-      `${name} has ${n} registered team${n !== 1 ? 's' : ''}. Removing will delete their registrations. Continue?`,
-    confirmRemoveSimple: (name: string) => `Remove ${name} from allowed clubs?`,
-    confirm: 'Confirm',
-    adminNotes: 'Admin notes',
-    saveNotes: 'Save',
-    withDefinitiveEntry: 'With definitive entry',
-    noDefinitiveEntry: 'Other clubs',
-    inviteNewClub: '+ Invite new club',
-    inviteClubTitle: 'Invite new club',
-    emailLabel: 'Email',
-    sendInvite: 'Send invitation',
-    inviteSent: 'Invitation sent to',
-    inviteClubInfo: 'The club will receive an email to set up their account.',
-    sending: 'Sending…',
   },
   es: {
-    noRegistrations: 'Sin equipos registrados todavía.',
-    import: 'Importar',
     backToList: 'Volver a inscripciones',
     registered: (n: number) => `${n} inscrito${n === 1 ? '' : 's'}`,
     dropout: (n: number) => `${n} baja`,
@@ -97,47 +52,6 @@ const T = {
     collapseAll: 'Contraer todo',
     // sub-tabs
     subTabs: { provisional: 'Provisional', definitive: 'Definitiva', nominative: 'Nominativa' },
-    // provisional sub-tab
-    noProvisional: 'Sin inscripciones provisionales todavía.',
-    total: 'Total',
-    teams: 'equipos',
-    // definitive sub-tab
-    noDefinitive: 'Sin inscripciones definitivas todavía.',
-    contact: 'Contacto',
-    totalAmount: 'Total',
-    judgeProvided: 'Juez',
-    noJudge: 'Sin juez',
-    statusPending: 'Pendiente',
-    statusPaymentUploaded: 'Pago subido',
-    statusApproved: 'Aprobado',
-    statusRejected: 'Rechazado',
-    approve: 'Aprobar',
-    reject: 'Rechazar',
-    viewPayment: 'Ver pago',
-    allowedClubs: 'Clubes autorizados',
-    noAllowedClubs: 'Aún no hay clubes autorizados.',
-    addManually: 'Añadir club',
-    removeAllowed: 'Quitar',
-    sourceAuto: 'Auto',
-    sourceManual: 'Manual',
-    selectClub: 'Selecciona un club…',
-    add: 'Añadir',
-    cancel: 'Cancelar',
-    confirmRemoveWithEntries: (name: string, n: number) =>
-      `${name} tiene ${n} equipo${n !== 1 ? 's' : ''} inscrito${n !== 1 ? 's' : ''}. Al quitar el club se eliminarán sus inscripciones. ¿Continuar?`,
-    confirmRemoveSimple: (name: string) => `¿Quitar a ${name} de los clubes autorizados?`,
-    confirm: 'Confirmar',
-    adminNotes: 'Notas del admin',
-    saveNotes: 'Guardar',
-    withDefinitiveEntry: 'Con inscripción definitiva',
-    noDefinitiveEntry: 'Otros clubes',
-    inviteNewClub: '+ Invitar nuevo club',
-    inviteClubTitle: 'Invitar nuevo club',
-    emailLabel: 'Email',
-    sendInvite: 'Enviar invitación',
-    inviteSent: 'Invitación enviada a',
-    inviteClubInfo: 'El club recibirá un email para crear su cuenta.',
-    sending: 'Enviando…',
   },
 }
 
@@ -867,8 +781,6 @@ function defaultSubTab(status: CompetitionStatus): SubTab {
   return 'nominative'
 }
 
-// ─── main component ───────────────────────────────────────────────────────────
-
 export type RegistrationsTabProps = {
   lang: Lang
   globalTeams: Team[]
@@ -883,30 +795,28 @@ export type RegistrationsTabProps = {
   competitionAgeGroups: string[]
   competitionYear: number
   competitionStatus: CompetitionStatus
+  provisionalEntries: ProvisionalEntry[]
+  definitiveEntries: DefinitiveEntry[]
 }
-
-type SubTab = 'provisional' | 'definitive' | 'nominative'
 
 export default function RegistrationsTab({
   lang, globalTeams, clubs, gymnasts, entries, agLabels, onToggleDropout, onRemoveClubEntries,
   competitionId, ageGroupRules, competitionAgeGroups, competitionYear, competitionStatus,
+  provisionalEntries: initialProvisionalEntries, definitiveEntries: initialDefinitiveEntries,
 }: RegistrationsTabProps) {
   const t = T[lang]
   const [activeSubTab, setActiveSubTab] = useState<SubTab>(() => defaultSubTab(competitionStatus))
   const [showImport, setShowImport] = useState(false)
 
-  // ── nominative state ────────────────────────────────────────────────────────
-  const [openLevels,  setOpenLevels]  = useState<Set<string>>(new Set())
-  const [openGroups,  setOpenGroups]  = useState<Set<string>>(new Set())
+  const [openLevels,   setOpenLevels]   = useState<Set<string>>(new Set())
+  const [openGroups,   setOpenGroups]   = useState<Set<string>>(new Set())
   const [routineMusic, setRoutineMusic] = useState<Array<{ team_id: string; music_path: string | null; ts_path: string | null }>>([])
   const [musicUnlockByTeam, setMusicUnlockByTeam] = useState<Record<string, boolean>>({})
 
-  // ── provisional / definitive / allowed clubs state ──────────────────────────
-  const [provisionalEntries, setProvisionalEntries] = useState<ProvisionalEntry[]>([])
-  const [definitiveEntries,  setDefinitiveEntries]  = useState<DefinitiveEntry[]>([])
+  const [provisionalEntries, setProvisionalEntries] = useState<ProvisionalEntry[]>(() => initialProvisionalEntries)
+  const [definitiveEntries,  setDefinitiveEntries]  = useState<DefinitiveEntry[]>(() => initialDefinitiveEntries)
   const [allowedClubs,       setAllowedClubs]       = useState<AllowedClub[]>([])
-  // extra clubs from provisional/definitive entries that aren't in the `clubs` prop
-  const [extraClubs, setExtraClubs] = useState<Club[]>([])
+  const [extraClubs,         setExtraClubs]         = useState<Club[]>([])
 
   useEffect(() => {
     const teamIds = entries.map(e => e.team_id)
@@ -949,20 +859,16 @@ export default function RegistrationsTab({
 
   async function fetchEntryData() {
     const supabase = createClient()
-    const [provRes, defRes, allowedRes] = await Promise.all([
-      supabase.from('provisional_entries').select('id,club_id,teams_per_category,created_at').eq('competition_id', competitionId),
-      supabase.from('definitive_entries').select('id,club_id,contact_name,contact_phone,contact_email,teams_per_category,judge_name,total_amount,status,payment_document_url,admin_notes,created_at').eq('competition_id', competitionId),
-      supabase.from('competition_allowed_clubs').select('id,club_id,source,created_at').eq('competition_id', competitionId),
-    ])
-    if (provRes.data)    setProvisionalEntries(provRes.data as ProvisionalEntry[])
-    if (defRes.data)     setDefinitiveEntries(defRes.data as DefinitiveEntry[])
-    if (allowedRes.data) setAllowedClubs(allowedRes.data as AllowedClub[])
+    const { data: allowedData } = await supabase
+      .from('competition_allowed_clubs')
+      .select('id,club_id,source,created_at')
+      .eq('competition_id', competitionId)
+    if (allowedData) setAllowedClubs(allowedData as AllowedClub[])
 
-    // Fetch any clubs from entry data not already in the clubs prop
     const allEntryClubIds = [
-      ...(provRes.data ?? []).map(e => e.club_id),
-      ...(defRes.data ?? []).map(e => e.club_id),
-      ...(allowedRes.data ?? []).map(ac => ac.club_id),
+      ...provisionalEntries.map(e => e.club_id),
+      ...definitiveEntries.map(e => e.club_id),
+      ...(allowedData ?? []).map(ac => ac.club_id),
     ]
     const knownIds = new Set(clubs.map(c => c.id))
     const missingIds = [...new Set(allEntryClubIds)].filter(id => !knownIds.has(id))
@@ -976,7 +882,6 @@ export default function RegistrationsTab({
 
   const allClubs = [...clubs, ...extraClubs]
 
-  // ── import screen ────────────────────────────────────────────────────────────
   if (showImport) {
     return (
       <div>
@@ -998,34 +903,18 @@ export default function RegistrationsTab({
     )
   }
 
-  // ── sub-tab bar ───────────────────────────────────────────────────────────────
-  const SUB_TABS: { key: SubTab; label: string }[] = [
-    { key: 'provisional', label: t.subTabs.provisional },
-    { key: 'definitive',  label: t.subTabs.definitive  },
-    { key: 'nominative',  label: t.subTabs.nominative  },
-  ]
-
   return (
     <div>
-      {/* sub-tab bar */}
-      <div className="flex border-b border-slate-200 mb-5 gap-0">
-        {SUB_TABS.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setActiveSubTab(key)}
-            className={[
-              'px-4 py-2 text-sm font-semibold border-b-2 transition-all whitespace-nowrap',
-              activeSubTab === key
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-slate-400 hover:text-slate-600',
-            ].join(' ')}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <SubTabSwitcher
+        tabs={[
+          { key: 'provisional', label: t.subTabs.provisional },
+          { key: 'definitive',  label: t.subTabs.definitive  },
+          { key: 'nominative',  label: t.subTabs.nominative  },
+        ] as const}
+        active={activeSubTab}
+        onChange={setActiveSubTab}
+      />
 
-      {/* provisional */}
       {activeSubTab === 'provisional' && (
         <ProvisionalSubTab
           lang={lang}
@@ -1036,7 +925,6 @@ export default function RegistrationsTab({
         />
       )}
 
-      {/* definitive */}
       {activeSubTab === 'definitive' && (
         <DefinitiveSubTab
           lang={lang}
@@ -1048,11 +936,11 @@ export default function RegistrationsTab({
           ageGroupRules={ageGroupRules}
           competitionAgeGroups={competitionAgeGroups}
           onRefresh={fetchEntryData}
+          onUpdateEntry={(updated) => setDefinitiveEntries(prev => prev.map(e => e.id === updated.id ? updated : e))}
           onRemoveClubEntries={onRemoveClubEntries ?? (() => {})}
         />
       )}
 
-      {/* nominative */}
       {activeSubTab === 'nominative' && (
         <NominativeView
           lang={lang}

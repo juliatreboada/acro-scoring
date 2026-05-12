@@ -66,7 +66,7 @@ export const DEFAULT_FLAG: ElementFlag = {
 
 // ─── CJP types ────────────────────────────────────────────────────────────────
 
-export type PanelJudgeRole = 'CJP' | 'EJ' | 'AJ' | 'DJ'
+export type PanelJudgeRole = 'CJP' | 'EJ' | 'AJ' | 'DJ' | 'RJ' | 'E' | 'A' | 'DA' | 'DB'
 
 export type ScoreDetail = {
   djFlags?: ElementFlags
@@ -107,16 +107,20 @@ export type JudgeScore = {
   djDifficulty: number | null
   djPenalty: number | null
   cjpPenalty: number | null
+  dbScore?: number | null  // RG DB judge
   detail?: ScoreDetail
 }
 
 export type RoutineResult = {
   performanceId: string
-  eScore: number       // raw average (shown ×2 in ranking)
+  eScore: number       // raw average (shown ×2 in ranking for Acro; direct for RG)
   aScore: number
-  difScore: number
-  difPenalty: number
-  cjpPenalty: number
+  difScore: number     // Acro only
+  difPenalty: number   // Acro only
+  cjpPenalty: number   // Acro only
+  daScore?: number     // RG only
+  dbScore?: number     // RG only
+  rjPenalty?: number   // RG only
   finalScore: number
   status: 'provisional' | 'approved'
 }
@@ -208,6 +212,45 @@ export function computeResult(
     difScore: parseFloat(difScore.toFixed(2)),
     difPenalty: parseFloat(difPenalty.toFixed(1)),
     cjpPenalty: parseFloat(cjpPenaltyValue.toFixed(1)),
+    finalScore: parseFloat(finalScore.toFixed(3)),
+    status,
+  }
+}
+
+// ─── RG result computation ─────────────────────────────────────────────────────
+// final = e_score + a_score + da_score + db_score − rj_penalty
+
+export function computeRGResult(
+  performanceId: string,
+  scores: JudgeScore[],
+  panelJudges: PanelJudge[],
+  rjPenaltyValue: number,
+  status: 'provisional' | 'approved',
+): RoutineResult {
+  const eJudges = panelJudges.filter(j => j.role === 'E')
+  const aJudges = panelJudges.filter(j => j.role === 'A')
+  const daJudge = panelJudges.find(j => j.role === 'DA')
+  const dbJudge = panelJudges.find(j => j.role === 'DB')
+
+  const eVals  = eJudges.map(j => scores.find(s => s.panelJudgeId === j.id)?.ejScore ?? 0)
+  const aVals  = aJudges.map(j => scores.find(s => s.panelJudgeId === j.id)?.ajScore ?? 0)
+  const daScore = daJudge ? (scores.find(s => s.panelJudgeId === daJudge.id)?.djDifficulty ?? 0) : 0
+  const dbScore = dbJudge ? (scores.find(s => s.panelJudgeId === dbJudge.id)?.dbScore ?? 0) : 0
+
+  const eScore = average(eVals)
+  const aScore = average(aVals)
+  const finalScore = Math.max(0, eScore + aScore + daScore + dbScore - rjPenaltyValue)
+
+  return {
+    performanceId,
+    eScore:     parseFloat(eScore.toFixed(3)),
+    aScore:     parseFloat(aScore.toFixed(3)),
+    difScore:   0,
+    difPenalty: 0,
+    cjpPenalty: 0,
+    daScore:    parseFloat(daScore.toFixed(2)),
+    dbScore:    parseFloat(dbScore.toFixed(2)),
+    rjPenalty:  parseFloat(rjPenaltyValue.toFixed(1)),
     finalScore: parseFloat(finalScore.toFixed(3)),
     status,
   }

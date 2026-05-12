@@ -5,6 +5,7 @@ import type { Lang } from '@/components/scoring/types'
 import type { Competition, Section, Panel, Session, SessionOrder, Team, Club, CompetitionEntry, AgeGroupRule } from '@/components/admin/types'
 import { categoryLabel } from '@/components/admin/types'
 import ClickableImg from '@/components/shared/ClickableImg'
+import { formatDateRange } from '@/lib/formatDate'
 
 // ─── time helpers ─────────────────────────────────────────────────────────────
 

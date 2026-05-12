@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, AgeGroupRule, AdminUser } from './types'
 import ClickableImg from '@/components/shared/ClickableImg'
+import { formatDateRange } from '@/lib/formatDate'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -31,6 +32,9 @@ const T = {
     posterPlaceholder: 'Image URL (upload coming soon)',
     competitionAdmin: 'Competition admin',
     noAdmin: '— assign later —',
+    sportType: 'Sport',
+    acro: 'Acrobatic Gymnastics',
+    rg: 'Rhythmic Gymnastics',
     // status
     draft:                'Draft',
     provisional_entry:    'Provisional entry',
@@ -68,6 +72,9 @@ const T = {
     posterPlaceholder: 'URL de imagen (subida próximamente)',
     competitionAdmin: 'Admin de competición',
     noAdmin: '— asignar después —',
+    sportType: 'Deporte',
+    acro: 'Gimnasia Acrobática',
+    rg: 'Gimnasia Rítmica',
     // status
     draft:                'Borrador',
     provisional_entry:    'Inscripción provisional',
@@ -85,17 +92,6 @@ const T = {
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
-
-function formatDateRange(start: string | null, end: string | null): string {
-  const fmt = (d: string) =>
-    new Date(d + 'T00:00:00').toLocaleDateString(undefined, {
-      day: 'numeric', month: 'short', year: 'numeric',
-    })
-  if (start && end) return `${fmt(start)} – ${fmt(end)}`
-  if (start) return `${fmt(start)} –`
-  if (end)   return `– ${fmt(end)}`
-  return ''
-}
 
 const STATUS_STYLES: Record<string, string> = {
   draft:                'bg-slate-100/90 text-slate-500',
@@ -126,7 +122,10 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
   const [posterUrl, setPosterUrl]                   = useState('')
   const [registrationDeadline, setRegistrationDeadline] = useState('')
   const [adminId, setAdminId]                       = useState('')
+  const [sportType, setSportType] = useState<'acro' | 'rg'>('acro')
   const [selectedAGs, setSelectedAGs] = useState<Set<string>>(new Set())
+
+  const filteredAGs = ageGroupRules.filter((r) => r.sport_type === sportType)
 
   function toggleAG(ag: string) {
     setSelectedAGs((prev) => {
@@ -136,13 +135,19 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
     })
   }
 
+  function handleSportTypeChange(type: 'acro' | 'rg') {
+    setSportType(type)
+    setSelectedAGs(new Set())
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim() || selectedAGs.size === 0) return
+    if (!name.trim()) return
     const admin = availableAdmins.find((u) => u.id === adminId) ?? null
     onSubmit({
       name: name.trim(),
       status: 'draft',
+      sport_type: sportType,
       location: location.trim() || null,
       start_date: startDate || null,
       end_date: endDate || null,
@@ -160,12 +165,34 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
     })
   }
 
-  const valid = name.trim().length > 0 && selectedAGs.size > 0
+  const valid = name.trim().length > 0
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-6 shadow-sm">
       <h2 className="text-base font-semibold text-slate-800 mb-5">{t.formTitle}</h2>
       <form onSubmit={handleSubmit} className="space-y-5">
+
+        {/* sport type */}
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1.5">{t.sportType} *</label>
+          <div className="flex gap-2">
+            {(['acro', 'rg'] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => handleSportTypeChange(type)}
+                className={[
+                  'flex-1 py-2.5 rounded-xl border text-sm font-medium transition-all',
+                  sportType === type
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400',
+                ].join(' ')}
+              >
+                {t[type]}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* name */}
         <div>
@@ -240,10 +267,10 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
 
         {/* age groups */}
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">{t.ageGroups} *</label>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.ageGroups}</label>
           <p className="text-xs text-slate-400 mb-2.5">{t.ageGroupsHint}</p>
           <div className="flex flex-wrap gap-2">
-            {ageGroupRules.map((rule) => {
+            {filteredAGs.map((rule) => {
               const active = selectedAGs.has(rule.id)
               const rangeLabel = rule.max_age
                 ? `${rule.min_age}–${rule.max_age}`

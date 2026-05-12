@@ -1,10 +1,9 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, Team, Gymnast, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule, Coach, CompetitionCoach } from '@/components/admin/types'
-import { ROUTINE_TYPES, categoriesForRuleset } from '@/components/admin/types'
 import ProvisionalEntryForm from './ProvisionalEntryForm'
 import DefinitiveEntryForm from './DefinitiveEntryForm'
 
@@ -1204,6 +1203,8 @@ function CompetitionListView({
 }
 
 // ─── main export ──────────────────────────────────────────────────────────────
+import { CompetitionDetailView } from './CompetitionDetailView'
+import { CompetitionListView } from './CompetitionListView'
 
 export default function CompetitionsTab({
   lang, clubId, clubName, competitions, teams, gymnasts, coaches, competitionCoaches, entries, music, judges, nominations, agLabels, ageGroupRules,
@@ -1239,7 +1240,6 @@ export default function CompetitionsTab({
   const [provisionalEntryComp, setProvisionalEntryComp] = useState<Competition | null>(null)
   const [definitiveEntryComp, setDefinitiveEntryComp] = useState<Competition | null>(null)
 
-  // keyed by competition_id
   const [clubProvisionalEntries, setClubProvisionalEntries] = useState<Record<string, { teams_per_category: Record<string, number> }>>({})
   const [clubDefinitiveEntries, setClubDefinitiveEntries]   = useState<Record<string, { teams_per_category: Record<string, number> }>>({})
 

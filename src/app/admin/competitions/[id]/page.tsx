@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import CompetitionDetail from '@/components/admin/competition-detail/CompetitionDetail'
 import AuthBar from '@/components/shared/AuthBar'
+import { CompetitionPageSkeleton } from '@/components/admin/competition-detail/CompetitionPageSkeleton'
+import { useCompetitionPage } from '@/hooks/useCompetitionPage'
 import type { Lang } from '@/components/scoring/types'
 import type {
   Competition, Panel, Section, Session, Judge, SectionPanelJudge,
@@ -413,6 +415,7 @@ export default function Page() {
   async function handleCreateJudge(data: Omit<Judge, 'id' | 'avatar_url'>) {
     const { full_name, email, phone, licence } = data
     if (!email) return
+    const supabase = createClient()
     const { data: { session } } = await supabase.auth.getSession()
     const token = session?.access_token
     const body: Record<string, string> = { role: 'judge', email, full_name }
@@ -427,67 +430,13 @@ export default function Page() {
       const { error } = await res.json()
       throw new Error(error ?? 'Failed to send invite')
     }
-    // Judge will appear in the pool once they accept the invite and their profile is created
   }
 
-  async function handleAssignJudge(slotId: string, judgeId: string | null) {
-    await supabase.from('section_panel_judges').update({ judge_id: judgeId }).eq('id', slotId)
-    setAssignments(prev => prev.map(a => a.id === slotId ? { ...a, judge_id: judgeId } : a))
-  }
-
-  async function handleAddSlot(sectionId: string, panelId: string, role: Role) {
-    const existing = assignments.filter(a => a.section_id === sectionId && a.panel_id === panelId && a.role === role)
-    if (existing.length >= ROLE_CONFIG[role].max) return
-    const { data: newSlot } = await supabase.from('section_panel_judges')
-      .insert({ section_id: sectionId, panel_id: panelId, judge_id: null, role, role_number: existing.length + 1 })
-      .select().single()
-    if (newSlot) setAssignments(prev => [...prev, newSlot as SectionPanelJudge])
-  }
-
-  async function handleRemoveSlot(sectionId: string, panelId: string, role: Role) {
-    const slots = assignments
-      .filter(a => a.section_id === sectionId && a.panel_id === panelId && a.role === role)
-      .sort((a, b) => b.role_number - a.role_number)
-    if (slots.length <= ROLE_CONFIG[role].min) return
-    const toRemove = slots[0]
-    await supabase.from('section_panel_judges').delete().eq('id', toRemove.id)
-    setAssignments(prev => prev.filter(a => a.id !== toRemove.id))
-  }
-
-  async function handleTogglePanelLock(sectionId: string, panelId: string) {
-    const current = panelLocks.find(l => l.section_id === sectionId && l.panel_id === panelId)
-    const nextLocked = !(current?.locked ?? false)
-    await (supabase as any).from('section_panel_locks').upsert(
-      { section_id: sectionId, panel_id: panelId, locked: nextLocked, updated_at: new Date().toISOString() },
-      { onConflict: 'section_id,panel_id' }
-    )
-    setPanelLocks(prev => {
-      const without = prev.filter(l => !(l.section_id === sectionId && l.panel_id === panelId))
-      return [...without, { section_id: sectionId, panel_id: panelId, locked: nextLocked }]
-    })
-  }
-
-  // ── registrations ─────────────────────────────────────────────────────────────
-  async function handleToggleDropout(entryId: string) {
-    const entry = entries.find(e => e.id === entryId)
-    if (!entry) return
-    const next = !entry.dropped_out
-    await supabase.from('competition_entries').update({ dropped_out: next }).eq('id', entryId)
-    setEntries(prev => prev.map(e => e.id === entryId ? { ...e, dropped_out: next } : e))
-  }
-
-  async function handleRemoveClubEntries(clubId: string) {
-    const clubTeamIds = globalTeams.filter(t => t.club_id === clubId).map(t => t.id)
-    if (clubTeamIds.length === 0) return
-    await supabase.from('competition_entries').delete().eq('competition_id', id).in('team_id', clubTeamIds)
-    setEntries(prev => prev.filter(e => !clubTeamIds.includes(e.team_id)))
-  }
-
-  // ── starting order ────────────────────────────────────────────────────────────
+  // ── admin-only: auto-create session_orders when locking for the first time ────
   async function handleToggleLock(sessionId: string) {
+    const supabase = createClient()
     const isLocked = lockedSessions.includes(sessionId)
 
-    // When locking: auto-create session_orders if none exist yet
     if (!isLocked) {
       const existingOrders = sessionOrders.filter(o => o.session_id === sessionId)
       if (existingOrders.length === 0) {
@@ -689,7 +638,7 @@ export default function Page() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <AuthBar lang={lang} onLangChange={(l) => setLang(l as Lang)} />
+      <AuthBar lang={lang} onLangChange={setLang} />
 
       <CompetitionDetail
         lang={lang}
@@ -726,6 +675,8 @@ export default function Page() {
         globalTeams={globalTeams}
         clubs={clubs}
         entries={entries}
+        provisionalEntries={provisionalEntries}
+        definitiveEntries={definitiveEntries}
         onToggleDropout={handleToggleDropout}
         onRemoveClubEntries={handleRemoveClubEntries}
         sessionOrders={sessionOrders}

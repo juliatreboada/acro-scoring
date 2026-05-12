@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import CompetitionDetail from '@/components/admin/competition-detail/CompetitionDetail'
 import AuthBar from '@/components/shared/AuthBar'
+import { CompetitionPageSkeleton } from '@/components/admin/competition-detail/CompetitionPageSkeleton'
+import { useCompetitionPage } from '@/hooks/useCompetitionPage'
 import type { Lang } from '@/components/scoring/types'
 import type {
   Competition, Panel, Section, Session, Judge, SectionPanelJudge,
@@ -458,6 +460,7 @@ export default function Page() {
 
   // ── starting order ────────────────────────────────────────────────────────────
   async function handleToggleLock(sessionId: string) {
+    const supabase = createClient()
     const isLocked = lockedSessions.includes(sessionId)
     await supabase.from('sessions').update({ order_locked: !isLocked } as never).eq('id', sessionId)
     setLockedSessions(prev =>
@@ -635,7 +638,7 @@ export default function Page() {
       {actionError && (
         <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-red-600 text-white text-sm px-4 py-3 rounded-xl shadow-lg">
           <span>{actionError}</span>
-          <button onClick={() => setActionError(null)} className="text-white/70 hover:text-white">✕</button>
+          <button onClick={clearActionError} className="text-white/70 hover:text-white">✕</button>
         </div>
       )}
 
@@ -673,6 +676,8 @@ export default function Page() {
         globalTeams={globalTeams}
         clubs={clubs}
         entries={entries}
+        provisionalEntries={provisionalEntries}
+        definitiveEntries={definitiveEntries}
         onToggleDropout={handleToggleDropout}
         onRemoveClubEntries={handleRemoveClubEntries}
         sessionOrders={sessionOrders}

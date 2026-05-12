@@ -1,14 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase'
-import { useProfile } from '@/contexts/ProfileContext'
+import { useState } from 'react'
 import type { Lang } from '@/components/scoring/types'
-import type { Club, Gymnast, Coach, CompetitionCoach, Team, Competition, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule } from '@/components/admin/types'
+import { useClubData } from '@/hooks/useClubData'
 import ClubPortal from '@/components/club/ClubPortal'
 import AuthBar from '@/components/shared/AuthBar'
-
-// ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function Page() {
   const supabase = createClient()
@@ -476,10 +472,10 @@ export default function Page() {
     <div>
       <AuthBar lang={lang} onLangChange={setLang} />
 
-      {uploadError && (
+      {actionError && (
         <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-red-600 text-white text-sm px-4 py-3 rounded-xl shadow-lg">
-          <span>{uploadError}</span>
-          <button onClick={() => setUploadError(null)} className="text-white/70 hover:text-white">✕</button>
+          <span>{actionError}</span>
+          <button onClick={clearActionError} className="text-white/70 hover:text-white">✕</button>
         </div>
       )}
 
@@ -498,6 +494,8 @@ export default function Page() {
         nominations={nominations}
         agLabels={agLabels}
         ageGroupRules={ageGroupRules}
+        apparatus={apparatus}
+        apparatusRules={apparatusRules}
         onAddGymnast={handleAddGymnast}
         onAddGymnastsBulk={handleAddGymnastsBulk}
         onUpdateGymnast={handleUpdateGymnast}
