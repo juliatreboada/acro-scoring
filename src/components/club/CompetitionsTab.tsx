@@ -478,6 +478,17 @@ function routineTypesForTeam(team: Team, ageGroupRules: AgeGroupRule[]): (typeof
   return ['Balance', 'Dynamic', 'Combined']
 }
 
+/** Rule UUID on the team row, or legacy human-readable label matching `agLabels[ruleId]`. */
+function teamMatchesCompetitionAgeGroups(
+  team: Team,
+  competition: Competition,
+  agLabels: Record<string, string>,
+): boolean {
+  return competition.age_groups.some(
+    (agId) => agId === team.age_group || (!!agLabels[agId] && agLabels[agId] === team.age_group),
+  )
+}
+
 function CompetitionDetailView({
   lang, clubId, competition, teams, gymnasts, coaches, competitionCoaches, entries, music, judges, nominations, agLabels, ageGroupRules,
   tsReviewStatuses, definitiveEntryQuota, onBack,
@@ -537,14 +548,17 @@ function CompetitionDetailView({
 
   useEffect(() => {
     const supabase = createClient()
-    const teamIds = teams
-      .filter((team) =>
-        competition.age_groups.some(agId =>
-          agId === team.age_group ||
-          (agLabels[agId] && agLabels[agId] === team.age_group),
-        ),
-      )
-      .map((t) => t.id)
+    const enteredIds = entries
+      .filter((e) => e.competition_id === competition.id)
+      .map((e) => e.team_id)
+    const teamIds = [
+      ...new Set([
+        ...teams
+          .filter((team) => !team.archived_at && teamMatchesCompetitionAgeGroups(team, competition, agLabels))
+          .map((t) => t.id),
+        ...enteredIds,
+      ]),
+    ].filter((id) => teams.some((t) => t.id === id))
     if (!teamIds.length) {
       setMusicUnlockedByTeam({})
       return
@@ -559,15 +573,16 @@ function CompetitionDetailView({
         for (const row of data ?? []) map[row.team_id] = !!row.enabled
         setMusicUnlockedByTeam(map)
       })
-  }, [competition.id, competition.age_groups, teams, agLabels])
+  }, [competition.id, competition.age_groups, teams, agLabels, entries])
 
-  // Fix eligible teams filter: match by UUID (ag_group = rule.id) OR by label name (legacy)
-  const eligibleTeams = teams.filter((team) =>
-    competition.age_groups.some(agId =>
-      agId === team.age_group ||
-      (agLabels[agId] && agLabels[agId] === team.age_group)
-    )
+  const rosterTeams = teams.filter((team) => !team.archived_at)
+  // Eligible for new registration; also show teams already entered even if age_group no longer matches (edits / rule changes).
+  const eligibleTeams = rosterTeams.filter((team) => teamMatchesCompetitionAgeGroups(team, competition, agLabels))
+  const enteredTeamIds = new Set(
+    entries.filter((e) => e.competition_id === competition.id).map((e) => e.team_id),
   )
+  const registeredOutsideEligible = teams.filter((t) => enteredTeamIds.has(t.id) && !eligibleTeams.some((e) => e.id === t.id))
+  const teamsListedForCompetition = [...eligibleTeams, ...registeredOutsideEligible]
 
   const compNominations = nominations.filter((n) => n.competition_id === competition.id)
   const nominatedIds = new Set(compNominations.map((n) => n.judge_id))
@@ -608,12 +623,12 @@ function CompetitionDetailView({
     if (!definitiveEntryQuota) return null
     const key = `${team.age_group}|${team.category}`
     const limit = definitiveEntryQuota[key] ?? 0
-    const used = eligibleTeams.filter(t =>
-      t.age_group === team.age_group && t.category === team.category
-    ).filter(t => {
-      const e = entryFor(t.id)
-      return e && !e.dropped_out
-    }).length
+    const used = teams
+      .filter((t) => t.age_group === team.age_group && t.category === team.category)
+      .filter((t) => {
+        const e = entryFor(t.id)
+        return e && !e.dropped_out
+      }).length
     return { limit, used }
   }
 
@@ -871,11 +886,11 @@ function CompetitionDetailView({
         </div>
       ) : teams.length === 0 ? (
         <p className="text-sm text-slate-400 text-center py-10 bg-white border border-slate-200 rounded-2xl">{t.noTeams}</p>
-      ) : eligibleTeams.length === 0 ? (
+      ) : teamsListedForCompetition.length === 0 ? (
         <p className="text-sm text-slate-400 text-center py-10 bg-white border border-slate-200 rounded-2xl">{t.noEligibleTeams}</p>
       ) : (
         <div className="space-y-3">
-          {eligibleTeams.map((team) => {
+          {teamsListedForCompetition.map((team) => {
             const entry = entryFor(team.id)
             const missingLicencia = (team.gymnast_ids ?? []).some(gid => {
               const g = gymnasts.find(x => x.id === gid)
@@ -942,7 +957,7 @@ function CompetitionDetailView({
                         <button onClick={() => {
                           const errs = validateTeamAges(team, gymnasts, ageGroupRules, competitionYear)
                           if (errs.length > 0) { setAgeError({ teamId: team.id, messages: errs }); return }
-                          if (!competition.age_groups.some(ag => ag === team.age_group)) {
+                          if (!teamMatchesCompetitionAgeGroups(team, competition, agLabels)) {
                             setAgeError({ teamId: team.id, messages: [lang === 'es' ? 'El grupo de edad de este equipo no está incluido en esta competición.' : 'This team\'s age group is not part of this competition.'] })
                             return
                           }

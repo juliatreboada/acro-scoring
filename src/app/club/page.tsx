@@ -45,7 +45,7 @@ export default function Page() {
         supabase.from('clubs').select('id,club_name,contact_name,phone,avatar_url').eq('id', cid).single(),
         (supabase as any).from('gymnasts').select('id,club_id,first_name,last_name_1,last_name_2,date_of_birth,photo_url,licencia_url').eq('club_id', cid),
         (supabase as any).from('coaches').select('id,club_id,full_name,licence,photo_url,licencia_url').eq('club_id', cid),
-        supabase.from('teams').select('id,club_id,category,age_group,gymnast_display,photo_url').eq('club_id', cid),
+        supabase.from('teams').select('id,club_id,category,age_group,gymnast_display,photo_url,archived_at').eq('club_id', cid),
         supabase.from('competitions')
           .select('id,name,status,location,start_date,end_date,provisional_entry_deadline, definitive_entry_deadline,registration_deadline,ts_music_deadline,age_groups,poster_url,logo_url,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine')
           .neq('status', 'draft')
@@ -225,6 +225,11 @@ export default function Page() {
   }
 
   async function handleUpdateTeam(id: string, t: Omit<Team, 'id' | 'club_id' | 'photo_url'>) {
+    const existing = teams.find(x => x.id === id)
+    if (existing?.archived_at) {
+      setUploadError(lang === 'es' ? 'Restaura el equipo antes de editarlo.' : 'Restore the team before editing.')
+      return
+    }
     const { gymnast_ids, ...rest } = t
     await supabase.from('teams').update(rest).eq('id', id)
     // replace team_gymnasts
@@ -238,16 +243,36 @@ export default function Page() {
   }
 
   async function handleDeleteTeam(id: string) {
-    await supabase.from('teams').delete().eq('id', id)
-    setTeams(prev => prev.filter(x => x.id !== id))
-    setEntries(prev => prev.filter(e => e.team_id !== id))
-    setMusicState(prev => prev.filter(m => m.team_id !== id))
+    const now = new Date().toISOString()
+    const { error } = await supabase.from('teams').update({ archived_at: now }).eq('id', id)
+    if (error) {
+      setUploadError(error.message)
+      return
+    }
+    setTeams(prev => prev.map(x => (x.id === id ? { ...x, archived_at: now } : x)))
+  }
+
+  async function handleRestoreTeam(id: string) {
+    const { error } = await supabase.from('teams').update({ archived_at: null }).eq('id', id)
+    if (error) {
+      setUploadError(error.message)
+      return
+    }
+    setTeams(prev => prev.map(x => (x.id === id ? { ...x, archived_at: null } : x)))
   }
 
   // ── registrations ─────────────────────────────────────────────────────────────
   async function handleRegister(competitionId: string, teamId: string) {
     if (entries.some(e => e.competition_id === competitionId && e.team_id === teamId)) return
     const team = teams.find(t => t.id === teamId)
+    if (team?.archived_at) {
+      setUploadError(
+        lang === 'es'
+          ? 'Este equipo está archivado. Restáuralo en Equipos antes de inscribirlo.'
+          : 'This team is archived. Restore it under Teams before registering.',
+      )
+      return
+    }
     const { data } = await supabase.from('competition_entries')
       .insert({
         competition_id: competitionId,
@@ -490,6 +515,7 @@ export default function Page() {
         onAddTeam={handleAddTeam}
         onUpdateTeam={handleUpdateTeam}
         onDeleteTeam={handleDeleteTeam}
+        onRestoreTeam={handleRestoreTeam}
         onUploadTeamPhoto={handleUploadTeamPhoto}
         onRegister={handleRegister}
         onDropout={handleDropout}

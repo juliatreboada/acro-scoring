@@ -156,6 +156,8 @@ export type Team = {
   age_group: string
   gymnast_display: string   // e.g. "Fernández / Ruiz"
   photo_url: string | null
+  /** Set when club removes team from roster; row kept for competition FKs. */
+  archived_at?: string | null
 }
 
 export type RoutineMusic = {
