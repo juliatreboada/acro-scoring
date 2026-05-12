@@ -1097,6 +1097,7 @@ export type Database = {
       teams: {
         Row: {
           age_group: string
+          archived_at: string | null
           category: string
           club_id: string
           created_at: string
@@ -1106,6 +1107,7 @@ export type Database = {
         }
         Insert: {
           age_group: string
+          archived_at?: string | null
           category: string
           club_id: string
           created_at?: string
@@ -1115,6 +1117,7 @@ export type Database = {
         }
         Update: {
           age_group?: string
+          archived_at?: string | null
           category?: string
           club_id?: string
           created_at?: string
