@@ -180,11 +180,12 @@ function PhoneView({ perf, lang, penaltyState, onPenaltyChange, onSubmit }: {
 // ─── tablet layout ────────────────────────────────────────────────────────────
 
 function TabletLayout({
-  lang, performances, currentPerfId, panelJudges, judgeScores, results,
-  penaltyStates, onPenaltyChange, onOpen, onSkip, onSubmitAJScore, onSubmit, onReopenScore, onEditScore,
+  lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results,
+  penaltyStates, onPenaltyChange, onOpen, onSkip, onSubmitAJScore, onSubmit, onReopenScore, onUnpublishResult, onEditScore,
 }: {
   lang: Lang
   performances: ScoringPerformance[]
+  rankingPerformances?: ScoringPerformance[]
   currentPerfId: string | null
   panelJudges: PanelJudge[]
   judgeScores: Record<string, JudgeScore[]>
@@ -196,6 +197,7 @@ function TabletLayout({
   onSubmitAJScore?: (perfId: string, score: number) => void
   onSubmit?: (status: 'provisional' | 'approved', result: RoutineResult) => void
   onReopenScore?: (perfId: string, panelJudgeId: string | 'all') => void
+  onUnpublishResult?: (perfId: string) => void
   onEditScore?: (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
 }) {
   const t = T[lang]
@@ -211,6 +213,7 @@ function TabletLayout({
     <CJPTabletShell
       lang={lang}
       performances={performances}
+      rankingPerformances={rankingPerformances}
       currentPerfId={currentPerfId}
       panelJudges={panelJudges}
       judgeScores={judgeScores}
@@ -219,7 +222,7 @@ function TabletLayout({
       onOpen={onOpen}
       onSkip={onSkip}
       onSubmit={onSubmit}
-      onReopenScore={onReopenScore}
+      onReopenScore={onReopenScore} onUnpublishResult={onUnpublishResult}
       onEditScore={onEditScore}
       renderRightPanel={(activePerfId, _isReviewMode) => {
         const penalty = activePerfId ? (penaltyStates[activePerfId] ?? DEFAULT_PENALTY) : DEFAULT_PENALTY
@@ -282,6 +285,7 @@ function TabletLayout({
 export type CJPAJViewProps = {
   lang: Lang
   performances: ScoringPerformance[]
+  rankingPerformances?: ScoringPerformance[]
   currentPerfId: string | null
   panelJudges: PanelJudge[]
   judgeScores: Record<string, JudgeScore[]>
@@ -291,13 +295,14 @@ export type CJPAJViewProps = {
   onSubmitAJScore?: (perfId: string, score: number) => void
   onSubmit?: (status: 'provisional' | 'approved', result: RoutineResult) => void
   onReopenScore?: (perfId: string, panelJudgeId: string | 'all') => void
+  onUnpublishResult?: (perfId: string) => void
   onEditScore?: (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
   onPhoneSubmit?: (ajScore: number, cjpPenalty: number) => void
 }
 
 export default function CJPAJView({
-  lang, performances, currentPerfId, panelJudges, judgeScores, results,
-  onOpen, onSkip, onSubmitAJScore, onSubmit, onReopenScore, onEditScore, onPhoneSubmit,
+  lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results,
+  onOpen, onSkip, onSubmitAJScore, onSubmit, onReopenScore, onUnpublishResult, onEditScore, onPhoneSubmit,
 }: CJPAJViewProps) {
   const [penaltyStates, setPenaltyStates] = useState<Record<string, PenaltyState>>({})
 
@@ -342,6 +347,7 @@ export default function CJPAJView({
         <TabletLayout
           lang={lang}
           performances={performances}
+          rankingPerformances={rankingPerformances}
           currentPerfId={currentPerfId}
           panelJudges={panelJudges}
           judgeScores={judgeScores}
@@ -352,7 +358,7 @@ export default function CJPAJView({
           onSkip={onSkip}
           onSubmitAJScore={onSubmitAJScore}
           onSubmit={onSubmit}
-          onReopenScore={onReopenScore}
+          onReopenScore={onReopenScore} onUnpublishResult={onUnpublishResult}
           onEditScore={onEditScore}
         />
       </div>

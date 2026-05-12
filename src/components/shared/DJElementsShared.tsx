@@ -28,7 +28,7 @@ const T = {
     note: 'Nota…', addRetry: 'Añadir reintento', retry: 'Reintento',
     difficulty: 'D', elementLabel: 'Descripción del elemento…', isStatic: 'Estático',
     incorrectTs: 'TS incorrecta', incorrectTsNote: '−0.3 · orden o elemento difiere de lo declarado en TS',
-    noElements: 'No hay elementos en la hoja de tarifa', noElementsNote: 'Puedes enviar directamente',
+    noElements: 'No hay elementos en la TS', noElementsNote: 'Puedes enviar directamente',
     addElement: '+ Añadir elemento no listado',
     submit: 'Enviar', difficultyTotal: 'Dificultad', djPenalty: 'Pen. DJ',
     scoreHint: 'Introduce dificultad y penalización',

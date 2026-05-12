@@ -12,7 +12,7 @@ export default function Page() {
   const {
     loading, sessionId,
     assignedRoles, panelJudges, currentPerfId, currentPerf, judgeScores, results,
-    djMethod, ejMethod, handleJudgeScoreSubmit, submitError, clearSubmitError,
+    djMethod, ejMethod, handleJudgeScoreSubmit, submitError, clearSubmitError, practiceMode,
   } = useJudgeSession()
 
   const djRole = assignedRoles.find(r => r.role === 'DJ')
@@ -34,7 +34,7 @@ export default function Page() {
   }
 
   return (
-    <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} submitError={submitError} onClearError={clearSubmitError}>
+    <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} submitError={submitError} onClearError={clearSubmitError} practiceMode={practiceMode}>
       <div className="md:flex-1 md:min-h-0 md:flex md:flex-col">
       <DJEJView
         currentPerf={currentPerf} lang={lang} elements={currentPerf?.elements ?? []}

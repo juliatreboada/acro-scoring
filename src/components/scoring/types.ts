@@ -94,6 +94,10 @@ export type ScoringPerformance = {
   skipped: boolean
   tsUrl?: string | null
   elements: TsElement[]
+  /** When set, CJP/TV/public ranking pools this session with peers in the same merge group. */
+  rankingMergeGroupId?: string | null
+  mergeLabelEs?: string | null
+  mergeLabelEn?: string | null
 }
 
 export type JudgeScore = {

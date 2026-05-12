@@ -70,6 +70,7 @@ export type ClubPortalProps = {
   onAddTeam: (t: Omit<Team, 'id' | 'club_id' | 'photo_url'>) => void
   onUpdateTeam: (id: string, t: Omit<Team, 'id' | 'club_id' | 'photo_url'>) => void
   onDeleteTeam: (id: string) => void
+  onRestoreTeam: (id: string) => void
   onUploadTeamPhoto: (id: string, file: File) => Promise<void>
   // judges
   onInviteJudge: (j: { full_name: string; email: string; phone?: string; licence?: string }) => Promise<void>
@@ -95,7 +96,7 @@ export default function ClubPortal({
   lang, club, gymnasts, coaches, competitionCoaches, teams, judges, nominations, competitions, entries, music, agLabels, ageGroupRules, apparatus, apparatusRules, tsReviewStatuses,
   onAddGymnast, onAddGymnastsBulk, onUpdateGymnast, onDeleteGymnast, onUploadGymnastPhoto, onUploadLicencia, onRemoveLicencia,
   onAddCoach, onUpdateCoach, onDeleteCoach, onUploadCoachPhoto, onUploadCoachLicencia, onRegisterCoach, onUnregisterCoach,
-  onAddTeam, onUpdateTeam, onDeleteTeam, onUploadTeamPhoto,
+  onAddTeam, onUpdateTeam, onDeleteTeam, onRestoreTeam, onUploadTeamPhoto,
   onInviteJudge, onUpdateJudge, onDeleteJudge, onUploadJudgePhoto,
   onRegister, onDropout, onSetFile,
   onNominate, onRemoveNomination,
@@ -110,7 +111,7 @@ export default function ClubPortal({
   const TABS: { key: Tab; label: string; count?: number }[] = [
     { key: 'gymnasts',     label: t.tabs.gymnasts,     count: gymnasts.length },
     { key: 'coaches',      label: t.tabs.coaches,      count: coaches.length },
-    { key: 'teams',        label: t.tabs.teams,        count: teams.length },
+    { key: 'teams',        label: t.tabs.teams,        count: teams.filter((tm) => !tm.archived_at).length },
     { key: 'competitions', label: t.tabs.competitions, count: uniqueCompIds.size },
     { key: 'profile',      label: t.tabs.profile },
   ]
@@ -140,7 +141,7 @@ export default function ClubPortal({
             {[
               { n: gymnasts.length,    label: t.gymnasts },
               { n: coaches.length,     label: t.coaches },
-              { n: teams.length,       label: t.teams },
+              { n: teams.filter((tm) => !tm.archived_at).length, label: t.teams },
               { n: uniqueCompIds.size, label: t.registrations },
             ].map(({ n, label }) => (
               <div key={label} className="text-center">
@@ -187,8 +188,8 @@ export default function ClubPortal({
         {activeTab === 'teams' && (
           <TeamsTab lang={lang} gymnasts={gymnasts} teams={teams}
             ageGroupRules={ageGroupRules} agLabels={agLabels}
+            onAdd={onAddTeam} onUpdate={onUpdateTeam} onArchive={onDeleteTeam} onRestore={onRestoreTeam}
             apparatus={apparatus} apparatusRules={apparatusRules}
-            onAdd={onAddTeam} onUpdate={onUpdateTeam} onDelete={onDeleteTeam}
             onUploadPhoto={onUploadTeamPhoto} />
         )}
         {activeTab === 'competitions' && (

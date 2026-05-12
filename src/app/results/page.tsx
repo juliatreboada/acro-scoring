@@ -20,6 +20,7 @@ const T = {
     subtitle: 'Select a competition to view its results.',
     live: 'Live',
     finished: 'Finished',
+    finishedCompetition: 'Finished competition',
     noCompetitions: 'No results available yet.',
   },
   es: {
@@ -27,6 +28,7 @@ const T = {
     subtitle: 'Selecciona una competición para ver sus resultados.',
     live: 'En vivo',
     finished: 'Finalizada',
+    finishedCompetition: 'Competición finalizada',
     noCompetitions: 'Aún no hay resultados disponibles.',
   },
 }
@@ -93,7 +95,8 @@ export default function Page() {
             {visible.map((comp) => {
               const dateStr = formatDateRange(comp.start_date, comp.end_date)
               const badgeCls = STATUS_BADGE[comp.status] ?? ''
-              const statusLabel = comp.status === 'active' ? t.live : t.finished
+              const statusLabel =
+                comp.status === 'active' ? t.live : comp.status === 'finished' ? t.finishedCompetition : t.finished
 
               return (
                 <button

@@ -46,11 +46,11 @@ const T = {
     difficultyTotal: 'Dificultad',
     djPenalty: 'Pen. DJ',
     ajScore: 'Punt. AJ',
-    pdfPlaceholder: 'Hoja de tarifa',
+    pdfPlaceholder: 'TS',
     pdfNote: 'El PDF aparecerá aquí una vez subido',
     submit: 'Enviar',
     addElement: '+ Añadir elemento no listado',
-    noElements: 'No hay elementos en la hoja de tarifa',
+    noElements: 'No hay elementos en la TS',
     noElementsNote: 'Puedes enviar directamente',
   },
 }

@@ -10,25 +10,38 @@ export default function Page() {
   const [lang, setLang] = useState<Lang>('es')
   const {
     loading, sessionId,
-    panelJudges, performances, currentPerfId, judgeScores, results,
-    handleOpen, handleSkip, handleCJPSubmit, handleReopenScore, handleEditScore,
-    submitError, clearSubmitError,
+    panelJudges, performances, rankingPerformances, currentPerfId, judgeScores, results,
+    handleOpen, handleSkip, handleCJPSubmit, handleReopenScore, handleUnpublishResult, handleEditScore,
+    submitError, clearSubmitError, practiceMode, startSectionPractice, stopSectionPractice,
   } = useJudgeSession()
 
   return (
-    <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} className="min-h-screen bg-slate-100" submitError={submitError} onClearError={clearSubmitError}>
+    <JudgeScoringShell
+      loading={loading}
+      sessionId={sessionId}
+      lang={lang}
+      onLangChange={setLang}
+      className="min-h-screen bg-slate-100"
+      submitError={submitError}
+      onClearError={clearSubmitError}
+      practiceMode={practiceMode}
+      canControlPractice
+      onStartPractice={() => { void startSectionPractice() }}
+      onStopPractice={() => { void stopSectionPractice() }}
+    >
       <CJPView
         isCJP={true}
         lang={lang}
         panelJudges={panelJudges}
         performances={performances}
+        rankingPerformances={rankingPerformances}
         currentPerfId={currentPerfId}
         judgeScores={judgeScores}
         results={results}
         onOpen={handleOpen}
         onSkip={handleSkip}
         onSubmit={handleCJPSubmit}
-        onReopenScore={handleReopenScore}
+        onReopenScore={handleReopenScore} onUnpublishResult={handleUnpublishResult}
         onEditScore={handleEditScore}
       />
     </JudgeScoringShell>

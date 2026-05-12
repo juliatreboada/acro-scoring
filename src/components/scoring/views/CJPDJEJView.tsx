@@ -261,14 +261,15 @@ function PhoneView({ lang, djMode, ejMode, elements, extraElements, flags, deduc
 // ─── tablet layout ────────────────────────────────────────────────────────────
 
 function TabletLayout({
-  lang, performances, currentPerfId, panelJudges, judgeScores, results,
+  lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results,
   elements, extraElements, flags, deductions, incorrectTs, penaltyStates,
   onFlagChange, onLock, onOpenRetry, onAddElement, onLabelChange, onTypeChange,
   onToggleIncorrectTs, onPenaltyChange, onOpen, onSkip,
-  onSubmitDJScore, onSubmitEJScore, onSubmit, onReopenScore, onEditScore,
+  onSubmitDJScore, onSubmitEJScore, onSubmit, onReopenScore, onUnpublishResult, onEditScore,
 }: {
   lang: Lang
   performances: ScoringPerformance[]
+  rankingPerformances?: ScoringPerformance[]
   currentPerfId: string | null
   panelJudges: PanelJudge[]
   judgeScores: Record<string, JudgeScore[]>
@@ -293,6 +294,7 @@ function TabletLayout({
   onSubmitEJScore?: (perfId: string, ejScore: number) => void
   onSubmit?: (status: 'provisional' | 'approved', result: RoutineResult) => void
   onReopenScore?: (perfId: string, panelJudgeId: string | 'all') => void
+  onUnpublishResult?: (perfId: string) => void
   onEditScore?: (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
 }) {
   const t = T[lang]
@@ -311,6 +313,7 @@ function TabletLayout({
     <CJPTabletShell
       lang={lang}
       performances={performances}
+      rankingPerformances={rankingPerformances}
       currentPerfId={currentPerfId}
       panelJudges={panelJudges}
       judgeScores={judgeScores}
@@ -319,7 +322,7 @@ function TabletLayout({
       onOpen={onOpen}
       onSkip={onSkip}
       onSubmit={onSubmit}
-      onReopenScore={onReopenScore}
+      onReopenScore={onReopenScore} onUnpublishResult={onUnpublishResult}
       onEditScore={onEditScore}
       renderRightPanel={(activePerfId, _isReviewMode) => {
         const penalty = activePerfId ? (penaltyStates[activePerfId] ?? DEFAULT_PENALTY) : DEFAULT_PENALTY
@@ -393,6 +396,7 @@ function TabletLayout({
 export type CJPDJEJViewProps = {
   lang: Lang
   performances: ScoringPerformance[]
+  rankingPerformances?: ScoringPerformance[]
   currentPerfId: string | null
   panelJudges: PanelJudge[]
   judgeScores: Record<string, JudgeScore[]>
@@ -406,14 +410,15 @@ export type CJPDJEJViewProps = {
   onSubmitEJScore?: (perfId: string, ejScore: number) => void
   onSubmit?: (status: 'provisional' | 'approved', result: RoutineResult) => void
   onReopenScore?: (perfId: string, panelJudgeId: string | 'all') => void
+  onUnpublishResult?: (perfId: string) => void
   onEditScore?: (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
   onPhoneSubmit?: (difficulty: number, djPenalty: number, ejScore: number, cjpPenalty: number) => void
 }
 
 export default function CJPDJEJView({
-  lang, performances, currentPerfId, panelJudges, judgeScores, results, elements,
+  lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results, elements,
   djMode = 'elements', ejMode = 'elements',
-  onOpen, onSkip, onSubmitDJScore, onSubmitEJScore, onSubmit, onReopenScore, onEditScore, onPhoneSubmit,
+  onOpen, onSkip, onSubmitDJScore, onSubmitEJScore, onSubmit, onReopenScore, onUnpublishResult, onEditScore, onPhoneSubmit,
 }: CJPDJEJViewProps) {
   const { flags, extraElements, incorrectTs, deductions,
     handleFlagChange, handleLock, handleOpenRetry,
@@ -468,6 +473,7 @@ export default function CJPDJEJView({
         <TabletLayout
           lang={lang}
           performances={performances}
+          rankingPerformances={rankingPerformances}
           currentPerfId={currentPerfId}
           panelJudges={panelJudges}
           judgeScores={judgeScores}
@@ -491,7 +497,7 @@ export default function CJPDJEJView({
           onSubmitDJScore={onSubmitDJScore}
           onSubmitEJScore={onSubmitEJScore}
           onSubmit={onSubmit}
-          onReopenScore={onReopenScore}
+          onReopenScore={onReopenScore} onUnpublishResult={onUnpublishResult}
           onEditScore={onEditScore}
         />
       </div>

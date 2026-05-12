@@ -8,6 +8,15 @@ import type { Lang } from '@/components/scoring/types'
 import ProfileEditor from '@/components/shared/ProfileEditor'
 import JudgePractice from './JudgePractice'
 
+function parseTimelineOrder(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  return null
+}
+
 // ─── types ────────────────────────────────────────────────────────────────────
 
 type CompetitionStatus = 'draft' | 'provisional_entry' | 'definitive_entry' | 'registration_open' | 'registration_closed' | 'active' | 'finished'
@@ -35,6 +44,8 @@ type LobbySession = {
 type LobbyPanel = {
   sectionId: string
   sectionNumber: number
+  /** Matches admin timeline / section order (timeline_order ?? section_number) */
+  sectionTimelineSort: number
   sectionLabel: string | null
   panelId: string
   panelNumber: number
@@ -72,6 +83,8 @@ const T = {
     startingOrder: 'Starting order',
     noOrder: 'Starting order not yet published.',
     scoreButton: 'Score',
+    startRehearsalButton: 'Start rehearsal',
+    rehearsalButton: 'Join rehearsal',
     djReviewButton: 'Review TS sheets',
     loadingDetail: 'Loading…',
     profile: 'Profile',
@@ -108,7 +121,9 @@ const T = {
     startingOrder: 'Orden de salida',
     noOrder: 'El orden de salida aún no está publicado.',
     scoreButton: 'Puntuar',
-    djReviewButton: 'Revisar hojas de tarifa',
+    startRehearsalButton: 'Iniciar ensayo',
+    rehearsalButton: 'Entrar en ensayo',
+    djReviewButton: 'Revisar TS',
     loadingDetail: 'Cargando…',
     profile: 'Perfil',
     competitions: 'Competiciones',
@@ -204,6 +219,7 @@ function CompetitionDetail({ comp, lang, onBack }: {
   const [loading, setLoading] = useState(true)
   const [panels, setPanels] = useState<LobbyPanel[]>([])
   const [sessionIds, setSessionIds] = useState<string[]>([])
+  const [practiceActiveBySection, setPracticeActiveBySection] = useState<Record<string, boolean>>({})
 
   // Real-time: update session statuses and auto-navigate when a session becomes active
   useEffect(() => {
@@ -236,16 +252,42 @@ function CompetitionDetail({ comp, lang, onBack }: {
   }, [sessionIds]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    const sectionIds = [...new Set(panels.map((p) => p.sectionId))]
+    if (sectionIds.length === 0) return
+    const channels = sectionIds.map((sid) =>
+      supabase
+        .channel(`lobby-practice-${sid}`)
+        .on('postgres_changes', {
+          event: '*', schema: 'public', table: 'section_practice_state',
+          filter: `section_id=eq.${sid}`,
+        }, (payload) => {
+          const row = payload.new as { section_id: string; active: boolean }
+          setPracticeActiveBySection(prev => ({ ...prev, [sid]: !!row?.active }))
+        })
+        .subscribe(),
+    )
+    return () => { channels.forEach(ch => supabase.removeChannel(ch)) }
+  }, [panels, supabase])
+
+  useEffect(() => {
     async function load() {
       if (!activeProfile) return
       // 1. Get my SPJ entries for this competition's sections
       const { data: sections } = await supabase
         .from('sections')
-        .select('id, section_number, label')
+        .select('id, section_number, label, timeline_order')
         .eq('competition_id', comp.id)
       if (!sections?.length) { setLoading(false); return }
 
       const sectionIds = sections.map(s => s.id)
+
+      const { data: practiceRows } = await supabase
+        .from('section_practice_state')
+        .select('section_id, active')
+        .in('section_id', sectionIds)
+      setPracticeActiveBySection(
+        Object.fromEntries((practiceRows ?? []).map((r) => [r.section_id, !!r.active])),
+      )
 
       // 2. Get locked panels for these sections
       const { data: locks } = await (supabase as any)
@@ -275,7 +317,7 @@ function CompetitionDetail({ comp, lang, onBack }: {
       const [panelsRes, sessionsRes] = await Promise.all([
         supabase.from('panels').select('id, panel_number').in('id', panelIds),
         supabase.from('sessions')
-          .select('id, name, status, section_id, panel_id')
+          .select('id, name, status, section_id, panel_id, order_index')
           .in('section_id', sectionIds)
           .in('panel_id', panelIds),
       ])
@@ -306,18 +348,24 @@ function CompetitionDetail({ comp, lang, onBack }: {
           groupMap.set(key, {
             sectionId: spj.section_id,
             sectionNumber: sec?.section_number ?? 0,
+            sectionTimelineSort:
+              parseTimelineOrder((sec as { timeline_order?: unknown } | undefined)?.timeline_order)
+              ?? sec?.section_number
+              ?? Number.MAX_SAFE_INTEGER,
             sectionLabel: sec?.label ?? null,
             panelId: spj.panel_id,
             panelNumber: panelMap[spj.panel_id] ?? 0,
             roles: [],
             sessions: allSessions
               .filter(s => s.section_id === spj.section_id && s.panel_id === spj.panel_id)
+              .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0) || a.id.localeCompare(b.id))
               .map(s => ({
                 id: s.id,
                 name: s.name,
                 status: s.status as SessionStatus,
                 orders: (orders ?? [])
                   .filter(o => o.session_id === s.id)
+                  .sort((a, b) => a.position - b.position || a.team_id.localeCompare(b.team_id))
                   .map(o => ({
                     position: o.position,
                     teamId: o.team_id,
@@ -330,7 +378,10 @@ function CompetitionDetail({ comp, lang, onBack }: {
       }
 
       const sorted = [...groupMap.values()].sort(
-        (a, b) => a.sectionNumber - b.sectionNumber || a.panelNumber - b.panelNumber
+        (a, b) =>
+          a.sectionTimelineSort - b.sectionTimelineSort ||
+          a.sectionNumber - b.sectionNumber ||
+          a.panelNumber - b.panelNumber,
       )
       setPanels(sorted)
       setSessionIds(sorted.flatMap(p => p.sessions.map(s => s.id)))
@@ -370,6 +421,8 @@ function CompetitionDetail({ comp, lang, onBack }: {
             const sectionLabel = panel.sectionLabel ?? t.sectionN(panel.sectionNumber)
             const hasActiveSession = panel.sessions.some(s => s.status === 'active')
             const route = rolesToRoute(panel.roles.map(r => r.role))
+            const sectionPracticeActive = practiceActiveBySection[panel.sectionId] === true
+            const canStartPractice = panel.roles.some(r => r.role === 'CJP')
 
             return (
               <div key={`${panel.sectionId}|${panel.panelId}`}
@@ -380,6 +433,11 @@ function CompetitionDetail({ comp, lang, onBack }: {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-700">{sectionLabel}</p>
                     <p className="text-xs text-slate-400">{t.panelN(panel.panelNumber)}</p>
+                    {sectionPracticeActive && (
+                      <p className="text-xs font-semibold text-violet-600 mt-0.5">
+                        {lang === 'en' ? 'Rehearsal active' : 'Ensayo activo'}
+                      </p>
+                    )}
                   </div>
                   {/* role badges */}
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -417,13 +475,17 @@ function CompetitionDetail({ comp, lang, onBack }: {
                           <span className={['px-2 py-0.5 rounded-md text-xs font-semibold', SESSION_STATUS_BADGE[session.status]].join(' ')}>
                             {t.sessionStatus[session.status]}
                           </span>
-                          {session.status === 'active' && (
+                          {(session.status === 'active' || sectionPracticeActive || canStartPractice) && (
                             <button
                               onClick={() => router.push(route)}
                               className="px-3 py-1 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center gap-1.5"
                             >
-                              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />
-                              {t.scoreButton}
+                              {session.status === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0" />}
+                              {session.status === 'active'
+                                ? t.scoreButton
+                                : sectionPracticeActive
+                                  ? t.rehearsalButton
+                                  : t.startRehearsalButton}
                             </button>
                           )}
                         </div>

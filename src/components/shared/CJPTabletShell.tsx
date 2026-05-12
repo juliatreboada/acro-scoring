@@ -17,13 +17,13 @@ const T = {
     noPerfSub: 'Select a performance from the list to open it.',
     reviewing: 'Reviewing', backToLive: 'Back to live',
     submitProv: 'Submit provisional', submitFinal: 'Submit final',
-    confirmFinal: 'Confirm final', nextPerf: 'Next performance',
+    confirmFinal: 'Confirm final', modifyFinal: 'Modify', nextPerf: 'Next performance',
     updateProv: 'Update provisional',
     tsPdfTitle: 'Tariff Sheet', pdfNote: 'PDF will appear here once uploaded',
     ej: 'EJ', aj: 'AJ', dj: 'DJ',
     avg: 'Avg', djDif: 'DJ Dif.', djPen: 'Pen.',
     cjpPen: 'CJP Pen.',
-    reopenAll: 'Re-open all', reopen: 'Re-open', editScore: 'Edit score',
+    reopenAll: 'Re-open all', reopen: 'Re-open', editScore: 'Edit score', addScore: 'Add score',
     scoreE: 'E', scoreA: 'A', scoreD: 'D', scorePen: 'Pen.', scoreTotal: 'Total',
     ranking: 'Ranking', rankCol: '#', teamCol: 'Team',
     balance: 'Balance', dynamic: 'Dynamic', combined: 'Combined',
@@ -36,13 +36,13 @@ const T = {
     noPerfSub: 'Selecciona una actuación de la lista para abrirla.',
     reviewing: 'Revisando', backToLive: 'Volver en directo',
     submitProv: 'Enviar provisional', submitFinal: 'Enviar final',
-    confirmFinal: 'Confirmar final', nextPerf: 'Siguiente actuación',
+    confirmFinal: 'Confirmar final', modifyFinal: 'Modificar', nextPerf: 'Siguiente actuación',
     updateProv: 'Actualizar provisional',
-    tsPdfTitle: 'Hoja de Tarifa', pdfNote: 'El PDF aparecerá aquí una vez subido',
+    tsPdfTitle: 'TS', pdfNote: 'El PDF aparecerá aquí una vez subido',
     ej: 'EJ', aj: 'AJ', dj: 'DJ',
     avg: 'Media', djDif: 'DJ Dif.', djPen: 'Pen.',
     cjpPen: 'CJP Pen.',
-    reopenAll: 'Reabrir todo', reopen: 'Reabrir', editScore: 'Editar puntuación',
+    reopenAll: 'Reabrir todo', reopen: 'Reabrir', editScore: 'Editar puntuación', addScore: 'Añadir puntuación',
     scoreE: 'E', scoreA: 'A', scoreD: 'D', scorePen: 'Pen.', scoreTotal: 'Total',
     ranking: 'Clasificación', rankCol: '#', teamCol: 'Equipo',
     balance: 'Balance', dynamic: 'Dinámico', combined: 'Combinado',
@@ -174,6 +174,12 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, res
     </svg>
   )
 
+  const PlusIcon = () => (
+    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+  )
+
   function DjFieldRow({ label, judgeId, field, value }: { label: string; judgeId: string; field: 'djDifficulty' | 'djPenalty'; value: number | null | undefined }) {
     const isEditing = editState?.judgeId === judgeId && editState?.field === field
     const displayValue = field === 'djPenalty' && value != null ? -value : value
@@ -233,10 +239,11 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, res
     </button>
   )
 
-  const EditBtn = ({ judgeId, field, value }: { judgeId: string; field: EditField; value: number }) => (
-    <button onClick={() => setEditState({ judgeId, field, value: String(value) })} title={t.editScore}
+  const EditBtn = ({ judgeId, field, value }: { judgeId: string; field: EditField; value?: number }) => (
+    <button onClick={() => setEditState({ judgeId, field, value: value != null ? String(value) : '' })}
+      title={value != null ? t.editScore : t.addScore}
       className="w-5 h-5 rounded text-slate-300 hover:text-blue-500 hover:bg-blue-50 transition-colors flex items-center justify-center">
-      <PencilIcon />
+      {value != null ? <PencilIcon /> : <PlusIcon />}
     </button>
   )
 
@@ -321,7 +328,7 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, res
                         <div className="flex items-center gap-1">
                           <ScoreCell value={s?.djDifficulty} />
                           {canReopen && s?.djDifficulty != null && <ReopenBtn judgeId={j.id} />}
-                          {canEdit && s?.djDifficulty != null && <EditBtn judgeId={j.id} field="djDifficulty" value={s.djDifficulty!} />}
+                          {canEdit && <EditBtn judgeId={j.id} field="djDifficulty" value={s?.djDifficulty ?? undefined} />}
                         </div>
                       )}
                     </td>
@@ -331,7 +338,7 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, res
                       {isEditingPen ? <EditInput judgeId={j.id} field="djPenalty" /> : (
                         <div className="flex items-center gap-1">
                           <ScoreCell value={s?.djPenalty != null ? -s.djPenalty : null} />
-                          {canEdit && s?.djPenalty != null && <EditBtn judgeId={j.id} field="djPenalty" value={s.djPenalty!} />}
+                          {canEdit && <EditBtn judgeId={j.id} field="djPenalty" value={s?.djPenalty ?? undefined} />}
                         </div>
                       )}
                     </td>
@@ -374,7 +381,7 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, res
                       <div className="flex items-center gap-1">
                         <ScoreCell value={ejVals[i]} dropped={ejDropped.has(i)} />
                         {canReopen && ejVals[i] != null && <ReopenBtn judgeId={j.id} />}
-                        {canEdit && ejVals[i] != null && <EditBtn judgeId={j.id} field="ejScore" value={ejVals[i]!} />}
+                        {canEdit && <EditBtn judgeId={j.id} field="ejScore" value={ejVals[i] ?? undefined} />}
                       </div>
                     )}
                   </td>
@@ -420,7 +427,7 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, res
                       <div className="flex items-center gap-1">
                         <ScoreCell value={ajVals[i]} dropped={ajDropped.has(i)} />
                         {canReopen && ajVals[i] != null && <ReopenBtn judgeId={j.id} />}
-                        {canEdit && ajVals[i] != null && <EditBtn judgeId={j.id} field="ajScore" value={ajVals[i]!} />}
+                        {canEdit && <EditBtn judgeId={j.id} field="ajScore" value={ajVals[i] ?? undefined} />}
                       </div>
                     )}
                   </td>
@@ -532,11 +539,22 @@ export function RankingTable({ performances, results, lang, selectedPerfId, onSe
   onSelectPerf?: (perfId: string) => void
 }) {
   const t = T[lang]
-  if (Object.values(results).length === 0) return null
+  const hasAnyScored = performances.some((p) => results[p.id])
+  if (!hasAnyScored) return null
 
   const routineLabel = (rt: string) => ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
-  const groupKey = (p: ScoringPerformance) => `${p.ageGroup}||${p.category}||${p.routineType}`
-  const groupLabel = (p: ScoringPerformance) => `${p.ageGroup} · ${categoryLabel(p.category, lang)} · ${routineLabel(p.routineType)}`
+  const groupKey = (p: ScoringPerformance) =>
+    p.rankingMergeGroupId
+      ? `${p.ageGroup}||mg:${p.rankingMergeGroupId}||${p.routineType}`
+      : `${p.ageGroup}||${p.category}||${p.routineType}`
+  const groupLabel = (p: ScoringPerformance) => {
+    if (p.rankingMergeGroupId) {
+      const raw = lang === 'en' ? p.mergeLabelEn : p.mergeLabelEs
+      if (raw?.trim()) return `${raw.trim()} · ${routineLabel(p.routineType)}`
+      return `${p.ageGroup} · ${routineLabel(p.routineType)}`
+    }
+    return `${p.ageGroup} · ${categoryLabel(p.category, lang)} · ${routineLabel(p.routineType)}`
+  }
 
   const groupOrder: string[] = []
   for (const p of performances) {
@@ -621,6 +639,7 @@ export function RankingTable({ performances, results, lang, selectedPerfId, onSe
 export type CJPTabletShellProps = {
   lang: Lang
   performances: ScoringPerformance[]
+  rankingPerformances?: ScoringPerformance[]
   currentPerfId: string | null
   panelJudges: PanelJudge[]
   judgeScores: Record<string, JudgeScore[]>
@@ -630,6 +649,7 @@ export type CJPTabletShellProps = {
   onSkip?: (perfId: string) => void
   onSubmit?: (status: 'provisional' | 'approved', result: RoutineResult, penaltyDetail?: PenaltyState) => void
   onReopenScore?: (perfId: string, panelJudgeId: string | 'all') => void
+  onUnpublishResult?: (perfId: string) => void
   onEditScore?: (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
   /** Render the right panel. activePerfId = reviewed perf during review mode, else currentPerfId. */
   renderRightPanel: (activePerfId: string | null, isReviewMode: boolean) => ReactNode
@@ -637,11 +657,12 @@ export type CJPTabletShellProps = {
 }
 
 export default function CJPTabletShell({
-  lang, performances, currentPerfId, panelJudges, judgeScores, results,
-  penaltyStates, onOpen, onSkip, onSubmit, onReopenScore, onEditScore,
+  lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results,
+  penaltyStates, onOpen, onSkip, onSubmit, onReopenScore, onUnpublishResult, onEditScore,
   renderRightPanel, rightPanelClassName = 'w-80',
 }: CJPTabletShellProps) {
   const t = T[lang]
+  const rankPerfs = rankingPerformances ?? performances
   const [reviewPerfId,    setReviewPerfId]    = useState<string | null>(null)
   const [leftOpen,        setLeftOpen]        = useState(true)
   const [bottomTab,       setBottomTab]       = useState<'ts' | 'ranking'>('ranking')
@@ -808,8 +829,14 @@ export default function CJPTabletShell({
                 </div>
               )}
               {reviewResult?.status === 'approved' && (
-                <div className="py-2 rounded-xl bg-emerald-50 border-2 border-emerald-200 text-center">
+                <div className="py-2 px-3 rounded-xl bg-emerald-50 border-2 border-emerald-200 flex items-center justify-between">
                   <span className="text-sm font-semibold text-emerald-700">✓ {t.final} · {reviewResult.finalScore.toFixed(3)}</span>
+                  {onUnpublishResult && (
+                    <button onClick={() => onUnpublishResult(reviewPerfId!)}
+                      className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 underline underline-offset-2 ml-2 shrink-0">
+                      {t.modifyFinal}
+                    </button>
+                  )}
                 </div>
               )}
             </>
@@ -855,8 +882,14 @@ export default function CJPTabletShell({
               )}
               {currentResult?.status === 'approved' && (
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 py-2 rounded-xl bg-emerald-50 border-2 border-emerald-200 text-center">
+                  <div className="flex-1 py-2 px-3 rounded-xl bg-emerald-50 border-2 border-emerald-200 flex items-center justify-between">
                     <span className="text-sm font-semibold text-emerald-700">✓ {t.final} · {currentResult.finalScore.toFixed(3)}</span>
+                    {onUnpublishResult && currentPerfId && (
+                      <button onClick={() => onUnpublishResult(currentPerfId)}
+                        className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 underline underline-offset-2 ml-2 shrink-0">
+                        {t.modifyFinal}
+                      </button>
+                    )}
                   </div>
                   {nextPending && (
                     <button onClick={() => onOpen(nextPending.id)}
@@ -910,7 +943,7 @@ export default function CJPTabletShell({
         })()}
         {bottomTab === 'ranking' && (
           <div className="px-4 py-3">
-            <RankingTable performances={performances} results={results} lang={lang}
+            <RankingTable performances={rankPerfs} results={results} lang={lang}
               selectedPerfId={activePerfId}
               onSelectPerf={handleRankingRowClick} />
           </div>

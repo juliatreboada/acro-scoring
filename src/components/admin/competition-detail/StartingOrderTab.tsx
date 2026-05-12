@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { createClient } from '@/lib/supabase'
+import { buildAndDownloadRoutineFilesZip } from '@/lib/routineFilesZip'
 import type { Lang } from '@/components/scoring/types'
 import type { Section, Panel, Session, Team, Club, CompetitionEntry, SessionOrder, AgeGroupRule, TimelineEntry } from '@/components/admin/types'
 import { categoryLabel } from '@/components/admin/types'
@@ -31,6 +33,13 @@ const T = {
     breakLabel: 'Break',
     saveStartingOrder: 'Save starting order',
     saveStartingOrderHint: 'Overwrite the timeline order with the current session order (keeps existing breaks).',
+    downloadAllTs: 'Download all TS (ZIP)',
+    downloadAllMusic: 'Download all music (ZIP)',
+    downloadZipWorking: 'Building ZIP…',
+    downloadZipSummary: (included: number, missing: number, failed: number) =>
+      `ZIP ready: ${included} file(s).` +
+      (missing ? ` ${missing} missing in database.` : '') +
+      (failed ? ` ${failed} download error(s).` : ''),
   },
   es: {
     hint: 'Establece el orden de actuación en cada sesión.',
@@ -52,6 +61,13 @@ const T = {
     breakLabel: 'Pausa',
     saveStartingOrder: 'Guardar orden de salida',
     saveStartingOrderHint: 'Reescribe la línea de tiempo con el orden de sesión actual (mantiene las pausas existentes).',
+    downloadAllTs: 'Descargar todas las TS (ZIP)',
+    downloadAllMusic: 'Descargar toda la música (ZIP)',
+    downloadZipWorking: 'Generando ZIP…',
+    downloadZipSummary: (included: number, missing: number, failed: number) =>
+      `ZIP listo: ${included} archivo(s).` +
+      (missing ? ` ${missing} sin archivo en base de datos.` : '') +
+      (failed ? ` ${failed} error(es) de descarga.` : ''),
   },
 }
 
@@ -759,6 +775,8 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
 
 export type StartingOrderTabProps = {
   lang: Lang
+  competitionId: string
+  competitionName: string | null
   globalTeams: Team[]
   clubs: Club[]
   entries: CompetitionEntry[]
@@ -775,10 +793,12 @@ export type StartingOrderTabProps = {
 }
 
 export default function StartingOrderTab({
-  lang, globalTeams, clubs, entries, sections, panels, sessions,
+  lang, competitionId, competitionName, globalTeams, clubs, entries, sections, panels, sessions,
   sessionOrders, lockedSessions, agLabels, ageGroupRules, onReorder, onToggleLock, onReorderTimeline,
 }: StartingOrderTabProps) {
   const t = T[lang]
+  const supabase = createClient()
+  const [zipBusy, setZipBusy] = useState<'ts' | 'music' | null>(null)
   const sortedSections = [...sections].sort((a, b) => a.section_number - b.section_number)
   const [activeSectionId, setActiveSectionId] = useState<string>(sortedSections[0]?.id ?? '')
   const [view, setView] = useState<'sessions' | 'timeline'>('sessions')
@@ -864,11 +884,56 @@ export default function StartingOrderTab({
     onReorderTimeline(activeSection.id, newOrder)
   }
 
+  async function handleDownloadZip(kind: 'ts' | 'music') {
+    if (zipBusy) return
+    setZipBusy(kind)
+    try {
+      const result = await buildAndDownloadRoutineFilesZip({
+        kind,
+        competitionId,
+        competitionName,
+        sections,
+        panels,
+        sessions,
+        sessionOrders,
+        entries,
+        globalTeams,
+        clubs,
+        supabase,
+      })
+      if (!result.ok) {
+        window.alert(result.error)
+        return
+      }
+      if (result.missingInDb > 0 || result.fetchFailed > 0) {
+        window.alert(t.downloadZipSummary(result.included, result.missingInDb, result.fetchFailed))
+      }
+    } finally {
+      setZipBusy(null)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 print:hidden">
         <p className="text-xs text-slate-400">{t.hint}</p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            disabled={!!zipBusy}
+            onClick={() => void handleDownloadZip('ts')}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50"
+          >
+            {zipBusy === 'ts' ? t.downloadZipWorking : t.downloadAllTs}
+          </button>
+          <button
+            type="button"
+            disabled={!!zipBusy}
+            onClick={() => void handleDownloadZip('music')}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50"
+          >
+            {zipBusy === 'music' ? t.downloadZipWorking : t.downloadAllMusic}
+          </button>
           <button
             onClick={handleSaveStartingOrder}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-colors"

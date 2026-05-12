@@ -34,7 +34,7 @@ Judge panel roles (stored in `section_panel_judges.role`): **CJP**, **EJ**, **AJ
 Routes like `/cjp-dj-ej-aj` mean "one device is used for CJP + DJ + EJ + AJ". The naming follows which judge roles are combined on that screen. Each route uses `useJudgeSession` and passes the relevant `handleCJPSubmit` / `handleJudgeScoreSubmit` callbacks down to view components.
 
 Dedicated single-role routes: `/cjp`, `/dj`, `/ej`, `/aj`.  
-Combined routes: `/cjp-dj`, `/cjp-dj-aj`, `/cjp-dj-ej`, `/cjp-dj-ej-aj`, `/dj-ej`, `/dj-aj`, `/dj-ej-aj`, `/ej-aj`.
+Combined routes: `/cjp-dj`, `/cjp-ej`, `/cjp-dj-aj`, `/cjp-dj-ej`, `/cjp-dj-ej-aj`, `/cjp-ej-aj`, `/dj-ej`, `/dj-aj`, `/dj-ej-aj`, `/ej-aj`.
 
 ## Key hooks
 

@@ -11,10 +11,10 @@ export default function Page() {
   const [lang, setLang] = useState<Lang>('es')
   const {
     loading, sessionId,
-    assignedRoles, panelJudges, performances, currentPerfId, judgeScores, results,
+    assignedRoles, panelJudges, performances, rankingPerformances, currentPerfId, judgeScores, results,
     djMethod, ejMethod,
-    handleOpen, handleSkip, handleCJPSubmit, handleReopenScore, handleEditScore, handleJudgeScoreSubmit,
-    submitError, clearSubmitError,
+    handleOpen, handleSkip, handleCJPSubmit, handleReopenScore, handleUnpublishResult, handleEditScore, handleJudgeScoreSubmit,
+    submitError, clearSubmitError, practiceMode, startSectionPractice, stopSectionPractice,
   } = useJudgeSession()
 
   function handleSubmitDJScore(_p: string, difficulty: number, penalty: number, detail: ScoreDetail) {
@@ -30,16 +30,17 @@ export default function Page() {
   }
 
   return (
-    <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} className="min-h-screen bg-slate-100" submitError={submitError} onClearError={clearSubmitError}>
+    <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} className="min-h-screen bg-slate-100" submitError={submitError} onClearError={clearSubmitError} practiceMode={practiceMode} canControlPractice onStartPractice={() => { void startSectionPractice() }} onStopPractice={() => { void stopSectionPractice() }}>
       <CJPDJEJView
         lang={lang} elements={performances.find(p => p.id === currentPerfId)?.elements ?? []}
         djMode={djMethod === 'keyboard' ? 'keyboard' : 'elements'}
         ejMode={ejMethod === 'keyboard' ? 'keyboard' : 'elements'}
-        panelJudges={panelJudges} performances={performances}
+        panelJudges={panelJudges}         performances={performances}
+        rankingPerformances={rankingPerformances}
         currentPerfId={currentPerfId} judgeScores={judgeScores} results={results}
         onOpen={handleOpen} onSkip={handleSkip}
         onSubmitDJScore={handleSubmitDJScore} onSubmitEJScore={handleSubmitEJScore}
-        onSubmit={handleCJPSubmit} onReopenScore={handleReopenScore} onEditScore={handleEditScore}
+        onSubmit={handleCJPSubmit} onReopenScore={handleReopenScore} onUnpublishResult={handleUnpublishResult} onEditScore={handleEditScore}
       />
     </JudgeScoringShell>
   )
