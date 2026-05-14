@@ -75,6 +75,8 @@ const T = {
     teamCount: (n: number) => n === 0 ? 'Not registered' : `${n} team${n !== 1 ? 's' : ''} registered`,
     licenciaWarning: 'Missing licencia',
     licenciaWarningFull: 'One or more gymnasts in this team have no licencia uploaded.',
+    nominalEntryOpen: 'Nominal entry open',
+    nominalEntryCta: 'Nominal entry →',
   },
   es: {
     empty: 'Aún no hay competiciones disponibles.',
@@ -140,6 +142,8 @@ const T = {
     teamCount: (n: number) => n === 0 ? 'Sin inscripción' : `${n} equipo${n !== 1 ? 's' : ''} inscrito${n !== 1 ? 's' : ''}`,
     licenciaWarning: 'Licencia pendiente',
     licenciaWarningFull: 'Uno o más gimnastas de este equipo no tienen la licencia subida.',
+    nominalEntryOpen: 'Inscripción nominativa abierta',
+    nominalEntryCta: 'Inscripción nominativa →',
   },
 }
 
@@ -153,6 +157,9 @@ const STATUS_BADGE: Record<string, string> = {
   active:              'bg-blue-600 text-white',
   finished:            'bg-slate-100 text-slate-400',
 }
+
+/** Club may register teams before global `registration_open` once definitive entry is approved. */
+const NOMINAL_ENTRY_BADGE = 'bg-green-100 text-green-700'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -491,7 +498,7 @@ function teamMatchesCompetitionAgeGroups(
 
 function CompetitionDetailView({
   lang, clubId, competition, teams, gymnasts, coaches, competitionCoaches, entries, music, judges, nominations, agLabels, ageGroupRules,
-  tsReviewStatuses, definitiveEntryQuota, onBack,
+  tsReviewStatuses, definitiveEntryQuota, clubDefinitiveEntryStatus, onBack,
   onRegister, onDropout, onSetFile, onNominate, onRemoveNomination, onInviteJudge,
   onRegisterCoach, onUnregisterCoach,
 }: {
@@ -510,6 +517,8 @@ function CompetitionDetailView({
   ageGroupRules: AgeGroupRule[]
   tsReviewStatuses: { team_id: string; competition_id: string; routine_type: string; status: string; final_comment: string | null }[]
   definitiveEntryQuota: Record<string, number> | null
+  /** From `definitive_entries.status` for this club+competition; `approved` ⇒ nominal entry allowed before global registration_open. */
+  clubDefinitiveEntryStatus: string | null
   onBack: () => void
   onRegister: (teamId: string) => void
   onDropout: (entryId: string) => void
@@ -522,6 +531,8 @@ function CompetitionDetailView({
 }) {
   const t = T[lang]
   const isOpen = competition.status === 'registration_open'
+  const nominalOpenForClub = competition.status === 'definitive_entry' && clubDefinitiveEntryStatus === 'approved'
+  const registrationFlowOpen = isOpen || nominalOpenForClub
   const canRegisterNow = competition.status === 'registration_open' || competition.status === 'definitive_entry'
   const dateStr = formatDateRange(competition.start_date, competition.end_date)
   const today = new Date().toISOString().slice(0, 10)
@@ -586,7 +597,7 @@ function CompetitionDetailView({
 
   const compNominations = nominations.filter((n) => n.competition_id === competition.id)
   const nominatedIds = new Set(compNominations.map((n) => n.judge_id))
-  const hasJudgeWarning = compNominations.length === 0 && isOpen
+  const hasJudgeWarning = compNominations.length === 0 && registrationFlowOpen
   const [judgesOpen, setJudgesOpen] = useState(hasJudgeWarning)
 
   const registeredCoachIds = new Set(
@@ -673,9 +684,14 @@ function CompetitionDetailView({
               ))}
             </div>
           </div>
-          <span className={['px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1', STATUS_BADGE[competition.status]].join(' ')}>
+          <span
+            className={[
+              'px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1',
+              nominalOpenForClub ? NOMINAL_ENTRY_BADGE : STATUS_BADGE[competition.status],
+            ].join(' ')}
+          >
             {competition.status === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
-            {t.status[competition.status]}
+            {nominalOpenForClub ? t.nominalEntryOpen : t.status[competition.status]}
           </span>
         </div>
 
@@ -710,7 +726,7 @@ function CompetitionDetailView({
                       <p className="text-sm text-slate-800 font-medium truncate">{c.full_name}</p>
                       {c.licence && <p className="text-xs text-slate-400">{c.licence}</p>}
                     </div>
-                    {isOpen && (
+                    {registrationFlowOpen && (
                       <button onClick={() => onUnregisterCoach(c.id)}
                         className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all shrink-0">
                         {t.unregisterCoach}
@@ -718,7 +734,7 @@ function CompetitionDetailView({
                     )}
                   </div>
                 ))}
-                {isOpen && unregisteredCoaches.map(c => (
+                {registrationFlowOpen && unregisteredCoaches.map(c => (
                   <div key={c.id} className="flex items-center gap-3 py-1.5 opacity-50">
                     <div className="w-7 h-7 rounded-full bg-slate-100 shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold text-slate-400">
                       {c.photo_url ? <img src={c.photo_url} alt={c.full_name} className="w-full h-full object-cover" /> : c.full_name.charAt(0)}
@@ -733,7 +749,7 @@ function CompetitionDetailView({
                     </button>
                   </div>
                 ))}
-                {registeredCoaches.length === 0 && !isOpen && (
+                {registeredCoaches.length === 0 && !registrationFlowOpen && (
                   <p className="text-sm text-slate-400 text-center py-2">{t.noCoaches}</p>
                 )}
               </>
@@ -790,7 +806,7 @@ function CompetitionDetailView({
                       </div>
                       <div className="shrink-0 flex items-center gap-2">
                         <span className="text-xs font-semibold px-2 py-0.5 bg-green-100 text-green-600 rounded-full">{t.nominated}</span>
-                        {isOpen && nomination && (
+                        {registrationFlowOpen && nomination && (
                           <button onClick={() => onRemoveNomination(nomination.id)}
                             className="text-xs text-slate-400 hover:text-red-500 transition-colors">
                             {t.removeNomination}
@@ -804,7 +820,7 @@ function CompetitionDetailView({
             )}
 
             {/* pool picker */}
-            {isOpen && (
+            {registrationFlowOpen && (
               <div className="space-y-2">
                 {!showInviteForm && (
                   <button
@@ -1085,7 +1101,7 @@ function CompetitionListView({
   entries: CompetitionEntry[]
   nominations: CompetitionJudgeNomination[]
   clubProvisionalEntries: Record<string, { teams_per_category: Record<string, number> }>
-  clubDefinitiveEntries: Record<string, { teams_per_category: Record<string, number> }>
+  clubDefinitiveEntries: Record<string, { teams_per_category: Record<string, number>; status: string }>
   ageGroupRules: AgeGroupRule[]
   onSelect: (id: string) => void
   onOpenProvisionalEntry: (comp: Competition) => void
@@ -1124,23 +1140,29 @@ function CompetitionListView({
           (e) => e.competition_id === comp.id && teamIds.has(e.team_id)
         ).length
         const nominatedCount = nominations.filter((n) => n.competition_id === comp.id).length
-        const needsJudge = comp.status === 'registration_open' && registeredCount > 0 && nominatedCount === 0
         const dateStr = formatDateRange(comp.start_date, comp.end_date)
         const isProvisionalEntry = comp.status === 'provisional_entry'
         const isDefinitiveEntry = comp.status === 'definitive_entry'
         const provEntry = clubProvisionalEntries[comp.id]
         const defEntry = clubDefinitiveEntries[comp.id]
+        const nominalOpenForClub = comp.status === 'definitive_entry' && defEntry?.status === 'approved'
+        const needsJudge = (comp.status === 'registration_open' || nominalOpenForClub) && registeredCount > 0 && nominatedCount === 0
         return (
           <div key={comp.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-blue-300 hover:shadow-sm transition-all group">
             <button onClick={() => onSelect(comp.id)} className="w-full text-left px-5 py-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                    <span className={['px-2 py-0.5 rounded-md text-xs font-semibold flex items-center gap-1', STATUS_BADGE[comp.status]].join(' ')}>
+                    <span
+                      className={[
+                        'px-2 py-0.5 rounded-md text-xs font-semibold flex items-center gap-1',
+                        nominalOpenForClub ? NOMINAL_ENTRY_BADGE : STATUS_BADGE[comp.status],
+                      ].join(' ')}
+                    >
                       {comp.status === 'active' && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
-                      {t.status[comp.status]}
+                      {nominalOpenForClub ? t.nominalEntryOpen : t.status[comp.status]}
                     </span>
-                    {comp.status === 'registration_open' && (
+                    {(comp.status === 'registration_open' || nominalOpenForClub) && (
                       <span className={['text-xs font-medium', registeredCount > 0 ? 'text-green-600' : 'text-slate-400'].join(' ')}>
                         {t.teamCount(registeredCount)}
                       </span>
@@ -1182,16 +1204,26 @@ function CompetitionListView({
 
             {isDefinitiveEntry && (
               <div className="px-5 pb-4">
-                <button
-                  onClick={() => onOpenDefinitiveEntry(comp)}
-                  className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold border-2 border-orange-200 text-orange-700 bg-orange-50 hover:bg-orange-100 transition-all text-center">
-                  {lang === 'es' ? 'Inscripción definitiva →' : 'Definitive entry →'}
-                </button>
+                {nominalOpenForClub ? (
+                  <button
+                    type="button"
+                    onClick={() => onSelect(comp.id)}
+                    className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold border-2 border-green-200 text-green-800 bg-green-50 hover:bg-green-100 transition-all text-center">
+                    {t.nominalEntryCta}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onOpenDefinitiveEntry(comp)}
+                    className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold border-2 border-orange-200 text-orange-700 bg-orange-50 hover:bg-orange-100 transition-all text-center">
+                    {lang === 'es' ? 'Inscripción definitiva →' : 'Definitive entry →'}
+                  </button>
+                )}
                 {defEntry && (
                   <EntrySummary
                     lang={lang}
                     rows={buildSummaryRows(comp.id, defEntry.teams_per_category)}
-                    accentClass="border-orange-200 text-orange-700 bg-orange-50/60"
+                    accentClass={nominalOpenForClub ? 'border-green-200 text-green-800 bg-green-50/60' : 'border-orange-200 text-orange-700 bg-orange-50/60'}
                   />
                 )}
               </div>
@@ -1241,7 +1273,7 @@ export default function CompetitionsTab({
 
   // keyed by competition_id
   const [clubProvisionalEntries, setClubProvisionalEntries] = useState<Record<string, { teams_per_category: Record<string, number> }>>({})
-  const [clubDefinitiveEntries, setClubDefinitiveEntries]   = useState<Record<string, { teams_per_category: Record<string, number> }>>({})
+  const [clubDefinitiveEntries, setClubDefinitiveEntries]   = useState<Record<string, { teams_per_category: Record<string, number>; status: string }>>({})
 
   async function fetchClubEntries() {
     const compIds = competitions
@@ -1255,7 +1287,7 @@ export default function CompetitionsTab({
         .eq('club_id', clubId)
         .in('competition_id', compIds),
       supabase.from('definitive_entries' as any)
-        .select('competition_id,teams_per_category')
+        .select('competition_id,teams_per_category,status')
         .eq('club_id', clubId)
         .in('competition_id', compIds),
     ])
@@ -1266,7 +1298,10 @@ export default function CompetitionsTab({
     }
     if (defRes.data) {
       setClubDefinitiveEntries(
-        Object.fromEntries((defRes.data as any[]).map(e => [e.competition_id, { teams_per_category: e.teams_per_category }]))
+        Object.fromEntries((defRes.data as unknown as { competition_id: string; teams_per_category: Record<string, number>; status: string }[]).map(e => [
+          e.competition_id,
+          { teams_per_category: e.teams_per_category ?? {}, status: e.status },
+        ]))
       )
     }
   }
@@ -1294,7 +1329,11 @@ export default function CompetitionsTab({
           ageGroupRules={ageGroupRules}
           tsReviewStatuses={tsReviewStatuses}
           definitiveEntryQuota={clubDefinitiveEntries[selected.id]?.teams_per_category ?? null}
-          onBack={() => setSelectedId(null)}
+          clubDefinitiveEntryStatus={clubDefinitiveEntries[selected.id]?.status ?? null}
+          onBack={() => {
+            setSelectedId(null)
+            void fetchClubEntries()
+          }}
           onRegister={(teamId) => onRegister(selected.id, teamId)}
           onDropout={onDropout}
           onSetFile={(teamId, routineType, field, file) => onSetFile(teamId, selected.id, routineType, field, file)}
