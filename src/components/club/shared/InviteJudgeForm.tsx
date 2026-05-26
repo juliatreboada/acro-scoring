@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { Lang } from '@/components/scoring/types'
+import { INPUT_CLS } from '@/lib/uiConstants'
 
 const T = {
   en: {
@@ -39,7 +40,7 @@ export function InviteJudgeForm({ lang, onSend, onCancel }: {
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+  const inputCls = INPUT_CLS
 
   function set(k: keyof InviteForm, v: string) { setForm(f => ({ ...f, [k]: v })) }
 

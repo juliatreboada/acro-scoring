@@ -4,10 +4,10 @@ import { useState, useEffect, useRef } from 'react'
 import type { Performance, Lang, TsElement, ElementType, ElementFlag, ElementFlags } from '../types'
 import { DEFAULT_FLAG } from '../types'
 import type { PanelJudge, JudgeScore, RoutineResult, ScoreDetail } from '../types'
-import { ScoreGrid } from '../../shared/CJPTabletShell'
+import { ScoreGrid } from '../CJPTabletShell'
 import { ScoringPerformanceHeader } from '../../shared/ScoringPerformanceHeader'
-import { MAX_RETRIES, getElementConfig, calcDJTotals, maxAttemptInFlags } from '../../shared/DJElementsShared'
-import type { ElementConfig } from '../../shared/DJElementsShared'
+import { MAX_RETRIES, getElementConfig, calcDJTotals, maxAttemptInFlags } from '../DJElementsShared'
+import type { ElementConfig } from '../DJElementsShared'
 
 function safeRead<T>(key: string): T | null {
   if (typeof window === 'undefined') return null
@@ -59,9 +59,9 @@ const T = {
   es: {
     waiting: 'Esperando actuación…',
     waitingSub: 'El juez coordinador no ha abierto ninguna rutina todavía.',
-    pdfPlaceholder: 'PDF Hoja de Tarifa',
+    pdfPlaceholder: 'PDF TS',
     pdfNote: 'El PDF aparecerá aquí una vez subido',
-    noElements: 'No hay elementos en la hoja de tarifa',
+    noElements: 'No hay elementos en la TS',
     noElementsNote: 'Puedes enviar directamente',
     difficulty: 'D',
     done: 'Realizado',

@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import type { Lang } from '@/components/scoring/types'
 import type { Club } from '@/components/admin/types'
 import ClickableImg from '@/components/shared/ClickableImg'
+import { INPUT_CLS } from '@/lib/uiConstants'
 
 const T = {
   en: {
@@ -69,7 +70,7 @@ export default function ClubProfileTab({ lang, club, onUpdate, onUploadAvatar }:
     }
   }
 
-  const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+  const inputCls = INPUT_CLS
 
   return (
     <div className="max-w-lg">

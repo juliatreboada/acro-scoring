@@ -5,6 +5,7 @@ import type { Lang } from '@/components/scoring/types'
 import type { DefinitiveEntry, Club, CompetitionEntry, AgeGroupRule } from '@/components/admin/types'
 import { categoriesForRuleset, sortByAgeGroupAndCategory, CATEGORY_LABELS } from '@/components/admin/types'
 import { createClient } from '@/lib/supabase'
+import { INPUT_CLS } from '@/lib/uiConstants'
 
 const T = {
   en: {
@@ -164,7 +165,7 @@ function InviteClubForm({ lang, competitionId, onDone, onCancel }: {
           value={email}
           onChange={e => setEmail(e.target.value)}
           autoFocus
-          className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className={INPUT_CLS}
         />
       </div>
       {error && <p className="text-xs text-red-600">{error}</p>}

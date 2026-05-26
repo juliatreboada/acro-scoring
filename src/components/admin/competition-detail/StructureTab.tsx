@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { Lang } from '@/components/scoring/types'
-import type { Panel, Section, Session, AgeGroupRule, Apparatus, ApparatusRule } from '@/components/admin/types'
+import type { Panel, Section, Session, AgeGroupRule, Apparatus, ApparatusRule, RankingMergeGroup } from '@/components/admin/types'
 import { ROUTINE_TYPES, categoriesForRuleset, CATEGORY_LABELS, rgRulesetLabel } from '@/components/admin/types'
 
 // ─── translations ─────────────────────────────────────────────────────────────
@@ -34,6 +34,15 @@ const T = {
     sectionN: (n: number) => `Section ${n}`,
     panelBadge: (n: number) => `P${n}`,
     panelN: (n: number) => `Panel ${n}`,
+    mergeRanking: 'Shared ranking (TV & results)',
+    mergeNone: 'Per category (default)',
+    newMergeGroup: 'New merge group',
+    newMergeGroupShort: 'New',
+    labelEs: 'Label (ES)',
+    labelEn: 'Label (EN)',
+    createGroup: 'Create & assign',
+    smallFieldHint: (n: number) =>
+      `Only ${n} team(s) registered in this category. You can assign a shared ranking with another session (same age group & routine type) below — optional.`,
    },
   es: {
     sections: 'Jornadas',
@@ -61,6 +70,15 @@ const T = {
     sectionN: (n: number) => `Jornada ${n}`,
     panelBadge: (n: number) => `P${n}`,
     panelN: (n: number) => `Panel ${n}`,
+    mergeRanking: 'Clasificación conjunta (TV y resultados)',
+    mergeNone: 'Por categoría (predeterminado)',
+    newMergeGroup: 'Nuevo grupo de fusión',
+    newMergeGroupShort: 'Nuevo',
+    labelEs: 'Etiqueta (ES)',
+    labelEn: 'Etiqueta (EN)',
+    createGroup: 'Crear y asignar',
+    smallFieldHint: (n: number) =>
+      `Solo ${n} equipo(s) inscrito(s) en esta categoría. Puedes usar una clasificación conjunta con otra sesión (mismo grupo de edad y tipo de rutina) abajo — opcional.`,
    },
 }
 
@@ -69,6 +87,37 @@ const T = {
 const PANEL_STYLES: Record<number, { badge: string; border: string }> = {
   1: { badge: 'bg-blue-100 text-blue-700',   border: 'border-l-blue-400' },
   2: { badge: 'bg-violet-100 text-violet-700', border: 'border-l-violet-400' },
+}
+
+/** Merge groups this session may join: same competition, empty group or peers share age_group + routine_type. */
+function mergeGroupsForSessionRow(
+  session: Session,
+  allSessions: Session[],
+  groups: RankingMergeGroup[],
+): RankingMergeGroup[] {
+  const valid = groups.filter((g) => {
+    const peers = allSessions.filter(
+      (s) => s.ranking_merge_group_id === g.id && s.id !== session.id,
+    )
+    if (peers.length === 0) return true
+    return peers.every(
+      (p) => p.age_group === session.age_group && p.routine_type === session.routine_type,
+    )
+  })
+  if (session.ranking_merge_group_id) {
+    const cur = groups.find((g) => g.id === session.ranking_merge_group_id)
+    if (cur && !valid.some((g) => g.id === cur.id)) {
+      return [...valid, cur].sort((a, b) => a.id.localeCompare(b.id))
+    }
+  }
+  return valid
+}
+
+function groupOptionLabel(g: RankingMergeGroup, lang: Lang) {
+  const a = (g.label_es || '').trim()
+  const b = (g.label_en || '').trim()
+  if (lang === 'en') return b || a || g.id.slice(0, 8)
+  return a || b || g.id.slice(0, 8)
 }
 
 // ─── add-session form ─────────────────────────────────────────────────────────
@@ -198,6 +247,7 @@ function AddSessionForm({ lang, panel, sportType, competitionYear, ageGroups, ag
         order_index: nextOrderIndex,
         dj_method: null,
         ej_method: null,
+        ranking_merge_group_id: null,
       })
     } else {
       if (!ageGroup || !category || !routineType) return
@@ -213,6 +263,7 @@ function AddSessionForm({ lang, panel, sportType, competitionYear, ageGroups, ag
         order_index: nextOrderIndex,
         dj_method: null,
         ej_method: null,
+        ranking_merge_group_id: null,
       })
     }
   }
@@ -303,29 +354,127 @@ function AddSessionForm({ lang, panel, sportType, competitionYear, ageGroups, ag
 
 // ─── session row ──────────────────────────────────────────────────────────────
 
-function SessionRow({ session, borderStyle, onDelete, lang }: {
+function SessionRow({
+  session,
+  borderStyle,
+  onDelete,
+  lang,
+  allSessions,
+  rankingMergeGroups,
+  eligibleTeamCount,
+  onAssignMergeGroup,
+  onCreateMergeGroup,
+}: {
   session: Session
   borderStyle: string
   onDelete: () => void
   lang: Lang
+  allSessions: Session[]
+  rankingMergeGroups: RankingMergeGroup[]
+  eligibleTeamCount: number
+  onAssignMergeGroup: (sessionId: string, mergeGroupId: string | null) => void | Promise<void>
+  onCreateMergeGroup: (labelEs: string, labelEn: string) => Promise<string | null>
 }) {
   const t = T[lang]
+  const rowGroups = mergeGroupsForSessionRow(session, allSessions, rankingMergeGroups)
+  const showSmallFieldHint = eligibleTeamCount < 3
+  const [creating, setCreating] = useState(false)
+  const [newEs, setNewEs] = useState('')
+  const [newEn, setNewEn] = useState('')
+
+  useEffect(() => {
+    setCreating(false)
+    setNewEs('')
+    setNewEn('')
+  }, [session.id])
+
+  const submitNewGroup = useCallback(async () => {
+    const gid = await onCreateMergeGroup(newEs.trim(), newEn.trim())
+    if (gid) await onAssignMergeGroup(session.id, gid)
+    setCreating(false)
+    setNewEs('')
+    setNewEn('')
+  }, [onAssignMergeGroup, onCreateMergeGroup, newEs, newEn, session.id])
+
+  const selectCls =
+    'max-w-[11rem] text-xs border border-slate-200 rounded-md px-1.5 py-0.5 text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400'
+
   return (
-    <div className={['flex items-center gap-3 px-3 py-2.5 bg-white border border-slate-200 rounded-xl border-l-4', borderStyle].join(' ')}>
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-slate-700 leading-snug">{session.name}</p>
+    <div
+      className={[
+        'flex flex-col gap-2 px-3 py-2.5 bg-white border border-slate-200 rounded-xl border-l-4',
+        borderStyle,
+      ].join(' ')}
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex-1 min-w-0 space-y-1">
+          <p className="text-xs font-medium text-slate-700 leading-snug">{session.name}</p>
+          {showSmallFieldHint && (
+            <p className="text-[10px] text-amber-800 bg-amber-50 border border-amber-100 rounded px-2 py-1 leading-snug">
+              {t.smallFieldHint(eligibleTeamCount)}
+            </p>
+          )}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <label className="text-[10px] text-slate-500 shrink-0">{t.mergeRanking}</label>
+            <select
+              className={selectCls}
+              value={session.ranking_merge_group_id ?? ''}
+              onChange={(e) => onAssignMergeGroup(session.id, e.target.value || null)}
+            >
+              <option value="">{t.mergeNone}</option>
+              {rowGroups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {groupOptionLabel(g, lang)}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              title={t.newMergeGroup}
+              onClick={() => setCreating((c) => !c)}
+              className="text-[10px] font-medium text-blue-600 hover:text-blue-800 px-1 py-0.5 rounded"
+            >
+              {t.newMergeGroupShort}
+            </button>
+          </div>
+          {creating && (
+            <div className="flex flex-col gap-1 p-2 bg-slate-50 rounded-lg border border-slate-100 text-[10px] mt-1">
+              <input
+                value={newEs}
+                onChange={(e) => setNewEs(e.target.value)}
+                placeholder={t.labelEs}
+                className="w-full border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 bg-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              />
+              <input
+                value={newEn}
+                onChange={(e) => setNewEn(e.target.value)}
+                placeholder={t.labelEn}
+                className="w-full border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 bg-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              />
+              <button
+                type="button"
+                onClick={() => void submitNewGroup()}
+                className="self-start mt-0.5 px-2 py-1 rounded bg-blue-600 text-white text-[10px] font-semibold hover:bg-blue-700"
+              >
+                {t.createGroup}
+              </button>
+            </div>
+          )}
+        </div>
+        <button
+          onClick={onDelete}
+          className="shrink-0 text-xs text-slate-300 hover:text-red-500 hover:bg-red-50 px-2 py-1 rounded-lg transition-all"
+        >
+          {t.deleteSession}
+        </button>
       </div>
-      <button onClick={onDelete}
-        className="shrink-0 text-xs text-slate-300 hover:text-red-500 hover:bg-red-50 px-2 py-1 rounded-lg transition-all">
-        {t.deleteSession}
-      </button>
     </div>
   )
 }
 
 // ─── panel column ─────────────────────────────────────────────────────────────
 
-function PanelColumn({ lang, panel, sportType, competitionYear, sessions, ageGroups, agLabels, ageGroupRules, apparatus, apparatusRules, sectionId, onAddSession, onDeleteSession }: {
+function PanelColumn({ lang, panel, sportType, competitionYear, sessions, ageGroups, agLabels, ageGroupRules, apparatus, apparatusRules, sectionId, onAddSession, onDeleteSession, allCompetitionSessions, rankingMergeGroups, sessionEligibleTeamCounts, onAssignMergeGroup, onCreateMergeGroup }: {
   lang: Lang
   panel: Panel
   sportType: string
@@ -339,6 +488,11 @@ function PanelColumn({ lang, panel, sportType, competitionYear, sessions, ageGro
   sectionId: string
   onAddSession: (s: Omit<Session, 'id'>) => void
   onDeleteSession: (id: string) => void
+  allCompetitionSessions: Session[]
+  rankingMergeGroups: RankingMergeGroup[]
+  sessionEligibleTeamCounts: Record<string, number>
+  onAssignMergeGroup: (sessionId: string, mergeGroupId: string | null) => void | Promise<void>
+  onCreateMergeGroup: (labelEs: string, labelEn: string) => Promise<string | null>
 }) {
   const t = T[lang]
   const [showForm, setShowForm] = useState(false)
@@ -359,6 +513,11 @@ function PanelColumn({ lang, panel, sportType, competitionYear, sessions, ageGro
           borderStyle={styles.border}
           onDelete={() => onDeleteSession(s.id)}
           lang={lang}
+          allSessions={allCompetitionSessions}
+          rankingMergeGroups={rankingMergeGroups}
+          eligibleTeamCount={sessionEligibleTeamCounts[s.id] ?? 0}
+          onAssignMergeGroup={onAssignMergeGroup}
+          onCreateMergeGroup={onCreateMergeGroup}
         />
       ))}
 
@@ -404,6 +563,7 @@ type SectionBlockProps = {
   lang: Lang
   section: Section
   sessions: Session[]
+  allCompetitionSessions: Session[]
   panels: Panel[]
   sportType: string
   competitionYear: number
@@ -412,17 +572,21 @@ type SectionBlockProps = {
   ageGroupRules: AgeGroupRule[]
   apparatus: Apparatus[]
   apparatusRules: ApparatusRule[]
+  rankingMergeGroups: RankingMergeGroup[]
+  sessionEligibleTeamCounts: Record<string, number>
   onUpdateLabel: (label: string) => void
   onUpdateTimes: (times: SectionTimes) => void
   onDelete: () => void
   onAddSession: (s: Omit<Session, 'id'>) => void
   onDeleteSession: (id: string) => void
+  onAssignMergeGroup: (sessionId: string, mergeGroupId: string | null) => void | Promise<void>
+  onCreateMergeGroup: (labelEs: string, labelEn: string) => Promise<string | null>
 }
 
 function SectionBlock({
-  lang, section, sessions, panels, sportType, competitionYear, ageGroups, agLabels, ageGroupRules,
-  apparatus, apparatusRules,
-  onUpdateLabel, onUpdateTimes, onDelete, onAddSession, onDeleteSession,
+  lang, section, sessions, allCompetitionSessions, panels, sportType, competitionYear, ageGroups, agLabels, ageGroupRules,
+  apparatus, apparatusRules, rankingMergeGroups, sessionEligibleTeamCounts,
+  onUpdateLabel, onUpdateTimes, onDelete, onAddSession, onDeleteSession, onAssignMergeGroup, onCreateMergeGroup,
 }: SectionBlockProps) {
   const t = T[lang]
   const [showForm, setShowForm] = useState(false)
@@ -513,6 +677,11 @@ function SectionBlock({
                 sectionId={section.id}
                 onAddSession={onAddSession}
                 onDeleteSession={onDeleteSession}
+                allCompetitionSessions={allCompetitionSessions}
+                rankingMergeGroups={rankingMergeGroups}
+                sessionEligibleTeamCounts={sessionEligibleTeamCounts}
+                onAssignMergeGroup={onAssignMergeGroup}
+                onCreateMergeGroup={onCreateMergeGroup}
               />
             ))}
           </div>
@@ -528,6 +697,11 @@ function SectionBlock({
                 borderStyle={PANEL_STYLES[1].border}
                 onDelete={() => onDeleteSession(s.id)}
                 lang={lang}
+                allSessions={allCompetitionSessions}
+                rankingMergeGroups={rankingMergeGroups}
+                eligibleTeamCount={sessionEligibleTeamCounts[s.id] ?? 0}
+                onAssignMergeGroup={onAssignMergeGroup}
+                onCreateMergeGroup={onCreateMergeGroup}
               />
             ))}
             {showForm ? (
@@ -578,19 +752,23 @@ export type StructureTabProps = {
   panels: Panel[]
   sections: Section[]
   sessions: Session[]
+  rankingMergeGroups: RankingMergeGroup[]
+  sessionEligibleTeamCounts: Record<string, number>
   onAddSection: () => void
   onUpdateSectionLabel: (sectionId: string, label: string) => void
   onUpdateSectionTimes: (sectionId: string, times: SectionTimes) => void
   onDeleteSection: (sectionId: string) => void
   onAddSession: (s: Omit<Session, 'id'>) => void
   onDeleteSession: (sessionId: string) => void
+  onAssignSessionMergeGroup: (sessionId: string, mergeGroupId: string | null) => void | Promise<void>
+  onCreateRankingMergeGroup: (labelEs: string, labelEn: string) => Promise<string | null>
 }
 
 export default function StructureTab({
   lang, competitionId, sportType, competitionYear, ageGroups, agLabels, ageGroupRules,
-  apparatus, apparatusRules, panels, sections, sessions,
+  apparatus, apparatusRules, rankingMergeGroups, sessionEligibleTeamCounts, panels, sections, sessions,
   onAddSection, onUpdateSectionLabel, onUpdateSectionTimes, onDeleteSection,
-  onAddSession, onDeleteSession,
+  onAddSession, onDeleteSession, onAssignSessionMergeGroup, onCreateRankingMergeGroup,
 }: StructureTabProps) {
   const t = T[lang]
   const sorted = [...sections].sort((a, b) => a.section_number - b.section_number)
@@ -670,6 +848,7 @@ export default function StructureTab({
           sessions={sessions
             .filter(s => s.section_id === activeSection.id)
             .sort((a, b) => a.order_index - b.order_index)}
+          allCompetitionSessions={sessions}
           panels={panels}
           sportType={sportType}
           competitionYear={competitionYear}
@@ -678,11 +857,15 @@ export default function StructureTab({
           ageGroupRules={ageGroupRules}
           apparatus={apparatus}
           apparatusRules={apparatusRules}
+          rankingMergeGroups={rankingMergeGroups}
+          sessionEligibleTeamCounts={sessionEligibleTeamCounts}
           onUpdateLabel={(label) => onUpdateSectionLabel(activeSection.id, label)}
           onUpdateTimes={(times) => onUpdateSectionTimes(activeSection.id, times)}
           onDelete={() => handleDelete(activeSection)}
           onAddSession={onAddSession}
           onDeleteSession={onDeleteSession}
+          onAssignMergeGroup={onAssignSessionMergeGroup}
+          onCreateMergeGroup={onCreateRankingMergeGroup}
         />
       )}
     </div>

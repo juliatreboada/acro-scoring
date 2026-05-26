@@ -6,9 +6,9 @@ import type { Performance, Lang } from '../types'
 import type { TsElement, Deductions } from '../types'
 import type { ElementFlags } from '../types'
 import type { PanelJudge, JudgeScore, RoutineResult, ScoreDetail } from '../types'
-import { ScoreGrid } from '../../shared/CJPTabletShell'
-import { calcDJTotals, IncorrectTsToggle, DualKeypad, PhoneDJElementsList } from '../../shared/DJElementsShared'
-import { calcEJScore, CombinedElementRow, EJKeypad, EJElementRow } from '../../shared/DJEJElementsShared'
+import { ScoreGrid } from '../CJPTabletShell'
+import { calcDJTotals, IncorrectTsToggle, DualKeypad, PhoneDJElementsList } from '../DJElementsShared'
+import { calcEJScore, CombinedElementRow, EJKeypad, EJElementRow } from '../DJEJElementsShared'
 import CheckIcon from '../../shared/CheckIcon'
 import { ScoringPerformanceHeader } from '../../shared/ScoringPerformanceHeader'
 
@@ -38,9 +38,9 @@ const T = {
   es: {
     waiting: 'Esperando actuación…',
     waitingSub: 'El juez coordinador no ha abierto ninguna rutina todavía.',
-    pdfPlaceholder: 'PDF Hoja de Tarifa',
+    pdfPlaceholder: 'PDF TS',
     pdfNote: 'El PDF aparecerá aquí una vez subido',
-    noElements: 'No hay elementos en la hoja de tarifa',
+    noElements: 'No hay elementos en la TS',
     noElementsNote: 'Puedes enviar directamente',
     addElement: '+ Añadir elemento no listado',
     ejScore: 'Nota EJ',

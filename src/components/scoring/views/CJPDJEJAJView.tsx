@@ -7,10 +7,10 @@ import type { ElementFlag, ElementFlags } from '../types'
 import type { PanelJudge, ScoringPerformance, JudgeScore, RoutineResult, PenaltyState, ScoreDetail } from '../types'
 import { calcCjpPenalty, DEFAULT_PENALTY } from '../types'
 import { PenaltyPanel } from '../../shared/CJPPenaltyPanel'
-import AJScoringPanel from '../../shared/AJScoringPanel'
-import CJPTabletShell from '../../shared/CJPTabletShell'
-import { calcDJTotals, DualKeypad, PhoneDJElementsList } from '../../shared/DJElementsShared'
-import { calcEJScore, DJEJTabContent, DJTabContent, EJKeypad, EJElementRow } from '../../shared/DJEJElementsShared'
+import AJScoringPanel from '../AJScoringPanel'
+import CJPTabletShell from '../CJPTabletShell'
+import { calcDJTotals, DualKeypad, PhoneDJElementsList } from '../DJElementsShared'
+import { calcEJScore, DJEJTabContent, DJTabContent, EJKeypad, EJElementRow } from '../DJEJElementsShared'
 import CheckIcon from '../../shared/CheckIcon'
 import { useDJScoring } from '@/hooks/useDJScoring'
 import { usePenaltyStates } from '@/hooks/usePenaltyStates'
@@ -304,15 +304,16 @@ function PhoneView({ perf, lang, djMode, ejMode, elements, extraElements, flags,
 // ─── tablet layout ────────────────────────────────────────────────────────────
 
 function TabletLayout({
-  lang, performances, currentPerfId, panelJudges, judgeScores, results,
+  lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results,
   elements, extraElements, flags, deductions, incorrectTs, penaltyStates,
   djMode, ejMode,
   onFlagChange, onLock, onOpenRetry, onAddElement, onLabelChange, onTypeChange,
   onToggleIncorrectTs, onPenaltyChange, onOpen, onSkip,
-  onSubmitDJScore, onSubmitEJScore, onSubmitAJScore, onSubmit, onReopenScore, onEditScore,
+  onSubmitDJScore, onSubmitEJScore, onSubmitAJScore, onSubmit, onReopenScore, onUnpublishResult, onEditScore,
 }: {
   lang: Lang
   performances: ScoringPerformance[]
+  rankingPerformances?: ScoringPerformance[]
   currentPerfId: string | null
   panelJudges: PanelJudge[]
   judgeScores: Record<string, JudgeScore[]>
@@ -340,6 +341,7 @@ function TabletLayout({
   onSubmitAJScore?: (perfId: string, score: number) => void
   onSubmit?: (status: 'provisional' | 'approved', result: RoutineResult) => void
   onReopenScore?: (perfId: string, panelJudgeId: string | 'all') => void
+  onUnpublishResult?: (perfId: string) => void
   onEditScore?: (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
 }) {
   const t = T[lang]
@@ -378,10 +380,10 @@ function TabletLayout({
 
   return (
     <CJPTabletShell
-      lang={lang} performances={performances} currentPerfId={currentPerfId}
+      lang={lang} performances={performances} rankingPerformances={rankingPerformances} currentPerfId={currentPerfId}
       panelJudges={panelJudges} judgeScores={judgeScores} results={results}
       penaltyStates={penaltyStates} onOpen={onOpen} onSkip={onSkip}
-      onSubmit={onSubmit} onReopenScore={onReopenScore}
+      onSubmit={onSubmit} onReopenScore={onReopenScore} onUnpublishResult={onUnpublishResult}
       onEditScore={onEditScore}
       renderRightPanel={(activePerfId, _isReviewMode) => {
         const penalty = activePerfId ? (penaltyStates[activePerfId] ?? DEFAULT_PENALTY) : DEFAULT_PENALTY
@@ -524,6 +526,7 @@ function TabletLayout({
 export type CJPDJEJAJViewProps = {
   lang: Lang
   performances: ScoringPerformance[]
+  rankingPerformances?: ScoringPerformance[]
   currentPerfId: string | null
   panelJudges: PanelJudge[]
   judgeScores: Record<string, JudgeScore[]>
@@ -538,14 +541,15 @@ export type CJPDJEJAJViewProps = {
   onSubmitAJScore?: (perfId: string, score: number) => void
   onSubmit?: (status: 'provisional' | 'approved', result: RoutineResult) => void
   onReopenScore?: (perfId: string, panelJudgeId: string | 'all') => void
+  onUnpublishResult?: (perfId: string) => void
   onEditScore?: (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
   onPhoneSubmit?: (difficulty: number, djPenalty: number, ejScore: number, ajScore: number, cjpPenalty: number) => void
 }
 
 export default function CJPDJEJAJView({
-  lang, performances, currentPerfId, panelJudges, judgeScores, results, elements,
+  lang, performances, rankingPerformances, currentPerfId, panelJudges, judgeScores, results, elements,
   djMode = 'elements', ejMode = 'elements',
-  onOpen, onSkip, onSubmitDJScore, onSubmitEJScore, onSubmitAJScore, onSubmit, onReopenScore, onEditScore, onPhoneSubmit,
+  onOpen, onSkip, onSubmitDJScore, onSubmitEJScore, onSubmitAJScore, onSubmit, onReopenScore, onUnpublishResult, onEditScore, onPhoneSubmit,
 }: CJPDJEJAJViewProps) {
   const { flags, extraElements, incorrectTs, deductions,
     handleFlagChange, handleLock, handleOpenRetry,
@@ -601,6 +605,7 @@ export default function CJPDJEJAJView({
         <TabletLayout
           lang={lang}
           performances={performances}
+          rankingPerformances={rankingPerformances}
           currentPerfId={currentPerfId}
           panelJudges={panelJudges}
           judgeScores={judgeScores}
@@ -627,7 +632,7 @@ export default function CJPDJEJAJView({
           onSubmitEJScore={onSubmitEJScore}
           onSubmitAJScore={onSubmitAJScore}
           onSubmit={onSubmit}
-          onReopenScore={onReopenScore}
+          onReopenScore={onReopenScore} onUnpublishResult={onUnpublishResult}
           onEditScore={onEditScore}
         />
       </div>

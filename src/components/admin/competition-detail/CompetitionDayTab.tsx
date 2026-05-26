@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, Section, Panel, Session, SessionOrder, Team, Club, CompetitionEntry, ScoringMethod } from '@/components/admin/types'
+import { resolveRoutineTypeForTeamInSession, type SessionMapRow } from '@/lib/openCombinadosBracket'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -18,8 +19,11 @@ const T = {
     finished: 'Finished',
     start: 'Start session',
     finish: 'Finish session',
+    back: 'Back',
     confirmStart: 'Start this session? Judges will be able to submit scores.',
     confirmFinish: 'Mark this session as finished?',
+    confirmBackToWaiting: 'Move this session back to waiting?',
+    confirmBackToActive: 'Re-open this session as live?',
     noTeams: 'No teams assigned.',
     dropout: 'Dropout',
     noOrder: 'Starting order not published.',
@@ -39,8 +43,11 @@ const T = {
     finished: 'Finalizada',
     start: 'Iniciar sesión',
     finish: 'Finalizar sesión',
+    back: 'Volver',
     confirmStart: '¿Iniciar esta sesión? Los jueces podrán enviar puntuaciones.',
     confirmFinish: '¿Marcar esta sesión como finalizada?',
+    confirmBackToWaiting: '¿Volver esta sesión a espera?',
+    confirmBackToActive: '¿Reabrir esta sesión en curso?',
     noTeams: 'Sin equipos asignados.',
     dropout: 'Baja',
     noOrder: 'Orden de salida no publicado.',
@@ -60,11 +67,16 @@ const SESSION_BADGE: Record<Session['status'], string> = {
   finished: 'bg-green-100 text-green-700',
 }
 
+// Keep one audio player per session so playback can persist across tab switches.
+const sharedSessionAudio = new Map<string, HTMLAudioElement>()
+const sharedSessionIdx = new Map<string, number>()
+const sharedSessionPlaying = new Map<string, boolean>()
+
 // ─── session card ─────────────────────────────────────────────────────────────
 
 function SessionCard({
   lang, session, sessionOrders, globalTeams, clubs, entries,
-  canControl, showStart, cjpCurrentTeamId, musicPaths, onStart, onFinish, onConfigChange,
+  canControl, showStart, cjpCurrentTeamId, musicPaths, onStart, onFinish, onRevert, onConfigChange,
 }: {
   lang: Lang
   session: Session
@@ -78,6 +90,7 @@ function SessionCard({
   musicPaths: Record<string, string | null>
   onStart: () => void
   onFinish: () => void
+  onRevert: () => void
   onConfigChange: (patch: Partial<Pick<Session, 'dj_method' | 'ej_method'>>) => void
 }) {
   const t = T[lang]
@@ -104,21 +117,48 @@ function SessionCard({
   const isFinished = session.status === 'finished'
 
   // ── music player state ────────────────────────────────────────────────────────
-  const [currentIdx, setCurrentIdx] = useState(0)
-  const [isPlaying,  setIsPlaying]  = useState(false)
+  const [currentIdx, setCurrentIdx] = useState(() => sharedSessionIdx.get(session.id) ?? 0)
+  const [isPlaying,  setIsPlaying]  = useState(() => {
+    const remembered = sharedSessionPlaying.get(session.id)
+    if (typeof remembered === 'boolean') return remembered
+    const existing = sharedSessionAudio.get(session.id)
+    return !!existing && !existing.paused && !!existing.src
+  })
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const currentIdxRef = useRef(0)
+  const isPlayingRef = useRef(false)
+  const prevIsActiveRef = useRef(isActive)
 
   // Init audio element once (client-only)
   useEffect(() => {
-    const audio = new Audio()
+    const existing = sharedSessionAudio.get(session.id)
+    const audio = existing ?? new Audio()
+    if (!existing) sharedSessionAudio.set(session.id, audio)
     audio.onended = () => setIsPlaying(false)
     audioRef.current = audio
-    return () => { audio.pause(); audioRef.current = null }
-  }, [])
+    return () => {
+      sharedSessionIdx.set(session.id, currentIdxRef.current)
+      sharedSessionPlaying.set(session.id, isPlayingRef.current)
+      audioRef.current = null
+    }
+  }, [session.id])
 
-  // Reset player when session goes active
+  useEffect(() => { currentIdxRef.current = currentIdx }, [currentIdx])
   useEffect(() => {
-    if (isActive) { setCurrentIdx(0); setIsPlaying(false); audioRef.current?.pause() }
+    isPlayingRef.current = isPlaying
+    sharedSessionPlaying.set(session.id, isPlaying)
+  }, [isPlaying, session.id])
+
+  // Reset player only when status transitions into active (not on tab remount).
+  useEffect(() => {
+    if (!prevIsActiveRef.current && isActive) {
+      setCurrentIdx(0)
+      setIsPlaying(false)
+      sharedSessionIdx.set(session.id, 0)
+      sharedSessionPlaying.set(session.id, false)
+      audioRef.current?.pause()
+    }
+    prevIsActiveRef.current = isActive
   }, [isActive])
 
   const activeTeamIds      = orderedTeamIds.filter(id => !droppedOutIds.has(id))
@@ -132,6 +172,10 @@ function SessionCard({
     if (!audio) return
 
     if (!currentMusicUrl) {
+      const rememberedPlaying = sharedSessionPlaying.get(session.id) ?? isPlayingRef.current
+      const hasLoadedSource = audio.src.length > 0
+      // Ignore transient remount/data-refresh gaps while an active session track is playing.
+      if (isActive && rememberedPlaying && hasLoadedSource) return
       audio.pause()
       audio.src = ''
       if (isPlaying) setIsPlaying(false)
@@ -149,17 +193,25 @@ function SessionCard({
     } else {
       audio.pause()
     }
-  }, [currentMusicTeamId, isPlaying, currentMusicUrl]) // eslint-disable-line
+  }, [currentMusicTeamId, isPlaying, currentMusicUrl, isActive, session.id]) // eslint-disable-line
 
   function prev() {
     audioRef.current?.pause()
-    setCurrentIdx(i => Math.max(0, i - 1))
+    setCurrentIdx(i => {
+      const next = Math.max(0, i - 1)
+      sharedSessionIdx.set(session.id, next)
+      return next
+    })
   }
 
   function next() {
     if (clampedIdx < activeTeamIds.length - 1) {
       audioRef.current?.pause()
-      setCurrentIdx(i => i + 1)
+      setCurrentIdx(i => {
+        const next = i + 1
+        sharedSessionIdx.set(session.id, next)
+        return next
+      })
     } else {
       setIsPlaying(false)
     }
@@ -190,9 +242,25 @@ function SessionCard({
               </button>
             )}
             {isActive && (
-              <button onClick={() => { if (confirm(t.confirmFinish)) onFinish() }}
-                className="px-3 py-1.5 text-xs font-semibold border border-green-200 text-green-700 rounded-xl hover:bg-green-50 transition-all">
-                {t.finish}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { if (confirm(t.confirmBackToWaiting)) onRevert() }}
+                  className="px-3 py-1.5 text-xs font-semibold border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-all"
+                >
+                  {t.back}
+                </button>
+                <button onClick={() => { if (confirm(t.confirmFinish)) onFinish() }}
+                  className="px-3 py-1.5 text-xs font-semibold border border-green-200 text-green-700 rounded-xl hover:bg-green-50 transition-all">
+                  {t.finish}
+                </button>
+              </div>
+            )}
+            {isFinished && (
+              <button
+                onClick={() => { if (confirm(t.confirmBackToActive)) onRevert() }}
+                className="px-3 py-1.5 text-xs font-semibold border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-all"
+              >
+                {t.back}
               </button>
             )}
           </div>
@@ -346,7 +414,7 @@ function SessionCard({
 export default function CompetitionDayTab({
   lang, competition, sections, panels, sessions,
   sessionOrders, globalTeams, clubs, entries,
-  onStartSession, onFinishSession,
+  onStartSession, onFinishSession, onRevertSession,
 }: {
   lang: Lang
   competition: Competition
@@ -359,6 +427,7 @@ export default function CompetitionDayTab({
   entries: CompetitionEntry[]
   onStartSession: (sessionId: string) => void
   onFinishSession: (sessionId: string) => void
+  onRevertSession: (sessionId: string) => void
 }) {
   const t = T[lang]
   const supabase = createClient()
@@ -368,6 +437,7 @@ export default function CompetitionDayTab({
   const [cjpCurrentTeamIds, setCjpCurrentTeamIds] = useState<Record<string, string | null>>({})
   // team_id|routine_type → music public URL
   const [allMusicPaths, setAllMusicPaths] = useState<Array<{ team_id: string; routine_type: string; music_path: string | null }>>([])
+  const [teamRoutineBySessionTeam, setTeamRoutineBySessionTeam] = useState<Record<string, 'Balance' | 'Dynamic' | 'Combined'>>({})
 
   // Local optimistic state for scoring config (so toggling reflects immediately without prop round-trip)
   const [localConfig, setLocalConfig] = useState<Record<string, Partial<Pick<Session, 'dj_method' | 'ej_method'>>>>({})
@@ -382,6 +452,7 @@ export default function CompetitionDayTab({
 
     const ids     = activeSessions.map(s => s.id)
     const teamIds = [...new Set(sessionOrders.filter(o => ids.includes(o.session_id)).map(o => o.team_id))]
+    const sessionById = Object.fromEntries(activeSessions.map((s) => [s.id, s]))
 
     // fetch initial CJP current_team_id
     supabase.from('sessions').select('id, current_team_id').in('id', ids)
@@ -394,11 +465,43 @@ export default function CompetitionDayTab({
 
     // fetch music URLs
     if (teamIds.length) {
-      supabase.from('routine_music')
-        .select('team_id, routine_type, music_path')
-        .eq('competition_id', competition.id)
-        .in('team_id', teamIds)
-        .then(({ data }) => setAllMusicPaths((data ?? []) as typeof allMusicPaths))
+      Promise.all([
+        supabase.from('routine_music')
+          .select('team_id, routine_type, music_path')
+          .eq('competition_id', competition.id)
+          .in('team_id', teamIds),
+        supabase
+          .from('open_combinados_phase_sessions')
+          .select('phase_key, session_id')
+          .eq('competition_id', competition.id)
+          .in('session_id', ids),
+        supabase
+          .from('open_combinados_open_team_choices')
+          .select('phase_key, team_id, selected_routine_type')
+          .eq('competition_id', competition.id)
+          .in('team_id', teamIds),
+      ]).then(([musicRes, phaseRes, choiceRes]) => {
+        setAllMusicPaths((musicRes.data ?? []) as typeof allMusicPaths)
+        const mappings = (phaseRes.data ?? []) as SessionMapRow[]
+        const openChoicesByPhaseAndTeam: Record<string, Record<string, 'Balance' | 'Dynamic' | 'Combined'>> = {}
+        for (const row of (choiceRes.data ?? [])) {
+          if (!openChoicesByPhaseAndTeam[row.phase_key]) openChoicesByPhaseAndTeam[row.phase_key] = {}
+          openChoicesByPhaseAndTeam[row.phase_key][row.team_id] = row.selected_routine_type as 'Balance' | 'Dynamic' | 'Combined'
+        }
+        const nextMap: Record<string, 'Balance' | 'Dynamic' | 'Combined'> = {}
+        for (const o of sessionOrders.filter((ord) => ids.includes(ord.session_id))) {
+          const session = sessionById[o.session_id]
+          if (!session) continue
+          nextMap[`${o.session_id}:${o.team_id}`] = resolveRoutineTypeForTeamInSession({
+            sessionId: o.session_id,
+            sessionRoutineType: session.routine_type as 'Balance' | 'Dynamic' | 'Combined',
+            teamId: o.team_id,
+            mappings,
+            openChoicesByPhaseAndTeam,
+          })
+        }
+        setTeamRoutineBySessionTeam(nextMap)
+      })
     }
 
     // subscribe to session updates (CJP indicator)
@@ -435,11 +538,14 @@ export default function CompetitionDayTab({
   const multiPanel      = panels.length > 1
 
   function getMusicPaths(session: Session): Record<string, string | null> {
-    return Object.fromEntries(
-      allMusicPaths
-        .filter(m => m.routine_type === session.routine_type)
-        .map(m => [m.team_id, m.music_path])
-    )
+    const byTeamAndRoutine = new Map<string, string | null>()
+    for (const row of allMusicPaths) byTeamAndRoutine.set(`${row.team_id}:${row.routine_type}`, row.music_path)
+    const out: Record<string, string | null> = {}
+    for (const o of sessionOrders.filter((ord) => ord.session_id === session.id)) {
+      const routine = teamRoutineBySessionTeam[`${session.id}:${o.team_id}`] ?? session.routine_type
+      out[o.team_id] = byTeamAndRoutine.get(`${o.team_id}:${routine}`) ?? null
+    }
+    return out
   }
 
   async function handleConfigChange(sessionId: string, patch: Partial<Pick<Session, 'dj_method' | 'ej_method'>>) {
@@ -478,6 +584,7 @@ export default function CompetitionDayTab({
                 musicPaths={getMusicPaths(session)}
                 onStart={() => onStartSession(session.id)}
                 onFinish={() => onFinishSession(session.id)}
+                onRevert={() => onRevertSession(session.id)}
                 onConfigChange={(patch) => handleConfigChange(session.id, patch)} />
             ) })}
         </div>
@@ -527,6 +634,7 @@ export default function CompetitionDayTab({
                           musicPaths={getMusicPaths(session)}
                           onStart={() => {}}
                           onFinish={() => {}}
+                          onRevert={() => {}}
                           onConfigChange={(patch) => handleConfigChange(session.id, patch)} />
                       ) })}
                     </div>

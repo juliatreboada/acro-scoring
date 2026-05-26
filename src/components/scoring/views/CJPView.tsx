@@ -6,7 +6,7 @@ import type { PanelJudge, ScoringPerformance, JudgeScore, RoutineResult, Penalty
 import { calcCjpPenalty, droppedIndices, computeResult, DEFAULT_PENALTY } from '../types'
 import { CJP_PENALTY_CATEGORIES, cjpCategoryContrib } from '@/lib/scoringRules'
 import { categoryLabel } from '@/components/admin/types'
-import { ScoreGrid } from '@/components/shared/CJPTabletShell'
+import { ScoreGrid } from '@/components/scoring/CJPTabletShell'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -37,6 +37,7 @@ const T = {
     submitProv: 'Submit provisional',
     submitFinal: 'Submit final',
     confirmFinal: 'Confirm final',
+    modifyFinal: 'Modify',
     nextPerf: 'Next performance',
     ranking: 'Ranking',
     rankCol: '#',
@@ -76,6 +77,7 @@ const T = {
     submitProv: 'Enviar provisional',
     submitFinal: 'Enviar final',
     confirmFinal: 'Confirmar final',
+    modifyFinal: 'Modificar',
     nextPerf: 'Siguiente actuación',
     ranking: 'Clasificación',
     rankCol: '#',
@@ -303,14 +305,25 @@ function RankingTable({ performances, results, lang, selectedPerfId, onSelectPer
 }) {
   const t = T[lang]
 
-  const scored = Object.values(results)
-  if (scored.length === 0) return null
+  const hasAnyScored = performances.some((p) => results[p.id])
+  if (!hasAnyScored) return null
 
   const routineLabel = (rt: string) =>
     ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
 
-  const groupKey = (p: ScoringPerformance) => `${p.ageGroup}||${p.category}||${p.routineType}`
-  const groupLabel = (p: ScoringPerformance) => `${p.ageGroup} · ${categoryLabel(p.category, lang)} · ${routineLabel(p.routineType)}`
+  const groupKey = (p: ScoringPerformance) =>
+    p.rankingMergeGroupId
+      ? `${p.ageGroup}||mg:${p.rankingMergeGroupId}||${p.routineType}`
+      : `${p.ageGroup}||${p.category}||${p.routineType}`
+
+  const groupLabel = (p: ScoringPerformance) => {
+    if (p.rankingMergeGroupId) {
+      const raw = lang === 'en' ? p.mergeLabelEn : p.mergeLabelEs
+      if (raw?.trim()) return `${raw.trim()} · ${routineLabel(p.routineType)}`
+      return `${p.ageGroup} · ${routineLabel(p.routineType)}`
+    }
+    return `${p.ageGroup} · ${categoryLabel(p.category, lang)} · ${routineLabel(p.routineType)}`
+  }
 
   const perfById = Object.fromEntries(performances.map((p) => [p.id, p]))
 
@@ -420,6 +433,8 @@ export type CJPViewProps = {
   lang: Lang
   panelJudges: PanelJudge[]
   performances: ScoringPerformance[]
+  /** When set, CJP ranking pools these rows (merge group peers). Defaults to `performances`. */
+  rankingPerformances?: ScoringPerformance[]
   currentPerfId: string | null
   judgeScores: Record<string, JudgeScore[]>
   results: Record<string, RoutineResult>
@@ -427,15 +442,18 @@ export type CJPViewProps = {
   onSkip: (perfId: string) => void
   onSubmit: (status: 'provisional' | 'approved', result: RoutineResult, penaltyDetail?: PenaltyState | null) => void
   onReopenScore: (perfId: string, panelJudgeId: string | 'all') => void
+  onUnpublishResult?: (perfId: string) => void
   onEditScore?: (perfId: string, panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
 }
 
 export default function CJPView({
   isCJP, lang, panelJudges, performances,
+  rankingPerformances,
   currentPerfId, judgeScores, results,
-  onOpen, onSkip, onSubmit, onReopenScore, onEditScore,
+  onOpen, onSkip, onSubmit, onReopenScore, onUnpublishResult, onEditScore,
 }: CJPViewProps) {
   const t = T[lang]
+  const rankPerfs = rankingPerformances ?? performances
   const [penaltyStates, setPenaltyStates] = useState<Record<string, PenaltyState>>({})
   const [reviewPerfId, setReviewPerfId] = useState<string | null>(null)
   const [leftOpen, setLeftOpen] = useState(true)
@@ -697,7 +715,7 @@ export default function CJPView({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 13h6M9 17h4" />
               </svg>
-              <p className="text-sm font-medium">{lang === 'es' ? 'Sin PDF de hoja de tarifa' : 'No tariff sheet PDF'}</p>
+              <p className="text-sm font-medium">{lang === 'es' ? 'Sin PDF de TS' : 'No tariff sheet PDF'}</p>
             </div>
           )
         })()}
@@ -776,8 +794,16 @@ export default function CJPView({
                 )}
 
                 {isCJP && reviewResult?.status === 'approved' && (
-                  <div className="py-2.5 rounded-xl bg-emerald-50 border-2 border-emerald-200 text-center">
+                  <div className="py-2.5 px-4 rounded-xl bg-emerald-50 border-2 border-emerald-200 flex items-center justify-between">
                     <span className="text-sm font-semibold text-emerald-700">✓ {t.final} · {reviewResult.finalScore.toFixed(3)}</span>
+                    {onUnpublishResult && (
+                      <button
+                        onClick={() => onUnpublishResult(reviewPerfId!)}
+                        className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 underline underline-offset-2"
+                      >
+                        {t.modifyFinal}
+                      </button>
+                    )}
                   </div>
                 )}
               </>
@@ -856,8 +882,16 @@ export default function CJPView({
                       )}
                       {currentResult?.status === 'approved' && (
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 py-2.5 rounded-xl bg-emerald-50 border-2 border-emerald-200 text-center">
+                          <div className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-50 border-2 border-emerald-200 flex items-center justify-between">
                             <span className="text-sm font-semibold text-emerald-700">✓ {t.final} · {currentResult.finalScore.toFixed(3)}</span>
+                            {onUnpublishResult && (
+                              <button
+                                onClick={() => onUnpublishResult(currentPerfId!)}
+                                className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 underline underline-offset-2 ml-2 shrink-0"
+                              >
+                                {t.modifyFinal}
+                              </button>
+                            )}
                           </div>
                           {nextPending && (
                             <button onClick={() => onOpen(nextPending.id)}
@@ -876,7 +910,7 @@ export default function CJPView({
 
             {/* ranking */}
             <RankingTable
-              performances={performances}
+              performances={rankPerfs}
               results={results}
               lang={lang}
               selectedPerfId={isReviewMode ? reviewPerfId : currentPerfId}

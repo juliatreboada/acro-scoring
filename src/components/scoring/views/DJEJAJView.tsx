@@ -5,10 +5,10 @@ import type { Performance, Lang } from '../types'
 import type { TsElement, ElementType, Deductions } from '../types'
 import type { ElementFlag, ElementFlags } from '../types'
 import type { PanelJudge, JudgeScore, RoutineResult, ScoreDetail } from '../types'
-import { ScoreGrid } from '../../shared/CJPTabletShell'
-import { calcDJTotals, IncorrectTsToggle, DualKeypad, PhoneDJElementsList } from '../../shared/DJElementsShared'
-import { calcEJScore, EJKeypad, EJElementRow, CombinedElementRow } from '../../shared/DJEJElementsShared'
-import AJScoringPanel from '../../shared/AJScoringPanel'
+import { ScoreGrid } from '../CJPTabletShell'
+import { calcDJTotals, IncorrectTsToggle, DualKeypad, PhoneDJElementsList } from '../DJElementsShared'
+import { calcEJScore, EJKeypad, EJElementRow, CombinedElementRow } from '../DJEJElementsShared'
+import AJScoringPanel from '../AJScoringPanel'
 import CheckIcon from '../../shared/CheckIcon'
 import { useDJScoring } from '@/hooks/useDJScoring'
 import { ScoringPerformanceHeader } from '../../shared/ScoringPerformanceHeader'
@@ -53,11 +53,11 @@ const T = {
     djPenalty: 'Pen. DJ',
     ejScore: 'Nota EJ',
     ajScore: 'Punt. AJ',
-    pdfPlaceholder: 'Hoja de tarifa',
+    pdfPlaceholder: 'TS',
     pdfNote: 'El PDF aparecerá aquí una vez subido',
     submit: 'Enviar',
     addElement: '+ Añadir elemento no listado',
-    noElements: 'No hay elementos en la hoja de tarifa',
+    noElements: 'No hay elementos en la TS',
     noElementsNote: 'Puedes enviar directamente',
   },
 }

@@ -4,9 +4,9 @@ import { useState, useEffect, useRef } from 'react'
 import type { Performance, Lang } from '../types'
 import type { TsElement } from '../types'
 import type { PanelJudge, JudgeScore, RoutineResult } from '../types'
-import { ScoreGrid } from '../../shared/CJPTabletShell'
-import { calcEJScore, EJKeypad, EJElementRow } from '../../shared/DJEJElementsShared'
-import AJScoringPanel from '../../shared/AJScoringPanel'
+import { ScoreGrid } from '../CJPTabletShell'
+import { calcEJScore, EJKeypad, EJElementRow } from '../DJEJElementsShared'
+import AJScoringPanel from '../AJScoringPanel'
 import CheckIcon from '../../shared/CheckIcon'
 import { useEJScoring } from '@/hooks/useEJScoring'
 import { ScoringPerformanceHeader } from '../../shared/ScoringPerformanceHeader'
@@ -43,10 +43,10 @@ const T = {
     submitted: 'Puntuaciones enviadas',
     ejScore: 'Nota EJ',
     ajScore: 'Punt. AJ',
-    pdfPlaceholder: 'Hoja de tarifa',
+    pdfPlaceholder: 'TS',
     pdfNote: 'El PDF aparecerá aquí una vez subido',
     submit: 'Enviar',
-    noElements: 'No hay elementos en la hoja de tarifa',
+    noElements: 'No hay elementos en la TS',
     noElementsNote: 'Puedes enviar directamente',
     addElement: '+ Añadir elemento no listado',
   },

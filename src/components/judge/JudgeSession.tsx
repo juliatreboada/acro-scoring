@@ -25,6 +25,8 @@ export type JudgeSessionProps = {
   // CJP-specific (only relevant when CJP is in assignedRoles)
   panelJudges: PanelJudge[]
   performances: ScoringPerformance[]
+  /** Optional wider list for CJP ranking when sessions share a merge group. */
+  rankingPerformances?: ScoringPerformance[]
   currentPerfId: string | null
   judgeScores: Record<string, JudgeScore[]>
   results: Record<string, RoutineResult>
@@ -98,7 +100,7 @@ function EmptyState({ icon, title, sub }: {
 export default function JudgeSession({
   lang, sessionStatus, assignedRoles,
   currentPerf, elements,
-  panelJudges, performances, currentPerfId, judgeScores, results,
+  panelJudges, performances, rankingPerformances, currentPerfId, judgeScores, results,
   onOpen, onSkip, onCJPSubmit, onReopenScore,
   onJudgeScoreSubmit,
 }: JudgeSessionProps) {
@@ -197,6 +199,7 @@ export default function JudgeSession({
                   lang={lang}
                   panelJudges={panelJudges}
                   performances={performances}
+                  rankingPerformances={rankingPerformances}
                   currentPerfId={currentPerfId}
                   judgeScores={judgeScores}
                   results={results}

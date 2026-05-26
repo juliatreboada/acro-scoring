@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Performance, Lang, Deductions, TsElement } from '../types'
 import type { PanelJudge, JudgeScore, RoutineResult, ScoreDetail } from '../types'
-import { ScoreGrid } from '../../shared/CJPTabletShell'
+import { ScoreGrid } from '../CJPTabletShell'
 import { ScoringPerformanceHeader } from '../../shared/ScoringPerformanceHeader'
 import { MAX_RETRIES, DEDUCTION_VALUES } from '@/lib/scoringRules'
 
@@ -42,9 +42,9 @@ const T = {
   es: {
     waiting: 'Esperando actuación…',
     waitingSub: 'El juez coordinador no ha abierto ninguna rutina todavía.',
-    pdfPlaceholder: 'PDF Hoja de Tarifa',
+    pdfPlaceholder: 'PDF TS',
     pdfNote: 'El PDF aparecerá aquí una vez subido',
-    noElements: 'No hay elementos en la hoja de tarifa',
+    noElements: 'No hay elementos en la TS',
     noElementsNote: 'Puedes enviar una puntuación de 10.0',
     difficulty: 'D',
     addRetry: 'Añadir reintento',

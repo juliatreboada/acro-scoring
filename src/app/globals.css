@@ -29,5 +29,12 @@ body {
 @media print {
   body * { visibility: hidden; }
   .so-print-area, .so-print-area * { visibility: visible; }
-  .so-print-area { position: absolute; inset: 0; }
+  .so-print-area {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    left: 0;
+    right: 0;
+  }
 }

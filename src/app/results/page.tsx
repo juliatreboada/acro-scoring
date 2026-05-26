@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Database } from '@/lib/database.types'
 import { formatDateRange } from '@/lib/formatDate'
+import { STATUS_BADGE } from '@/lib/uiConstants'
 
 type Competition = Pick<
   Database['public']['Tables']['competitions']['Row'],
@@ -20,6 +21,7 @@ const T = {
     subtitle: 'Select a competition to view its results.',
     live: 'Live',
     finished: 'Finished',
+    finishedCompetition: 'Finished competition',
     noCompetitions: 'No results available yet.',
   },
   es: {
@@ -27,13 +29,9 @@ const T = {
     subtitle: 'Selecciona una competición para ver sus resultados.',
     live: 'En vivo',
     finished: 'Finalizada',
+    finishedCompetition: 'Competición finalizada',
     noCompetitions: 'Aún no hay resultados disponibles.',
   },
-}
-
-const STATUS_BADGE: Partial<Record<Competition['status'], string>> = {
-  active:   'bg-blue-600 text-white',
-  finished: 'bg-slate-100 text-slate-500',
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -93,7 +91,8 @@ export default function Page() {
             {visible.map((comp) => {
               const dateStr = formatDateRange(comp.start_date, comp.end_date)
               const badgeCls = STATUS_BADGE[comp.status] ?? ''
-              const statusLabel = comp.status === 'active' ? t.live : t.finished
+              const statusLabel =
+                comp.status === 'active' ? t.live : comp.status === 'finished' ? t.finishedCompetition : t.finished
 
               return (
                 <button

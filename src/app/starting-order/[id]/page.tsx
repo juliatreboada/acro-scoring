@@ -24,14 +24,16 @@ export default function Page() {
   const [clubs,         setClubs]         = useState<Club[]>([])
   const [entries,       setEntries]       = useState<CompetitionEntry[]>([])
   const [ageGroupRules, setAgeGroupRules] = useState<AgeGroupRule[]>([])
+  const [completedRoutineKeys, setCompletedRoutineKeys] = useState<string[]>([])
+  const [ongoingRoutineKey, setOngoingRoutineKey] = useState<string | null>(null)
   const [loading,       setLoading]       = useState(true)
 
   useEffect(() => {
     async function load() {
       // ── first wave: competition + panels + sections + sessions + entries ──────
-      const [compRes, panelsRes, sectionsRes, sessionsRes, entriesRes, rulesRes] = await Promise.all([
+      const [compRes, panelsRes, sectionsRes, sessionsRes, entriesRes, rulesRes, resultsRes, tvStateRes] = await Promise.all([
         supabase.from('competitions')
-          .select('id, name, status, sport_type, location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
+          .select('id, name, status, sport_type,location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, logo_url, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
           .eq('id', id).single(),
         supabase.from('panels')
           .select('id, competition_id, panel_number')
@@ -46,11 +48,19 @@ export default function Page() {
           .eq('competition_id', id)
           .order('order_index'),
         supabase.from('competition_entries')
-          .select('id, competition_id, team_id, dorsal, dropped_out')
+          .select('id, competition_id, team_id, dorsal, dropped_out, gymnast_display, gymnast_ids')
           .eq('competition_id', id),
         supabase.from('age_group_rules')
           .select('id, age_group, level, ruleset, min_age, max_age, routine_count')
           .order('sort_order'),
+        supabase.from('routine_results')
+          .select('session_id, team_id')
+          .eq('competition_id', id)
+          .in('status', ['approved', 'provisional']),
+        supabase.from('tv_state')
+          .select('session_id, team_id')
+          .eq('competition_id', id)
+          .maybeSingle(),
       ])
 
       if (!compRes.data) { setLoading(false); return }
@@ -58,6 +68,7 @@ export default function Page() {
       const comp: Competition = { ...compRes.data, admin: null }
       const rawSessions = sessionsRes.data ?? []
       const rawEntries  = entriesRes.data  ?? []
+      const entryDisplayMap = Object.fromEntries(rawEntries.map(e => [e.team_id, (e as any).gymnast_display as string | null]))
 
       const locked    = rawSessions.filter((s) => s.order_locked).map((s) => s.id)
       const teamIds   = rawEntries.map((e) => e.team_id)
@@ -72,7 +83,10 @@ export default function Page() {
           : Promise.resolve({ data: [] as Team[] }),
       ])
 
-      const rawTeams = teamsRes.data ?? []
+      const rawTeams = (teamsRes.data ?? []).map(t => ({
+        ...t,
+        gymnast_display: entryDisplayMap[t.id] ?? t.gymnast_display,
+      }))
       const clubIds  = [...new Set(rawTeams.map((t) => t.club_id))]
 
       // ── third wave: clubs ─────────────────────────────────────────────────────
@@ -90,9 +104,46 @@ export default function Page() {
       setGlobalTeams(rawTeams)
       setClubs(clubsData ?? [])
       setAgeGroupRules((rulesRes.data ?? []) as unknown as AgeGroupRule[])
+      setCompletedRoutineKeys((resultsRes.data ?? []).map((r) => `${r.session_id}:${r.team_id}`))
+      setOngoingRoutineKey(tvStateRes.data?.session_id && tvStateRes.data?.team_id
+        ? `${tvStateRes.data.session_id}:${tvStateRes.data.team_id}`
+        : null)
       setLoading(false)
     }
     load()
+
+    const resultsChannel = supabase
+      .channel(`starting-order-results-${id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'routine_results', filter: `competition_id=eq.${id}` },
+        async () => {
+          const { data } = await supabase
+            .from('routine_results')
+            .select('session_id, team_id')
+            .eq('competition_id', id)
+            .in('status', ['approved', 'provisional'])
+          setCompletedRoutineKeys((data ?? []).map((r) => `${r.session_id}:${r.team_id}`))
+        },
+      )
+      .subscribe()
+
+    const tvStateChannel = supabase
+      .channel(`starting-order-tv-state-${id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tv_state', filter: `competition_id=eq.${id}` },
+        (payload) => {
+          const row = payload.new as { session_id: string | null; team_id: string | null }
+          setOngoingRoutineKey(row?.session_id && row?.team_id ? `${row.session_id}:${row.team_id}` : null)
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(resultsChannel)
+      supabase.removeChannel(tvStateChannel)
+    }
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return (
@@ -135,6 +186,8 @@ export default function Page() {
         clubs={clubs}
         entries={entries}
         ageGroupRules={ageGroupRules}
+        completedRoutineKeys={completedRoutineKeys}
+        ongoingRoutineKey={ongoingRoutineKey}
       />
     </div>
   )

@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import type { Lang } from '@/components/scoring/types'
 import type { Judge } from '@/components/admin/types'
 import { InviteJudgeForm } from './shared/InviteJudgeForm'
+import { INPUT_CLS } from '@/lib/uiConstants'
 
 const T = {
   en: {
@@ -73,7 +74,7 @@ export default function ClubJudgesTab({ lang, judges, onInvite, onUpdate, onDele
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<EditForm>({ full_name: '', phone: '', licence: '' })
 
-  const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+  const inputCls = INPUT_CLS
 
   const q = query.trim().toLowerCase()
   const filtered = [...judges]

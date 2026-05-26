@@ -62,12 +62,14 @@ export type Competition = {
   registration_deadline: string | null // last day clubs can register
   ts_music_deadline: string | null     // after this date clubs cannot upload/modify/delete TS or music
   age_groups: string[]                 // selected age groups for this competition
-  poster_url: string | null            // event poster / logo
+  poster_url: string | null            // event poster (marketing, home, TV idle)
+  logo_url: string | null              // brand mark; printed public results (same storage bucket as poster)
   admin: AdminUser | null              // assigned competition-admin
   created_at: string
   fee_per_team: number | null          // fixed fee per team entry
   fee_per_gymnast: number | null       // fee × gymnast count per category (pair=2, trio=3, group=4)
   judge_missing_fine: number | null    // extra charge if club doesn't provide a judge
+  open_combinados_enabled?: boolean
   sport_type: string                   // 'acro' | 'rg'
 }
 
@@ -107,6 +109,14 @@ export type Session = {
   order_index: number   // order within the section
   dj_method:  ScoringMethod | null
   ej_method:  ScoringMethod | null
+  /** Pool sessions for a single public/TV/CJP ranking (optional). */
+  ranking_merge_group_id: string | null
+}
+
+export type RankingMergeGroup = {
+  id: string
+  label_es: string | null
+  label_en: string | null
 }
 
 export type Judge = {
@@ -198,6 +208,8 @@ export type Team = {
   age_group: string
   gymnast_display: string   // e.g. "Fernández / Ruiz"
   photo_url: string | null
+  /** Set when club removes team from roster; row kept for competition FKs. */
+  archived_at?: string | null
   sport_type?: string       // 'acro' | 'rg' (defaults to 'acro')
   apparatus_ids?: string[]  // RG only — from team_apparatus
 }
@@ -234,6 +246,8 @@ export type CompetitionEntry = {
   team_id: string
   dorsal: number | null
   dropped_out: boolean
+  gymnast_display: string | null
+  gymnast_ids: string[] | null
 }
 
 export type SessionOrder = {
@@ -363,6 +377,16 @@ export const NEXT_STATUS: Partial<Record<CompetitionStatus, CompetitionStatus>> 
   registration_closed:  'published',
   published:            'active',
   active:               'finished',
+}
+
+export const PREV_STATUS: Partial<Record<CompetitionStatus, CompetitionStatus>> = {
+  provisional_entry:   'draft',
+  definitive_entry:    'provisional_entry',
+  registration_open:   'definitive_entry',
+  registration_closed: 'registration_open',
+  published:           'registration_closed',
+  active:              'published',
+  finished:            'active',
 }
 
 // ─── provisional / definitive entry types ────────────────────────────────────

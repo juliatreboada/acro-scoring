@@ -67,7 +67,7 @@ export function useClubData() {
             ? supabase.from('team_apparatus').select('team_id,apparatus_id').in('team_id', teamIds)
             : Promise.resolve({ data: [] as { team_id: string; apparatus_id: string }[] }),
           teamIds.length > 0
-            ? supabase.from('competition_entries').select('id,competition_id,team_id,dorsal,dropped_out').in('team_id', teamIds)
+            ? supabase.from('competition_entries').select('id,competition_id,team_id,dorsal,dropped_out,gymnast_display,gymnast_ids').in('team_id', teamIds)
             : Promise.resolve({ data: [] }),
           teamIds.length > 0
             ? supabase.from('routine_music').select('id,team_id,competition_id,routine_type,music_path,ts_path,uploaded_at').in('team_id', teamIds)
@@ -289,11 +289,16 @@ export function useClubData() {
   }
 
   async function handleDeleteTeam(id: string) {
-    const { error } = await supabase.from('teams').delete().eq('id', id)
+    const now = new Date().toISOString()
+    const { error } = await supabase.from('teams').update({ archived_at: now }).eq('id', id)
     if (error) { setActionError(error.message); return }
-    setTeams(prev => prev.filter(x => x.id !== id))
-    setEntries(prev => prev.filter(e => e.team_id !== id))
-    setMusicState(prev => prev.filter(m => m.team_id !== id))
+    setTeams(prev => prev.map(x => x.id === id ? { ...x, archived_at: now } : x))
+  }
+
+  async function handleRestoreTeam(id: string) {
+    const { error } = await supabase.from('teams').update({ archived_at: null }).eq('id', id)
+    if (error) { setActionError(error.message); return }
+    setTeams(prev => prev.map(x => x.id === id ? { ...x, archived_at: null } : x))
   }
 
   async function handleUploadTeamPhoto(id: string, file: File) {
@@ -504,7 +509,7 @@ export function useClubData() {
     handleAddCoach, handleUpdateCoach, handleDeleteCoach,
     handleUploadCoachPhoto, handleUploadCoachLicencia,
     handleRegisterCoach, handleUnregisterCoach,
-    handleAddTeam, handleUpdateTeam, handleDeleteTeam, handleUploadTeamPhoto,
+    handleAddTeam, handleUpdateTeam, handleDeleteTeam, handleRestoreTeam, handleUploadTeamPhoto,
     handleRGRegister, handleRGUploadPaymentDoc, handleSetRGMusic,
     handleRegister, handleDropout,
     handleInviteJudge, handleUpdateJudge, handleDeleteJudge, handleUploadJudgePhoto,

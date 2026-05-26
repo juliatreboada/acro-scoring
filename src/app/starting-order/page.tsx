@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Database } from '@/lib/database.types'
 import { formatDateRange } from '@/lib/formatDate'
+import { STATUS_BADGE } from '@/lib/uiConstants'
 
 type Competition = Pick<
   Database['public']['Tables']['competitions']['Row'],
@@ -21,6 +22,7 @@ const T = {
     live: 'Live',
     published: 'Starting order published',
     finished: 'Finished',
+    finishedCompetition: 'Finished competition',
     viewOrder: 'View starting order',
     noCompetitions: 'No competitions available.',
     location: 'Location',
@@ -32,17 +34,12 @@ const T = {
     live: 'En vivo',
     published: 'Orden de salida publicada',
     finished: 'Finalizada',
+    finishedCompetition: 'Competición finalizada',
     viewOrder: 'Ver orden de salida',
     noCompetitions: 'No hay competiciones disponibles.',
     location: 'Sede',
     dates: 'Fechas',
   },
-}
-
-const STATUS_BADGE: Partial<Record<Competition['status'], string>> = {
-  published: 'bg-indigo-100 text-indigo-700',
-  active:    'bg-blue-600 text-white',
-  finished:  'bg-slate-100 text-slate-500',
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -102,7 +99,14 @@ export default function Page() {
             {visible.map((comp) => {
               const dateStr = formatDateRange(comp.start_date, comp.end_date)
               const badgeCls = STATUS_BADGE[comp.status] ?? ''
-              const statusLabel = comp.status === 'active' ? t.live : comp.status === 'published' ? t.published : t.finished
+              const statusLabel =
+                comp.status === 'active'
+                  ? t.live
+                  : comp.status === 'published'
+                    ? t.published
+                    : comp.status === 'finished'
+                      ? t.finishedCompetition
+                      : t.finished
 
               return (
                 <button

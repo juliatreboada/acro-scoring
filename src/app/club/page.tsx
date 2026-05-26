@@ -13,18 +13,19 @@ export default function Page() {
     loading, club,
     gymnasts, coaches, competitionCoaches, teams, competitions,
     entries, music, judges, nominations, agLabels, ageGroupRules, tsReviewStatuses, apparatus, apparatusRules,
-    actionError, clearActionError,
+    actionError,
     handleAddGymnast, handleAddGymnastsBulk, handleUpdateGymnast, handleDeleteGymnast,
     handleUploadGymnastPhoto, handleUploadLicencia, handleRemoveLicencia,
     handleAddCoach, handleUpdateCoach, handleDeleteCoach,
     handleUploadCoachPhoto, handleUploadCoachLicencia,
     handleRegisterCoach, handleUnregisterCoach,
-    handleAddTeam, handleUpdateTeam, handleDeleteTeam, handleUploadTeamPhoto,
+    handleAddTeam, handleUpdateTeam, handleDeleteTeam, handleRestoreTeam, handleUploadTeamPhoto,
     handleRegister, handleDropout,
     handleInviteJudge, handleUpdateJudge, handleDeleteJudge, handleUploadJudgePhoto,
     handleNominate, handleRemoveNomination,
     handleUpdateClub, handleUploadAvatar,
     handleSetFile,
+    clearActionError,
   } = useClubData()
 
   if (loading || !club) return (
@@ -78,6 +79,7 @@ export default function Page() {
         onAddTeam={handleAddTeam}
         onUpdateTeam={handleUpdateTeam}
         onDeleteTeam={handleDeleteTeam}
+        onRestoreTeam={handleRestoreTeam}
         onUploadTeamPhoto={handleUploadTeamPhoto}
         onRegister={handleRegister}
         onDropout={handleDropout}

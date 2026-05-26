@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import type { Answers, Lang, Performance } from '../types'
 import { getSections, getQuestionValues, calcSectionScore, calcTotal } from '../aj-content'
 import type { PanelJudge, JudgeScore, RoutineResult } from '../types'
-import { ScoreGrid } from '../../shared/CJPTabletShell'
+import { ScoreGrid } from '../CJPTabletShell'
 import { ScoringPerformanceHeader } from '../../shared/ScoringPerformanceHeader'
 
 // ─── translations ────────────────────────────────────────────────────────────

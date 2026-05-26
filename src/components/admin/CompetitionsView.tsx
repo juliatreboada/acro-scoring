@@ -156,6 +156,7 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
       registration_deadline: registrationDeadline || null,
       ts_music_deadline: null,
       poster_url: posterUrl.trim() || null,
+      logo_url: null,
       admin,
       fee_per_team: null,
       fee_per_gymnast: null,

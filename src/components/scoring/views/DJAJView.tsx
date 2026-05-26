@@ -6,9 +6,9 @@ import type { TsElement, ElementType } from '../types'
 import type { ElementFlag, ElementFlags } from '../types'
 import { DEFAULT_FLAG } from '../types'
 import type { PanelJudge, JudgeScore, RoutineResult } from '../types'
-import { ScoreGrid } from '../../shared/CJPTabletShell'
-import { getElementConfig, calcDJTotals, IncorrectTsToggle, DJElementRow, DualKeypad, PhoneDJElementsList } from '../../shared/DJElementsShared'
-import AJScoringPanel from '../../shared/AJScoringPanel'
+import { ScoreGrid } from '../CJPTabletShell'
+import { getElementConfig, calcDJTotals, IncorrectTsToggle, DJElementRow, DualKeypad, PhoneDJElementsList } from '../DJElementsShared'
+import AJScoringPanel from '../AJScoringPanel'
 import CheckIcon from '../../shared/CheckIcon'
 import { ScoringPerformanceHeader } from '../../shared/ScoringPerformanceHeader'
 import { RoleTabBar } from '../../shared/RoleTabBar'
@@ -46,11 +46,11 @@ const T = {
     difficultyTotal: 'Dificultad',
     djPenalty: 'Pen. DJ',
     ajScore: 'Punt. AJ',
-    pdfPlaceholder: 'Hoja de tarifa',
+    pdfPlaceholder: 'TS',
     pdfNote: 'El PDF aparecerá aquí una vez subido',
     submit: 'Enviar',
     addElement: '+ Añadir elemento no listado',
-    noElements: 'No hay elementos en la hoja de tarifa',
+    noElements: 'No hay elementos en la TS',
     noElementsNote: 'Puedes enviar directamente',
   },
 }

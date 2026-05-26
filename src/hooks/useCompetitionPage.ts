@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useEffect, Dispatch, SetStateAction } from 'react'
+import { useState, useEffect, useMemo, Dispatch, SetStateAction } from 'react'
 import { createClient } from '@/lib/supabase'
 import type {
   Competition, Panel, Section, Session, Judge, SectionPanelJudge,
   Role, Team, Club, CompetitionEntry, SessionOrder, AdminUser,
   AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry,
-  ProvisionalEntry, DefinitiveEntry, Apparatus, ApparatusRule,
+  ProvisionalEntry, DefinitiveEntry, Apparatus, ApparatusRule, RankingMergeGroup,
 } from '@/components/admin/types'
-import { ROLE_CONFIG, defaultSlots, NEXT_STATUS } from '@/components/admin/types'
+import { ROLE_CONFIG, defaultSlots, NEXT_STATUS, PREV_STATUS } from '@/components/admin/types'
 import type { PanelLock } from '@/components/admin/competition-detail/JudgesTab'
 
 export function useCompetitionPage(id: string) {
@@ -38,6 +38,7 @@ export function useCompetitionPage(id: string) {
   const [competitionCoaches, setCompetitionCoaches]   = useState<Coach[]>([])
   const [provisionalEntries, setProvisionalEntries]   = useState<ProvisionalEntry[]>([])
   const [definitiveEntries,  setDefinitiveEntries]    = useState<DefinitiveEntry[]>([])
+  const [rankingMergeGroups, setRankingMergeGroups]   = useState<RankingMergeGroup[]>([])
   const [actionError, setActionError] = useState<string | null>(null)
 
   // ── initial load ──────────────────────────────────────────────────────────────
@@ -46,22 +47,23 @@ export function useCompetitionPage(id: string) {
       try {
         const [compRes, panelsRes, sectionsRes, sessionsRes, judgesRes,
                nominationsRes, entriesRes, rulesRes, adminsRes, provRes, defRes,
-               apparatusRes, apparatusRulesRes] = await Promise.all([
+               apparatusRes, apparatusRulesRes, mergeGroupsRes] = await Promise.all([
           supabase.from('competitions')
-            .select('id,name,status,sport_type,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,age_groups,poster_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine')
+            .select('id,name,status,sport_type,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,age_groups,poster_url,logo_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine,open_combinados_enabled')
             .eq('id', id).single(),
           supabase.from('panels').select('id,competition_id,panel_number').eq('competition_id', id).order('panel_number'),
           supabase.from('sections').select('id,competition_id,section_number,label,starting_time,waiting_time_seconds,warmup_duration_minutes,timeline_order').eq('competition_id', id).order('section_number'),
-          supabase.from('sessions').select('id,competition_id,panel_id,section_id,name,age_group,category,routine_type,status,order_index,order_locked,dj_method,ej_method').eq('competition_id', id).order('order_index'),
+          supabase.from('sessions').select('id,competition_id,panel_id,section_id,name,age_group,category,routine_type,status,order_index,order_locked,dj_method,ej_method,ranking_merge_group_id').eq('competition_id', id).order('order_index'),
           supabase.from('judges').select('id,full_name,phone,licence,avatar_url,sport_type'),
           supabase.from('competition_judge_nominations').select('id,competition_id,judge_id,club_id').eq('competition_id', id),
-          supabase.from('competition_entries').select('id,competition_id,team_id,dorsal,dropped_out').eq('competition_id', id),
+          supabase.from('competition_entries').select('id,competition_id,team_id,dorsal,dropped_out,gymnast_display,gymnast_ids').eq('competition_id', id),
           supabase.from('age_group_rules').select('id,age_group,level,ruleset,min_age,max_age,routine_count,sort_order,sport_type').order('sort_order'),
           supabase.from('profiles').select('id,email').eq('role', 'admin'),
           supabase.from('provisional_entries').select('id,club_id,teams_per_category,created_at').eq('competition_id', id),
           supabase.from('definitive_entries').select('id,club_id,contact_name,contact_phone,contact_email,teams_per_category,judge_name,total_amount,status,payment_document_url,admin_notes,created_at').eq('competition_id', id),
           supabase.from('apparatus').select('id,name,name_es,sort_order').order('sort_order'),
           supabase.from('apparatus_rules').select('id,age_group_rule_id,year,apparatus_id,is_mandatory,sort_order').order('sort_order'),
+          supabase.from('ranking_merge_groups').select('id,label_es,label_en').eq('competition_id', id),
         ])
 
         if (!compRes.data) { setLoading(false); return }
@@ -185,12 +187,27 @@ export function useCompetitionPage(id: string) {
         setApparatusRules((apparatusRulesRes.data ?? []) as ApparatusRule[])
         setProvisionalEntries((provRes.data ?? []) as ProvisionalEntry[])
         setDefinitiveEntries((defRes.data ?? []) as DefinitiveEntry[])
+        setRankingMergeGroups((mergeGroupsRes.data ?? []) as RankingMergeGroup[])
       } finally {
         setLoading(false)
       }
     }
     load()
   }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── session eligible counts (for merge group UI) ─────────────────────────────
+  const sessionEligibleTeamCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const session of sessions) {
+      counts[session.id] = entries
+        .filter(e => !e.dropped_out)
+        .filter(e => {
+          const team = globalTeams.find(t => t.id === e.team_id)
+          return team?.age_group === session.age_group && team?.category === session.category
+        }).length
+    }
+    return counts
+  }, [sessions, entries, globalTeams])
 
   // ── status ────────────────────────────────────────────────────────────────────
   async function handleAdvanceStatus() {
@@ -199,6 +216,14 @@ export function useCompetitionPage(id: string) {
     if (!next) return
     await supabase.from('competitions').update({ status: next }).eq('id', id)
     setCompetition(prev => prev ? { ...prev, status: next } : prev)
+  }
+
+  async function handleRevertStatus() {
+    if (!competition) return
+    const prev = PREV_STATUS[competition.status]
+    if (!prev) return
+    await supabase.from('competitions').update({ status: prev }).eq('id', id)
+    setCompetition(curr => curr ? { ...curr, status: prev } : curr)
   }
 
   // ── panel count ───────────────────────────────────────────────────────────────
@@ -408,6 +433,7 @@ export function useCompetitionPage(id: string) {
     ts_music_deadline: string | null
     age_groups: string[]
     poster_url: string | null
+    logo_url: string | null
     admin: AdminUser | null
     fee_per_team: number | null
     fee_per_gymnast: number | null
@@ -424,6 +450,7 @@ export function useCompetitionPage(id: string) {
       ts_music_deadline: updates.ts_music_deadline,
       age_groups: updates.age_groups,
       poster_url: updates.poster_url,
+      logo_url: updates.logo_url,
       admin_id: updates.admin?.id ?? null,
       fee_per_team: updates.fee_per_team,
       fee_per_gymnast: updates.fee_per_gymnast,
@@ -463,26 +490,74 @@ export function useCompetitionPage(id: string) {
     setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status: 'finished' as const } : s))
   }
 
+  async function handleRevertSession(sessionId: string) {
+    const session = sessions.find(s => s.id === sessionId)
+    if (!session) return
+    const prevStatus = session.status === 'finished' ? 'active' : 'waiting'
+    await supabase.from('sessions').update({ status: prevStatus }).eq('id', sessionId)
+    setSessions(curr => curr.map(s => s.id === sessionId ? { ...s, status: prevStatus as Session['status'] } : s))
+  }
+
+  async function handleUploadLogo(file: File) {
+    const ext = file.name.split('.').pop() ?? 'jpg'
+    const path = `${id}/logo.${ext}`
+    await supabase.storage.from('competition-posters').upload(path, file, { upsert: true })
+    const { data } = supabase.storage.from('competition-posters').getPublicUrl(path)
+    const url = data.publicUrl + `?t=${Date.now()}`
+    await supabase.from('competitions').update({ logo_url: url }).eq('id', id)
+    setCompetition(prev => prev ? { ...prev, logo_url: url } : prev)
+  }
+
+  async function handleAssignSessionMergeGroup(sessionId: string, mergeGroupId: string | null) {
+    if (mergeGroupId) {
+      const session = sessions.find(s => s.id === sessionId)
+      const others  = sessions.filter(s => s.ranking_merge_group_id === mergeGroupId && s.id !== sessionId)
+      const conflict = session && others.some(
+        o => o.age_group !== session.age_group || o.routine_type !== session.routine_type,
+      )
+      if (conflict) {
+        window.alert('Este grupo ya tiene sesiones con otro grupo de edad o tipo de rutina. Solo sesiones con el mismo grupo de edad y tipo de rutina pueden compartir clasificación.')
+        return
+      }
+    }
+    const { error } = await supabase.from('sessions')
+      .update({ ranking_merge_group_id: mergeGroupId }).eq('id', sessionId)
+    if (error) { setActionError(error.message); return }
+    setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, ranking_merge_group_id: mergeGroupId } : s))
+  }
+
+  async function handleCreateRankingMergeGroup(labelEs: string, labelEn: string): Promise<string | null> {
+    const { data, error } = await supabase.from('ranking_merge_groups')
+      .insert({ competition_id: id, label_es: labelEs || null, label_en: labelEn || null })
+      .select('id,label_es,label_en')
+      .single()
+    if (error || !data) { setActionError(error?.message ?? 'Error'); return null }
+    const row = data as RankingMergeGroup
+    setRankingMergeGroups(prev => [...prev, row])
+    return row.id
+  }
+
   return {
     // state
     loading, competition, panels, sections, sessions,
     globalJudges, judgePool, nominations, assignments, panelLocks,
     globalTeams, clubs, entries, sessionOrders, lockedSessions,
     availableAdmins, ageGroupRules, apparatus, apparatusRules, competitionGymnasts, globalCoaches, competitionCoaches,
-    provisionalEntries, definitiveEntries, actionError,
+    provisionalEntries, definitiveEntries, rankingMergeGroups, sessionEligibleTeamCounts, actionError,
     // setters exposed for local overrides (e.g. admin's extended handleToggleLock)
     setLockedSessions: setLockedSessions as Dispatch<SetStateAction<string[]>>,
     setSessionOrders:  setSessionOrders  as Dispatch<SetStateAction<SessionOrder[]>>,
     // handlers
-    handleAdvanceStatus, handleSetPanelCount,
+    handleAdvanceStatus, handleRevertStatus, handleSetPanelCount,
     handleAddSection, handleUpdateSectionLabel, handleUpdateSectionTimes, handleDeleteSection,
     handleAddSession, handleDeleteSession,
     handleAddToPool, handleRemoveFromPool, handleAssignJudge,
     handleAddSlot, handleRemoveSlot, handleTogglePanelLock,
     handleToggleDropout, handleRemoveClubEntries,
     handleToggleLock, handleReorder, handleReorderTimeline,
-    handleUpdateCompetition, handleUpdateFees, handleUploadPoster, handleSetDJReviewDeadline,
-    handleStartSession, handleFinishSession,
+    handleUpdateCompetition, handleUpdateFees, handleUploadPoster, handleUploadLogo, handleSetDJReviewDeadline,
+    handleStartSession, handleFinishSession, handleRevertSession,
+    handleAssignSessionMergeGroup, handleCreateRankingMergeGroup,
     clearActionError: () => setActionError(null),
   }
 }

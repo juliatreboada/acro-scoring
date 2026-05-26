@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase'
 import { useProfile } from '@/contexts/ProfileContext'
 import type { Lang } from '@/components/scoring/types'
 import ClickableImg from '@/components/shared/ClickableImg'
+import { INPUT_CLS } from '@/lib/uiConstants'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -149,7 +150,7 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
     }
   }
 
-  const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+  const inputCls = INPUT_CLS
 
   if (loading) {
     return (

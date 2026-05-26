@@ -6,6 +6,7 @@ import type { Coach } from '@/components/admin/types'
 import { PhotoAvatar } from './GymnastsTab'
 import { normalizeForSearch } from '@/lib/normalizeString'
 import { LicenciaChip } from './shared/LicenciaChip'
+import { INPUT_CLS } from '@/lib/uiConstants'
 
 // ─── translations ─────────────────────────────────────────────────────────────
 
@@ -53,7 +54,7 @@ function CoachForm({ lang, initial, onSave, onCancel }: {
 }) {
   const t = T[lang]
   const [form, setForm] = useState<FormState>(initial)
-  const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+  const inputCls = INPUT_CLS
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

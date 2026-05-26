@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
 import CompetitionDetail from '@/components/admin/competition-detail/CompetitionDetail'
 import AuthBar from '@/components/shared/AuthBar'
-import { CompetitionPageSkeleton } from '@/components/admin/competition-detail/CompetitionPageSkeleton'
 import { useCompetitionPage } from '@/hooks/useCompetitionPage'
 import type { Lang } from '@/components/scoring/types'
+
+// ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function Page() {
   const { id } = useParams<{ id: string }>()
@@ -19,28 +19,63 @@ export default function Page() {
     globalJudges, judgePool, nominations, assignments, panelLocks,
     globalTeams, clubs, entries, sessionOrders, lockedSessions,
     availableAdmins, ageGroupRules, apparatus, apparatusRules, competitionGymnasts, globalCoaches, competitionCoaches,
-    provisionalEntries, definitiveEntries, actionError, clearActionError,
-    setLockedSessions,
-    handleAdvanceStatus, handleSetPanelCount,
+    provisionalEntries, definitiveEntries, rankingMergeGroups, sessionEligibleTeamCounts, actionError,
+    handleAdvanceStatus, handleRevertStatus, handleSetPanelCount,
     handleAddSection, handleUpdateSectionLabel, handleUpdateSectionTimes, handleDeleteSection,
     handleAddSession, handleDeleteSession,
     handleAddToPool, handleRemoveFromPool, handleAssignJudge,
     handleAddSlot, handleRemoveSlot, handleTogglePanelLock,
     handleToggleDropout, handleRemoveClubEntries,
-    handleReorder, handleReorderTimeline,
-    handleUpdateCompetition, handleUpdateFees, handleUploadPoster, handleSetDJReviewDeadline,
-    handleStartSession, handleFinishSession,
+    handleToggleLock, handleReorder, handleReorderTimeline,
+    handleUpdateCompetition, handleUpdateFees, handleUploadPoster, handleUploadLogo, handleSetDJReviewDeadline,
+    handleStartSession, handleFinishSession, handleRevertSession,
+    handleAssignSessionMergeGroup, handleCreateRankingMergeGroup,
+    clearActionError,
   } = useCompetitionPage(id)
 
-  // ── comp-admin uses simple toggle (no auto-create of session_orders) ──────────
-  async function handleToggleLock(sessionId: string) {
-    const supabase = createClient()
-    const isLocked = lockedSessions.includes(sessionId)
-    await supabase.from('sessions').update({ order_locked: !isLocked } as never).eq('id', sessionId)
-    setLockedSessions(prev => isLocked ? prev.filter(sid => sid !== sessionId) : [...prev, sessionId])
-  }
-
-  if (loading) return <CompetitionPageSkeleton lang={lang} onLangChange={setLang} />
+  // ── render ────────────────────────────────────────────────────────────────────
+  if (loading) return (
+    <div className="min-h-screen bg-slate-50">
+      <AuthBar lang={lang} onLangChange={setLang} />
+      <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-4 sticky top-0 z-10">
+        <div className="h-4 w-16 bg-slate-100 rounded animate-pulse" />
+        <div className="h-4 w-px bg-slate-200" />
+        <div className="h-4 w-48 bg-slate-100 rounded animate-pulse" />
+      </div>
+      <div className="bg-white border-b border-slate-200 px-4">
+        <div className="max-w-5xl mx-auto flex gap-1 py-1">
+          {[80, 64, 72, 88, 56, 76, 60].map((w, i) => (
+            <div key={i} className="h-8 bg-slate-100 rounded-lg animate-pulse" style={{ width: w }} />
+          ))}
+        </div>
+      </div>
+      <div className="max-w-5xl mx-auto px-4 py-6 space-y-4">
+        <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
+          <div className="h-5 w-40 bg-slate-100 rounded animate-pulse" />
+          <div className="grid grid-cols-2 gap-4">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="space-y-1.5">
+                <div className="h-3 w-20 bg-slate-100 rounded animate-pulse" />
+                <div className="h-9 bg-slate-50 border border-slate-100 rounded-xl animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-3">
+          <div className="h-5 w-32 bg-slate-100 rounded animate-pulse" />
+          {[1,2,3].map(i => (
+            <div key={i} className="flex items-center gap-3 py-2">
+              <div className="w-9 h-9 rounded-full bg-slate-100 animate-pulse shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3.5 w-36 bg-slate-100 rounded animate-pulse" />
+                <div className="h-3 w-24 bg-slate-100 rounded animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 
   if (!competition) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -67,6 +102,7 @@ export default function Page() {
         sessions={sessions}
         onBack={() => router.push('/comp-admin')}
         onAdvanceStatus={handleAdvanceStatus}
+        onRevertStatus={handleRevertStatus}
         onSetPanelCount={handleSetPanelCount}
         onAddSection={handleAddSection}
         onUpdateSectionLabel={handleUpdateSectionLabel}
@@ -74,6 +110,10 @@ export default function Page() {
         onDeleteSection={handleDeleteSection}
         onAddSession={handleAddSession}
         onDeleteSession={handleDeleteSession}
+        rankingMergeGroups={rankingMergeGroups}
+        sessionEligibleTeamCounts={sessionEligibleTeamCounts}
+        onAssignSessionMergeGroup={handleAssignSessionMergeGroup}
+        onCreateRankingMergeGroup={handleCreateRankingMergeGroup}
         globalJudges={globalJudges}
         judgePool={judgePool}
         nominations={nominations}
@@ -103,10 +143,12 @@ export default function Page() {
         apparatusRules={apparatusRules}
         onUpdateCompetition={handleUpdateCompetition}
         onUploadPoster={handleUploadPoster}
+        onUploadLogo={handleUploadLogo}
         onUpdateFees={handleUpdateFees}
+        onSetDJReviewDeadline={handleSetDJReviewDeadline}
         onStartSession={handleStartSession}
         onFinishSession={handleFinishSession}
-        onSetDJReviewDeadline={handleSetDJReviewDeadline}
+        onRevertSession={handleRevertSession}
         competitionGymnasts={competitionGymnasts}
         globalCoaches={globalCoaches}
         competitionCoaches={competitionCoaches}

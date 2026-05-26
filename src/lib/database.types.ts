@@ -174,6 +174,8 @@ export type Database = {
           competition_id: string
           dorsal: number | null
           dropped_out: boolean
+          gymnast_display: string | null
+          gymnast_ids: string[] | null
           id: string
           registered_at: string
           team_id: string
@@ -182,6 +184,8 @@ export type Database = {
           competition_id: string
           dorsal?: number | null
           dropped_out?: boolean
+          gymnast_display?: string | null
+          gymnast_ids?: string[] | null
           id?: string
           registered_at?: string
           team_id: string
@@ -190,6 +194,8 @@ export type Database = {
           competition_id?: string
           dorsal?: number | null
           dropped_out?: boolean
+          gymnast_display?: string | null
+          gymnast_ids?: string[] | null
           id?: string
           registered_at?: string
           team_id?: string
@@ -267,7 +273,9 @@ export type Database = {
           id: string
           judge_missing_fine: number | null
           location: string | null
+          logo_url: string | null
           name: string
+          open_combinados_enabled: boolean
           poster_url: string | null
           provisional_entry_deadline: string | null
           registration_deadline: string | null
@@ -275,6 +283,7 @@ export type Database = {
           status: Database["public"]["Enums"]["competition_status"]
           sport_type: string
           ts_music_deadline: string | null
+          tv_sponsor_videos: Json
           updated_at: string
         }
         Insert: {
@@ -289,7 +298,9 @@ export type Database = {
           id?: string
           judge_missing_fine?: number | null
           location?: string | null
+          logo_url?: string | null
           name: string
+          open_combinados_enabled?: boolean
           poster_url?: string | null
           provisional_entry_deadline?: string | null
           registration_deadline?: string | null
@@ -297,6 +308,7 @@ export type Database = {
           start_date?: string | null
           status?: Database["public"]["Enums"]["competition_status"]
           ts_music_deadline?: string | null
+          tv_sponsor_videos?: Json
           updated_at?: string
         }
         Update: {
@@ -311,7 +323,9 @@ export type Database = {
           id?: string
           judge_missing_fine?: number | null
           location?: string | null
+          logo_url?: string | null
           name?: string
+          open_combinados_enabled?: boolean
           poster_url?: string | null
           provisional_entry_deadline?: string | null
           registration_deadline?: string | null
@@ -319,6 +333,7 @@ export type Database = {
           start_date?: string | null
           status?: Database["public"]["Enums"]["competition_status"]
           ts_music_deadline?: string | null
+          tv_sponsor_videos?: Json
           updated_at?: string
         }
         Relationships: [
@@ -627,6 +642,41 @@ export type Database = {
             columns: ["club_id"]
             isOneToOne: false
             referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ranking_merge_groups: {
+        Row: {
+          competition_id: string
+          created_at: string
+          id: string
+          label_en: string | null
+          label_es: string | null
+          updated_at: string
+        }
+        Insert: {
+          competition_id: string
+          created_at?: string
+          id?: string
+          label_en?: string | null
+          label_es?: string | null
+          updated_at?: string
+        }
+        Update: {
+          competition_id?: string
+          created_at?: string
+          id?: string
+          label_en?: string | null
+          label_es?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ranking_merge_groups_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
             referencedColumns: ["id"]
           },
         ]
@@ -1080,6 +1130,7 @@ export type Database = {
           order_index: number
           order_locked: boolean
           panel_id: string
+          ranking_merge_group_id: string | null
           routine_type: Database["public"]["Enums"]["routine_type"]
           section_id: string
           status: Database["public"]["Enums"]["session_status"]
@@ -1098,6 +1149,7 @@ export type Database = {
           order_index?: number
           order_locked?: boolean
           panel_id: string
+          ranking_merge_group_id?: string | null
           routine_type: Database["public"]["Enums"]["routine_type"]
           section_id: string
           status?: Database["public"]["Enums"]["session_status"]
@@ -1116,6 +1168,7 @@ export type Database = {
           order_index?: number
           order_locked?: boolean
           panel_id?: string
+          ranking_merge_group_id?: string | null
           routine_type?: Database["public"]["Enums"]["routine_type"]
           section_id?: string
           status?: Database["public"]["Enums"]["session_status"]
@@ -1126,6 +1179,13 @@ export type Database = {
             columns: ["competition_id"]
             isOneToOne: false
             referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_ranking_merge_group_id_fkey"
+            columns: ["ranking_merge_group_id"]
+            isOneToOne: false
+            referencedRelation: "ranking_merge_groups"
             referencedColumns: ["id"]
           },
           {
@@ -1214,6 +1274,7 @@ export type Database = {
       teams: {
         Row: {
           age_group: string
+          archived_at: string | null
           category: string
           club_id: string
           created_at: string
@@ -1224,6 +1285,7 @@ export type Database = {
         }
         Insert: {
           age_group: string
+          archived_at?: string | null
           category: string
           club_id: string
           created_at?: string
@@ -1234,6 +1296,7 @@ export type Database = {
         }
         Update: {
           age_group?: string
+          archived_at?: string | null
           category?: string
           club_id?: string
           created_at?: string
@@ -1386,6 +1449,236 @@ export type Database = {
           }
         ]
       }
+      section_practice_state: {
+        Row: {
+          id: string
+          section_id: string
+          competition_id: string
+          routine_session_id: string
+          routine_team_id: string
+          active: boolean
+          started_by: string | null
+          started_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          section_id: string
+          competition_id: string
+          routine_session_id: string
+          routine_team_id: string
+          active?: boolean
+          started_by?: string | null
+          started_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          section_id?: string
+          competition_id?: string
+          routine_session_id?: string
+          routine_team_id?: string
+          active?: boolean
+          started_by?: string | null
+          started_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "section_practice_state_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "section_practice_state_routine_session_id_fkey"
+            columns: ["routine_session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "section_practice_state_routine_team_id_fkey"
+            columns: ["routine_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "section_practice_state_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: true
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "section_practice_state_started_by_fkey"
+            columns: ["started_by"]
+            isOneToOne: false
+            referencedRelation: "judges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      open_combinados_bracket_config: {
+        Row: {
+          competition_id: string
+          combinados_semi_count: number
+          combinados_final_count: number
+          open_quarter_count: number
+          open_semi_count: number
+          open_final_count: number
+          updated_at: string
+        }
+        Insert: {
+          competition_id: string
+          combinados_semi_count?: number
+          combinados_final_count?: number
+          open_quarter_count?: number
+          open_semi_count?: number
+          open_final_count?: number
+          updated_at?: string
+        }
+        Update: {
+          competition_id?: string
+          combinados_semi_count?: number
+          combinados_final_count?: number
+          open_quarter_count?: number
+          open_semi_count?: number
+          open_final_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "open_combinados_bracket_config_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: true
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      open_combinados_open_team_choices: {
+        Row: {
+          id: string
+          competition_id: string
+          phase_key: string
+          team_id: string
+          selected_routine_type: Database["public"]["Enums"]["routine_type"]
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          competition_id: string
+          phase_key: string
+          team_id: string
+          selected_routine_type: Database["public"]["Enums"]["routine_type"]
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          competition_id?: string
+          phase_key?: string
+          team_id?: string
+          selected_routine_type?: Database["public"]["Enums"]["routine_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "open_combinados_open_team_choices_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "open_combinados_open_team_choices_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      open_combinados_phase_sessions: {
+        Row: {
+          id: string
+          competition_id: string
+          phase_key: string
+          group_key: string
+          routine_type: Database["public"]["Enums"]["routine_type"]
+          session_id: string
+        }
+        Insert: {
+          id?: string
+          competition_id: string
+          phase_key: string
+          group_key: string
+          routine_type: Database["public"]["Enums"]["routine_type"]
+          session_id: string
+        }
+        Update: {
+          id?: string
+          competition_id?: string
+          phase_key?: string
+          group_key?: string
+          routine_type?: Database["public"]["Enums"]["routine_type"]
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "open_combinados_phase_sessions_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "open_combinados_phase_sessions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competition_music_unlocks: {
+        Row: {
+          competition_id: string
+          team_id: string
+          enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          competition_id: string
+          team_id: string
+          enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          competition_id?: string
+          team_id?: string
+          enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_music_unlocks_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competition_music_unlocks_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tv_state: {
         Row: {
           id: string
@@ -1393,6 +1686,8 @@ export type Database = {
           session_id: string | null
           team_id: string | null
           revealed: boolean
+          sponsor_playlist_index: number
+          sponsor_reel_enabled: boolean
           updated_at: string
         }
         Insert: {
@@ -1401,6 +1696,8 @@ export type Database = {
           session_id?: string | null
           team_id?: string | null
           revealed?: boolean
+          sponsor_playlist_index?: number
+          sponsor_reel_enabled?: boolean
           updated_at?: string
         }
         Update: {
@@ -1409,6 +1706,8 @@ export type Database = {
           session_id?: string | null
           team_id?: string | null
           revealed?: boolean
+          sponsor_playlist_index?: number
+          sponsor_reel_enabled?: boolean
           updated_at?: string
         }
         Relationships: [
