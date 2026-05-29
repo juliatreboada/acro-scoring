@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, Team, Gymnast, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule, Coach, CompetitionCoach } from '@/components/admin/types'
-import { ROUTINE_TYPES, categoriesForRuleset } from '@/components/admin/types'
+import { ROUTINE_TYPES, categoriesForRuleset, ageGroupLabel } from '@/components/admin/types'
 import { formatDate, formatDateRange } from '@/lib/formatDate'
 import { STATUS_BADGE, INPUT_CLS } from '@/lib/uiConstants'
 import ProvisionalEntryForm from './ProvisionalEntryForm'
@@ -982,8 +982,8 @@ function CompetitionListView({
     return comp.age_groups.flatMap(agId => {
       const rule = ageGroupRules.find(r => r.id === agId)
       if (!rule) return []
-      return categoriesForRuleset(rule.age_group)
-        .map(cat => ({ label: `${rule.age_group} · ${cat}`, count: tpc[`${agId}|${cat}`] ?? 0 }))
+      return categoriesForRuleset(rule.level)
+        .map(cat => ({ label: `${ageGroupLabel(rule)} · ${cat}`, count: tpc[`${agId}|${cat}`] ?? 0 }))
         .filter(r => r.count > 0)
     })
   }

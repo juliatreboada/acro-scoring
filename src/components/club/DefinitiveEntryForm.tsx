@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, AgeGroupRule } from '@/components/admin/types'
-import { categoriesForRuleset, categoryLabel, CATEGORY_SIZE } from '@/components/admin/types'
+import { categoriesForRuleset, categoryLabel, CATEGORY_SIZE, ageGroupLabel } from '@/components/admin/types'
 import { useT } from '@/lib/useT'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -263,7 +263,7 @@ export default function DefinitiveEntryForm({ lang, competition, clubId, clubNam
                 const categories = categoriesForRuleset(rule.level)
                 return (
                   <div key={rule.id}>
-                    <p className="text-xs font-medium text-slate-500 mb-1.5">{rule.age_group}</p>
+                    <p className="text-xs font-medium text-slate-500 mb-1.5">{ageGroupLabel(rule)}</p>
                     <div className="space-y-1.5">
                       {categories.map(cat => {
                         const key = `${rule.id}|${cat}`
