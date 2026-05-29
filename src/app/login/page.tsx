@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
+import { useT } from '@/lib/useT'
 
 // ─── role routing ──────────────────────────────────────────────────────────────
 
@@ -14,69 +15,6 @@ const ROLE_REDIRECT: Record<DbRole, string> = {
   admin:       '/comp-admin',
   judge:       '/judge',
   club:        '/club',
-}
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    title: 'Nosa Acro Suite',
-    subtitle: 'Sign in to your account',
-    email: 'Email',
-    password: 'Password',
-    signIn: 'Sign in',
-    signingIn: 'Signing in…',
-    errorCredentials: 'Invalid email or password.',
-    errorGeneric: 'Something went wrong. Please try again.',
-    alreadyLogged: 'Already signed in as',
-    goToDashboard: 'Go to dashboard',
-    logOut: 'Sign in with a different account',
-    forgotPassword: 'Forgot password?',
-    backToLogin: '← Back to sign in',
-    forgotTitle: 'Reset your password',
-    forgotSubtitle: 'Enter your email and we will send you a reset link.',
-    sendLink: 'Send reset link',
-    sendingLink: 'Sending…',
-    forgotSuccess: 'Check your email for the reset link.',
-    forgotError: 'Could not send reset email. Please try again.',
-    devTitle: 'Dev quick-access',
-    devHint: 'Click to pre-fill credentials',
-    roles: {
-      super_admin: 'Super Admin',
-      admin:       'Competition Admin',
-      judge:       'Judge',
-      club:        'Club',
-    } as Record<DbRole, string>,
-  },
-  es: {
-    title: 'Nosa Acro Suite',
-    subtitle: 'Inicia sesión en tu cuenta',
-    email: 'Email',
-    password: 'Contraseña',
-    signIn: 'Entrar',
-    signingIn: 'Entrando…',
-    errorCredentials: 'Email o contraseña incorrectos.',
-    errorGeneric: 'Algo ha fallado. Inténtalo de nuevo.',
-    alreadyLogged: 'Ya has iniciado sesión como',
-    goToDashboard: 'Ir al panel',
-    logOut: 'Iniciar sesión con otra cuenta',
-    forgotPassword: '¿Olvidaste tu contraseña?',
-    backToLogin: '← Volver al inicio de sesión',
-    forgotTitle: 'Restablecer contraseña',
-    forgotSubtitle: 'Introduce tu email y te enviaremos un enlace para restablecer tu contraseña.',
-    sendLink: 'Enviar enlace',
-    sendingLink: 'Enviando…',
-    forgotSuccess: 'Revisa tu email para encontrar el enlace de restablecimiento.',
-    forgotError: 'No se pudo enviar el email. Inténtalo de nuevo.',
-    devTitle: 'Acceso rápido (dev)',
-    devHint: 'Haz clic para rellenar las credenciales',
-    roles: {
-      super_admin: 'Super Admin',
-      admin:       'Admin de competición',
-      judge:       'Juez',
-      club:        'Club',
-    } as Record<DbRole, string>,
-  },
 }
 
 // ─── role styles ──────────────────────────────────────────────────────────────
@@ -143,7 +81,7 @@ export default function LoginPage() {
   const [forgotEmail, setForgotEmail] = useState('')
   const [forgotState, setForgotState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
 
-  const t = T[lang]
+  const t = useT('LoginPage', lang)
 
   // Check for existing session on mount
   useEffect(() => {

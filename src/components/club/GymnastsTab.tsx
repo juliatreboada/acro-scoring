@@ -4,71 +4,9 @@ import { useRef, useState } from 'react'
 import * as XLSX from 'xlsx'
 import type { Lang } from '@/components/scoring/types'
 import type { Gymnast } from '@/components/admin/types'
-
-const T = {
-  en: {
-    addGymnast: 'Add gymnast',
-    search: 'Search by name or surname…',
-    importGymnasts: 'Import from Excel RFEG',
-    importTitle: 'Import gymnasts',
-    importFound: (n: number) => `${n} gymnast${n !== 1 ? 's' : ''} found in file`,
-    importDuplicateNote: (n: number) => `${n} already exist and will be skipped`,
-    importDuplicate: 'Already exists',
-    importConfirm: 'Add gymnasts',
-    importConfirming: 'Saving…',
-    importCancel: 'Cancel',
-    importEmpty: 'No valid gymnasts found in the file.',
-    importDone: (n: number) => `${n} gymnast${n !== 1 ? 's' : ''} added.`,
-    licenciaNacional: 'Nat. Licence',
-    firstName: 'First name',
-    lastName1: 'First surname',
-    lastName2: 'Second surname',
-    dob: 'Date of birth',
-    save: 'Save',
-    cancel: 'Cancel',
-    empty: 'No gymnasts yet. Add your first gymnast to get started.',
-    yrs: 'yrs',
-    confirmDelete: 'Remove this gymnast from the roster?',
-    gymnasts: (n: number) => `${n} gymnast${n !== 1 ? 's' : ''}`,
-    licencia: 'Licence',
-    uploadLicencia: 'Upload licence',
-    replaceLicencia: 'Replace',
-    removeLicencia: 'Remove licence',
-  },
-  es: {
-    addGymnast: 'Añadir gimnasta',
-    search: 'Buscar por nombre o apellido…',
-    importGymnasts: 'Importar desde Excel de licencias RFEG',
-    importTitle: 'Importar gimnastas',
-    importFound: (n: number) => `${n} gimnasta${n !== 1 ? 's' : ''} encontrado${n !== 1 ? 's' : ''} en el archivo`,
-    importDuplicateNote: (n: number) => `${n} ya existen y se omitirán`,
-    importDuplicate: 'Ya existe',
-    importConfirm: 'Añadir gimnastas',
-    importConfirming: 'Guardando…',
-    importCancel: 'Cancelar',
-    importEmpty: 'No se encontraron gimnastas válidos en el archivo.',
-    importDone: (n: number) => `${n} gimnasta${n !== 1 ? 's' : ''} añadido${n !== 1 ? 's' : ''}.`,
-    licenciaNacional: 'Lic. Nacional',
-    firstName: 'Nombre',
-    lastName1: 'Primer apellido',
-    lastName2: 'Segundo apellido',
-    dob: 'Fecha de nacimiento',
-    save: 'Guardar',
-    cancel: 'Cancelar',
-    empty: 'Aún no hay gimnastas. Añade el primero para empezar.',
-    yrs: 'años',
-    confirmDelete: '¿Eliminar este gimnasta del registro?',
-    gymnasts: (n: number) => `${n} gimnasta${n !== 1 ? 's' : ''}`,
-    licencia: 'Licencia',
-    uploadLicencia: 'Subir licencia',
-    replaceLicencia: 'Reemplazar',
-    removeLicencia: 'Eliminar licencia',
-  },
-}
-
-function normalizeStr(s: string): string {
-  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
-}
+import { normalizeForSearch } from '@/lib/normalizeString'
+import { LicenciaChip } from './shared/LicenciaChip'
+import { useT } from '@/lib/useT'
 
 // ─── gymnast excel import ─────────────────────────────────────────────────────
 
@@ -91,7 +29,7 @@ function parseGymnastFile(buffer: ArrayBuffer, existing: Gymnast[]): ImportRow[]
   const rows = XLSX.utils.sheet_to_json<(string | number)[]>(ws, { header: 1, defval: '' })
 
   const existingKeys = new Set(
-    existing.map(g => `${normalizeStr(g.first_name)}|${normalizeStr(g.last_name_1)}`)
+    existing.map(g => `${normalizeForSearch(g.first_name)}|${normalizeForSearch(g.last_name_1)}`)
   )
 
   const result: ImportRow[] = []
@@ -106,7 +44,7 @@ function parseGymnastFile(buffer: ArrayBuffer, existing: Gymnast[]): ImportRow[]
     const licencia   = String(row[5]  ?? '').trim()
     const licNac     = String(row[6]  ?? '').trim()
 
-    const key = `${normalizeStr(firstName)}|${normalizeStr(lastName1)}`
+    const key = `${normalizeForSearch(firstName)}|${normalizeForSearch(lastName1)}`
     result.push({
       _id: crypto.randomUUID(),
       first_name: firstName,
@@ -128,7 +66,7 @@ function GymnastImportModal({ lang, rows, onConfirm, onClose }: {
   onConfirm: (gymnasts: Array<Omit<Gymnast, 'id' | 'club_id'>>) => Promise<void>
   onClose: () => void
 }) {
-  const t = T[lang]
+  const t = useT('GymnastsTab', lang)
   const inputCls = 'w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
   const [list, setList] = useState<ImportRow[]>(rows)
   const [saving, setSaving] = useState(false)
@@ -196,13 +134,13 @@ function GymnastImportModal({ lang, rows, onConfirm, onClose }: {
               <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <input value={row.first_name} disabled={row.removed || row.isDuplicate}
                   onChange={e => update(row._id, { first_name: e.target.value })}
-                  placeholder={T[lang].firstName} className={inputCls} />
+                  placeholder={t.firstName} className={inputCls} />
                 <input value={row.last_name_1} disabled={row.removed || row.isDuplicate}
                   onChange={e => update(row._id, { last_name_1: e.target.value })}
-                  placeholder={T[lang].lastName1} className={inputCls} />
+                  placeholder={t.lastName1} className={inputCls} />
                 <input value={row.last_name_2} disabled={row.removed || row.isDuplicate}
                   onChange={e => update(row._id, { last_name_2: e.target.value })}
-                  placeholder={T[lang].lastName2} className={inputCls} />
+                  placeholder={t.lastName2} className={inputCls} />
                 <input type="date" value={row.date_of_birth} disabled={row.removed || row.isDuplicate}
                   onChange={e => update(row._id, { date_of_birth: e.target.value })}
                   className={inputCls} />
@@ -301,56 +239,6 @@ function PhotoAvatar({ photoUrl, initials, size = 'md', onUpload }: {
 // Export so TeamsTab can reuse
 export { PhotoAvatar }
 
-// ─── licencia chip ────────────────────────────────────────────────────────────
-
-type LicenciaLabels = { view: string; upload: string; replace: string; remove: string }
-
-function LicenciaChip({ url, onUpload, onRemove, labels }: {
-  url: string | null | undefined
-  onUpload: (file: File) => void
-  onRemove: () => void
-  labels: LicenciaLabels
-}) {
-  const ref = useRef<HTMLInputElement>(null)
-  return (
-    <div className="flex items-center gap-1 shrink-0">
-      <button
-        type="button"
-        onClick={() => url ? window.open(url, '_blank') : ref.current?.click()}
-        className={[
-          'flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-all',
-          url
-            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-            : 'bg-slate-50 text-slate-400 border-slate-200 hover:border-slate-300 hover:text-slate-500',
-        ].join(' ')}
-      >
-        <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-        </svg>
-        {url ? labels.view : labels.upload}
-      </button>
-      {url && (
-        <>
-          <button type="button" onClick={() => ref.current?.click()} title={labels.replace}
-            className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-            </svg>
-          </button>
-          <button type="button" onClick={onRemove} title={labels.remove}
-            className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </>
-      )}
-      <input ref={ref} type="file" accept=".pdf,application/pdf" className="hidden"
-        onChange={e => { const f = e.target.files?.[0]; if (f) { onUpload(f); e.target.value = '' } }} />
-    </div>
-  )
-}
-
 // ─── gymnast form ─────────────────────────────────────────────────────────────
 
 type FormState = { first_name: string; last_name_1: string; last_name_2: string; date_of_birth: string }
@@ -362,7 +250,7 @@ function GymnastForm({ lang, initial, onSave, onCancel }: {
   onSave: (f: FormState) => void
   onCancel: () => void
 }) {
-  const t = T[lang]
+  const t = useT('GymnastsTab', lang)
   const [form, setForm] = useState<FormState>(initial)
   const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
 
@@ -421,7 +309,7 @@ export default function GymnastsTab({
   onUploadLicencia: (id: string, file: File) => Promise<void>
   onRemoveLicencia: (id: string) => Promise<void>
 }) {
-  const t = T[lang]
+  const t = useT('GymnastsTab', lang)
   const licenciaLabels = { view: t.licencia, upload: t.uploadLicencia, replace: t.replaceLicencia, remove: t.removeLicencia }
   const [showAdd, setShowAdd] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -445,9 +333,9 @@ export default function GymnastsTab({
   }
 
   const sorted = [...gymnasts].sort((a, b) => (a.last_name_1 ?? '').localeCompare(b.last_name_1 ?? ''))
-  const q = normalizeStr(search)
+  const q = normalizeForSearch(search)
   const filtered = q
-    ? sorted.filter(g => normalizeStr(gymnastFullName(g)).includes(q))
+    ? sorted.filter(g => normalizeForSearch(gymnastFullName(g)).includes(q))
     : sorted
 
   return (

@@ -3,99 +3,12 @@
 import { useState } from 'react'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, AgeGroupRule, AdminUser } from './types'
+import { groupByLevel, rgRulesetLabel } from './types'
 import ClickableImg from '@/components/shared/ClickableImg'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    title: 'Competitions',
-    newCompetition: 'New competition',
-    cancel: 'Cancel',
-    create: 'Create competition',
-    noCompetitions: 'No competitions yet',
-    noCompetitionsSub: 'Create your first competition to get started.',
-    manage: 'Manage',
-    // form
-    formTitle: 'New competition',
-    name: 'Name',
-    namePlaceholder: 'e.g. Spanish National Championships 2026',
-    location: 'Location',
-    locationPlaceholder: 'e.g. Madrid, Spain',
-    startDate: 'Start date',
-    endDate: 'End date',
-    ageGroups: 'Age groups',
-    ageGroupsHint: 'Select at least one',
-    registrationDeadline: 'Registration deadline',
-    poster: 'Poster / logo',
-    posterPlaceholder: 'Image URL (upload coming soon)',
-    competitionAdmin: 'Competition admin',
-    noAdmin: '— assign later —',
-    // status
-    draft:                'Draft',
-    provisional_entry:    'Provisional entry',
-    definitive_entry:     'Definitive entry',
-    registration_open:    'Registration open',
-    registration_closed:  'Registration closed',
-    published:            'Published',
-    active:               'Live',
-    finished:             'Finished',
-    // card
-    noLocation: 'No location set',
-    noDates: 'Dates not set',
-    noAdminAssigned: 'No admin assigned',
-  },
-  es: {
-    title: 'Competiciones',
-    newCompetition: 'Nueva competición',
-    cancel: 'Cancelar',
-    create: 'Crear competición',
-    noCompetitions: 'Sin competiciones',
-    noCompetitionsSub: 'Crea tu primera competición para empezar.',
-    manage: 'Gestionar',
-    // form
-    formTitle: 'Nueva competición',
-    name: 'Nombre',
-    namePlaceholder: 'p.ej. Campeonato Nacional 2026',
-    location: 'Sede',
-    locationPlaceholder: 'p.ej. Madrid, España',
-    startDate: 'Fecha inicio',
-    endDate: 'Fecha fin',
-    ageGroups: 'Grupos de edad',
-    ageGroupsHint: 'Selecciona al menos uno',
-    registrationDeadline: 'Fecha límite de inscripción',
-    poster: 'Póster / logo',
-    posterPlaceholder: 'URL de imagen (subida próximamente)',
-    competitionAdmin: 'Admin de competición',
-    noAdmin: '— asignar después —',
-    // status
-    draft:                'Borrador',
-    provisional_entry:    'Inscripción provisional',
-    definitive_entry:     'Inscripción definitiva',
-    registration_open:    'Inscripción abierta',
-    registration_closed:  'Inscripción cerrada',
-    published:            'Publicada',
-    active:               'En vivo',
-    finished:             'Finalizada',
-    // card
-    noLocation: 'Sin sede',
-    noDates: 'Fechas no definidas',
-    noAdminAssigned: 'Sin admin asignado',
-  },
-}
+import { formatDateRange } from '@/lib/formatDate'
+import { useT } from '@/lib/useT'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
-
-function formatDateRange(start: string | null, end: string | null): string {
-  const fmt = (d: string) =>
-    new Date(d + 'T00:00:00').toLocaleDateString(undefined, {
-      day: 'numeric', month: 'short', year: 'numeric',
-    })
-  if (start && end) return `${fmt(start)} – ${fmt(end)}`
-  if (start) return `${fmt(start)} –`
-  if (end)   return `– ${fmt(end)}`
-  return ''
-}
 
 const STATUS_STYLES: Record<string, string> = {
   draft:                'bg-slate-100/90 text-slate-500',
@@ -118,7 +31,7 @@ type CreateFormProps = {
 }
 
 function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }: CreateFormProps) {
-  const t = T[lang]
+  const t = useT('CompetitionsView', lang)
   const [name, setName]           = useState('')
   const [location, setLocation]   = useState('')
   const [startDate, setStartDate] = useState('')
@@ -126,7 +39,10 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
   const [posterUrl, setPosterUrl]                   = useState('')
   const [registrationDeadline, setRegistrationDeadline] = useState('')
   const [adminId, setAdminId]                       = useState('')
+  const [sportType, setSportType] = useState<'acro' | 'rg'>('acro')
   const [selectedAGs, setSelectedAGs] = useState<Set<string>>(new Set())
+
+  const filteredAGs = ageGroupRules.filter((r) => r.sport_type === sportType)
 
   function toggleAG(ag: string) {
     setSelectedAGs((prev) => {
@@ -136,13 +52,19 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
     })
   }
 
+  function handleSportTypeChange(type: 'acro' | 'rg') {
+    setSportType(type)
+    setSelectedAGs(new Set())
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim() || selectedAGs.size === 0) return
+    if (!name.trim()) return
     const admin = availableAdmins.find((u) => u.id === adminId) ?? null
     onSubmit({
       name: name.trim(),
       status: 'draft',
+      sport_type: sportType,
       location: location.trim() || null,
       start_date: startDate || null,
       end_date: endDate || null,
@@ -160,12 +82,34 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
     })
   }
 
-  const valid = name.trim().length > 0 && selectedAGs.size > 0
+  const valid = name.trim().length > 0
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-6 shadow-sm">
       <h2 className="text-base font-semibold text-slate-800 mb-5">{t.formTitle}</h2>
       <form onSubmit={handleSubmit} className="space-y-5">
+
+        {/* sport type */}
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1.5">{t.sportType} *</label>
+          <div className="flex gap-2">
+            {(['acro', 'rg'] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => handleSportTypeChange(type)}
+                className={[
+                  'flex-1 py-2.5 rounded-xl border text-sm font-medium transition-all',
+                  sportType === type
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400',
+                ].join(' ')}
+              >
+                {t[type]}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* name */}
         <div>
@@ -240,33 +184,54 @@ function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }
 
         {/* age groups */}
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">{t.ageGroups} *</label>
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.ageGroups}</label>
           <p className="text-xs text-slate-400 mb-2.5">{t.ageGroupsHint}</p>
-          <div className="flex flex-wrap gap-2">
-            {ageGroupRules.map((rule) => {
-              const active = selectedAGs.has(rule.id)
-              const rangeLabel = rule.max_age
-                ? `${rule.min_age}–${rule.max_age}`
-                : `${rule.min_age}+`
-              return (
-                <button
-                  type="button"
-                  key={rule.id}
-                  onClick={() => toggleAG(rule.id)}
-                  className={[
-                    'flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all',
-                    active
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400',
-                  ].join(' ')}
-                >
-                  <span>{rule.age_group} ({rule.ruleset})</span>
-                  <span className={['text-xs', active ? 'text-blue-200' : 'text-slate-400'].join(' ')}>
-                    {rangeLabel}
-                  </span>
-                </button>
-              )
-            })}
+          <div className="space-y-2">
+            {groupByLevel(filteredAGs).map(({ level, rules }) => (
+              <div key={level} className="bg-slate-50 rounded-xl border border-slate-100 p-3">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">{level}</p>
+                {sportType === 'rg' ? (
+                  <div className="space-y-2">
+                    {(['Individual', 'Group', 'Equipos'] as const).map((rs) => {
+                      const sub = rules.filter((r) => r.ruleset === rs)
+                      if (sub.length === 0) return null
+                      return (
+                        <div key={rs}>
+                          <p className="text-xs text-slate-400 italic mb-1">{rgRulesetLabel(rs)}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {sub.map((rule) => {
+                              const active = selectedAGs.has(rule.id)
+                              const rangeLabel = rule.max_age ? `${rule.min_age}–${rule.max_age}` : `${rule.min_age}+`
+                              return (
+                                <button type="button" key={rule.id} onClick={() => toggleAG(rule.id)}
+                                  className={['flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all', active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'].join(' ')}>
+                                  <span>{rule.age_group}</span>
+                                  <span className={['text-xs', active ? 'text-blue-200' : 'text-slate-400'].join(' ')}>{rangeLabel}</span>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {rules.map((rule) => {
+                      const active = selectedAGs.has(rule.id)
+                      const rangeLabel = rule.max_age ? `${rule.min_age}–${rule.max_age}` : `${rule.min_age}+`
+                      return (
+                        <button type="button" key={rule.id} onClick={() => toggleAG(rule.id)}
+                          className={['flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all', active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'].join(' ')}>
+                          <span>{rule.age_group}</span>
+                          <span className={['text-xs', active ? 'text-blue-200' : 'text-slate-400'].join(' ')}>{rangeLabel}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -316,7 +281,7 @@ type CompetitionCardProps = {
 }
 
 function CompetitionCard({ competition: c, lang, onManage }: CompetitionCardProps) {
-  const t       = T[lang]
+  const t = useT('CompetitionsView', lang)
   const dateStr = formatDateRange(c.start_date, c.end_date)
 
   return (
@@ -399,7 +364,7 @@ export type CompetitionsViewProps = {
 export default function CompetitionsView({
   lang, ageGroupRules, availableAdmins, competitions, canCreate = true, onCreate, onManage,
 }: CompetitionsViewProps) {
-  const t = T[lang]
+  const t = useT('CompetitionsView', lang)
   const [showForm, setShowForm] = useState(false)
 
   function handleCreate(data: Omit<Competition, 'id' | 'created_at'>) {

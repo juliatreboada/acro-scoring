@@ -6,6 +6,10 @@ import { createClient } from '@/lib/supabase'
 import { useProfile, ROLE_HOME } from '@/contexts/ProfileContext'
 import type { Lang } from '@/components/scoring/types'
 import type { Database } from '@/lib/database.types'
+import { formatDateRange } from '@/lib/formatDate'
+import { useT } from '@/lib/useT'
+import { ageGroupLabel } from '@/components/admin/types'
+import type { AgeGroupRule } from '@/components/admin/types'
 
 type Competition = Pick<
   Database['public']['Tables']['competitions']['Row'],
@@ -26,77 +30,7 @@ const POSTER_STATUS_BADGE: Record<CompetitionStatus, string> = {
   finished: 'bg-slate-200/90 text-slate-700',
 }
 
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    appName: 'Nosa Acro Suite',
-    appTagline: 'Competition management & live scoring for Acrobatic Gymnastics',
-    signIn: 'Sign in',
-    liveNow: 'Live now',
-    upcoming: 'Upcoming',
-    finished: 'Finished',
-    startingOrder: 'Starting order',
-    results: 'Results',
-    location: 'Location',
-    competitions: 'Competitions',
-    noActive: 'No active competitions right now.',
-    noUpcoming: 'No upcoming competitions.',
-    viewAll: 'All results',
-    publicAccess: 'Public access',
-    publicHint: 'Starting order and live results are publicly available — no sign-in needed.',
-    finishedCompetition: 'Finished competition',
-    status: {
-      draft: 'Draft',
-      provisional_entry: 'Provisional entry',
-      definitive_entry: 'Definitive entry',
-      registration_open: 'Registration open',
-      registration_closed: 'Registration closed',
-      published: 'Starting order published',
-      active: 'Live',
-      finished: 'Finished',
-    } as Record<CompetitionStatus, string>,
-  },
-  es: {
-    appName: 'Nosa Acro Suite',
-    appTagline: 'Gestión de competiciones y puntuación en directo para Gimnasia Acrobática',
-    signIn: 'Entrar',
-    liveNow: 'En directo',
-    upcoming: 'Próximas',
-    finished: 'Finalizadas',
-    startingOrder: 'Orden de salida',
-    results: 'Resultados',
-    location: 'Sede',
-    competitions: 'Competiciones',
-    noActive: 'No hay competiciones activas en este momento.',
-    noUpcoming: 'No hay próximas competiciones.',
-    viewAll: 'Todos los resultados',
-    publicAccess: 'Acceso público',
-    publicHint: 'El orden de salida y los resultados en directo son públicos — sin necesidad de iniciar sesión.',
-    finishedCompetition: 'Competición finalizada',
-    status: {
-      draft: 'Borrador',
-      provisional_entry: 'Inscripción provisional',
-      definitive_entry: 'Inscripción definitiva',
-      registration_open: 'Inscripción abierta',
-      registration_closed: 'Inscripción cerrada',
-      published: 'Orden de salida publicada',
-      active: 'En vivo',
-      finished: 'Finalizada',
-    } as Record<CompetitionStatus, string>,
-  },
-}
-
 // ─── helpers ──────────────────────────────────────────────────────────────────
-
-function formatDateRange(start: string | null, end: string | null): string {
-  const fmt = (d: string) =>
-    new Date(d + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-  if (start && end) return start !== end ? `${fmt(start)} – ${fmt(end)}` : fmt(start)
-  if (start) return fmt(start)
-  if (end) return fmt(end)
-  return ''
-}
 
 // ─── competition card ─────────────────────────────────────────────────────────
 
@@ -116,7 +50,7 @@ function CompCard({
   lang: Lang
   router: ReturnType<typeof useRouter>
 }) {
-  const t = T[lang]
+  const t = useT('HomePage', lang)
   const isActive = comp.status === 'active'
   const isFinished = comp.status === 'finished'
   const isPublished = comp.status === 'published'
@@ -255,7 +189,7 @@ export default function HomePage() {
   const [loading, setLoading]     = useState(true)
   const router = useRouter()
   const supabase = createClient()
-  const t = T[lang]
+  const t = useT('HomePage', lang)
   const { activeProfile, profileLoading } = useProfile()
 
   useEffect(() => {
@@ -266,10 +200,10 @@ export default function HomePage() {
           .select('id, name, status, location, start_date, end_date, age_groups, poster_url')
           .neq('status', 'draft')
           .order('start_date', { ascending: false }),
-        supabase.from('age_group_rules').select('id, age_group, ruleset').order('sort_order'),
+        supabase.from('age_group_rules').select('id, age_group, level, ruleset, sport_type').order('sort_order'),
       ])
       setComps(data ?? [])
-      setAgLabel(Object.fromEntries(((rulesData ?? []) as unknown as { id: string; age_group: string; ruleset: string }[]).map(r => [r.id, `${r.age_group} (${r.ruleset})`])))
+      setAgLabel(Object.fromEntries(((rulesData ?? []) as unknown as AgeGroupRule[]).map(r => [r.id, ageGroupLabel(r, true)])))
       setLoading(false)
     }
     load()

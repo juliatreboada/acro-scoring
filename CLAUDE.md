@@ -9,6 +9,7 @@ npm run dev      # Start development server
 npm run build    # Production build (also runs TypeScript check)
 npm run lint     # ESLint
 npm run start    # Serve production build
+npm run gen-types  # Regenerate src/lib/database.types.ts from Supabase (requires supabase CLI + SUPABASE_ACCESS_TOKEN)
 ```
 
 There are no automated tests. To verify correctness, run `npm run build` — it catches all TypeScript errors.
@@ -21,7 +22,7 @@ There are no automated tests. To verify correctness, run `npm run build` — it 
 
 - Next.js 16 (App Router), React 19, TypeScript 5, Tailwind CSS 4
 - Supabase (Postgres + Auth + Realtime + Storage)
-- `@supabase/ssr` for server-side auth; `database.types.ts` is the hand-maintained type file (not auto-generated — update it manually when adding columns)
+- `@supabase/ssr` for server-side auth; `database.types.ts` is in `src/lib/`. Run `npm run gen-types` to regenerate it, or update it manually when adding columns.
 
 ## Role system
 

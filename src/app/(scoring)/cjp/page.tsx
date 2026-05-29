@@ -1,0 +1,37 @@
+'use client'
+
+import { useState } from 'react'
+import { useJudgeSession } from '@/hooks/useJudgeSession'
+import ScoringView from '@/components/scoring/ScoringView'
+import { JudgeScoringShell } from '@/components/shared/JudgeScoringShell'
+import type { Lang } from '@/components/scoring/types'
+
+export default function Page() {
+  const [lang, setLang] = useState<Lang>('es')
+  const {
+    loading, sessionId,
+    panelJudges, performances, rankingPerformances, currentPerfId, judgeScores, results,
+    handleOpen, handleSkip, handleCJPSubmit, handleReopenScore, handleUnpublishResult, handleEditScore,
+    submitError, clearSubmitError, practiceMode, startSectionPractice, stopSectionPractice,
+  } = useJudgeSession()
+
+  return (
+    <JudgeScoringShell
+      loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang}
+      className="min-h-screen bg-slate-100" submitError={submitError} onClearError={clearSubmitError}
+      practiceMode={practiceMode} canControlPractice
+      onStartPractice={() => { void startSectionPractice() }}
+      onStopPractice={() => { void stopSectionPractice() }}
+    >
+      <ScoringView
+        roles={['CJP']} lang={lang}
+        panelJudges={panelJudges} performances={performances}
+        rankingPerformances={rankingPerformances} currentPerfId={currentPerfId}
+        judgeScores={judgeScores} results={results}
+        onOpen={handleOpen} onSkip={handleSkip} onCJPSubmit={handleCJPSubmit}
+        onReopenScore={handleReopenScore} onUnpublishResult={handleUnpublishResult}
+        onEditScore={handleEditScore}
+      />
+    </JudgeScoringShell>
+  )
+}

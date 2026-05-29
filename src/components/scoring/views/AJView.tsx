@@ -4,53 +4,20 @@ import { useState, useEffect, useRef } from 'react'
 import type { Answers, Lang, Performance } from '../types'
 import { getSections, getQuestionValues, calcSectionScore, calcTotal } from '../aj-content'
 import type { PanelJudge, JudgeScore, RoutineResult } from '../types'
-import { ScoreGrid } from '../../shared/CJPTabletShell'
+import { ScoreGrid } from '../CJPTabletShell'
 import { ScoringPerformanceHeader } from '../../shared/ScoringPerformanceHeader'
+import { useT } from '@/lib/useT'
 
-// ─── translations ────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    waiting: 'Waiting for performance…',
-    waitingSub: 'The panel chief has not opened a routine yet.',
-    section: 'Section',
-    of: 'of',
-    next: 'Next section',
-    summary: 'Summary',
-    total: 'Total',
-    submit: 'Submit score',
-    submitted: 'Score submitted',
-    waitingOtherScores: 'Waiting for your other scores…',
-    balance: 'Balance',
-    dynamic: 'Dynamic',
-    combined: 'Combined',
-    info: 'More info',
-    close: 'Close',
-    sectionScore: 'Section score',
-    scoreRange: '(range 1.0 – 2.0)',
-    totalRange: '(range 5.0 – 10.0)',
-  },
-  es: {
-    waiting: 'Esperando actuación…',
-    waitingSub: 'El juez coordinador no ha abierto ninguna rutina todavía.',
-    section: 'Jornada',
-    of: 'de',
-    next: 'Siguiente jornada',
-    summary: 'Resumen',
-    total: 'Total',
-    submit: 'Enviar puntuación',
-    submitted: 'Puntuación enviada',
-    waitingOtherScores: 'Esperando tus otras puntuaciones…',
-    balance: 'Equilibrio',
-    dynamic: 'Dinámico',
-    combined: 'Combinado',
-    info: 'Más info',
-    close: 'Cerrar',
-    sectionScore: 'Puntuación jornada',
-    scoreRange: '(rango 1.0 – 2.0)',
-    totalRange: '(rango 5.0 – 10.0)',
-  },
+function safeRead<T>(key: string): T | null {
+  if (typeof window === 'undefined') return null
+  try { const s = localStorage.getItem(key); return s ? JSON.parse(s) as T : null } catch { return null }
 }
+function safeWrite(key: string, val: unknown) {
+  if (typeof window === 'undefined') return
+  try { localStorage.setItem(key, JSON.stringify(val)) } catch {}
+}
+
+type AJCache = { answers: Answers; redTapped: string[]; currentSection: number; showSummary: boolean }
 
 // ─── sub-components ──────────────────────────────────────────────────────────
 
@@ -122,7 +89,7 @@ function QuestionRow({
   onAnswer,
 }: QuestionRowProps) {
   const [showInfo, setShowInfo] = useState(false)
-  const t = T[lang]
+  const t = useT('AJView', lang)
   const vals = getQuestionValues(qIndex)
 
   if (!visible) return null
@@ -210,7 +177,7 @@ type AJViewProps = {
 }
 
 export default function AJView({ currentPerf, lang, onSubmit, waitingForOtherScores, judgeScores, panelJudges, result }: AJViewProps) {
-  const t = T[lang]
+  const t = useT('AJView', lang)
   const sections = getSections(lang)
 
   const [answers, setAnswers] = useState<Answers>({})
@@ -223,18 +190,33 @@ export default function AJView({ currentPerf, lang, onSubmit, waitingForOtherSco
 
   const prevPerfId = useRef<string | null>(null)
 
-  // reset state when performance changes
+  // restore or reset state when performance changes
   useEffect(() => {
     if (currentPerf?.id !== prevPerfId.current) {
-      setAnswers({})
-      setRedTapped(new Set())
-      setCurrentSection(0)
-      setShowSummary(false)
+      const cacheKey = currentPerf?.id ? `scoring_aj_${currentPerf.id}` : null
+      const cached = cacheKey ? safeRead<AJCache>(cacheKey) : null
+      if (cached) {
+        setAnswers(cached.answers)
+        setRedTapped(new Set(cached.redTapped))
+        setCurrentSection(cached.currentSection)
+        setShowSummary(cached.showSummary)
+      } else {
+        setAnswers({})
+        setRedTapped(new Set())
+        setCurrentSection(0)
+        setShowSummary(false)
+      }
       setSubmitted(false)
       setSubmittedScore(null)
       prevPerfId.current = currentPerf?.id ?? null
     }
   }, [currentPerf?.id])
+
+  // persist state to localStorage
+  useEffect(() => {
+    if (!currentPerf?.id || submitted) return
+    safeWrite(`scoring_aj_${currentPerf.id}`, { answers, redTapped: [...redTapped], currentSection, showSummary })
+  }, [answers, redTapped, currentSection, showSummary, currentPerf?.id, submitted])
 
   function isAnswered(sIdx: number, qIdx: number): boolean {
     const key = `${sIdx}:${qIdx}`
@@ -289,6 +271,7 @@ export default function AJView({ currentPerf, lang, onSubmit, waitingForOtherSco
     const score = calcTotal(answers)
     setSubmittedScore(score)
     setSubmitted(true)
+    if (currentPerf?.id) localStorage.removeItem(`scoring_aj_${currentPerf.id}`)
     onSubmit?.(score)
   }
 

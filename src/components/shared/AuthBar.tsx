@@ -81,6 +81,11 @@ export default function AuthBar({ lang, onLangChange }: {
         <span className={['inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold', ROLE_BADGE[activeProfile.role]].join(' ')}>
           {ROLE_LABEL[activeProfile.role]}
         </span>
+        {activeProfile.role === 'judge' && (
+          <span className={['inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold', activeProfile.sport_type === 'rg' ? 'bg-violet-100 text-violet-700' : 'bg-blue-100 text-blue-700'].join(' ')}>
+            {activeProfile.sport_type === 'rg' ? 'RG' : 'Acro'}
+          </span>
+        )}
         <span className="text-sm text-slate-600 font-medium">{activeProfile.name}</span>
       </div>
 
@@ -122,8 +127,8 @@ export default function AuthBar({ lang, onLangChange }: {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-slate-700 font-medium truncate">{p.name}</p>
-                    <p className={['text-xs font-medium', ROLE_BADGE[p.role].replace('bg-', 'text-').split(' ')[1]].join(' ')}>
-                      {ROLE_LABEL[p.role]}
+                    <p className="text-xs font-medium text-slate-500">
+                      {ROLE_LABEL[p.role]}{p.role === 'judge' ? ` · ${p.sport_type === 'rg' ? 'RG' : 'Acro'}` : ''}
                     </p>
                   </div>
                   {p.id === activeProfile.id && (

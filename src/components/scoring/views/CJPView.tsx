@@ -1,97 +1,13 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import type { Lang } from '../types'
 import type { PanelJudge, ScoringPerformance, JudgeScore, RoutineResult, PenaltyState } from '../types'
 import { calcCjpPenalty, droppedIndices, computeResult, DEFAULT_PENALTY } from '../types'
 import { CJP_PENALTY_CATEGORIES, cjpCategoryContrib } from '@/lib/scoringRules'
 import { categoryLabel } from '@/components/admin/types'
-import { ScoreGrid } from '@/components/shared/CJPTabletShell'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    noPerf: 'No performance open',
-    noPerfSub: 'Select a performance from the list to open it.',
-    open: 'Open',
-    skip: 'Skip',
-    skipped: 'Skipped',
-    final: 'Final',
-    prov: 'Prov.',
-    backToLive: 'Back to live',
-    reviewing: 'Reviewing',
-    ej: 'EJ',
-    aj: 'AJ',
-    dj: 'DJ',
-    avg: 'Avg',
-    djDif: 'DJ Dif.',
-    djPen: 'DJ Pen.',
-    cjpPen: 'CJP Pen.',
-    reopenAll: 'Re-open all',
-    reopen: 'Re-open',
-    editScore: 'Edit score',
-    updateProv: 'Update provisional',
-    penalties: 'CJP Penalties',
-    penaltyTotal: 'Total penalty',
-    submitProv: 'Submit provisional',
-    submitFinal: 'Submit final',
-    confirmFinal: 'Confirm final',
-    modifyFinal: 'Modify',
-    nextPerf: 'Next performance',
-    ranking: 'Ranking',
-    rankCol: '#',
-    teamCol: 'Team',
-    scoreE: 'E',
-    scoreA: 'A',
-    scoreD: 'D',
-    scorePen: 'Pen.',
-    scoreTotal: 'Total',
-    balance: 'Balance',
-    dynamic: 'Dynamic',
-    combined: 'Combined',
-  },
-  es: {
-    noPerf: 'No hay actuación abierta',
-    noPerfSub: 'Selecciona una actuación de la lista para abrirla.',
-    open: 'Abrir',
-    skip: 'Saltar',
-    skipped: 'Saltada',
-    final: 'Final',
-    prov: 'Prov.',
-    backToLive: 'Volver al directo',
-    reviewing: 'Revisando',
-    ej: 'EJ',
-    aj: 'AJ',
-    dj: 'DJ',
-    avg: 'Media',
-    djDif: 'DJ Dif.',
-    djPen: 'DJ Pen.',
-    cjpPen: 'Pen. CJP',
-    reopenAll: 'Reabrir todo',
-    reopen: 'Reabrir',
-    editScore: 'Editar puntuación',
-    updateProv: 'Actualizar provisional',
-    penalties: 'Penalizaciones CJP',
-    penaltyTotal: 'Total penalización',
-    submitProv: 'Enviar provisional',
-    submitFinal: 'Enviar final',
-    confirmFinal: 'Confirmar final',
-    modifyFinal: 'Modificar',
-    nextPerf: 'Siguiente actuación',
-    ranking: 'Clasificación',
-    rankCol: '#',
-    teamCol: 'Equipo',
-    scoreE: 'E',
-    scoreA: 'A',
-    scoreD: 'D',
-    scorePen: 'Pen.',
-    scoreTotal: 'Total',
-    balance: 'Equilibrio',
-    dynamic: 'Dinámico',
-    combined: 'Combinado',
-  },
-}
+import { ScoreGrid } from '@/components/scoring/CJPTabletShell'
+import { useT } from '@/lib/useT'
 
 // ─── penalty table ────────────────────────────────────────────────────────────
 
@@ -118,7 +34,7 @@ function PenaltyTable({ state, onChange, lang, readonly, hideHeader }: {
   readonly: boolean
   hideHeader?: boolean
 }) {
-  const t = T[lang]
+  const t = useT('CJPView', lang)
   const total = calcCjpPenalty(state)
   const [open, setOpen] = useState(true)
 
@@ -252,7 +168,7 @@ function ScorePreview({ scores, panelJudges, cjpPenalty, lang }: {
   cjpPenalty: number
   lang: Lang
 }) {
-  const t = T[lang]
+  const t = useT('CJPView', lang)
 
   const ejJudges = panelJudges.filter((j) => j.role === 'EJ')
   const ajJudges = panelJudges.filter((j) => j.role === 'AJ')
@@ -303,7 +219,7 @@ function RankingTable({ performances, results, lang, selectedPerfId, onSelectPer
   selectedPerfId?: string | null
   onSelectPerf?: (perfId: string) => void
 }) {
-  const t = T[lang]
+  const t = useT('CJPView', lang)
 
   const hasAnyScored = performances.some((p) => results[p.id])
   if (!hasAnyScored) return null
@@ -452,13 +368,16 @@ export default function CJPView({
   currentPerfId, judgeScores, results,
   onOpen, onSkip, onSubmit, onReopenScore, onUnpublishResult, onEditScore,
 }: CJPViewProps) {
-  const t = T[lang]
+  const t = useT('CJPView', lang)
   const rankPerfs = rankingPerformances ?? performances
   const [penaltyStates, setPenaltyStates] = useState<Record<string, PenaltyState>>({})
   const [reviewPerfId, setReviewPerfId] = useState<string | null>(null)
   const [leftOpen, setLeftOpen] = useState(true)
   const [viewTab, setViewTab] = useState<'scores' | 'ts'>('scores')
   const [showMobilePerfs, setShowMobilePerfs] = useState(false)
+  const [rightPanelWidth, setRightPanelWidth] = useState(320)
+  const resizeStartX = useRef<number>(0)
+  const resizeStartWidth = useRef<number>(320)
 
   const routineLabel = (rt: string) =>
     ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
@@ -920,8 +839,23 @@ export default function CJPView({
         )}
       </div>
 
+      {/* ── resize handle (desktop only) ── */}
+      <div
+        className="hidden md:block w-1.5 cursor-col-resize bg-slate-200 hover:bg-blue-400 transition-colors shrink-0 select-none"
+        onPointerDown={(e) => {
+          e.currentTarget.setPointerCapture(e.pointerId)
+          resizeStartX.current = e.clientX
+          resizeStartWidth.current = rightPanelWidth
+        }}
+        onPointerMove={(e) => {
+          if (e.buttons !== 1) return
+          const delta = resizeStartX.current - e.clientX
+          setRightPanelWidth(Math.min(640, Math.max(180, resizeStartWidth.current + delta)))
+        }}
+      />
+
       {/* ── right panel: CJP penalties (desktop only) ── */}
-      <div className="hidden md:flex flex-col w-72 border-l border-slate-200 bg-white min-h-0">
+      <div className="hidden md:flex flex-col border-l border-slate-200 bg-white min-h-0 shrink-0" style={{ width: rightPanelWidth }}>
         <div className="px-3 py-2.5 border-b border-slate-200 shrink-0">
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">{t.penalties}</p>
         </div>

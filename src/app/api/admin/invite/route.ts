@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
     contact_name?: string
     licence?: string
     phone?: string
+    sport_type?: string
   }
 
   const { role, email } = body
@@ -74,6 +75,7 @@ export async function POST(req: NextRequest) {
   if (body.contact_name) metadata.contact_name = body.contact_name
   if (body.licence)      metadata.licence      = body.licence
   if (body.phone)        metadata.phone        = body.phone
+  if (body.sport_type)   metadata.sport_type   = body.sport_type
 
   const { data, error } = await db.auth.admin.inviteUserByEmail(email, {
     data: metadata,

@@ -46,33 +46,102 @@ export type Database = {
           },
         ]
       }
+      apparatus: {
+        Row: {
+          id: string
+          name: string
+          name_es: string | null
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          name: string
+          name_es?: string | null
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          name?: string
+          name_es?: string | null
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      apparatus_rules: {
+        Row: {
+          id: string
+          age_group_rule_id: string
+          year: number
+          apparatus_id: string
+          is_mandatory: boolean
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          age_group_rule_id: string
+          year: number
+          apparatus_id: string
+          is_mandatory?: boolean
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          age_group_rule_id?: string
+          year?: number
+          apparatus_id?: string
+          is_mandatory?: boolean
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apparatus_rules_age_group_rule_id_fkey"
+            columns: ["age_group_rule_id"]
+            isOneToOne: false
+            referencedRelation: "age_group_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apparatus_rules_apparatus_id_fkey"
+            columns: ["apparatus_id"]
+            isOneToOne: false
+            referencedRelation: "apparatus"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       age_group_rules: {
         Row: {
           age_group: string
           id: string
+          level: string
           max_age: number | null
           min_age: number
           routine_count: number
           ruleset: string
           sort_order: number
+          sport_type: string
         }
         Insert: {
           age_group: string
           id?: string
+          level: string
           max_age?: number | null
           min_age: number
           routine_count?: number
           ruleset: string
           sort_order?: number
+          sport_type?: string
         }
         Update: {
           age_group?: string
           id?: string
+          level?: string
           max_age?: number | null
           min_age?: number
           routine_count?: number
           ruleset?: string
           sort_order?: number
+          sport_type?: string
         }
         Relationships: []
       }
@@ -212,6 +281,7 @@ export type Database = {
           registration_deadline: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["competition_status"]
+          sport_type: string
           ts_music_deadline: string | null
           tv_sponsor_videos: Json
           updated_at: string
@@ -234,6 +304,7 @@ export type Database = {
           poster_url?: string | null
           provisional_entry_deadline?: string | null
           registration_deadline?: string | null
+          sport_type?: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["competition_status"]
           ts_music_deadline?: string | null
@@ -258,6 +329,7 @@ export type Database = {
           poster_url?: string | null
           provisional_entry_deadline?: string | null
           registration_deadline?: string | null
+          sport_type?: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["competition_status"]
           ts_music_deadline?: string | null
@@ -482,6 +554,7 @@ export type Database = {
           id: string
           licence: string | null
           phone: string | null
+          sport_type: string
         }
         Insert: {
           avatar_url?: string | null
@@ -489,6 +562,7 @@ export type Database = {
           id: string
           licence?: string | null
           phone?: string | null
+          sport_type?: string
         }
         Update: {
           avatar_url?: string | null
@@ -496,6 +570,7 @@ export type Database = {
           id?: string
           licence?: string | null
           phone?: string | null
+          sport_type?: string
         }
         Relationships: [
           {
@@ -651,6 +726,63 @@ export type Database = {
           },
         ]
       }
+      rg_registrations: {
+        Row: {
+          id: string
+          team_id: string
+          competition_id: string
+          status: string
+          payment_document_url: string | null
+          notes: string | null
+          approved_by: string | null
+          approved_at: string | null
+          payment_approved_by: string | null
+          payment_approved_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          team_id: string
+          competition_id: string
+          status?: string
+          payment_document_url?: string | null
+          notes?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+          payment_approved_by?: string | null
+          payment_approved_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          team_id?: string
+          competition_id?: string
+          status?: string
+          payment_document_url?: string | null
+          notes?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+          payment_approved_by?: string | null
+          payment_approved_at?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rg_registrations_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rg_registrations_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       routine_results: {
         Row: {
           a_score: number | null
@@ -659,12 +791,16 @@ export type Database = {
           cjp_penalty: number | null
           cjp_penalty_detail: Json | null
           created_at: string
+          da_score: number | null
+          db_score: number | null
           dif_penalty: number | null
           dif_score: number | null
           dj_penalty_detail: Json | null
           e_score: number | null
           final_score: number | null
           id: string
+          rj_penalty: number | null
+          rj_penalty_detail: Json | null
           session_id: string
           status: Database["public"]["Enums"]["result_status"]
           team_id: string
@@ -677,12 +813,16 @@ export type Database = {
           cjp_penalty?: number | null
           cjp_penalty_detail?: Json | null
           created_at?: string
+          da_score?: number | null
+          db_score?: number | null
           dif_penalty?: number | null
           dif_score?: number | null
           dj_penalty_detail?: Json | null
           e_score?: number | null
           final_score?: number | null
           id?: string
+          rj_penalty?: number | null
+          rj_penalty_detail?: Json | null
           session_id: string
           status?: Database["public"]["Enums"]["result_status"]
           team_id: string
@@ -695,12 +835,16 @@ export type Database = {
           cjp_penalty?: number | null
           cjp_penalty_detail?: Json | null
           created_at?: string
+          da_score?: number | null
+          db_score?: number | null
           dif_penalty?: number | null
           dif_score?: number | null
           dj_penalty_detail?: Json | null
           e_score?: number | null
           final_score?: number | null
           id?: string
+          rj_penalty?: number | null
+          rj_penalty_detail?: Json | null
           session_id?: string
           status?: Database["public"]["Enums"]["result_status"]
           team_id?: string
@@ -734,6 +878,7 @@ export type Database = {
         Row: {
           aj_score: number | null
           cjp_penalty: number | null
+          db_score: number | null
           dj_difficulty: number | null
           dj_extra_elements: Json | null
           dj_flags: Json | null
@@ -752,6 +897,7 @@ export type Database = {
         Insert: {
           aj_score?: number | null
           cjp_penalty?: number | null
+          db_score?: number | null
           dj_difficulty?: number | null
           dj_extra_elements?: Json | null
           dj_flags?: Json | null
@@ -770,6 +916,7 @@ export type Database = {
         Update: {
           aj_score?: number | null
           cjp_penalty?: number | null
+          db_score?: number | null
           dj_difficulty?: number | null
           dj_extra_elements?: Json | null
           dj_flags?: Json | null
@@ -1094,6 +1241,36 @@ export type Database = {
           },
         ]
       }
+      team_apparatus: {
+        Row: {
+          team_id: string
+          apparatus_id: string
+        }
+        Insert: {
+          team_id: string
+          apparatus_id: string
+        }
+        Update: {
+          team_id?: string
+          apparatus_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_apparatus_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_apparatus_apparatus_id_fkey"
+            columns: ["apparatus_id"]
+            isOneToOne: false
+            referencedRelation: "apparatus"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           age_group: string
@@ -1104,6 +1281,7 @@ export type Database = {
           gymnast_display: string
           id: string
           photo_url: string | null
+          sport_type: string
         }
         Insert: {
           age_group: string
@@ -1114,6 +1292,7 @@ export type Database = {
           gymnast_display: string
           id?: string
           photo_url?: string | null
+          sport_type?: string
         }
         Update: {
           age_group?: string
@@ -1124,6 +1303,7 @@ export type Database = {
           gymnast_display?: string
           id?: string
           photo_url?: string | null
+          sport_type?: string
         }
         Relationships: [
           {
@@ -1193,7 +1373,7 @@ export type Database = {
         Row: {
           team_id: string
           competition_id: string
-          routine_type: "Balance" | "Dynamic" | "Combined"
+          routine_type: 'Balance' | 'Dynamic' | 'Combined' | 'Free' | 'Hoop' | 'Ball' | 'Clubs' | 'Ribbon' | 'Rope'
           status: string
           dj1_id: string | null
           dj1_decision: string | null
@@ -1209,7 +1389,7 @@ export type Database = {
         Insert: {
           team_id: string
           competition_id: string
-          routine_type: "Balance" | "Dynamic" | "Combined"
+          routine_type: 'Balance' | 'Dynamic' | 'Combined' | 'Free' | 'Hoop' | 'Ball' | 'Clubs' | 'Ribbon' | 'Rope'
           status?: string
           dj1_id?: string | null
           dj1_decision?: string | null
@@ -1225,7 +1405,7 @@ export type Database = {
         Update: {
           team_id?: string
           competition_id?: string
-          routine_type?: "Balance" | "Dynamic" | "Combined"
+          routine_type: 'Balance' | 'Dynamic' | 'Combined' | 'Free' | 'Hoop' | 'Ball' | 'Clubs' | 'Ribbon' | 'Rope'
           status?: string
           dj1_id?: string | null
           dj1_decision?: string | null
@@ -1581,9 +1761,9 @@ export type Database = {
         | "published"
         | "active"
         | "finished"
-      judge_role: "CJP" | "EJ" | "AJ" | "DJ"
+      judge_role: "CJP" | "EJ" | "AJ" | "DJ" | "RJ" | "E" | "A" | "DA" | "DB"
       result_status: "provisional" | "approved"
-      routine_type: "Balance" | "Dynamic" | "Combined"
+      routine_type: 'Balance' | 'Dynamic' | 'Combined' | 'Free' | 'Hoop' | 'Ball' | 'Clubs' | 'Ribbon' | 'Rope'
       session_status: "waiting" | "active" | "finished"
       user_role: "super_admin" | "admin" | "judge" | "club"
     }
@@ -1723,9 +1903,9 @@ export const Constants = {
         "active",
         "finished",
       ],
-      judge_role: ["CJP", "EJ", "AJ", "DJ"],
+      judge_role: ["CJP", "EJ", "AJ", "DJ", "RJ", "E", "A", "DA", "DB"],
       result_status: ["provisional", "approved"],
-      routine_type: ["Balance", "Dynamic", "Combined"],
+      routine_type: ["Balance", "Dynamic", "Combined", "Free", "Hoop", "Ball", "Clubs", "Ribbon", "Rope"],
       session_status: ["waiting", "active", "finished"],
       user_role: ["super_admin", "admin", "judge", "club"],
     },

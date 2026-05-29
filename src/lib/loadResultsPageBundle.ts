@@ -4,6 +4,7 @@ import type { ScoringPerformance, RoutineResult } from '@/components/scoring/typ
 import type { TeamClubInfo } from '@/lib/clubTrophyRanking'
 import { computeOpenCombinadosActaFromRows, type OpenCombinadosActaData } from '@/lib/openCombinadosBracket'
 import { isOpenCombinadosCompetitionName } from '@/lib/openCombinadosCompetition'
+import { ageGroupLabel, type AgeGroupRule } from '@/components/admin/types'
 
 export type ResultsPageCompetitionMeta = {
   name: string
@@ -70,14 +71,14 @@ export async function loadResultsPageBundle(
       .from('sessions')
       .select('id, age_group, category, routine_type, ranking_merge_group_id')
       .eq('competition_id', competitionId),
-    supabase.from('age_group_rules').select('id, age_group, sort_order, ruleset'),
+    supabase.from('age_group_rules').select('id, age_group, level, sort_order, ruleset, sport_type'),
     supabase.from('ranking_merge_groups').select('id, label_es, label_en').eq('competition_id', competitionId),
   ])
   const sessions = sessionsRes.data
   const agRules = ageGroupRulesRes.data ?? []
   const mergeById = Object.fromEntries((mergeGroupsRes.data ?? []).map((m) => [m.id, m]))
-  const agLabelMap = Object.fromEntries(agRules.map((r) => [r.id, r.age_group]))
-  const agSortOrder = Object.fromEntries(agRules.map((r) => [r.age_group, r.sort_order ?? 0]))
+  const agLabelMap = Object.fromEntries(agRules.map((r) => [r.id, ageGroupLabel(r as unknown as AgeGroupRule)]))
+  const agSortOrder = Object.fromEntries(agRules.map((r) => [ageGroupLabel(r as unknown as AgeGroupRule), r.sort_order ?? 0]))
 
   if (!sessions?.length) {
     return { competition, performances: [], results: {}, clubAvatarByTeam: {}, teamClubInfo: {}, agSortOrder, openCombinadosActa: null }

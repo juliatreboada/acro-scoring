@@ -1,9 +1,12 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { formatDateRange } from '@/lib/formatDate'
+import { STATUS_BADGE } from '@/lib/uiConstants'
 import type { Lang } from '@/components/scoring/types'
-import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry, RankingMergeGroup } from '@/components/admin/types'
-import { NEXT_STATUS, PREV_STATUS } from '@/components/admin/types'
+import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry, ProvisionalEntry, DefinitiveEntry, RankingMergeGroup } from '@/components/admin/types'
+import { NEXT_STATUS, PREV_STATUS, ageGroupLabel } from '@/components/admin/types'
+import type { Apparatus, ApparatusRule } from '@/components/admin/types'
 import StructureTab from './StructureTab'
 import JudgesTab, { type JudgesTabProps, type PanelLock } from './JudgesTab'
 import RegistrationsTab, { type RegistrationsTabProps } from './RegistrationsTab'
@@ -13,225 +16,8 @@ import LicenciasTab from './LicenciasTab'
 import TVTab from './TVTab'
 import OpenCombinadosTab from './OpenCombinadosTab'
 import { isOpenCombinadosCompetitionName } from '@/lib/openCombinadosCompetition'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    back: 'Competitions',
-    tabs: {
-      structure:     'Structure',
-      judges:        'Judges',
-      startingOrder: 'Starting order',
-      registrations: 'Registrations',
-      overview:      'Overview',
-      day:           'Competition day',
-      licencias:     'Licencias',
-      tv:            'TV',
-      bracket:       'Bracket',
-    },
-    soon: 'Coming soon',
-    soonSub: 'This section is not built yet.',
-    // overview — display
-    name: 'Name',
-    location: 'Location',
-    dates: 'Dates',
-    provisionalEntryDeadline: 'Provisional entry deadline',
-    definitiveEntryDeadline: 'Definitive entry deadline',
-    registrationDeadline: 'Registration deadline',
-    tsMusicDeadline: 'TS & Music deadline',
-    admin: 'Competition admin',
-    ageGroups: 'Age groups',
-    poster: 'Poster',
-    logoTitle: 'Logo',
-    logoHint: 'Used on printed public results. Square PNG/SVG recommended.',
-    logoUpload: 'Upload logo',
-    logoReplace: 'Replace logo',
-    logoUploading: 'Uploading logo…',
-    panels: 'Judging panels',
-    panelN: (n: number) => `${n} panel${n !== 1 ? 's' : ''}`,
-    warningPanelChange: 'Changing to 1 panel will reassign all sessions to Panel 1.',
-    none: '—',
-    noAdmin: '— assign later —',
-    // overview — edit
-    edit: 'Edit',
-    save: 'Save',
-    cancel: 'Cancel',
-    startDate: 'Start date',
-    endDate: 'End date',
-    // status
-    status: {
-      draft:                'Draft',
-      provisional_entry:    'Provisional entry',
-      definitive_entry:     'Definitive entry',
-      registration_open:    'Registration open',
-      registration_closed:  'Registration closed',
-      published:            'Published',
-      active:               'Live',
-      finished:             'Finished',
-      },
-    // status advance actions
-    action: {
-      draft:                'Open provisional entry',
-      provisional_entry:    'Open definitive entry',
-      definitive_entry:     'Open registration',
-      registration_open:    'Close registration',
-      registration_closed:  'Publish starting order',
-      published:            'Start competition',
-      active:               'Finish competition',
-    } as Partial<Record<CompetitionStatus, string>>,
-    actionBack: {
-      provisional_entry:    'Back to draft',
-      definitive_entry:     'Back to provisional entry',
-      registration_open:    'Back to definitive entry',
-      registration_closed:  'Reopen registration',
-      published:            'Back to registration closed',
-      active:               'Back to published',
-      finished:             'Back to live',
-    } as Partial<Record<CompetitionStatus, string>>,
-    confirmAction: {
-      published:  'This will start the competition and enable scoring. Continue?',
-      active:     'This will mark the competition as finished. Continue?',
-    } as Partial<Record<CompetitionStatus, string>>,
-    confirmBackAction: {
-      provisional_entry:    'Move competition back to draft?',
-      definitive_entry:     'Move competition back to provisional entry?',
-      registration_open:    'Move competition back to definitive entry?',
-      registration_closed:  'Reopen registration?',
-      published:            'Move competition back to registration closed?',
-      active:               'Move competition back to published?',
-      finished:             'Re-open competition as live?',
-    } as Partial<Record<CompetitionStatus, string>>,
-    posterUpload: 'Upload image',
-    posterReplace: 'Replace',
-    posterUploading: 'Uploading…',
-    officialResultsPrint: 'Official results for printing (signatures)',
-    djReviewOpen: 'DJ Review open',
-    djReviewClosed: 'DJ Review closed',
-    openDJReview: 'Open DJ review',
-    closeDJReview: 'Close DJ review',
-    confirmCloseDJReview: 'Close the DJ review period? DJs will no longer be able to access the review.',
-    //Fees
-    feesTitle: 'Entry fees',
-    feeType: 'Fee type',
-    feePerTeam: 'Per team',
-    feePerGymnast: 'Per gymnast',
-    feeAmount: 'Amount (€)',
-    judgeMissingFine: 'Missing judge fine (€)',
-    feeHint: 'Choose to charge per team or per gymnast. Gymnast counts: pair=2, trio=3, group=4.',  
-  },
-  es: {
-    back: 'Competiciones',
-    tabs: {
-      structure:     'Estructura',
-      judges:        'Jueces',
-      startingOrder: 'Orden de salida',
-      registrations: 'Inscripciones',
-      overview:      'Resumen',
-      day:           'Día de competición',
-      licencias:     'Licencias',
-      tv:            'TV',
-      bracket:       'Bracket',
-    },
-    soon: 'Próximamente',
-    soonSub: 'Esta jornada aún no está construida.',
-    name: 'Nombre',
-    location: 'Sede',
-    dates: 'Fechas',
-    provisionalEntryDeadline: 'Fecha límite inscripción provisional',
-    definitiveEntryDeadline: 'Fecha límite inscripción definitiva',
-    registrationDeadline: 'Fecha límite de inscripción',
-    tsMusicDeadline: 'Fecha límite de TS y música',
-    admin: 'Admin de competición',
-    ageGroups: 'Grupos de edad',
-    poster: 'Póster',
-    logoTitle: 'Logo',
-    logoHint: 'Se usa en los resultados públicos impresos. Recomendado PNG/SVG cuadrado.',
-    logoUpload: 'Subir logo',
-    logoReplace: 'Cambiar logo',
-    logoUploading: 'Subiendo logo…',
-    panels: 'Paneles de jueces',
-    panelN: (n: number) => `${n} panel${n !== 1 ? 'es' : ''}`,
-    warningPanelChange: 'Cambiar a 1 panel reasignará todas las sesiones al Panel 1.',
-    none: '—',
-    noAdmin: '— asignar después —',
-    edit: 'Editar',
-    save: 'Guardar',
-    cancel: 'Cancelar',
-    startDate: 'Fecha inicio',
-    endDate: 'Fecha fin',
-    // status
-    status: {
-      draft:                'Borrador',
-      provisional_entry:    'Inscripción provisional',
-      definitive_entry:     'Inscripción definitiva',
-      registration_open:    'Inscripción abierta',
-      registration_closed:  'Inscripción cerrada',
-      published:            'Publicada',
-      active:               'En vivo',
-      finished:             'Finalizada',
-    },
-    action: {
-      draft:                'Abrir inscripción provisional',
-      provisional_entry:    'Abrir inscripción definitiva',
-      definitive_entry:     'Abrir inscripción nominativa',
-      registration_open:    'Cerrar inscripción',
-      registration_closed:  'Publicar orden de salida',
-      published:            'Iniciar competición',
-      active:               'Finalizar competición',
-    } as Partial<Record<CompetitionStatus, string>>,
-    actionBack: {
-      provisional_entry:    'Volver a borrador',
-      definitive_entry:     'Volver a inscripción provisional',
-      registration_open:    'Volver a inscripción definitiva',
-      registration_closed:  'Reabrir inscripción',
-      published:            'Volver a inscripción cerrada',
-      active:               'Volver a publicada',
-      finished:             'Volver a en vivo',
-    } as Partial<Record<CompetitionStatus, string>>,
-    confirmAction: {
-      published:  '¿Iniciar la competición y habilitar la puntuación?',
-      active:     '¿Marcar la competición como finalizada?',
-    } as Partial<Record<CompetitionStatus, string>>,
-    confirmBackAction: {
-      provisional_entry:    '¿Volver la competición a borrador?',
-      definitive_entry:     '¿Volver la competición a inscripción provisional?',
-      registration_open:    '¿Volver la competición a inscripción definitiva?',
-      registration_closed:  '¿Reabrir la inscripción?',
-      published:            '¿Volver la competición a inscripción cerrada?',
-      active:               '¿Volver la competición a publicada?',
-      finished:             '¿Reabrir la competición en vivo?',
-    } as Partial<Record<CompetitionStatus, string>>,
-    posterUpload: 'Subir imagen',
-    posterReplace: 'Reemplazar',
-    posterUploading: 'Subiendo…',
-    officialResultsPrint: 'Resultados oficiales para imprimir (firmas)',
-    djReviewOpen: 'Revisión DJ abierta',
-    djReviewClosed: 'Revisión DJ cerrada',
-    openDJReview: 'Abrir revisión DJ',
-    closeDJReview: 'Cerrar revisión DJ',
-    confirmCloseDJReview: '¿Cerrar el período de revisión DJ? Los jueces DJ ya no podrán acceder.',
-    //Fees
-    feesTitle: 'Tasas de inscripción',
-    feeType: 'Tipo de tasa',
-    feePerTeam: 'Por equipo',
-    feePerGymnast: 'Por gimnasta',
-    feeAmount: 'Importe (€)',
-    judgeMissingFine: 'Penalización sin juez (€)',
-    feeHint: 'Elige cobrar por equipo o por gimnasta. Recuento: pareja=2, trío=3, grupo=4.',
-  },
-}
-
-const STATUS_BADGE: Record<CompetitionStatus, string> = {
-  draft:                'bg-slate-100 text-slate-500',
-  provisional_entry:    'bg-violet-100 text-violet-700',
-  definitive_entry:     'bg-orange-100 text-orange-700',
-  registration_open:    'bg-green-100 text-green-700',
-  registration_closed:  'bg-amber-100 text-amber-700',
-  published:            'bg-indigo-100 text-indigo-700',
-  active:               'bg-blue-600 text-white',
-  finished:             'bg-slate-100 text-slate-400',
-}
+import RGRegistrationsTab from './RGRegistrationsTab'
+import { useT } from '@/lib/useT'
 
 const ACTION_STYLE: Partial<Record<CompetitionStatus, string>> = {
   draft:                'border-violet-200 text-violet-700 hover:bg-violet-50',
@@ -245,21 +31,11 @@ const ACTION_STYLE: Partial<Record<CompetitionStatus, string>> = {
 
 type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias' | 'tv' | 'bracket'
 
-function formatDateRange(start: string | null, end: string | null): string {
-  const fmt = (d: string) =>
-    new Date(d + 'T00:00:00').toLocaleDateString(undefined, {
-      day: 'numeric', month: 'short', year: 'numeric',
-    })
-  if (start && end) return `${fmt(start)} – ${fmt(end)}`
-  if (start) return fmt(start)
-  if (end)   return fmt(end)
-  return ''
-}
 
 // ─── placeholder tab ──────────────────────────────────────────────────────────
 
 function PlaceholderTab({ lang }: { lang: Lang }) {
-  const t = T[lang]
+  const t = useT('CompetitionDetail', lang)
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
       <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mb-4">
@@ -305,8 +81,9 @@ function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels
   onUploadPoster: (file: File) => Promise<void>
   onUploadLogo: (file: File) => Promise<void>
 }) {
-  const t = T[lang]
-  const agLabels = Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group} (${r.ruleset})`]))
+  const t = useT('CompetitionDetail', lang)
+  const filteredAGs = ageGroupRules.filter(r => r.sport_type === competition.sport_type)
+  const agLabels = Object.fromEntries(ageGroupRules.map(r => [r.id, ageGroupLabel(r, true)]))
   const [uploadBusy, setUploadBusy] = useState<null | 'poster' | 'logo'>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const posterInputRef = useRef<HTMLInputElement>(null)
@@ -752,7 +529,7 @@ const dateCls = 'border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate
               {editingAgeGroups ? (
                 <div className="space-y-3">
                   <div className="flex flex-wrap gap-2">
-                    {ageGroupRules.map((rule) => {
+                    {filteredAGs.map((rule) => {
                       const active = ageGroupsForm.has(rule.id)
                       return (
                         <button type="button" key={rule.id}
@@ -763,7 +540,7 @@ const dateCls = 'border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate
                           }}
                           className={['px-3 py-1.5 rounded-xl border text-sm font-medium transition-all', active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'].join(' ')}
                         >
-                          {rule.age_group} ({rule.ruleset})
+                          {ageGroupLabel(rule, true)}
                         </button>
                       )
                     })}
@@ -993,11 +770,14 @@ export type CompetitionDetailProps = {
   onAddSlot: (sectionId: string, panelId: string, role: Role) => void
   onRemoveSlot: (sectionId: string, panelId: string, role: Role) => void
   onTogglePanelLock: (sectionId: string, panelId: string) => Promise<void>
+  onCopyPanel: (fromSectionId: string, panelId: string) => Promise<void>
   onCreateJudge?: (data: Omit<Judge, 'id' | 'avatar_url'>) => Promise<void>
   // registrations
   globalTeams: Team[]
   clubs: Club[]
   entries: CompetitionEntry[]
+  provisionalEntries: ProvisionalEntry[]
+  definitiveEntries: DefinitiveEntry[]
   onToggleDropout: (entryId: string) => void
   onRemoveClubEntries?: (clubId: string) => void
   // starting order
@@ -1009,6 +789,8 @@ export type CompetitionDetailProps = {
   // overview
   availableAdmins: AdminUser[]
   ageGroupRules: AgeGroupRule[]
+  apparatus: Apparatus[]
+  apparatusRules: ApparatusRule[]
   onUpdateCompetition: (updates: OverviewUpdate) => void
   onUploadPoster: (file: File) => Promise<void>
   onUploadLogo: (file: File) => Promise<void>
@@ -1032,13 +814,13 @@ export default function CompetitionDetail({
   rankingMergeGroups, sessionEligibleTeamCounts, onAssignSessionMergeGroup, onCreateRankingMergeGroup,
   globalJudges, judgePool, nominations, assignments,
   panelLocks, onAddToPool, onRemoveFromPool, onAssignJudge, onAddSlot, onRemoveSlot,
-  onTogglePanelLock, onCreateJudge,
-  globalTeams, clubs, entries, onToggleDropout, onRemoveClubEntries, sessionOrders, lockedSessions, onReorder, onToggleLock, onReorderTimeline,
-  availableAdmins, ageGroupRules, onUpdateCompetition, onUploadPoster, onUploadLogo, onUpdateFees,
+  onTogglePanelLock, onCopyPanel, onCreateJudge,
+  globalTeams, clubs, entries, provisionalEntries, definitiveEntries, onToggleDropout, onRemoveClubEntries, sessionOrders, lockedSessions, onReorder, onToggleLock, onReorderTimeline,
+  availableAdmins, ageGroupRules, apparatus, apparatusRules, onUpdateCompetition, onUploadPoster, onUploadLogo, onUpdateFees,
   onSetDJReviewDeadline, onStartSession, onFinishSession, onRevertSession,
   competitionGymnasts, competitionCoaches, globalCoaches,
 }: CompetitionDetailProps) {
-  const t = T[lang]
+  const t = useT('CompetitionDetail', lang)
   const [activeTab, setActiveTab] = useState<Tab>('structure')
   const openCombinadosEnabled =
     isOpenCombinadosCompetitionName(competition.name) || Boolean(competition.open_combinados_enabled)
@@ -1189,9 +971,13 @@ export default function CompetitionDetail({
         <StructureTab
           lang={lang}
           competitionId={competition.id}
+          sportType={competition.sport_type}
+          competitionYear={competition.start_date ? new Date(competition.start_date).getFullYear() : new Date().getFullYear()}
           ageGroups={competition.age_groups}
-          agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group} (${r.ruleset})`]))}
+          agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, ageGroupLabel(r)]))}
           ageGroupRules={ageGroupRules}
+          apparatus={apparatus}
+          apparatusRules={apparatusRules}
           panels={panels}
           sections={sections}
           sessions={sessions}
@@ -1224,6 +1010,7 @@ export default function CompetitionDetail({
       {activeTab === 'judges' && (
         <JudgesTab
           lang={lang}
+          sportType={competition.sport_type}
           globalJudges={globalJudges}
           judgePool={judgePool}
           nominations={nominations}
@@ -1238,6 +1025,7 @@ export default function CompetitionDetail({
           onAddSlot={onAddSlot}
           onRemoveSlot={onRemoveSlot}
           onTogglePanelLock={onTogglePanelLock}
+          onCopyPanel={onCopyPanel}
           onCreateJudge={onCreateJudge}
         />
       )}
@@ -1254,21 +1042,24 @@ export default function CompetitionDetail({
           sessions={sessions}
           sessionOrders={sessionOrders}
           lockedSessions={lockedSessions}
-          agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group}`]))}
+          agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, ageGroupLabel(r)]))}
           ageGroupRules={ageGroupRules}
           onReorder={onReorder}
           onToggleLock={onToggleLock}
           onReorderTimeline={onReorderTimeline}
         />
       )}
-      {activeTab === 'registrations' && (
+      {activeTab === 'registrations' && competition.sport_type === 'rg' && (
+        <RGRegistrationsTab lang={lang} competition={competition} />
+      )}
+      {activeTab === 'registrations' && competition.sport_type !== 'rg' && (
         <RegistrationsTab
           lang={lang}
           globalTeams={globalTeams}
           clubs={clubs}
           gymnasts={competitionGymnasts}
           entries={entries}
-          agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, `${r.age_group}`]))}
+          agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, ageGroupLabel(r, true)]))}
           onToggleDropout={onToggleDropout}
           onRemoveClubEntries={onRemoveClubEntries}
           competitionId={competition.id}
@@ -1276,13 +1067,16 @@ export default function CompetitionDetail({
           competitionAgeGroups={competition.age_groups}
           competitionYear={competition.start_date ? new Date(competition.start_date + 'T00:00:00').getFullYear() : new Date().getFullYear()}
           competitionStatus={competition.status}
+          provisionalEntries={provisionalEntries}
+          definitiveEntries={definitiveEntries}
         />
       )}
       {activeTab === 'licencias' && (
         <LicenciasTab
           lang={lang}
-          competitionId={competition.id}
           competitionStatus={competition.status}
+          provisionalEntries={provisionalEntries}
+          definitiveEntries={definitiveEntries}
           globalTeams={globalTeams}
           clubs={clubs}
           entries={entries}
@@ -1319,7 +1113,7 @@ export default function CompetitionDetail({
           globalTeams={globalTeams}
           clubs={clubs}
           entries={entries}
-          agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, r.age_group]))}
+          agLabels={Object.fromEntries(ageGroupRules.map(r => [r.id, ageGroupLabel(r, true)]))}
         />
       )}
       {activeTab === 'bracket' && openCombinadosEnabled && (

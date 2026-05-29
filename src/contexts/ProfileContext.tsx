@@ -14,6 +14,7 @@ export type ProfileEntry = {
   name:       string
   club_id:    string | null  // only set for role='club'
   avatar_url: string | null
+  sport_type: string         // only meaningful for role='judge'; defaults to 'acro'
 }
 
 type ProfileContextValue = {
@@ -73,9 +74,10 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
           let name         = userEmail?.split('@')[0] ?? '—'
           let avatar_url: string | null = null
 
+          let sport_type = 'acro'
           if (role === 'judge') {
-            const { data } = await supabase.from('judges').select('full_name, avatar_url').eq('id', p.id).single()
-            if (data) { name = data.full_name; avatar_url = data.avatar_url ?? null }
+            const { data } = await supabase.from('judges').select('full_name, avatar_url, sport_type').eq('id', p.id).single()
+            if (data) { name = data.full_name; avatar_url = data.avatar_url ?? null; sport_type = data.sport_type }
           } else if (role === 'club' && club_id) {
             const { data } = await supabase.from('clubs').select('club_name, avatar_url').eq('id', club_id).single()
             if (data) { name = data.club_name; avatar_url = data.avatar_url ?? null }
@@ -84,7 +86,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
             if (data) { name = data.full_name; avatar_url = data.avatar_url ?? null }
           }
 
-          return { id: p.id, role, name, club_id, avatar_url }
+          return { id: p.id, role, name, club_id, avatar_url, sport_type }
         })
       )
 

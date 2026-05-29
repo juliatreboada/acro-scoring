@@ -6,107 +6,8 @@ import { createClient } from '@/lib/supabase'
 import type { Lang } from '../scoring/types'
 import type { Sheet, ReviewElement, ElementType, TsReviewStatus } from './types'
 import { categoryLabel } from '@/components/admin/types'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    title: 'Tariff Sheet Review',
-    reviewed: 'reviewed',
-    of: 'of',
-    sheets: 'sheets reviewed',
-    pdfPlaceholder: 'Tariff Sheet PDF',
-    pdfNote: 'PDF will appear here once uploaded',
-    openPdf: 'Open in new tab',
-    elements: 'Elements',
-    noElements: 'No elements added yet',
-    position: 'Pos',
-    type: 'Type',
-    label: 'Label (optional)',
-    difficulty: 'Difficulty',
-    difficultyHint: '0.00 – 4.00',
-    difficultyHintInt: 'e.g. 30 → 0.30',
-    isStatic: 'Static',
-    addElement: 'Add element',
-    markReviewed: 'Mark as reviewed',
-    markIncorrect: 'Mark as incorrect',
-    incorrectPlaceholder: 'Describe what is wrong with this tariff sheet…',
-    send: 'Send',
-    cancel: 'Cancel',
-    reopen: 'Reopen',
-    reviewedBy: 'Reviewed',
-    clubNotified: 'Club notified — TS marked as incorrect',
-    waitingDJ2: 'Waiting for the other DJ to confirm…',
-    dj2Header: 'The other DJ marked this TS as:',
-    dj2MarkCorrect: 'Mark as correct',
-    dj2Confirm: 'Confirm & send to club',
-    newTs: 'Club uploaded a new TS — please review again',
-    incorrect: 'Incorrect',
-    deleteElement: 'Delete',
-    editElement: 'Edit',
-    saveElement: 'Save',
-    cancelEdit: 'Cancel',
-    balance: 'Balance',
-    mount: 'Mount',
-    dynamic: 'Dynamic',
-    individual: 'Individual',
-    motion: 'Motion',
-    routineBalance: 'Balance',
-    routineDynamic: 'Dynamic',
-    routineCombined: 'Combined',
-    totalDifficulty: 'Total D',
-    refresh: 'Refresh',
-    back: 'Back',
-  },
-  es: {
-    title: 'Revisión de TS',
-    reviewed: 'revisadas',
-    of: 'de',
-    sheets: 'hojas revisadas',
-    pdfPlaceholder: 'PDF TS',
-    pdfNote: 'El PDF aparecerá aquí una vez subido',
-    openPdf: 'Abrir en nueva pestaña',
-    elements: 'Elementos',
-    noElements: 'No hay elementos añadidos',
-    position: 'Pos',
-    type: 'Tipo',
-    label: 'Etiqueta (opcional)',
-    difficulty: 'Dificultad',
-    difficultyHint: '0.00 – 4.00',
-    difficultyHintInt: 'ej. 30 → 0.30',
-    isStatic: 'Estático',
-    addElement: 'Añadir elemento',
-    markReviewed: 'Marcar como revisada',
-    markIncorrect: 'Marcar como incorrecta',
-    incorrectPlaceholder: 'Describe qué hay incorrecto en esta TS…',
-    send: 'Enviar',
-    cancel: 'Cancelar',
-    reopen: 'Reabrir',
-    reviewedBy: 'Revisada',
-    clubNotified: 'Club notificado — TS marcada como incorrecta',
-    waitingDJ2: 'Esperando confirmación del otro DJ…',
-    dj2Header: 'El otro DJ ha marcado esta TS como:',
-    dj2MarkCorrect: 'Marcar como correcta',
-    dj2Confirm: 'Confirmar y enviar al club',
-    newTs: 'El club ha subido una nueva TS — revísala de nuevo',
-    incorrect: 'Incorrecta',
-    deleteElement: 'Eliminar',
-    editElement: 'Editar',
-    saveElement: 'Guardar',
-    cancelEdit: 'Cancelar',
-    balance: 'Balance',
-    mount: 'Mount',
-    dynamic: 'Dinámico',
-    individual: 'Individual',
-    motion: 'Motion',
-    routineBalance: 'Equilibrio',
-    routineDynamic: 'Dinámico',
-    routineCombined: 'Combinado',
-    totalDifficulty: 'D total',
-    refresh: 'Actualizar',
-    back: 'Volver',
-  },
-}
+import { useT } from '@/lib/useT'
+import { DJReview as DJReviewT } from '@/locales/en'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -120,7 +21,7 @@ function usesIntegerDifficulty(ageGroup: string): boolean {
   )
 }
 
-function typeBadge(type: ElementType, isStatic: boolean, t: typeof T['en']) {
+function typeBadge(type: ElementType, isStatic: boolean, t: typeof DJReviewT) {
   if (type === 'balance') return { label: t.balance,  color: 'bg-blue-100 text-blue-700' }
   if (type === 'mount')   return { label: t.mount,    color: 'bg-blue-100 text-blue-700' }
   if (type === 'dynamic') return { label: t.dynamic,  color: 'bg-purple-100 text-purple-700' }
@@ -150,7 +51,7 @@ function ElementForm({ lang, integerMode, onAdd }: {
   integerMode: boolean
   onAdd: (el: Omit<ReviewElement, 'id' | 'position'>) => Promise<void>
 }) {
-  const t = T[lang]
+  const t = useT('DJReview', lang)
   const [form, setForm] = useState<ElementFormState>(EMPTY_FORM)
 
   const rawNum = parseFloat(form.difficultyValue)
@@ -257,7 +158,7 @@ function ElementEditRow({ el, lang, integerMode, onSave, onCancel }: {
   onSave: (updated: Omit<ReviewElement, 'id' | 'position'>) => void
   onCancel: () => void
 }) {
-  const t = T[lang]
+  const t = useT('DJReview', lang)
   const [form, setForm] = useState<ElementFormState>({
     elementType: el.elementType,
     isStatic: el.isStatic,
@@ -353,16 +254,14 @@ function ReviewActions({ sheet, myJudgeId, lang, onMarkChecked, onMarkIncorrect,
   onDJ2Confirm: (decision: 'checked' | 'incorrect', comment: string) => void
   onReopen: () => void
 }) {
-  const t = T[lang]
+  const t = useT('DJReview', lang)
   const [showIncorrectForm, setShowIncorrectForm] = useState(false)
-  // Pre-fill comment from DJ1 for DJ2's confirmation view
   const [comment, setComment] = useState(sheet.dj1Comment ?? '')
 
   const iAmDJ1 = !sheet.dj1Id || sheet.dj1Id === myJudgeId
   const awaitingMyAction = sheet.reviewStatus === 'awaiting_dj2' && !iAmDJ1
   const waitingForOther = sheet.reviewStatus === 'awaiting_dj2' && iAmDJ1
 
-  // ── checked ──
   if (sheet.reviewStatus === 'checked') {
     return (
       <div className="flex items-center justify-between px-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl shrink-0">
@@ -381,7 +280,6 @@ function ReviewActions({ sheet, myJudgeId, lang, onMarkChecked, onMarkIncorrect,
     )
   }
 
-  // ── incorrect ──
   if (sheet.reviewStatus === 'incorrect') {
     return (
       <div className="space-y-2 shrink-0">
@@ -407,7 +305,6 @@ function ReviewActions({ sheet, myJudgeId, lang, onMarkChecked, onMarkIncorrect,
     )
   }
 
-  // ── awaiting DJ2 — DJ1's view (locked) ──
   if (waitingForOther) {
     return (
       <div className="px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl shrink-0">
@@ -422,7 +319,6 @@ function ReviewActions({ sheet, myJudgeId, lang, onMarkChecked, onMarkIncorrect,
     )
   }
 
-  // ── awaiting DJ2 — DJ2's view (must act) ──
   if (awaitingMyAction) {
     return (
       <div className="space-y-2 shrink-0">
@@ -433,7 +329,6 @@ function ReviewActions({ sheet, myJudgeId, lang, onMarkChecked, onMarkIncorrect,
           </p>
         </div>
 
-        {/* Pre-filled comment for DJ2 to edit (shown when DJ1 flagged as incorrect OR when DJ2 wants to override to incorrect) */}
         {(sheet.dj1Decision === 'incorrect' || showIncorrectForm) && (
           <textarea
             value={comment}
@@ -445,14 +340,12 @@ function ReviewActions({ sheet, myJudgeId, lang, onMarkChecked, onMarkIncorrect,
         )}
 
         <div className="flex gap-2">
-          {/* Confirm as correct */}
           <button
             onClick={() => onDJ2Confirm('checked', '')}
             className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white transition-all"
           >
             ✓ {t.dj2MarkCorrect}
           </button>
-          {/* Confirm / trigger incorrect */}
           {sheet.dj1Decision === 'incorrect' ? (
             <button
               onClick={() => onDJ2Confirm('incorrect', comment)}
@@ -482,7 +375,6 @@ function ReviewActions({ sheet, myJudgeId, lang, onMarkChecked, onMarkIncorrect,
     )
   }
 
-  // ── pending / new_ts: both action buttons ──
   return (
     <div className="space-y-2 shrink-0">
       {sheet.reviewStatus === 'new_ts' && (
@@ -552,7 +444,7 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
   onDJ2Confirm: (sheetId: string, decision: 'checked' | 'incorrect', comment: string) => Promise<void>
   onReopen: (sheetId: string) => Promise<void>
 }) {
-  const t = T[lang]
+  const t = useT('DJReview', lang)
   const isLocked = sheet.reviewStatus === 'checked' || sheet.reviewStatus === 'incorrect' || sheet.reviewStatus === 'awaiting_dj2'
   const integerMode = usesIntegerDifficulty(sheet.ageGroup)
   const totalD = sheet.elements.reduce((s, el) => s + el.difficultyValue, 0)
@@ -560,7 +452,6 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
 
   return (
     <div className="flex gap-4 h-full min-h-0">
-      {/* PDF panel */}
       <div className="flex-1 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-3 bg-white text-slate-400 min-h-0">
         {sheet.pdfUrl ? (
           <iframe src={sheet.pdfUrl} className="w-full h-full rounded-2xl" />
@@ -576,9 +467,7 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
         )}
       </div>
 
-      {/* elements + review panel */}
       <div className="w-[400px] flex flex-col gap-3 min-h-0">
-        {/* element list */}
         <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 min-h-0">
           {sheet.elements.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-6">{t.noElements}</p>
@@ -643,7 +532,6 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
           )}
         </div>
 
-        {/* total D */}
         {sheet.elements.length > 0 && (
           <div className="flex justify-between items-center px-3 py-2 bg-slate-50 rounded-xl border border-slate-100 shrink-0">
             <span className="text-xs text-slate-500">{t.totalDifficulty}</span>
@@ -651,12 +539,10 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
           </div>
         )}
 
-        {/* add element form (only when editable) */}
         {!isLocked && (
           <ElementForm lang={lang} integerMode={integerMode} onAdd={(el) => onAddElement(sheet.id, el)} />
         )}
 
-        {/* review actions */}
         <ReviewActions
           sheet={sheet}
           myJudgeId={myJudgeId}
@@ -685,13 +571,11 @@ type DJReviewProps = {
 export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode = false, judgeLobbyHref }: DJReviewProps) {
   const router = useRouter()
   const supabase = createClient()
-  const t = T[lang]
+  const t = useT('DJReview', lang)
   const [sheets, setSheets] = useState<Sheet[]>(initialSheets)
   const [modalSheetId, setModalSheetId] = useState<string | null>(null)
 
   const reviewedCount = sheets.filter((s) => s.reviewStatus === 'checked').length
-
-  // ── element handlers (unchanged) ──────────────────────────────────────────
 
   async function handleAddElement(sheetId: string, el: Omit<ReviewElement, 'id' | 'position'>) {
     const sheet = sheets.find((s) => s.id === sheetId)
@@ -766,8 +650,6 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
     }
   }
 
-  // ── review status handlers ────────────────────────────────────────────────
-
   function updateSheetReview(sheetId: string, patch: Partial<Sheet>) {
     setSheets((prev) => prev.map((s) => s.id === sheetId ? { ...s, ...patch } : s))
   }
@@ -781,9 +663,10 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
 
     if (!practiceMode) {
       if (isSecondDJ) {
+        const routineType = sheet.routineType as 'Balance' | 'Dynamic' | 'Combined'
         await supabase.from('ts_review_status')
-          .update({ status: newStatus, dj2_id: myJudgeId, dj2_decision: 'checked', dj2_comment: null, dj2_at: now })
-          .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', sheet.routineType as "Balance" | "Dynamic" | "Combined")
+          .update({ routine_type: routineType, status: newStatus, dj2_id: myJudgeId, dj2_decision: 'checked', dj2_comment: null, dj2_at: now })
+          .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', routineType)
       } else {
         await supabase.from('ts_review_status').upsert({
           team_id: sheet.teamId, competition_id: sheet.competitionId,
@@ -814,13 +697,15 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
 
     if (!practiceMode) {
       if (isSecondDJ) {
+        const routineType = sheet.routineType as 'Balance' | 'Dynamic' | 'Combined'
         await supabase.from('ts_review_status')
           .update({
+            routine_type: routineType,
             status: newStatus, dj2_id: myJudgeId, dj2_decision: 'incorrect',
             dj2_comment: comment, dj2_at: now,
             ...(isFinal ? { final_comment: comment, notified_at: now } : {}),
           })
-          .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', sheet.routineType as "Balance" | "Dynamic" | "Combined")
+          .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', routineType)
       } else {
         await supabase.from('ts_review_status').upsert({
           team_id: sheet.teamId, competition_id: sheet.competitionId,
@@ -851,14 +736,16 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
     const isFinalComment = decision === 'incorrect' ? comment : null
 
     if (!practiceMode) {
+      const routineType = sheet.routineType as 'Balance' | 'Dynamic' | 'Combined'
       await supabase.from('ts_review_status')
         .update({
+          routine_type: routineType,
           status: newStatus,
           dj2_id: myJudgeId, dj2_decision: decision,
           dj2_comment: comment || null, dj2_at: now,
           ...(decision === 'incorrect' ? { final_comment: isFinalComment, notified_at: now } : { final_comment: null }),
         })
-        .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', sheet.routineType as "Balance" | "Dynamic" | "Combined")
+        .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', routineType)
     }
 
     updateSheetReview(sheetId, {
@@ -873,14 +760,16 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
     if (!sheet) return
 
     if (!practiceMode) {
+      const routineType = sheet.routineType as 'Balance' | 'Dynamic' | 'Combined'
       await supabase.from('ts_review_status')
         .update({
+          routine_type: routineType,
           status: 'pending',
           dj1_id: null, dj1_decision: null, dj1_comment: null, dj1_at: null,
           dj2_id: null, dj2_decision: null, dj2_comment: null, dj2_at: null,
           final_comment: null, notified_at: null,
         })
-        .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', sheet.routineType as "Balance" | "Dynamic" | "Combined")
+        .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', routineType)
     }
 
     updateSheetReview(sheetId, {
@@ -889,8 +778,6 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
       dj2Id: null, finalComment: null,
     })
   }
-
-  // ── routing helpers ───────────────────────────────────────────────────────
 
   function routineLabel(rt: string) {
     return { Balance: t.routineBalance, Dynamic: t.routineDynamic, Combined: t.routineCombined }[rt] ?? rt
@@ -911,21 +798,6 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
   return (
     <>
       <div className="px-4 pb-8">
-        {/* header */}
-        {judgeLobbyHref ? (
-          <div className="mb-3">
-            <button
-              type="button"
-              onClick={() => router.push(judgeLobbyHref)}
-              className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-              </svg>
-              {t.back}
-            </button>
-          </div>
-        ) : null}
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-lg font-bold text-slate-800">{t.title}</h1>
           <span className={[
@@ -938,7 +810,6 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
           </span>
         </div>
 
-        {/* sheet list */}
         <div className="space-y-2">
           {sheets.map((sheet) => {
             const iAmDJ1 = !sheet.dj1Id || sheet.dj1Id === myJudgeId
@@ -949,7 +820,6 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
                 onClick={() => setModalSheetId(sheet.id)}
                 className="w-full flex items-center gap-3 px-4 py-3 border border-slate-200 rounded-2xl bg-white hover:bg-slate-50 transition-colors text-left"
               >
-                {/* status dot */}
                 <div className={`w-2 h-2 rounded-full shrink-0 ${dotColor(sheet)}`} />
 
                 <div className="flex-1 min-w-0">
@@ -985,10 +855,8 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
         </div>
       </div>
 
-      {/* full-screen modal */}
       {modalSheet && (
         <div className="fixed inset-0 z-50 bg-white flex flex-col">
-          {/* modal header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 shrink-0">
             <button
               onClick={() => setModalSheetId(null)}
@@ -1008,7 +876,6 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
             </div>
           </div>
 
-          {/* modal body */}
           <div className="flex-1 min-h-0 p-4">
             <SheetPanel
               sheet={modalSheet}

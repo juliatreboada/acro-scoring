@@ -8,6 +8,7 @@ import type { TsElement } from '@/components/scoring/types'
 import type { Sheet } from '@/components/dj-review/types'
 import DJReview from '@/components/dj-review/DJReview'
 import JudgeSession from './JudgeSession'
+import { useT } from '@/lib/useT'
 
 // ─── mock data ────────────────────────────────────────────────────────────────
 
@@ -64,17 +65,10 @@ function makeScoringPerformance(resetKey: number): ScoringPerformance {
   }
 }
 
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: { banner: 'Practice mode — scores are not saved', reset: 'Reset', back: 'Back', scoring: 'Scoring', djReview: 'TS Review' },
-  es: { banner: 'Modo práctica — las puntuaciones no se guardan', reset: 'Reiniciar', back: 'Volver', scoring: 'Puntuación', djReview: 'Revisión TS' },
-}
-
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function JudgePractice({ lang, onBack }: { lang: Lang; onBack: () => void }) {
-  const t = T[lang]
+  const t = useT('JudgePractice', lang)
 
   const [practiceView, setPracticeView] = useState<'scoring' | 'dj-review'>('scoring')
   const [resetKey, setResetKey]         = useState(0)

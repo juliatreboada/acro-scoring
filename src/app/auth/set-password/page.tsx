@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
+import { useT } from '@/lib/useT'
 
 type DbRole = 'super_admin' | 'admin' | 'judge' | 'club'
 
@@ -12,37 +13,6 @@ const ROLE_REDIRECT: Record<DbRole, string> = {
   admin:       '/comp-admin',
   judge:       '/judge',
   club:        '/club',
-}
-
-const T = {
-  en: {
-    title:      'Nosa Acro Suite',
-    heading:    'Create your password',
-    subtitle:   'You have been invited to Nosa Acro Suite. Set a password to activate your account.',
-    password:   'New password',
-    confirm:    'Confirm password',
-    submit:     'Set password & sign in',
-    submitting: 'Setting password…',
-    errShort:   'Password must be at least 8 characters.',
-    errMatch:   'Passwords do not match.',
-    errGeneric: 'Something went wrong. Please try again.',
-    noSession:  'This invite link is invalid or has already been used.',
-    goToLogin:  'Go to login',
-  },
-  es: {
-    title:      'Nosa Acro Suite',
-    heading:    'Crea tu contraseña',
-    subtitle:   'Has sido invitado a Nosa Acro Suite. Establece una contraseña para activar tu cuenta.',
-    password:   'Nueva contraseña',
-    confirm:    'Confirmar contraseña',
-    submit:     'Establecer contraseña y entrar',
-    submitting: 'Estableciendo contraseña…',
-    errShort:   'La contraseña debe tener al menos 8 caracteres.',
-    errMatch:   'Las contraseñas no coinciden.',
-    errGeneric: 'Algo ha fallado. Inténtalo de nuevo.',
-    noSession:  'El enlace de invitación no es válido o ya ha sido usado.',
-    goToLogin:  'Ir al inicio de sesión',
-  },
 }
 
 export default function SetPasswordPage() {
@@ -56,7 +26,7 @@ export default function SetPasswordPage() {
   const [error, setError]       = useState('')
   const [saving, setSaving]     = useState(false)
 
-  const t = T[lang]
+  const t = useT('SetPasswordPage', lang)
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search)

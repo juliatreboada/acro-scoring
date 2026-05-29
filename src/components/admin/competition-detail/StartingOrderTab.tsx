@@ -6,162 +6,10 @@ import { buildAndDownloadRoutineFilesZip } from '@/lib/routineFilesZip'
 import type { Lang } from '@/components/scoring/types'
 import type { Section, Panel, Session, Team, Club, CompetitionEntry, SessionOrder, AgeGroupRule, TimelineEntry } from '@/components/admin/types'
 import { categoryLabel } from '@/components/admin/types'
-
-// ─── time helpers ─────────────────────────────────────────────────────────────
-
-function routineDurationSec(routineType: string, routineCount: number): number {
-  if (routineType === 'Balance') return 150
-  if (routineType === 'Combined' && routineCount === 3) return 150
-  return 120
-}
-
-function addSecsToHHMM(hhmm: string, secs: number): string {
-  const [h, m] = hhmm.split(':').map(Number)
-  const total = h * 3600 + m * 60 + secs
-  const adj = ((total % 86400) + 86400) % 86400
-  return `${String(Math.floor(adj / 3600)).padStart(2, '0')}:${String(Math.floor((adj % 3600) / 60)).padStart(2, '0')}`
-}
-
-type SlotTimes = { warmup: string; compete: string }
-
-function calcPanelTimes(
-  section: Section,
-  panelSessions: Session[],
-  sessionOrders: SessionOrder[],
-  ageGroupRules: AgeGroupRule[],
-): Map<string, SlotTimes> {
-  const result = new Map<string, SlotTimes>()
-  if (!section.starting_time) return result
-  const startHHMM = section.starting_time.slice(0, 5)
-  const waitSec   = section.waiting_time_seconds    ?? 0
-  const warmupSec = (section.warmup_duration_minutes ?? 0) * 60
-  let elapsed = 0
-  const sorted = [...panelSessions].sort((a, b) => a.order_index - b.order_index)
-  for (const session of sorted) {
-    const rule = ageGroupRules.find(r => r.id === session.age_group)
-    const duration = routineDurationSec(session.routine_type, rule?.routine_count ?? 2)
-    const orders = sessionOrders.filter(o => o.session_id === session.id).sort((a, b) => a.position - b.position)
-    for (const o of orders) {
-      result.set(`${session.id}:${o.team_id}`, {
-        compete: addSecsToHHMM(startHHMM, elapsed),
-        warmup:  addSecsToHHMM(startHHMM, elapsed - warmupSec),
-      })
-      elapsed += duration + waitSec
-    }
-  }
-  return result
-}
-
-// Alternating 2-panel: P1[0], P2[0], P1[1], P2[1], … share a single clock
-function calcInterleavedTimes(
-  section: Section,
-  p1Sessions: Session[],
-  p2Sessions: Session[],
-  sessionOrders: SessionOrder[],
-  ageGroupRules: AgeGroupRule[],
-): Map<string, SlotTimes> {
-  const result = new Map<string, SlotTimes>()
-  if (!section.starting_time) return result
-  const startHHMM = section.starting_time.slice(0, 5)
-  const waitSec   = section.waiting_time_seconds    ?? 0
-  const warmupSec = (section.warmup_duration_minutes ?? 0) * 60
-
-  type PerfEntry = { sessionId: string; teamId: string; duration: number }
-  function buildSeq(sessions: Session[]): PerfEntry[] {
-    const seq: PerfEntry[] = []
-    for (const s of [...sessions].sort((a, b) => a.order_index - b.order_index)) {
-      const rule = ageGroupRules.find(r => r.id === s.age_group)
-      const dur  = routineDurationSec(s.routine_type, rule?.routine_count ?? 2)
-      for (const o of sessionOrders.filter(o => o.session_id === s.id).sort((a, b) => a.position - b.position)) {
-        seq.push({ sessionId: s.id, teamId: o.team_id, duration: dur })
-      }
-    }
-    return seq
-  }
-
-  const seq1 = buildSeq(p1Sessions)
-  const seq2 = buildSeq(p2Sessions)
-  let elapsed = 0
-  const maxLen = Math.max(seq1.length, seq2.length)
-  for (let i = 0; i < maxLen; i++) {
-    if (i < seq1.length) {
-      result.set(`${seq1[i].sessionId}:${seq1[i].teamId}`, {
-        compete: addSecsToHHMM(startHHMM, elapsed),
-        warmup:  addSecsToHHMM(startHHMM, elapsed - warmupSec),
-      })
-      elapsed += seq1[i].duration + waitSec
-    }
-    if (i < seq2.length) {
-      result.set(`${seq2[i].sessionId}:${seq2[i].teamId}`, {
-        compete: addSecsToHHMM(startHHMM, elapsed),
-        warmup:  addSecsToHHMM(startHHMM, elapsed - warmupSec),
-      })
-      elapsed += seq2[i].duration + waitSec
-    }
-  }
-  return result
-}
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    hint: 'Set the order teams compete within each session.',
-    noTeams: 'No teams registered for this session.',
-    noSections: 'No sessions defined yet. Go to Structure to add sessions.',
-    panelN: (n: number) => `Panel ${n}`,
-    sectionN: (n: number) => `Section ${n}`,
-    shuffle: 'Shuffle',
-    lock: 'Publish',
-    unlock: 'Published',
-    notCompeting: 'Not competing',
-    baja: 'Dropout',
-    warmup: 'W',
-    compete: 'C',
-    viewSessions: 'Sessions',
-    viewTimeline: 'Timeline',
-    print: 'Print',
-    addBreak: 'Add break',
-    breakLabel: 'Break',
-    saveStartingOrder: 'Save starting order',
-    saveStartingOrderHint: 'Overwrite the timeline order with the current session order (keeps existing breaks).',
-    downloadAllTs: 'Download all TS (ZIP)',
-    downloadAllMusic: 'Download all music (ZIP)',
-    downloadZipWorking: 'Building ZIP…',
-    downloadZipSummary: (included: number, missing: number, failed: number) =>
-      `ZIP ready: ${included} file(s).` +
-      (missing ? ` ${missing} missing in database.` : '') +
-      (failed ? ` ${failed} download error(s).` : ''),
-  },
-  es: {
-    hint: 'Establece el orden de actuación en cada sesión.',
-    noTeams: 'Sin equipos inscritos para esta sesión.',
-    noSections: 'Sin sesiones definidas. Ve a Estructura.',
-    panelN: (n: number) => `Panel ${n}`,
-    sectionN: (n: number) => `Jornada ${n}`,
-    shuffle: 'Aleatorio',
-    lock: 'Publicar',
-    unlock: 'Publicado',
-    notCompeting: 'No compiten',
-    baja: 'Baja',
-    warmup: 'C',
-    compete: 'A',
-    viewSessions: 'Sesiones',
-    viewTimeline: 'Línea de tiempo',
-    print: 'Imprimir',
-    addBreak: 'Añadir pausa',
-    breakLabel: 'Pausa',
-    saveStartingOrder: 'Guardar orden de salida',
-    saveStartingOrderHint: 'Reescribe la línea de tiempo con el orden de sesión actual (mantiene las pausas existentes).',
-    downloadAllTs: 'Descargar todas las TS (ZIP)',
-    downloadAllMusic: 'Descargar toda la música (ZIP)',
-    downloadZipWorking: 'Generando ZIP…',
-    downloadZipSummary: (included: number, missing: number, failed: number) =>
-      `ZIP listo: ${included} archivo(s).` +
-      (missing ? ` ${missing} sin archivo en base de datos.` : '') +
-      (failed ? ` ${failed} error(es) de descarga.` : ''),
-  },
-}
+import { ClubAvatar } from '@/components/admin/Avatar'
+import { routineDurationSec, addSecsToHHMM, calcPanelTimes, calcInterleavedTimes, calcMergedTimes, isBreak } from '@/lib/competitionTiming'
+import type { SlotTimes, AdminSlot, BreakSlot, MergedSlot } from '@/lib/competitionTiming'
+import { useT } from '@/lib/useT'
 
 const PANEL_HEADER: Record<number, string> = {
   1: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -171,19 +19,6 @@ const PANEL_HEADER: Record<number, string> = {
 const PANEL_COLORS: Record<number, { badge: string; num: string }> = {
   1: { badge: 'bg-emerald-100 text-emerald-700', num: 'bg-emerald-50 text-emerald-600 border border-emerald-200' },
   2: { badge: 'bg-violet-100 text-violet-700',   num: 'bg-violet-50 text-violet-600 border border-violet-200'   },
-}
-
-// ─── club avatar ──────────────────────────────────────────────────────────────
-
-function ClubAvatar({ club }: { club: Club | null | undefined }) {
-  if (!club) return null
-  return club.avatar_url ? (
-    <img src={club.avatar_url} alt={club.club_name} className="w-5 h-5 rounded-full object-cover shrink-0" />
-  ) : (
-    <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-500 text-[9px] font-semibold flex items-center justify-center shrink-0">
-      {club.club_name.charAt(0).toUpperCase()}
-    </span>
-  )
 }
 
 // ─── icons ────────────────────────────────────────────────────────────────────
@@ -223,7 +58,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
   onReorder: (sessionId: string, teamIds: string[]) => void
   onToggleLock: (sessionId: string) => void
 }) {
-  const t = T[lang]
+  const t = useT('StartingOrderTab', lang)
 
   // Split entries into active and dropout for this session's category + age group
   const sessionEntries = entries.filter((e) => {
@@ -463,7 +298,7 @@ function PanelColumn({ lang, panel, sessions, globalTeams, clubs, entries, sessi
   onReorder: (sessionId: string, teamIds: string[]) => void
   onToggleLock: (sessionId: string) => void
 }) {
-  const t = T[lang]
+  const t = useT('StartingOrderTab', lang)
   const headerCls = PANEL_HEADER[panel.panel_number] ?? PANEL_HEADER[1]
 
   return (
@@ -503,55 +338,6 @@ type TimelineDragInfo =
   | { kind: 'team'; sessionId: string; teamId: string }
   | { kind: 'break'; breakId: string }
 
-type AdminSlot = {
-  sessionId: string
-  sessionName: string
-  panelNumber: number
-  teamId: string
-  isDropout: boolean
-}
-
-type BreakSlot = { type: 'break'; id: string; duration_minutes: number; label?: string }
-type MergedSlot = AdminSlot | BreakSlot
-
-function isBreak(slot: MergedSlot): slot is BreakSlot {
-  return 'type' in slot && slot.type === 'break'
-}
-
-function calcMergedTimes(
-  section: Section,
-  mergedSlots: MergedSlot[],
-  sessions: Session[],
-  ageGroupRules: AgeGroupRule[],
-): Map<string, SlotTimes> {
-  const result = new Map<string, SlotTimes>()
-  if (!section.starting_time) return result
-  const startHHMM = section.starting_time.slice(0, 5)
-  const waitSec   = section.waiting_time_seconds    ?? 0
-  const warmupSec = (section.warmup_duration_minutes ?? 0) * 60
-  let elapsed = 0
-  for (const slot of mergedSlots) {
-    if (isBreak(slot)) {
-      result.set(`break:${slot.id}`, {
-        compete: addSecsToHHMM(startHHMM, elapsed),
-        warmup:  addSecsToHHMM(startHHMM, elapsed),
-      })
-      elapsed += slot.duration_minutes * 60
-      continue
-    }
-    if (!slot.isDropout) {
-      const sess = sessions.find(s => s.id === slot.sessionId)
-      const rule = sess ? ageGroupRules.find(r => r.id === sess.age_group) : undefined
-      const dur  = sess ? routineDurationSec(sess.routine_type, rule?.routine_count ?? 2) : 120
-      result.set(`${slot.sessionId}:${slot.teamId}`, {
-        compete: addSecsToHHMM(startHHMM, elapsed),
-        warmup:  addSecsToHHMM(startHHMM, elapsed - warmupSec),
-      })
-      elapsed += dur + waitSec
-    }
-  }
-  return result
-}
 
 function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, entries, globalTeams, clubs, ageGroupRules, onReorderTimeline }: {
   lang: Lang
@@ -565,7 +351,7 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
   ageGroupRules: AgeGroupRule[]
   onReorderTimeline: (sectionId: string, order: Array<TimelineEntry>) => void
 }) {
-  const t = T[lang]
+  const t = useT('StartingOrderTab', lang)
   const [dragInfo, setDragInfo] = useState<TimelineDragInfo | null>(null)
   const [overIdx, setOverIdx] = useState<number | null>(null)
 
@@ -898,7 +684,7 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
                     {team?.gymnast_display ?? slot.teamId}
                   </p>
                   <span className="flex items-center gap-1 text-xs text-slate-400 truncate">
-                    <ClubAvatar club={club} />
+                    <ClubAvatar club={club} size="xs" />
                     {club?.club_name ?? ''} · {slot.sessionName}
                   </span>
                 </div>
@@ -950,7 +736,7 @@ export default function StartingOrderTab({
   lang, competitionId, competitionName, globalTeams, clubs, entries, sections, panels, sessions,
   sessionOrders, lockedSessions, agLabels, ageGroupRules, onReorder, onToggleLock, onReorderTimeline,
 }: StartingOrderTabProps) {
-  const t = T[lang]
+  const t = useT('StartingOrderTab', lang)
   const supabase = createClient()
   const [zipBusy, setZipBusy] = useState<'ts' | 'music' | null>(null)
   const sortedSections = [...sections].sort((a, b) => a.section_number - b.section_number)

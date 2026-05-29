@@ -6,7 +6,7 @@ import { cookies } from 'next/headers'
 import type { Database } from '@/lib/database.types'
 
 // POST /api/club/invite-judge
-// Body: { email, full_name, phone?, licence? }
+// Body: { email, full_name, sport_type, phone?, licence? }
 // Protected: caller must be an authenticated club.
 
 export async function POST(req: NextRequest) {
@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json() as {
     email: string
     full_name: string
+    sport_type: string
     phone?: string
     licence?: string
   }
@@ -37,7 +38,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing email or full_name' }, { status: 400 })
   }
 
-  const metadata: Record<string, string> = { role: 'judge', full_name: body.full_name }
+  const metadata: Record<string, string> = {
+    role: 'judge',
+    full_name: body.full_name,
+    sport_type: body.sport_type ?? 'acro',
+  }
   if (body.phone)   metadata.phone   = body.phone
   if (body.licence) metadata.licence = body.licence
 
