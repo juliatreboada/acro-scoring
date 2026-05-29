@@ -33,7 +33,7 @@ export default function Page() {
       // ── first wave: competition + panels + sections + sessions + entries ──────
       const [compRes, panelsRes, sectionsRes, sessionsRes, entriesRes, rulesRes, resultsRes, tvStateRes] = await Promise.all([
         supabase.from('competitions')
-          .select('id, name, status, location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, logo_url, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
+          .select('id, name, status, sport_type,location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, logo_url, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
           .eq('id', id).single(),
         supabase.from('panels')
           .select('id, competition_id, panel_number')
@@ -51,7 +51,7 @@ export default function Page() {
           .select('id, competition_id, team_id, dorsal, dropped_out, gymnast_display, gymnast_ids')
           .eq('competition_id', id),
         supabase.from('age_group_rules')
-          .select('id, age_group, ruleset, min_age, max_age, routine_count')
+          .select('id, age_group, level, ruleset, min_age, max_age, routine_count, sport_type')
           .order('sort_order'),
         supabase.from('routine_results')
           .select('session_id, team_id')

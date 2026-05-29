@@ -1,178 +1,17 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, Team, Gymnast, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule, Coach, CompetitionCoach } from '@/components/admin/types'
 import { ROUTINE_TYPES, categoriesForRuleset } from '@/components/admin/types'
+import { formatDate, formatDateRange } from '@/lib/formatDate'
+import { STATUS_BADGE, INPUT_CLS } from '@/lib/uiConstants'
 import ProvisionalEntryForm from './ProvisionalEntryForm'
 import DefinitiveEntryForm from './DefinitiveEntryForm'
+import { useT } from '@/lib/useT'
 
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    empty: 'No competitions available yet.',
-    back: 'Competitions',
-    register: 'Register',
-    registered: 'Registered',
-    dropout: 'Dropout',
-    toggleDropout: 'Declare dropout',
-    undoDropout: 'Undo dropout',
-    dorsal: 'Dorsal',
-    registrationClosed: 'Registration closed',
-    quotaFull: 'Quota full',
-    notInEntry: 'Not in your entry',
-    quotaOf: (used: number, limit: number) => `${used}/${limit}`,
-    notAllowedTitle: 'Registration not available for your club',
-    notAllowedHint: 'Your club has not been approved to register teams for this competition. Contact the organiser if you believe this is an error.',
-    noEligibleTeams: 'None of your teams match the age groups of this competition.',
-    noTeams: 'Create teams first to be able to register.',
-    teamsTitle: 'Your teams',
-    deadline: 'Entry deadline',
-    tsMusicDeadline: 'TS & Music deadline',
-    filesLocked: 'File upload closed',
-    music: 'Music',
-    ts: 'TS',
-    noFile: 'No file',
-    replace: 'Replace',
-    upload: 'Upload',
-    coachesTitle: 'Coaches',
-    registerCoach: 'Register',
-    unregisterCoach: 'Remove',
-    noCoaches: 'No coaches registered for this competition.',
-    noCoachesInClub: 'Add coaches in the Coaches tab first.',
-    judgesTitle: 'Judges',
-    nominate: 'Nominate',
-    nominated: 'Nominated',
-    removeNomination: 'Remove',
-    noJudges: 'No judges nominated yet.',
-    judgesWarning: 'At least 1 judge must be nominated for this competition.',
-    addFromPool: '+ Add from pool',
-    inviteNew: '+ Invite new judge',
-    noPoolJudges: 'No other judges available in the pool.',
-    searchJudges: 'Search judges…',
-    // invite form
-    inviteJudge: 'Invite new judge',
-    name: 'Full name',
-    email: 'Email',
-    phone: 'Phone',
-    licence: 'Licence no.',
-    send: 'Send invitation',
-    cancel: 'Cancel',
-    inviteSent: 'Invitation sent to',
-    inviteInfo: 'The judge will receive an email to set up their account.',
-    status: {
-      draft: 'Draft',
-      provisional_entry: 'Provisional entry',
-      definitive_entry: 'Definitive entry',
-      registration_open: 'Open',
-      registration_closed: 'Closed',
-      published: 'Published',
-      active: 'Live',
-      finished: 'Finished',
-    } as Record<string, string>,
-    teamCount: (n: number) => n === 0 ? 'Not registered' : `${n} team${n !== 1 ? 's' : ''} registered`,
-    licenciaWarning: 'Missing licencia',
-    licenciaWarningFull: 'One or more gymnasts in this team have no licencia uploaded.',
-    nominalEntryOpen: 'Nominal entry open',
-    nominalEntryCta: 'Nominal entry →',
-  },
-  es: {
-    empty: 'Aún no hay competiciones disponibles.',
-    back: 'Competiciones',
-    register: 'Inscribir',
-    registered: 'Inscrito',
-    dropout: 'Baja',
-    toggleDropout: 'Declarar baja',
-    undoDropout: 'Deshacer baja',
-    dorsal: 'Dorsal',
-    registrationClosed: 'Inscripción cerrada',
-    quotaFull: 'Cupo completo',
-    notInEntry: 'No está en tu inscripción',
-    quotaOf: (used: number, limit: number) => `${used}/${limit}`,
-    notAllowedTitle: 'Inscripción no disponible para tu club',
-    notAllowedHint: 'Tu club no ha sido autorizado para inscribir equipos en esta competición. Contacta con el organizador si crees que es un error.',
-    noEligibleTeams: 'Ningún equipo coincide con los grupos de edad de esta competición.',
-    noTeams: 'Crea equipos primero para poder inscribirte.',
-    teamsTitle: 'Tus equipos',
-    deadline: 'Inscripción hasta',
-    tsMusicDeadline: 'Plazo de TS y música',
-    filesLocked: 'Entrega de archivos cerrada',
-    music: 'Música',
-    ts: 'TS',
-    noFile: 'Sin archivo',
-    replace: 'Reemplazar',
-    upload: 'Subir',
-    coachesTitle: 'Entrenadores',
-    registerCoach: 'Inscribir',
-    unregisterCoach: 'Quitar',
-    noCoaches: 'Ningún entrenador inscrito en esta competición.',
-    noCoachesInClub: 'Añade entrenadores en la pestaña Entrenadores primero.',
-    judgesTitle: 'Jueces',
-    nominate: 'Nominar',
-    nominated: 'Nominado',
-    removeNomination: 'Quitar',
-    noJudges: 'Aún no hay jueces nominados.',
-    judgesWarning: 'Debes nominar al menos 1 juez para esta competición.',
-    addFromPool: '+ Añadir del pool',
-    inviteNew: '+ Invitar nuevo juez',
-    noPoolJudges: 'No hay otros jueces disponibles en el pool.',
-    searchJudges: 'Buscar jueces…',
-    // invite form
-    inviteJudge: 'Invitar nuevo juez',
-    name: 'Nombre completo',
-    email: 'Email',
-    phone: 'Teléfono',
-    licence: 'Nº licencia',
-    send: 'Enviar invitación',
-    cancel: 'Cancelar',
-    inviteSent: 'Invitación enviada a',
-    inviteInfo: 'El juez recibirá un email para crear su cuenta.',
-    status: {
-      draft: 'Borrador',
-      provisional_entry: 'Inscripción provisional',
-      definitive_entry: 'Inscripción definitiva',
-      registration_open: 'Abierta',
-      registration_closed: 'Cerrada',
-      published: 'Publicada',
-      active: 'En vivo',
-      finished: 'Finalizada',
-    } as Record<string, string>,
-    teamCount: (n: number) => n === 0 ? 'Sin inscripción' : `${n} equipo${n !== 1 ? 's' : ''} inscrito${n !== 1 ? 's' : ''}`,
-    licenciaWarning: 'Licencia pendiente',
-    licenciaWarningFull: 'Uno o más gimnastas de este equipo no tienen la licencia subida.',
-    nominalEntryOpen: 'Inscripción nominativa abierta',
-    nominalEntryCta: 'Inscripción nominativa →',
-  },
-}
-
-const STATUS_BADGE: Record<string, string> = {
-  draft:               'bg-slate-100 text-slate-500',
-  provisional_entry:   'bg-violet-100 text-violet-700',
-  definitive_entry:    'bg-orange-100 text-orange-700',
-  registration_open:   'bg-green-100 text-green-700',
-  registration_closed: 'bg-amber-100 text-amber-700',
-  published:           'bg-indigo-100 text-indigo-700',
-  active:              'bg-blue-600 text-white',
-  finished:            'bg-slate-100 text-slate-400',
-}
-
-/** Club may register teams before global `registration_open` once definitive entry is approved. */
 const NOMINAL_ENTRY_BADGE = 'bg-green-100 text-green-700'
-
-// ─── helpers ──────────────────────────────────────────────────────────────────
-
-function formatDateRange(start: string | null, end: string | null) {
-  const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-  if (start && end && start !== end) return `${fmt(start)} – ${fmt(end)}`
-  if (start) return fmt(start)
-  if (end) return fmt(end)
-  return ''
-}
-function formatDate(d: string) {
-  return new Date(d + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-}
 
 // ─── compact file chip ────────────────────────────────────────────────────────
 
@@ -301,7 +140,7 @@ function RoutineRow({
   reviewComment?: string | null
   onSet: (field: 'music' | 'ts', file: File | null) => void
 }) {
-  const t = T[lang]
+  const t = useT('CompetitionsTab', lang)
   const [tsPreviewUrl, setTsPreviewUrl] = useState<string | null>(null)
   const [musicPreviewUrl, setMusicPreviewUrl] = useState<string | null>(null)
   return (
@@ -369,20 +208,20 @@ function RoutineRow({
 
 // ─── invite judge form ────────────────────────────────────────────────────────
 
-type InviteForm = { full_name: string; email: string; phone: string; licence: string }
-const EMPTY_INVITE: InviteForm = { full_name: '', email: '', phone: '', licence: '' }
+type InviteForm = { full_name: string; email: string; phone: string; licence: string; sport_type: string }
+const EMPTY_INVITE: InviteForm = { full_name: '', email: '', phone: '', licence: '', sport_type: 'acro' }
 
 function InviteJudgeForm({ lang, onSend, onCancel }: {
   lang: Lang
   onSend: (f: InviteForm) => Promise<void>
   onCancel: () => void
 }) {
-  const t = T[lang]
+  const t = useT('CompetitionsTab', lang)
   const [form, setForm] = useState<InviteForm>(EMPTY_INVITE)
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+  const inputCls = INPUT_CLS
 
   function set(k: keyof InviteForm, v: string) { setForm(f => ({ ...f, [k]: v })) }
 
@@ -433,6 +272,22 @@ function InviteJudgeForm({ lang, onSend, onCancel }: {
         <div>
           <label className="block text-xs font-medium text-slate-500 mb-1">{t.licence}</label>
           <input type="text" value={form.licence} onChange={(e) => set('licence', e.target.value)} className={inputCls} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.sportType} *</label>
+          <div className="flex gap-2">
+            {(['acro', 'rg'] as const).map(s => (
+              <button key={s} type="button" onClick={() => set('sport_type', s)}
+                className={[
+                  'flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-colors',
+                  form.sport_type === s
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300',
+                ].join(' ')}>
+                {s === 'acro' ? t.acro : t.rg}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       {error && <p className="text-xs text-red-600">{error}</p>}
@@ -517,7 +372,7 @@ function CompetitionDetailView({
   ageGroupRules: AgeGroupRule[]
   tsReviewStatuses: { team_id: string; competition_id: string; routine_type: string; status: string; final_comment: string | null }[]
   definitiveEntryQuota: Record<string, number> | null
-  /** From `definitive_entries.status` for this club+competition; `approved` ⇒ nominal entry allowed before global registration_open. */
+  /** From `definitive_entries.status`; `approved` ⇒ nominal entry allowed before global registration_open. */
   clubDefinitiveEntryStatus: string | null
   onBack: () => void
   onRegister: (teamId: string) => void
@@ -525,11 +380,11 @@ function CompetitionDetailView({
   onSetFile: (teamId: string, routineType: 'Balance' | 'Dynamic' | 'Combined', field: 'music' | 'ts', file: File | null) => void
   onNominate: (judgeId: string) => void
   onRemoveNomination: (nominationId: string) => void
-  onInviteJudge: (f: { full_name: string; email: string; phone?: string; licence?: string }) => Promise<void>
+  onInviteJudge: (f: { full_name: string; email: string; phone?: string; licence?: string; sport_type: string }) => Promise<void>
   onRegisterCoach: (coachId: string) => void
   onUnregisterCoach: (coachId: string) => void
 }) {
-  const t = T[lang]
+  const t = useT('CompetitionsTab', lang)
   const isOpen = competition.status === 'registration_open'
   const nominalOpenForClub = competition.status === 'definitive_entry' && clubDefinitiveEntryStatus === 'approved'
   const registrationFlowOpen = isOpen || nominalOpenForClub
@@ -876,7 +731,7 @@ function CompetitionDetailView({
                   <InviteJudgeForm
                     lang={lang}
                     onSend={async (f) => {
-                      await onInviteJudge({ full_name: f.full_name, email: f.email, phone: f.phone || undefined, licence: f.licence || undefined })
+                      await onInviteJudge({ full_name: f.full_name, email: f.email, phone: f.phone || undefined, licence: f.licence || undefined, sport_type: f.sport_type })
                     }}
                     onCancel={() => setShowInviteForm(false)}
                   />
@@ -1107,7 +962,7 @@ function CompetitionListView({
   onOpenProvisionalEntry: (comp: Competition) => void
   onOpenDefinitiveEntry: (comp: Competition) => void
 }) {
-  const t = T[lang]
+  const t = useT('CompetitionsTab', lang)
   const teamIds = new Set(teams.map((tm) => tm.id))
 
   const visible = competitions.filter((c) =>
@@ -1263,7 +1118,7 @@ export default function CompetitionsTab({
   onSetFile: (teamId: string, competitionId: string, routineType: 'Balance' | 'Dynamic' | 'Combined', field: 'music' | 'ts', file: File | null) => void
   onNominate: (competitionId: string, judgeId: string) => void
   onRemoveNomination: (nominationId: string) => void
-  onInviteJudge: (f: { full_name: string; email: string; phone?: string; licence?: string }) => Promise<void>
+  onInviteJudge: (f: { full_name: string; email: string; phone?: string; licence?: string; sport_type: string }) => Promise<void>
   onRegisterCoach: (competitionId: string, coachId: string) => void
   onUnregisterCoach: (competitionId: string, coachId: string) => void
 }) {
@@ -1271,7 +1126,6 @@ export default function CompetitionsTab({
   const [provisionalEntryComp, setProvisionalEntryComp] = useState<Competition | null>(null)
   const [definitiveEntryComp, setDefinitiveEntryComp] = useState<Competition | null>(null)
 
-  // keyed by competition_id
   const [clubProvisionalEntries, setClubProvisionalEntries] = useState<Record<string, { teams_per_category: Record<string, number> }>>({})
   const [clubDefinitiveEntries, setClubDefinitiveEntries]   = useState<Record<string, { teams_per_category: Record<string, number>; status: string }>>({})
 

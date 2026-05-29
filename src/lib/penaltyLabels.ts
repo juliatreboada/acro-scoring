@@ -61,6 +61,20 @@ export function activePenalties(
   return out
 }
 
+// ─── RJ penalty summaries (RG) ───────────────────────────────────────────────
+
+// Reads rj_penalty_detail (Json blob) and returns labelled penalty reasons.
+// Currently surfaces the aggregate total; expand when categories are filled in scoringRulesRG.ts.
+export function activeRJPenalties(
+  detail: Record<string, unknown>,
+  total: number,
+  lang: 'en' | 'es' = 'es',
+): { label: string; value: number }[] {
+  if (!detail || total <= 0) return []
+  const label = lang === 'es' ? 'Penalización RJ' : 'RJ Penalty'
+  return [{ label, value: total }]
+}
+
 // ─── DJ flag penalty summaries ────────────────────────────────────────────────
 
 const DJ_FLAG_LABELS: Record<'en' | 'es', {

@@ -6,6 +6,7 @@ import AuthBar from '@/components/shared/AuthBar'
 import { useRouter } from 'next/navigation'
 import { useProfile } from '@/contexts/ProfileContext'
 import type { Lang } from '@/components/scoring/types'
+import { useT } from '@/lib/useT'
 
 // ─── types ─────────────────────────────────────────────────────────────────────
 
@@ -23,64 +24,10 @@ type UserRow = {
   licence: string | null
   contact_name: string | null
   club_name: string | null
+  sport_type: string | null  // only for role='judge'
 }
 
 type ClubOption = { id: string; club_name: string }
-
-// ─── translations ──────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    title: 'Users',
-    tabs: { admin: 'Admins', judge: 'Judges', club: 'Clubs' },
-    invite: 'Invite new',
-    addProfile: 'Add to existing user',
-    inviteTitle: { admin: 'Invite Admin', judge: 'Invite Judge', club: 'Invite Club' },
-    addProfileTitle: { admin: 'Add Admin profile', judge: 'Add Judge profile', club: 'Add Club profile' },
-    editTitle: { admin: 'Edit Admin', judge: 'Edit Judge', club: 'Edit Club' },
-    email: 'Email',
-    fullName: 'Full name', clubName: 'Club name', contactName: 'Contact name',
-    licence: 'Licence', phone: 'Phone (optional)',
-    send: 'Send invite', cancel: 'Cancel', sending: 'Sending…',
-    save: 'Save', saving: 'Saving…',
-    add: 'Add profile', adding: 'Adding…',
-    lookup: 'Look up user',
-    lookupBtn: 'Search',
-    lookupHint: 'Enter the email of the existing user',
-    userFound: 'User found',
-    userNotFound: 'No user found with that email',
-    currentProfiles: 'Current profiles',
-    noUsers: 'No users yet.',
-    backToAdmin: '← Admin',
-    confirmRemove: 'Remove this profile? This cannot be undone.',
-    roleLabel: { admin: 'Admin', judge: 'Judge', club: 'Club' },
-  },
-  es: {
-    title: 'Usuarios',
-    tabs: { admin: 'Admins', judge: 'Jueces', club: 'Clubs' },
-    invite: 'Invitar nuevo',
-    addProfile: 'Añadir a usuario existente',
-    inviteTitle: { admin: 'Invitar Admin', judge: 'Invitar Juez', club: 'Invitar Club' },
-    addProfileTitle: { admin: 'Añadir perfil Admin', judge: 'Añadir perfil Juez', club: 'Añadir perfil Club' },
-    editTitle: { admin: 'Editar Admin', judge: 'Editar Juez', club: 'Editar Club' },
-    email: 'Email',
-    fullName: 'Nombre completo', clubName: 'Nombre del club', contactName: 'Persona de contacto',
-    licence: 'Licencia', phone: 'Teléfono (opcional)',
-    send: 'Enviar invitación', cancel: 'Cancelar', sending: 'Enviando…',
-    save: 'Guardar', saving: 'Guardando…',
-    add: 'Añadir perfil', adding: 'Añadiendo…',
-    lookup: 'Buscar usuario',
-    lookupBtn: 'Buscar',
-    lookupHint: 'Introduce el email del usuario existente',
-    userFound: 'Usuario encontrado',
-    userNotFound: 'No se encontró ningún usuario con ese email',
-    currentProfiles: 'Perfiles actuales',
-    noUsers: 'Sin usuarios aún.',
-    backToAdmin: '← Admin',
-    confirmRemove: '¿Eliminar este perfil? Esta acción no se puede deshacer.',
-    roleLabel: { admin: 'Admin', judge: 'Juez', club: 'Club' },
-  },
-}
 
 const roleBadgeClass: Record<Role, string> = {
   admin: 'bg-purple-100 text-purple-700',
@@ -118,6 +65,7 @@ export default function Page() {
   const [invContactName, setInvContactName] = useState('')
   const [invLicence, setInvLicence]         = useState('')
   const [invPhone,   setInvPhone]           = useState('')
+  const [invSportType, setInvSportType]     = useState<'acro' | 'rg'>('acro')
   const [sending, setSending]               = useState(false)
   const [invError, setInvError]             = useState('')
   const [invClubMode, setInvClubMode]       = useState<'existing' | 'new'>('existing')
@@ -129,12 +77,13 @@ export default function Page() {
   const [addEmail, setAddEmail]             = useState('')
   const [addLookupDone, setAddLookupDone]   = useState(false)
   const [addFoundName, setAddFoundName]     = useState('')
-  const [addFoundProfiles, setAddFoundProfiles] = useState<Role[]>([])
+  const [addFoundProfiles, setAddFoundProfiles] = useState<{ role: Role; label: string }[]>([])
   const [addFullName, setAddFullName]       = useState('')
   const [addClubName, setAddClubName]       = useState('')
   const [addContactName, setAddContactName] = useState('')
   const [addLicence, setAddLicence]         = useState('')
   const [addPhone, setAddPhone]             = useState('')
+  const [addSportType, setAddSportType]     = useState<'acro' | 'rg'>('acro')
   const [adding, setAdding]                 = useState(false)
   const [addError, setAddError]             = useState('')
   const [looking, setLooking]               = useState(false)
@@ -153,14 +102,14 @@ export default function Page() {
   const [saving, setSaving]                 = useState(false)
   const [editError, setEditError]           = useState('')
 
-  const t = T[lang]
+  const t = useT('AdminUsersPage', lang)
 
   // ── load ─────────────────────────────────────────────────────────────────────
   useEffect(() => {
     async function load() {
       const [profilesRes, judgesRes, clubsRes, adminsRes] = await Promise.all([
         supabase.from('profiles').select('id, email, role, club_id').in('role', ['admin', 'judge', 'club']),
-        supabase.from('judges').select('id, full_name, licence, phone, avatar_url'),
+        supabase.from('judges').select('id, full_name, licence, phone, avatar_url, sport_type'),
         supabase.from('clubs').select('id, club_name, contact_name, phone, avatar_url'),
         supabase.from('admins').select('id, full_name, phone, avatar_url'),
       ])
@@ -175,18 +124,20 @@ export default function Page() {
           const j = judgeMap[p.id]
           return { id: p.id, club_id: null, name: j?.full_name ?? '—', email: p.email ?? '', role: 'judge' as Role,
             detail: j?.licence ?? null, avatar_url: j?.avatar_url ?? null,
-            phone: j?.phone ?? null, licence: j?.licence ?? null, contact_name: null, club_name: null }
+            phone: j?.phone ?? null, licence: j?.licence ?? null, contact_name: null, club_name: null,
+            sport_type: j?.sport_type ?? null }
         }
         if (p.role === 'club') {
           const c = clubMap[p.club_id ?? '']
           return { id: p.id, club_id: p.club_id, name: c?.club_name ?? '—', email: p.email ?? '', role: 'club' as Role,
             detail: c?.contact_name ?? null, avatar_url: c?.avatar_url ?? null,
-            phone: c?.phone ?? null, licence: null, contact_name: c?.contact_name ?? null, club_name: c?.club_name ?? null }
+            phone: c?.phone ?? null, licence: null, contact_name: c?.contact_name ?? null, club_name: c?.club_name ?? null,
+            sport_type: null }
         }
         const a = adminMap[p.id]
         return { id: p.id, club_id: null, name: a?.full_name ?? '—', email: p.email ?? '', role: 'admin' as Role,
           detail: null, avatar_url: a?.avatar_url ?? null,
-          phone: a?.phone ?? null, licence: null, contact_name: null, club_name: null }
+          phone: a?.phone ?? null, licence: null, contact_name: null, club_name: null, sport_type: null }
       })
 
       setUsers(rows)
@@ -201,6 +152,7 @@ export default function Page() {
     setInviteRole(role)
     setInvEmail(''); setInvFullName(''); setInvClubName('')
     setInvContactName(''); setInvLicence(''); setInvPhone('')
+    setInvSportType('acro')
     setInvError(''); setInvClubMode('existing'); setInvSelectedClubId('')
     setShowInvite(true)
   }
@@ -224,7 +176,10 @@ export default function Page() {
     const body: Record<string, string> = { role: inviteRole, email: invEmail }
     if (inviteRole === 'admin' || inviteRole === 'judge') {
       body.full_name = invFullName
-      if (inviteRole === 'judge' && invLicence) body.licence = invLicence
+      if (inviteRole === 'judge') {
+        body.sport_type = invSportType
+        if (invLicence) body.licence = invLicence
+      }
     }
     if (inviteRole === 'club') {
       if (invClubMode === 'existing') {
@@ -253,6 +208,7 @@ export default function Page() {
     setAddRole(role)
     setAddEmail(''); setAddLookupDone(false); setAddFoundName(''); setAddFoundProfiles([])
     setAddFullName(''); setAddClubName(''); setAddContactName(''); setAddLicence(''); setAddPhone('')
+    setAddSportType('acro')
     setAddError(''); setSelectedClubId(''); setClubMode('existing')
     setShowAdd(true)
   }
@@ -290,7 +246,24 @@ export default function Page() {
     }
 
     setAddFoundName(name)
-    setAddFoundProfiles(roles.filter(r => ['admin', 'judge', 'club'].includes(r)) as Role[])
+
+    // Build display labels — for judges, include sport_type to distinguish acro vs rg profiles
+    const judgeProfileIds = typedData.filter(p => p.role === 'judge').map(p => p.id)
+    let judgeSportTypes: Record<string, string> = {}
+    if (judgeProfileIds.length > 0) {
+      const { data: jRows } = await supabase.from('judges').select('id, sport_type').in('id', judgeProfileIds)
+      judgeSportTypes = Object.fromEntries((jRows ?? []).map(j => [j.id, j.sport_type]))
+    }
+
+    const profileDetails = typedData
+      .filter(p => ['admin', 'judge', 'club'].includes(p.role))
+      .map(p => ({
+        role: p.role as Role,
+        label: p.role === 'judge'
+          ? `Judge · ${(judgeSportTypes[p.id] ?? 'acro').toUpperCase()}`
+          : p.role.charAt(0).toUpperCase() + p.role.slice(1),
+      }))
+    setAddFoundProfiles(profileDetails)
     setAddLookupDone(true)
   }
 
@@ -314,6 +287,7 @@ export default function Page() {
     if (addFullName)    body.full_name    = addFullName
     if (addLicence)     body.licence      = addLicence
     if (addPhone)       body.phone        = addPhone
+    if (addRole === 'judge') body.sport_type = addSportType
 
     if (addRole === 'club') {
       if (clubMode === 'existing') {
@@ -450,7 +424,14 @@ export default function Page() {
                   }
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 truncate">{u.name}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-semibold text-slate-800 truncate">{u.name}</p>
+                    {u.sport_type && (
+                      <span className={`shrink-0 text-xs font-bold px-1.5 py-0.5 rounded-md ${u.sport_type === 'rg' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {u.sport_type.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-400 truncate">{u.email}</p>
                 </div>
                 {u.detail && (
@@ -501,11 +482,27 @@ export default function Page() {
                 </div>
               )}
               {inviteRole === 'judge' && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">{t.licence}</label>
-                  <input type="text" value={invLicence} onChange={e => setInvLicence(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                </div>
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">{t.sportType} *</label>
+                    <div className="flex gap-2">
+                      {(['acro', 'rg'] as const).map(s => (
+                        <button key={s} type="button" onClick={() => setInvSportType(s)}
+                          className={['flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-colors',
+                            invSportType === s
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'].join(' ')}>
+                          {s === 'acro' ? t.acro : t.rg}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">{t.licence}</label>
+                    <input type="text" value={invLicence} onChange={e => setInvLicence(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                  </div>
+                </>
               )}
               {inviteRole === 'club' && (
                 <>
@@ -596,10 +593,10 @@ export default function Page() {
                   <p className="text-sm font-semibold text-slate-800">{addFoundName}</p>
                   <p className="text-xs text-slate-400">{addEmail}</p>
                   {addFoundProfiles.length > 0 && (
-                    <div className="flex gap-1 mt-2">
-                      {addFoundProfiles.map(r => (
-                        <span key={r} className={`text-xs px-2 py-0.5 rounded-full font-medium ${roleBadgeClass[r]}`}>
-                          {t.roleLabel[r]}
+                    <div className="flex gap-1 mt-2 flex-wrap">
+                      {addFoundProfiles.map((p, i) => (
+                        <span key={i} className={`text-xs px-2 py-0.5 rounded-full font-medium ${roleBadgeClass[p.role]}`}>
+                          {p.label}
                         </span>
                       ))}
                     </div>
@@ -618,11 +615,27 @@ export default function Page() {
                     </div>
                   )}
                   {addRole === 'judge' && (
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">{t.licence}</label>
-                      <input type="text" value={addLicence} onChange={e => setAddLicence(e.target.value)}
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-                    </div>
+                    <>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">{t.sportType} *</label>
+                        <div className="flex gap-2">
+                          {(['acro', 'rg'] as const).map(s => (
+                            <button key={s} type="button" onClick={() => setAddSportType(s)}
+                              className={['flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-colors',
+                                addSportType === s
+                                  ? 'bg-blue-600 text-white border-blue-600'
+                                  : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'].join(' ')}>
+                              {s === 'acro' ? t.acro : t.rg}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1">{t.licence}</label>
+                        <input type="text" value={addLicence} onChange={e => setAddLicence(e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                      </div>
+                    </>
                   )}
                   {addRole === 'club' && (
                     <>

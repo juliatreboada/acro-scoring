@@ -2,33 +2,14 @@
 
 import { useState } from 'react'
 import type { Lang } from '@/components/scoring/types'
-import type { Club, Gymnast, Coach, CompetitionCoach, Team, Competition, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination } from '@/components/admin/types'
+import type { Club, Gymnast, Coach, CompetitionCoach, Team, Competition, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule, Apparatus, ApparatusRule } from '@/components/admin/types'
 import ClickableImg from '@/components/shared/ClickableImg'
-import type { AgeGroupRule } from '@/components/admin/types'
 import GymnastsTab from './GymnastsTab'
 import CoachesTab from './CoachesTab'
 import TeamsTab from './TeamsTab'
 import CompetitionsTab from './CompetitionsTab'
 import ClubProfileTab from './ClubProfileTab'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    tabs: { gymnasts: 'Gymnasts', coaches: 'Coaches', teams: 'Teams', competitions: 'Competitions', judges: 'Judges', profile: 'Profile' },
-    gymnasts: 'gymnasts',
-    coaches: 'coaches',
-    teams: 'teams',
-    registrations: 'registrations',
-  },
-  es: {
-    tabs: { gymnasts: 'Gimnastas', coaches: 'Entrenadores', teams: 'Equipos', competitions: 'Competiciones', judges: 'Jueces', profile: 'Perfil' },
-    gymnasts: 'gimnastas',
-    coaches: 'entrenadores',
-    teams: 'equipos',
-    registrations: 'inscripciones',
-  },
-}
+import { useT } from '@/lib/useT'
 
 type Tab = 'gymnasts' | 'coaches' | 'teams' | 'competitions' | 'profile'
 
@@ -48,6 +29,8 @@ export type ClubPortalProps = {
   music: RoutineMusic[]
   agLabels: Record<string, string>
   ageGroupRules: AgeGroupRule[]
+  apparatus: Apparatus[]
+  apparatusRules: ApparatusRule[]
   tsReviewStatuses: { team_id: string; competition_id: string; routine_type: string; status: string; final_comment: string | null }[]
   // gymnasts
   onAddGymnast: (g: Omit<Gymnast, 'id' | 'club_id'>) => void
@@ -72,7 +55,7 @@ export type ClubPortalProps = {
   onRestoreTeam: (id: string) => void
   onUploadTeamPhoto: (id: string, file: File) => Promise<void>
   // judges
-  onInviteJudge: (j: { full_name: string; email: string; phone?: string; licence?: string }) => Promise<void>
+  onInviteJudge: (j: { full_name: string; email: string; phone?: string; licence?: string; sport_type: string }) => Promise<void>
   onUpdateJudge: (id: string, j: Omit<Judge, 'id' | 'avatar_url'>) => void
   onDeleteJudge: (id: string) => void
   onUploadJudgePhoto: (id: string, file: File) => Promise<void>
@@ -92,7 +75,7 @@ export type ClubPortalProps = {
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function ClubPortal({
-  lang, club, gymnasts, coaches, competitionCoaches, teams, judges, nominations, competitions, entries, music, agLabels, ageGroupRules, tsReviewStatuses,
+  lang, club, gymnasts, coaches, competitionCoaches, teams, judges, nominations, competitions, entries, music, agLabels, ageGroupRules, apparatus, apparatusRules, tsReviewStatuses,
   onAddGymnast, onAddGymnastsBulk, onUpdateGymnast, onDeleteGymnast, onUploadGymnastPhoto, onUploadLicencia, onRemoveLicencia,
   onAddCoach, onUpdateCoach, onDeleteCoach, onUploadCoachPhoto, onUploadCoachLicencia, onRegisterCoach, onUnregisterCoach,
   onAddTeam, onUpdateTeam, onDeleteTeam, onRestoreTeam, onUploadTeamPhoto,
@@ -101,7 +84,7 @@ export default function ClubPortal({
   onNominate, onRemoveNomination,
   onUpdateClub, onUploadAvatar,
 }: ClubPortalProps) {
-  const t = T[lang]
+  const t = useT('ClubPortal', lang)
   const [activeTab, setActiveTab] = useState<Tab>('gymnasts')
 
   const activeEntries = entries.filter((e) => !e.dropped_out)
@@ -188,6 +171,7 @@ export default function ClubPortal({
           <TeamsTab lang={lang} gymnasts={gymnasts} teams={teams}
             ageGroupRules={ageGroupRules} agLabels={agLabels}
             onAdd={onAddTeam} onUpdate={onUpdateTeam} onArchive={onDeleteTeam} onRestore={onRestoreTeam}
+            apparatus={apparatus} apparatusRules={apparatusRules}
             onUploadPhoto={onUploadTeamPhoto} />
         )}
         {activeTab === 'competitions' && (

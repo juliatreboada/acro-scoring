@@ -5,13 +5,7 @@ import type { Lang } from '../scoring/types'
 import type { PenaltyState } from '../scoring/types'
 import { calcCjpPenalty } from '../scoring/types'
 import { CJP_PENALTY_CATEGORIES, cjpCategoryContrib } from '@/lib/scoringRules'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: { penaltyTotal: 'Total penalty' },
-  es: { penaltyTotal: 'Total penalización' },
-}
+import { useT } from '@/lib/useT'
 
 // ─── counter ──────────────────────────────────────────────────────────────────
 
@@ -32,7 +26,7 @@ export function PenaltyPanel({ state, onChange, lang }: {
   onChange: (p: PenaltyState) => void
   lang: Lang
 }) {
-  const t = T[lang]
+  const t = useT('CJPPenaltyPanel', lang)
   const total = calcCjpPenalty(state)
 
   function patch(p: Partial<PenaltyState>) {

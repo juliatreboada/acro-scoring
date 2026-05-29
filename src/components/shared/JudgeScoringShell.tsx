@@ -31,9 +31,19 @@ export function JudgeScoringShell({
 
   if (!sessionId) return (
     <div className="min-h-screen bg-slate-50">
-      <AuthBar />
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-48px)] gap-3 px-4">
-        <p className="text-xl font-semibold text-slate-600">No active session</p>
+      <AuthBar lang={lang} onLangChange={onLangChange} />
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-48px)] gap-3 px-4 text-center">
+        <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center">
+          <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z" />
+          </svg>
+        </div>
+        <p className="text-xl font-semibold text-slate-600">
+          {lang === 'en' ? 'No active session' : 'Sin sesión activa'}
+        </p>
+        <p className="text-sm text-slate-400">
+          {lang === 'en' ? 'Contact your competition administrator.' : 'Contacta con el administrador de la competición.'}
+        </p>
       </div>
     </div>
   )

@@ -5,39 +5,8 @@ import { createClient } from '@/lib/supabase'
 import { useProfile } from '@/contexts/ProfileContext'
 import type { Lang } from '@/components/scoring/types'
 import ClickableImg from '@/components/shared/ClickableImg'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    profile:     'Profile',
-    fullName:    'Full name',
-    email:       'Email',
-    phone:       'Phone',
-    licence:     'Licence',
-    edit:        'Edit profile',
-    save:        'Save changes',
-    cancel:      'Cancel',
-    saved:       'Saved',
-    uploading:   'Uploading…',
-    changePhoto: 'Change photo',
-    loading:     'Loading…',
-  },
-  es: {
-    profile:     'Perfil',
-    fullName:    'Nombre completo',
-    email:       'Email',
-    phone:       'Teléfono',
-    licence:     'Licencia',
-    edit:        'Editar perfil',
-    save:        'Guardar cambios',
-    cancel:      'Cancelar',
-    saved:       'Guardado',
-    uploading:   'Subiendo…',
-    changePhoto: 'Cambiar foto',
-    loading:     'Cargando…',
-  },
-}
+import { INPUT_CLS } from '@/lib/uiConstants'
+import { useT } from '@/lib/useT'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -47,6 +16,7 @@ type ProfileData = {
   email: string | null
   phone: string | null
   licence?: string | null   // judges only
+  sport_type?: string | null // judges only
   avatar_url: string | null
   role: 'judge' | 'admin'
 }
@@ -54,7 +24,7 @@ type ProfileData = {
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function ProfileEditor({ lang }: { lang: Lang }) {
-  const t = T[lang]
+  const t = useT('ProfileEditor', lang)
   const supabase = createClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { activeProfile } = useProfile()
@@ -74,7 +44,7 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
       const role = activeProfile.role as 'judge' | 'admin'
       const table = role === 'judge' ? 'judges' : 'admins'
       const fields = role === 'judge'
-        ? 'id,full_name,phone,licence,avatar_url'
+        ? 'id,full_name,phone,licence,sport_type,avatar_url'
         : 'id,full_name,phone,avatar_url'
 
       const { data: row } = await supabase.from(table as 'judges').select(fields).eq('id', activeProfile.id).single()
@@ -84,7 +54,8 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
         full_name:  (row as any)?.full_name ?? '',
         email:      user?.email ?? null,
         phone:      (row as any)?.phone ?? null,
-        licence:    role === 'judge' ? ((row as any)?.licence ?? null) : undefined,
+        licence:     role === 'judge' ? ((row as any)?.licence ?? null) : undefined,
+        sport_type:  role === 'judge' ? ((row as any)?.sport_type ?? 'acro') : undefined,
         avatar_url: (row as any)?.avatar_url ?? null,
         role,
       })
@@ -149,7 +120,7 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
     }
   }
 
-  const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+  const inputCls = INPUT_CLS
 
   if (loading) {
     return (
@@ -195,7 +166,19 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
           </div>
           <div className="min-w-0">
-            <p className="text-base font-bold text-slate-800 truncate">{profile.full_name}</p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-base font-bold text-slate-800 truncate">{profile.full_name}</p>
+              {profile.role === 'judge' && profile.sport_type && (
+                <span className={[
+                  'px-2 py-0.5 rounded-md text-xs font-bold shrink-0',
+                  profile.sport_type === 'rg'
+                    ? 'bg-violet-100 text-violet-700'
+                    : 'bg-blue-100 text-blue-700',
+                ].join(' ')}>
+                  {profile.sport_type === 'rg' ? 'RG' : 'Acro'}
+                </span>
+              )}
+            </div>
             {profile.email && <p className="text-sm text-slate-400 truncate">{profile.email}</p>}
             {uploading && <p className="text-xs text-blue-500 mt-0.5">{t.uploading}</p>}
           </div>

@@ -7,6 +7,8 @@ import { useProfile } from '@/contexts/ProfileContext'
 import type { Lang } from '@/components/scoring/types'
 import ProfileEditor from '@/components/shared/ProfileEditor'
 import JudgePractice from './JudgePractice'
+import JudgePracticeRG from './JudgePracticeRG'
+import { useT } from '@/lib/useT'
 
 function parseTimelineOrder(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -53,87 +55,6 @@ type LobbyPanel = {
   sessions: LobbySession[]
 }
 
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    title: 'My competitions',
-    noCompetitions: 'No competitions yet.',
-    noCompetitionsSub: 'You will appear here once an admin adds you to a competition.',
-    enter: 'Enter',
-    back: 'Back',
-    sectionN: (n: number) => `Section ${n}`,
-    panelN: (n: number) => `Panel ${n}`,
-    status: {
-      draft: 'Draft',
-      provisional_entry: 'Provisional entry',
-      definitive_entry: 'Definitive entry',
-      registration_open: 'Registration open',
-      registration_closed: 'Registration closed',
-      active: 'Live',
-      finished: 'Finished',
-    } as Record<CompetitionStatus, string>,
-    sessionStatus: {
-      waiting: 'Pending',
-      active: 'Active',
-      finished: 'Finished',
-    } as Record<SessionStatus, string>,
-    myAssignments: 'My panel assignments',
-    noLockedPanels: 'Panel assignments have not been published yet.',
-    startingOrder: 'Starting order',
-    noOrder: 'Starting order not yet published.',
-    scoreButton: 'Score',
-    startRehearsalButton: 'Start rehearsal',
-    rehearsalButton: 'Join rehearsal',
-    djReviewButton: 'Review TS sheets',
-    loadingDetail: 'Loading…',
-    profile: 'Profile',
-    competitions: 'Competitions',
-    practice: 'Practice',
-    practiceTitle: 'Practice mode',
-    practiceSub: 'Try all judge roles with mock data. Nothing is saved.',
-    practiceButton: 'Start practice',
-  },
-  es: {
-    title: 'Mis competiciones',
-    noCompetitions: 'Sin competiciones todavía.',
-    noCompetitionsSub: 'Aparecerás aquí cuando un administrador te añada a una competición.',
-    enter: 'Entrar',
-    back: 'Volver',
-    sectionN: (n: number) => `Jornada ${n}`,
-    panelN: (n: number) => `Panel ${n}`,
-    status: {
-      draft: 'Borrador',
-      provisional_entry: 'Inscripción provisional',
-      definitive_entry: 'Inscripción definitiva',
-      registration_open: 'Inscripción abierta',
-      registration_closed: 'Inscripción cerrada',
-      active: 'En vivo',
-      finished: 'Finalizada',
-    } as Record<CompetitionStatus, string>,
-    sessionStatus: {
-      waiting: 'Pendiente',
-      active: 'Activa',
-      finished: 'Finalizada',
-    } as Record<SessionStatus, string>,
-    myAssignments: 'Mis asignaciones de panel',
-    noLockedPanels: 'Las asignaciones de panel aún no han sido publicadas.',
-    startingOrder: 'Orden de salida',
-    noOrder: 'El orden de salida aún no está publicado.',
-    scoreButton: 'Puntuar',
-    startRehearsalButton: 'Iniciar ensayo',
-    rehearsalButton: 'Entrar en ensayo',
-    djReviewButton: 'Revisar TS',
-    loadingDetail: 'Cargando…',
-    profile: 'Perfil',
-    competitions: 'Competiciones',
-    practice: 'Práctica',
-    practiceTitle: 'Modo práctica',
-    practiceSub: 'Prueba todos los roles de juez con datos ficticios. Nada se guarda.',
-    practiceButton: 'Iniciar práctica',
-  },
-}
-
 const COMP_STATUS_BADGE: Record<CompetitionStatus, string> = {
   draft:                'bg-slate-100 text-slate-500',
   provisional_entry:    'bg-violet-100 text-violet-700',
@@ -172,7 +93,7 @@ function CompetitionCard({ comp, lang, onEnter }: {
   lang: Lang
   onEnter: () => void
 }) {
-  const t = T[lang]
+  const t = useT('JudgeLobby', lang)
   const start = formatDate(comp.start_date)
   const end   = formatDate(comp.end_date)
   const dateStr = start && end ? `${start} – ${end}` : start ?? end ?? null
@@ -211,7 +132,7 @@ function CompetitionDetail({ comp, lang, onBack }: {
   lang: Lang
   onBack: () => void
 }) {
-  const t = T[lang]
+  const t = useT('JudgeLobby', lang)
   const router = useRouter()
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
@@ -521,7 +442,7 @@ function CompetitionDetail({ comp, lang, onBack }: {
 // ─── main component ───────────────────────────────────────────────────────────
 
 export default function JudgeLobby({ lang }: { lang: Lang }) {
-  const t = T[lang]
+  const t = useT('JudgeLobby', lang)
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
   const { activeProfile } = useProfile()
@@ -568,7 +489,10 @@ export default function JudgeLobby({ lang }: { lang: Lang }) {
   )
 
   if (showPractice) {
-    return <JudgePractice lang={lang} onBack={() => setShowPractice(false)} />
+    const isRG = activeProfile?.sport_type === 'rg'
+    return isRG
+      ? <JudgePracticeRG lang={lang} onBack={() => setShowPractice(false)} />
+      : <JudgePractice   lang={lang} onBack={() => setShowPractice(false)} />
   }
 
   if (selectedComp) {

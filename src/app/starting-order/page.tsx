@@ -5,59 +5,16 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Database } from '@/lib/database.types'
+import { formatDateRange } from '@/lib/formatDate'
+import { STATUS_BADGE } from '@/lib/uiConstants'
+import { useT } from '@/lib/useT'
 
 type Competition = Pick<
   Database['public']['Tables']['competitions']['Row'],
   'id' | 'name' | 'status' | 'location' | 'start_date' | 'end_date'
 >
 
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    title: 'Starting Orders',
-    subtitle: 'Select a competition to view its published starting orders.',
-    live: 'Live',
-    published: 'Starting order published',
-    finished: 'Finished',
-    finishedCompetition: 'Finished competition',
-    viewOrder: 'View starting order',
-    noCompetitions: 'No competitions available.',
-    location: 'Location',
-    dates: 'Dates',
-  },
-  es: {
-    title: 'Órdenes de salida',
-    subtitle: 'Selecciona una competición para ver sus órdenes de salida publicadas.',
-    live: 'En vivo',
-    published: 'Orden de salida publicada',
-    finished: 'Finalizada',
-    finishedCompetition: 'Competición finalizada',
-    viewOrder: 'Ver orden de salida',
-    noCompetitions: 'No hay competiciones disponibles.',
-    location: 'Sede',
-    dates: 'Fechas',
-  },
-}
-
-const STATUS_BADGE: Partial<Record<Competition['status'], string>> = {
-  published: 'bg-indigo-100 text-indigo-700',
-  active:    'bg-blue-600 text-white',
-  finished:  'bg-slate-100 text-slate-500',
-}
-
 // ─── helpers ──────────────────────────────────────────────────────────────────
-
-function formatDateRange(start: string | null, end: string | null): string {
-  const fmt = (d: string) =>
-    new Date(d + 'T00:00:00').toLocaleDateString(undefined, {
-      day: 'numeric', month: 'short', year: 'numeric',
-    })
-  if (start && end && start !== end) return `${fmt(start)} – ${fmt(end)}`
-  if (start) return fmt(start)
-  if (end) return fmt(end)
-  return ''
-}
 
 // ─── page ─────────────────────────────────────────────────────────────────────
 
@@ -67,7 +24,7 @@ export default function Page() {
   const [loading, setLoading] = useState(true)
   const router   = useRouter()
   const supabase = createClient()
-  const t = T[lang]
+  const t = useT('StartingOrderPage', lang)
 
   useEffect(() => {
     async function load() {

@@ -4,11 +4,12 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import type { PenaltyState } from '@/components/scoring/types'
-import { activePenalties, activeDJPenalties } from '@/lib/penaltyLabels'
+import { activePenalties, activeDJPenalties, activeRJPenalties } from '@/lib/penaltyLabels'
 import type { ElementFlags } from '@/components/scoring/types'
 import { categoryLabel } from '@/components/admin/types'
 import { fetchPeerSessionIdsForRanking } from '@/lib/rankingPeers'
 import { TV_SPONSOR_BUCKET, parseTvSponsorVideos, type TvSponsorClip } from '@/lib/tvSponsorVideos'
+import { useT } from '@/lib/useT'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -43,42 +44,20 @@ type ResultData = {
   dif_score: number | null
   dif_penalty: number | null
   cjp_penalty: number | null
+  da_score: number | null
+  db_score: number | null
+  rj_penalty: number | null
   final_score: number | null
   status: string | null
   cjp_penalty_detail: PenaltyState | null
   dj_penalty_detail: ElementFlags | null
+  rj_penalty_detail: Record<string, unknown> | null
 }
 
 type CompetitionData = {
   name: string
   poster_url: string | null
-}
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    waiting: 'Waiting for results',
-    waitingHint: 'Scores will appear here when the competition team shows them on screen.',
-    balance: 'Balance', dynamic: 'Dynamic', combined: 'Combined',
-    e: 'E×2', a: 'A', d: 'D', pen: 'Pen.',
-    total: 'TOTAL',
-    rank: (n: number, total: number) => `#${n} of ${total}`,
-    penLabel: 'Penalties',
-    dorsal: (n: number) => `#${n}`,
-    provisional: 'PROVISIONAL',
-  },
-  es: {
-    waiting: 'Esperando resultados',
-    waitingHint: 'Las puntuaciones aparecerán cuando el equipo de competición las muestre en pantalla.',
-    balance: 'Equilibrio', dynamic: 'Dinámico', combined: 'Combinado',
-    e: 'E×2', a: 'A', d: 'D', pen: 'Pen.',
-    total: 'TOTAL',
-    rank: (n: number, total: number) => `#${n} de ${total}`,
-    penLabel: 'Penalizaciones',
-    dorsal: (n: number) => `#${n}`,
-    provisional: 'PROVISIONAL',
-  },
+  sport_type: string
 }
 
 // ─── component ────────────────────────────────────────────────────────────────
@@ -87,7 +66,7 @@ export default function TVPage() {
   const { competitionId } = useParams<{ competitionId: string }>()
   const searchParams = useSearchParams()
   const lang: Lang = (searchParams.get('lang') as Lang) === 'en' ? 'en' : 'es'
-  const t = T[lang]
+  const t = useT('TVPage', lang)
 
   const supabase = createClient()
 
@@ -104,6 +83,8 @@ export default function TVPage() {
   // not on team switch (team switch resets immediately, no animation).
   const [scoreVisible, setScoreVisible] = useState(false)
   const prevRevealedRef = useRef<boolean | null>(null)
+  const prevSessionIdRef = useRef<string | null>(null)
+  const prevTeamIdRef = useRef<string | null>(null)
 
   // ── fetch competition info once ──────────────────────────────────────────────
 
@@ -114,11 +95,11 @@ export default function TVPage() {
     async function load() {
       const { data } = await supabase
         .from('competitions')
-        .select('name, poster_url, tv_sponsor_videos')
+        .select('name, poster_url, sport_type, tv_sponsor_videos')
         .eq('id', competitionId)
         .single()
       if (data) {
-        setCompetition({ name: data.name, poster_url: data.poster_url ?? null })
+        setCompetition({ name: data.name, poster_url: data.poster_url ?? null, sport_type: (data as unknown as { sport_type: string }).sport_type ?? 'acro' })
         setSponsorClips(parseTvSponsorVideos(data.tv_sponsor_videos))
       }
     }
@@ -198,6 +179,41 @@ export default function TVPage() {
     return () => { supabase.removeChannel(ch) }
   }, [competitionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── subscribe to routine_results for live score updates ─────────────────────
+
+  useEffect(() => {
+    if (!tvState?.session_id || !tvState?.team_id) return
+    const { session_id, team_id } = tvState
+
+    const ch = supabase
+      .channel(`tv-result-${session_id}-${team_id}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'routine_results',
+        filter: `session_id=eq.${session_id}`,
+      }, (payload) => {
+        const row = payload.new as ResultData & { team_id: string }
+        if (row.team_id !== team_id) return
+        setResult({
+          e_score:            row.e_score            ?? null,
+          a_score:            row.a_score            ?? null,
+          dif_score:          row.dif_score          ?? null,
+          dif_penalty:        row.dif_penalty        ?? null,
+          cjp_penalty:        row.cjp_penalty        ?? null,
+          da_score:           row.da_score           ?? null,
+          db_score:           row.db_score           ?? null,
+          rj_penalty:         row.rj_penalty         ?? null,
+          final_score:        row.final_score        ?? null,
+          status:             row.status             ?? null,
+          cjp_penalty_detail: row.cjp_penalty_detail as PenaltyState | null,
+          dj_penalty_detail:  row.dj_penalty_detail  as ElementFlags | null,
+          rj_penalty_detail:  row.rj_penalty_detail  as Record<string, unknown> | null,
+        })
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(ch) }
+  }, [tvState?.session_id, tvState?.team_id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── handle team/session change ───────────────────────────────────────────────
 
   useEffect(() => {
@@ -210,19 +226,29 @@ export default function TVPage() {
       setRankTotal(0)
       setScoreVisible(false)
       prevRevealedRef.current = false
+      prevSessionIdRef.current = null
+      prevTeamIdRef.current = null
       return
     }
 
     const { session_id, team_id, revealed } = tvState
 
-    // If only revealed changed (same team+session), just update scoreVisible.
-    // If team changed, reset score visibility immediately before fetching.
-    const teamChanged = team?.gymnast_display !== undefined &&
-      prevRevealedRef.current !== null &&
-      (tvState.session_id !== session?.age_group) // rough check handled below
-
     setScoreVisible(revealed)
     prevRevealedRef.current = revealed
+
+    // When only revealed changed, skip the full re-fetch — Realtime handles result updates.
+    if (session_id === prevSessionIdRef.current && team_id === prevTeamIdRef.current) {
+      return
+    }
+    prevSessionIdRef.current = session_id
+    prevTeamIdRef.current = team_id
+
+    setTeam(null)
+    setSession(null)
+    setResult(null)
+    setDorsal(null)
+    setRank(null)
+    setRankTotal(0)
 
     async function fetchDisplay() {
       const [teamRes, sessionRes, entryRes, resultRes] = await Promise.all([
@@ -244,7 +270,7 @@ export default function TVPage() {
           .maybeSingle(),
         supabase
           .from('routine_results')
-          .select('e_score, a_score, dif_score, dif_penalty, cjp_penalty, final_score, status, cjp_penalty_detail, dj_penalty_detail')
+          .select('e_score, a_score, dif_score, dif_penalty, cjp_penalty, da_score, db_score, rj_penalty, final_score, status, cjp_penalty_detail, dj_penalty_detail, rj_penalty_detail')
           .eq('session_id', session_id)
           .eq('team_id', team_id)
           .maybeSingle(),
@@ -314,10 +340,14 @@ export default function TVPage() {
           dif_score:           resultRes.data.dif_score,
           dif_penalty:         resultRes.data.dif_penalty,
           cjp_penalty:         resultRes.data.cjp_penalty,
+          da_score:            resultRes.data.da_score,
+          db_score:            resultRes.data.db_score,
+          rj_penalty:          resultRes.data.rj_penalty,
           final_score:         resultRes.data.final_score,
           status:              (resultRes.data as unknown as { status: string | null }).status ?? null,
           cjp_penalty_detail:  resultRes.data.cjp_penalty_detail as PenaltyState | null,
           dj_penalty_detail:   resultRes.data.dj_penalty_detail as ElementFlags | null,
+          rj_penalty_detail:   resultRes.data.rj_penalty_detail as Record<string, unknown> | null,
         })
       } else {
         setResult(null)
@@ -332,15 +362,20 @@ export default function TVPage() {
   const routineLabel = (rt: string) =>
     ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
 
-  const djPenalties  = result?.dj_penalty_detail
-    ? activeDJPenalties(result.dj_penalty_detail, lang)
-    : []
-  const cjpPenalties = result?.cjp_penalty_detail
-    ? activePenalties(result.cjp_penalty_detail, lang)
-    : []
-  const allPenalties = [...djPenalties, ...cjpPenalties]
+  const isRG = competition?.sport_type === 'rg'
 
-  const totalPen = (result?.dif_penalty ?? 0) + (result?.cjp_penalty ?? 0)
+  const allPenalties = isRG
+    ? (result?.rj_penalty_detail
+        ? activeRJPenalties(result.rj_penalty_detail, result.rj_penalty ?? 0, lang)
+        : [])
+    : [
+        ...(result?.dj_penalty_detail ? activeDJPenalties(result.dj_penalty_detail, lang) : []),
+        ...(result?.cjp_penalty_detail ? activePenalties(result.cjp_penalty_detail, lang) : []),
+      ]
+
+  const totalPen = isRG
+    ? (result?.rj_penalty ?? 0)
+    : (result?.dif_penalty ?? 0) + (result?.cjp_penalty ?? 0)
 
   const isTeamQueued = !!(tvState?.session_id && tvState?.team_id)
 
@@ -471,9 +506,11 @@ export default function TVPage() {
 
   if (!team) return null
 
-  const eScore     = result ? (result.e_score ?? 0) * 2 : null
+  const eScore     = result ? (isRG ? (result.e_score ?? 0) : (result.e_score ?? 0) * 2) : null
   const aScore     = result?.a_score ?? null
   const dScore     = result?.dif_score ?? null
+  const daScore    = result?.da_score ?? null
+  const dbScore    = result?.db_score ?? null
   const penDisplay = totalPen > 0 ? -totalPen : null
   const final      = result?.final_score ?? null
 
@@ -641,6 +678,46 @@ export default function TVPage() {
                   </span>
                 </div>
               )}
+            {/* partial scores row */}
+            {result && (
+              <div className="flex items-center gap-6 flex-wrap">
+                {(isRG ? [
+                  { label: t.eRg, value: eScore,     delay: 0   },
+                  { label: t.a,   value: aScore,     delay: 100 },
+                  { label: t.da,  value: daScore,    delay: 200 },
+                  { label: t.db,  value: dbScore,    delay: 300 },
+                  ...(penDisplay !== null
+                    ? [{ label: t.penRj, value: penDisplay, delay: 400 }]
+                    : []),
+                ] : [
+                  { label: t.e,   value: eScore,     delay: 0   },
+                  { label: t.a,   value: aScore,     delay: 100 },
+                  { label: t.d,   value: dScore,     delay: 200 },
+                  ...(penDisplay !== null
+                    ? [{ label: t.pen, value: penDisplay, delay: 300 }]
+                    : []),
+                ] as { label: string; value: number | null; delay: number }[]).map(({ label, value, delay }) => (
+                  <div
+                    key={label}
+                    className="flex flex-col items-center transition-all duration-300"
+                    style={{ transitionDelay: scoreVisible ? `${delay}ms` : '0ms' }}
+                  >
+                    <span className="text-slate-400 text-sm uppercase tracking-widest">{label}</span>
+                    <span className={[
+                      'tabular-nums font-bold',
+                      (label === t.pen || label === t.penRj) ? 'text-red-400' : 'text-white',
+                    ].join(' ')}
+                      style={{ fontSize: 'clamp(1.5rem, 2.5vw, 2.5rem)' }}>
+                      {value != null
+                        ? label === t.pen
+                          ? value.toFixed(1)
+                          : value.toFixed(3)
+                        : '—'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             </div>
 

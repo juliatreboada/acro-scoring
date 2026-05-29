@@ -5,59 +5,7 @@ import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, Section, Panel, Session, SessionOrder, Team, Club, CompetitionEntry, ScoringMethod } from '@/components/admin/types'
 import { resolveRoutineTypeForTeamInSession, type SessionMapRow } from '@/lib/openCombinadosBracket'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    notActive: 'The competition is not live yet.',
-    notActiveSub: 'Session controls become available once the competition is marked as active.',
-    section: 'Section',
-    panel: 'Panel',
-    waiting: 'Waiting',
-    active: 'Live',
-    finished: 'Finished',
-    start: 'Start session',
-    finish: 'Finish session',
-    back: 'Back',
-    confirmStart: 'Start this session? Judges will be able to submit scores.',
-    confirmFinish: 'Mark this session as finished?',
-    confirmBackToWaiting: 'Move this session back to waiting?',
-    confirmBackToActive: 'Re-open this session as live?',
-    noTeams: 'No teams assigned.',
-    dropout: 'Dropout',
-    noOrder: 'Starting order not published.',
-    scoring: 'Scoring',
-    noMusic: 'No music uploaded',
-    inputConfig: 'Scoring input',
-    keyboard: 'Keyboard',
-    elements: 'Elements',
-  },
-  es: {
-    notActive: 'La competición aún no está en curso.',
-    notActiveSub: 'Los controles de sesión estarán disponibles cuando la competición esté activa.',
-    section: 'Jornada',
-    panel: 'Panel',
-    waiting: 'En espera',
-    active: 'En curso',
-    finished: 'Finalizada',
-    start: 'Iniciar sesión',
-    finish: 'Finalizar sesión',
-    back: 'Volver',
-    confirmStart: '¿Iniciar esta sesión? Los jueces podrán enviar puntuaciones.',
-    confirmFinish: '¿Marcar esta sesión como finalizada?',
-    confirmBackToWaiting: '¿Volver esta sesión a espera?',
-    confirmBackToActive: '¿Reabrir esta sesión en curso?',
-    noTeams: 'Sin equipos asignados.',
-    dropout: 'Baja',
-    noOrder: 'Orden de salida no publicado.',
-    scoring: 'Puntuando',
-    noMusic: 'Sin música subida',
-    inputConfig: 'Entrada de puntuación',
-    keyboard: 'Teclado',
-    elements: 'Elementos',
-  },
-}
+import { useT } from '@/lib/useT'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -93,7 +41,7 @@ function SessionCard({
   onRevert: () => void
   onConfigChange: (patch: Partial<Pick<Session, 'dj_method' | 'ej_method'>>) => void
 }) {
-  const t = T[lang]
+  const t = useT('CompetitionDayTab', lang)
 
   const matchingTeamIds = new Set(
     globalTeams
@@ -429,7 +377,7 @@ export default function CompetitionDayTab({
   onFinishSession: (sessionId: string) => void
   onRevertSession: (sessionId: string) => void
 }) {
-  const t = T[lang]
+  const t = useT('CompetitionDayTab', lang)
   const supabase = createClient()
   const [activeSection, setActiveSection] = useState<string>(sections[0]?.id ?? '')
 
@@ -494,7 +442,7 @@ export default function CompetitionDayTab({
           if (!session) continue
           nextMap[`${o.session_id}:${o.team_id}`] = resolveRoutineTypeForTeamInSession({
             sessionId: o.session_id,
-            sessionRoutineType: session.routine_type,
+            sessionRoutineType: session.routine_type as 'Balance' | 'Dynamic' | 'Combined',
             teamId: o.team_id,
             mappings,
             openChoicesByPhaseAndTeam,

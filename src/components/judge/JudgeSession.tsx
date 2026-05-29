@@ -8,6 +8,7 @@ import CJPView from '../scoring/views/CJPView'
 import EJView from '../scoring/views/EJView'
 import AJView from '../scoring/views/AJView'
 import DJView from '../scoring/views/DJView'
+import { useT } from '@/lib/useT'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -37,27 +38,6 @@ export type JudgeSessionProps = {
 
   // called when any non-CJP role submits — page stores score in judgeScores
   onJudgeScoreSubmit?: (score: JudgeScore) => void
-}
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    waiting: 'Session has not started yet',
-    waitingSub: 'Please wait. The session will begin shortly.',
-    finished: 'Session is finished',
-    finishedSub: 'All performances for this session have been completed.',
-    noRoles: 'No roles assigned',
-    noRolesSub: 'You have no judging roles assigned for this session.',
-  },
-  es: {
-    waiting: 'La sesión aún no ha comenzado',
-    waitingSub: 'Por favor, espera. La sesión comenzará en breve.',
-    finished: 'La sesión ha finalizado',
-    finishedSub: 'Todas las actuaciones de esta sesión han concluido.',
-    noRoles: 'Sin roles asignados',
-    noRolesSub: 'No tienes ningún rol de juez asignado para esta sesión.',
-  },
 }
 
 // Tab order enforced: CJP → DJ → EJ → AJ
@@ -104,7 +84,7 @@ export default function JudgeSession({
   onOpen, onSkip, onCJPSubmit, onReopenScore,
   onJudgeScoreSubmit,
 }: JudgeSessionProps) {
-  const t = T[lang]
+  const t = useT('JudgeSession', lang)
 
   const sortedRoles = [...assignedRoles].sort((a, b) => {
     const ai = ROLE_ORDER.indexOf(a.role)

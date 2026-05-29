@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
     full_name?: string
     licence?: string
     phone?: string
+    sport_type?: string
     club_id?: string       // use existing club
     club_name?: string     // create new club
     contact_name?: string
@@ -52,7 +53,18 @@ export async function POST(req: NextRequest) {
 
   const auth_id = existing[0].auth_id
 
-  if (existing.some(p => p.role === role)) {
+  if (role === 'judge') {
+    // For judges, allow one acro profile + one rg profile — check sport_type specifically
+    const existingJudgeIds = existing.filter(p => p.role === 'judge').map(p => p.id)
+    if (existingJudgeIds.length > 0) {
+      const { data: existingJudges } = await db
+        .from('judges').select('sport_type').in('id', existingJudgeIds)
+      const newSportType = body.sport_type ?? 'acro'
+      if (existingJudges?.some(j => j.sport_type === newSportType)) {
+        return NextResponse.json({ error: `User already has a ${newSportType} judge profile` }, { status: 409 })
+      }
+    }
+  } else if (existing.some(p => p.role === role)) {
     return NextResponse.json({ error: 'User already has this role' }, { status: 409 })
   }
 
@@ -66,9 +78,10 @@ export async function POST(req: NextRequest) {
 
     const { error } = await db.from('judges').insert({
       id: newProfileId,
-      full_name: body.full_name ?? '',
-      licence:   body.licence   ?? null,
-      phone:     body.phone     ?? null,
+      full_name:  body.full_name  ?? '',
+      licence:    body.licence    ?? null,
+      phone:      body.phone      ?? null,
+      sport_type: body.sport_type ?? 'acro',
     })
     if (error) {
       await db.from('profiles').delete().eq('id', newProfileId)

@@ -21,23 +21,24 @@ export default function Page() {
   const [loading, setLoading]         = useState(true)
   const router        = useRouter()
   const supabase      = createClient()
-  const { activeProfile } = useProfile()
+  const { activeProfile, profileLoading } = useProfile()
   const isSuperAdmin  = activeProfile?.role === 'super_admin'
 
   useEffect(() => {
     async function load() {
-      if (!activeProfile) return
+      if (profileLoading) return
+      if (!activeProfile) { setLoading(false); return }
 
       const compsQuery = supabase
         .from('competitions')
-        .select('id, name, status, location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, logo_url, admin_id, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
+        .select('id, name, status, sport_type, location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, logo_url, admin_id, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
         .order('created_at', { ascending: false })
 
       // admin sees only their assigned competitions
       if (!isSuperAdmin) compsQuery.eq('admin_id', activeProfile.id)
 
       const [rulesRes, compsRes] = await Promise.all([
-        supabase.from('age_group_rules').select('id, age_group, ruleset, min_age, max_age, sort_order').order('sort_order'),
+        supabase.from('age_group_rules').select('id, age_group, level, ruleset, min_age, max_age, sort_order, sport_type').order('sort_order'),
         compsQuery,
       ])
 
@@ -72,7 +73,7 @@ export default function Page() {
       setLoading(false)
     }
     load()
-  }, [activeProfile?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeProfile?.id, profileLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleCreate(data: Omit<Competition, 'id' | 'created_at'>) {
     const { data: created, error } = await supabase
@@ -80,6 +81,7 @@ export default function Page() {
       .insert({
         name:                  data.name,
         status:                data.status,
+        sport_type:            data.sport_type,
         location:              data.location,
         start_date:            data.start_date,
         end_date:              data.end_date,
@@ -89,7 +91,7 @@ export default function Page() {
         logo_url:              data.logo_url ?? null,
         admin_id:              data.admin?.id ?? null,
       })
-      .select('id, name, status, location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, logo_url, admin_id, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
+      .select('id, name, status, sport_type, location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, logo_url, admin_id, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
       .single()
 
     if (error || !created) return

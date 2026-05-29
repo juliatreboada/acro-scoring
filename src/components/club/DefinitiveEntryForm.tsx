@@ -5,95 +5,7 @@ import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, AgeGroupRule } from '@/components/admin/types'
 import { categoriesForRuleset, categoryLabel, CATEGORY_SIZE } from '@/components/admin/types'
-
-// ─── translations ──────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    title: 'Definitive Entry',
-    contact: 'Contact person',
-    contactName: 'Full name',
-    contactPhone: 'Phone',
-    contactEmail: 'Email',
-    teams: 'Teams per category',
-    judge: 'Judge nomination',
-    judgeName: 'Judge name (optional)',
-    judgeHint: 'Leave blank if your club cannot provide a judge.',
-    totalTitle: 'Estimated total',
-    feePerTeam: (n: number) => `${n} team${n !== 1 ? 's' : ''} × fee`,
-    feePerGymnast: (n: number) => `${n} gymnast${n !== 1 ? 's' : ''} × fee`,
-    judgeFine: 'No judge fine',
-    save: 'Submit entry',
-    saving: 'Saving…',
-    saved: 'Entry submitted',
-    edit: 'Update entry',
-    close: 'Close',
-    error: 'Failed to save. Please try again.',
-    paymentTitle: 'Payment proof',
-    paymentHint: 'Upload your transfer receipt or proof of payment.',
-    uploadPayment: 'Upload payment document',
-    paymentUploaded: 'Payment document uploaded',
-    replace: 'Replace',
-    uploading: 'Uploading…',
-    uploadError: 'Upload failed. Please try again.',
-    status: {
-      pending: 'Pending review',
-      payment_uploaded: 'Payment uploaded — awaiting approval',
-      approved: 'Approved',
-      rejected: 'Rejected — contact the organiser',
-    } as Record<string, string>,
-    statusBadge: {
-      pending: 'bg-amber-100 text-amber-700',
-      payment_uploaded: 'bg-blue-100 text-blue-700',
-      approved: 'bg-green-100 text-green-700',
-      rejected: 'bg-red-100 text-red-700',
-    } as Record<string, string>,
-    readOnly: 'This entry has been approved and can no longer be edited.',
-    required: 'Required',
-  },
-  es: {
-    title: 'Inscripción definitiva',
-    contact: 'Persona de contacto',
-    contactName: 'Nombre completo',
-    contactPhone: 'Teléfono',
-    contactEmail: 'Email',
-    teams: 'Equipos por categoría',
-    judge: 'Nominación de juez',
-    judgeName: 'Nombre del juez (opcional)',
-    judgeHint: 'Déjalo en blanco si tu club no puede aportar juez.',
-    totalTitle: 'Total estimado',
-    feePerTeam: (n: number) => `${n} equipo${n !== 1 ? 's' : ''} × tarifa`,
-    feePerGymnast: (n: number) => `${n} gimnasta${n !== 1 ? 's' : ''} × tarifa`,
-    judgeFine: 'Recargo sin juez',
-    save: 'Enviar inscripción',
-    saving: 'Guardando…',
-    saved: 'Inscripción enviada',
-    edit: 'Actualizar inscripción',
-    close: 'Cerrar',
-    error: 'Error al guardar. Inténtalo de nuevo.',
-    paymentTitle: 'Justificante de pago',
-    paymentHint: 'Sube el justificante de transferencia o recibo de pago.',
-    uploadPayment: 'Subir justificante',
-    paymentUploaded: 'Justificante subido',
-    replace: 'Reemplazar',
-    uploading: 'Subiendo…',
-    uploadError: 'Error al subir. Inténtalo de nuevo.',
-    status: {
-      pending: 'Pendiente de revisión',
-      payment_uploaded: 'Pago subido — pendiente de aprobación',
-      approved: 'Aprobada',
-      rejected: 'Rechazada — contacta al organizador',
-    } as Record<string, string>,
-    statusBadge: {
-      pending: 'bg-amber-100 text-amber-700',
-      payment_uploaded: 'bg-blue-100 text-blue-700',
-      approved: 'bg-green-100 text-green-700',
-      rejected: 'bg-red-100 text-red-700',
-    } as Record<string, string>,
-    readOnly: 'Esta inscripción ha sido aprobada y ya no puede editarse.',
-    required: 'Obligatorio',
-  },
-}
+import { useT } from '@/lib/useT'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -146,7 +58,7 @@ type Props = {
 type EntryStatus = 'pending' | 'payment_uploaded' | 'approved' | 'rejected'
 
 export default function DefinitiveEntryForm({ lang, competition, clubId, clubName, ageGroupRules, onClose, onSaved }: Props) {
-  const t = T[lang]
+  const t = useT('DefinitiveEntryForm', lang)
   const supabase = createClient()
   const paymentInputRef = useRef<HTMLInputElement>(null)
 
@@ -348,7 +260,7 @@ export default function DefinitiveEntryForm({ lang, competition, clubId, clubNam
             <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">{t.teams}</p>
             <div className="space-y-4">
               {competitionRules.map(rule => {
-                const categories = categoriesForRuleset(rule.age_group)
+                const categories = categoriesForRuleset(rule.level)
                 return (
                   <div key={rule.id}>
                     <p className="text-xs font-medium text-slate-500 mb-1.5">{rule.age_group}</p>

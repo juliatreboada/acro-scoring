@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import type { TsElement, ElementType, Deductions } from '@/components/scoring/types'
 import type { ElementFlag, ElementFlags } from '@/components/scoring/types'
 import { DEFAULT_FLAG } from '@/components/scoring/types'
-import { getElementConfig } from '@/components/shared/DJElementsShared'
+import { getElementConfig } from '@/components/scoring/DJElementsShared'
 
 function safeRead<T>(key: string): T | null {
   if (typeof window === 'undefined') return null
