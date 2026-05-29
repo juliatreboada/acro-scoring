@@ -5,37 +5,7 @@ import type { Lang } from '@/components/scoring/types'
 import type { Judge } from '@/components/admin/types'
 import { InviteJudgeForm } from './shared/InviteJudgeForm'
 import { INPUT_CLS } from '@/lib/uiConstants'
-
-const T = {
-  en: {
-    inviteJudge: 'Invite new judge',
-    empty: 'No judges in the system yet.',
-    confirmDelete: 'Remove this judge from the system?',
-    edit: 'Edit',
-    save: 'Save',
-    cancel: 'Cancel',
-    name: 'Full name',
-    phone: 'Phone',
-    licence: 'Licence no.',
-    search: 'Search judges…',
-    judges: (n: number) => `${n} judge${n !== 1 ? 's' : ''} in pool`,
-    noResults: 'No judges match your search.',
-  },
-  es: {
-    inviteJudge: 'Invitar nuevo juez',
-    empty: 'Aún no hay jueces en el sistema.',
-    confirmDelete: '¿Eliminar este juez del sistema?',
-    edit: 'Editar',
-    save: 'Guardar',
-    cancel: 'Cancelar',
-    name: 'Nombre completo',
-    phone: 'Teléfono',
-    licence: 'Nº licencia',
-    search: 'Buscar jueces…',
-    judges: (n: number) => `${n} jue${n !== 1 ? 'ces' : 'z'}`,
-    noResults: 'Ningún juez coincide con tu búsqueda.',
-  },
-}
+import { useT } from '@/lib/useT'
 
 type EditForm = { full_name: string; phone: string; licence: string }
 
@@ -63,12 +33,12 @@ function JudgeAvatar({ judge, onUpload }: { judge: Judge; onUpload: (file: File)
 export default function ClubJudgesTab({ lang, judges, onInvite, onUpdate, onDelete, onUploadPhoto }: {
   lang: Lang
   judges: Judge[]
-  onInvite: (f: { full_name: string; email: string; phone?: string; licence?: string }) => Promise<void>
+  onInvite: (f: { full_name: string; email: string; phone?: string; licence?: string; sport_type: string }) => Promise<void>
   onUpdate: (id: string, f: Omit<Judge, 'id' | 'avatar_url'>) => void
   onDelete: (id: string) => void
   onUploadPhoto: (id: string, file: File) => Promise<void>
 }) {
-  const t = T[lang]
+  const t = useT('ClubJudgesTab', lang)
   const [showInvite, setShowInvite] = useState(false)
   const [query, setQuery] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -117,7 +87,7 @@ export default function ClubJudgesTab({ lang, judges, onInvite, onUpdate, onDele
         <div className="mb-4">
           <InviteJudgeForm
             lang={lang}
-            onSend={async (f) => onInvite({ full_name: f.full_name, email: f.email, phone: f.phone || undefined, licence: f.licence || undefined })}
+            onSend={async (f) => onInvite({ full_name: f.full_name, email: f.email, phone: f.phone || undefined, licence: f.licence || undefined, sport_type: f.sport_type })}
             onCancel={() => setShowInvite(false)}
           />
         </div>

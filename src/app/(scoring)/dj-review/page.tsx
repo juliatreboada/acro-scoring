@@ -8,6 +8,8 @@ import DJReview from '@/components/dj-review/DJReview'
 import AuthBar from '@/components/shared/AuthBar'
 import type { Lang } from '@/components/scoring/types'
 import type { Sheet } from '@/components/dj-review/types'
+import { ageGroupLabel } from '@/components/admin/types'
+import type { AgeGroupRule } from '@/components/admin/types'
 
 function DJReviewPage() {
   const supabase = createClient()
@@ -173,7 +175,7 @@ function DJReviewPage() {
         supabase.from('routine_music')
           .select('team_id, competition_id, routine_type, ts_path')
           .in('team_id', teamIds).in('competition_id', [...validCompIds]),
-        supabase.from('age_group_rules').select('id, age_group, level, ruleset'),
+        supabase.from('age_group_rules').select('id, age_group, level, ruleset, sport_type'),
         supabase.from('ts_elements')
           .select('id, team_id, competition_id, routine_type, position, label, element_type, is_static, difficulty_value')
           .in('team_id', teamIds).in('competition_id', [...validCompIds])
@@ -193,8 +195,8 @@ function DJReviewPage() {
       }
 
       const agLabels: Record<string, string> = Object.fromEntries(
-        ((rulesRes.data ?? []) as unknown as { id: string; age_group: string; ruleset: string }[])
-          .map(r => [r.id, `${r.age_group} (${r.ruleset})`])
+        ((rulesRes.data ?? []) as unknown as AgeGroupRule[])
+          .map(r => [r.id, ageGroupLabel(r, true)])
       )
 
       const teamMap: Record<string, { gymnast_display: string; age_group: string; category: string }> =

@@ -369,6 +369,37 @@ export function useCompetitionPage(id: string) {
     setAssignments(prev => prev.filter(a => a.id !== toRemove.id))
   }
 
+  async function handleCopyPanel(fromSectionId: string, panelId: string) {
+    const sourceSlots = assignments.filter(a => a.section_id === fromSectionId && a.panel_id === panelId)
+    const targetSections = sections.filter(s => s.id !== fromSectionId)
+    if (targetSections.length === 0) return
+
+    for (const section of targetSections) {
+      // delete existing slots for this section+panel
+      const targetSlotIds = assignments
+        .filter(a => a.section_id === section.id && a.panel_id === panelId)
+        .map(a => a.id)
+      if (targetSlotIds.length > 0) {
+        await supabase.from('section_panel_judges').delete().in('id', targetSlotIds)
+      }
+      // insert slots mirroring the source
+      const toInsert = sourceSlots.map(s => ({
+        section_id: section.id,
+        panel_id:   panelId,
+        judge_id:   s.judge_id,
+        role:       s.role,
+        role_number: s.role_number,
+      }))
+      const { data: inserted } = await supabase.from('section_panel_judges').insert(toInsert).select()
+      if (inserted) {
+        setAssignments(prev => [
+          ...prev.filter(a => !(a.section_id === section.id && a.panel_id === panelId)),
+          ...(inserted as SectionPanelJudge[]),
+        ])
+      }
+    }
+  }
+
   async function handleTogglePanelLock(sectionId: string, panelId: string) {
     const current = panelLocks.find(l => l.section_id === sectionId && l.panel_id === panelId)
     const nextLocked = !(current?.locked ?? false)
@@ -552,7 +583,7 @@ export function useCompetitionPage(id: string) {
     handleAddSection, handleUpdateSectionLabel, handleUpdateSectionTimes, handleDeleteSection,
     handleAddSession, handleDeleteSession,
     handleAddToPool, handleRemoveFromPool, handleAssignJudge,
-    handleAddSlot, handleRemoveSlot, handleTogglePanelLock,
+    handleAddSlot, handleRemoveSlot, handleTogglePanelLock, handleCopyPanel,
     handleToggleDropout, handleRemoveClubEntries,
     handleToggleLock, handleReorder, handleReorderTimeline,
     handleUpdateCompetition, handleUpdateFees, handleUploadPoster, handleUploadLogo, handleSetDJReviewDeadline,

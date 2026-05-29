@@ -28,15 +28,17 @@ export function groupByLevel(rules: AgeGroupRule[]): { level: string; rules: Age
   return order.map((l) => ({ level: l, rules: map[l] }))
 }
 
-// Full display label for an age group badge (read-only view).
-// Acro: "{age_group} {level}" — e.g. "Alevín Base", "Senior FIG"
-// RG: "{age_group} {level} {gymnast_type}" — e.g. "Benjamín Prebase Individual", "Alevín Escolar Conjuntos"
-export function ageGroupLabel(rule: AgeGroupRule): string {
+// Full display label for an age group badge.
+// Acro: shows level only for Base/Escolar — e.g. "Alevín Base", "Senior", "Alevín Base (FIG)" with includeRuleset
+// RG: always includes level and gymnast type — e.g. "Benjamín Prebase Individual"
+export function ageGroupLabel(rule: AgeGroupRule, includeRuleset = false): string {
   if (rule.sport_type === 'rg') {
     const rs = rule.ruleset === 'Group' ? 'Conjuntos' : rule.ruleset
     return `${rule.age_group} ${rule.level} ${rs}`
   }
-  return `${rule.age_group} ${rule.level}`
+  const showLevel = rule.level === 'Base' || rule.level === 'Escolar'
+  const base = showLevel ? `${rule.age_group} ${rule.level}` : rule.age_group
+  return includeRuleset ? `${base} (${rule.ruleset})` : base
 }
 
 // Returns the Spanish display label for an RG gymnast type (ruleset value).
@@ -419,8 +421,8 @@ export type Level = 'Escolar' | 'Base' | 'Nacional'
 export const LEVEL_ORDER: Level[] = ['Escolar', 'Base', 'Nacional']
 
 export function getLevel(ageGroupId: string, rules: AgeGroupRule[]): Level {
-  const ag = rules.find(r => r.id === ageGroupId)?.age_group ?? ''
-  if (ag.includes('Escolar')) return 'Escolar'
-  if (ag.includes('Base'))    return 'Base'
+  const level = rules.find(r => r.id === ageGroupId)?.level ?? ''
+  if (level === 'Escolar') return 'Escolar'
+  if (level === 'Base')    return 'Base'
   return 'Nacional'
 }

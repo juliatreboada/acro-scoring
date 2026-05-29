@@ -9,67 +9,7 @@ import { categoryLabel } from '@/components/admin/types'
 import { ClubAvatar } from '@/components/admin/Avatar'
 import { routineDurationSec, addSecsToHHMM, calcPanelTimes, calcInterleavedTimes, calcMergedTimes, isBreak } from '@/lib/competitionTiming'
 import type { SlotTimes, AdminSlot, BreakSlot, MergedSlot } from '@/lib/competitionTiming'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    hint: 'Set the order teams compete within each session.',
-    noTeams: 'No teams registered for this session.',
-    noSections: 'No sessions defined yet. Go to Structure to add sessions.',
-    panelN: (n: number) => `Panel ${n}`,
-    sectionN: (n: number) => `Section ${n}`,
-    shuffle: 'Shuffle',
-    lock: 'Publish',
-    unlock: 'Published',
-    notCompeting: 'Not competing',
-    baja: 'Dropout',
-    warmup: 'W',
-    compete: 'C',
-    viewSessions: 'Sessions',
-    viewTimeline: 'Timeline',
-    print: 'Print',
-    addBreak: 'Add break',
-    breakLabel: 'Break',
-    saveStartingOrder: 'Save starting order',
-    saveStartingOrderHint: 'Overwrite the timeline order with the current session order (keeps existing breaks).',
-    downloadAllTs: 'Download all TS (ZIP)',
-    downloadAllMusic: 'Download all music (ZIP)',
-    downloadZipWorking: 'Building ZIP…',
-    downloadZipSummary: (included: number, missing: number, failed: number) =>
-      `ZIP ready: ${included} file(s).` +
-      (missing ? ` ${missing} missing in database.` : '') +
-      (failed ? ` ${failed} download error(s).` : ''),
-  },
-  es: {
-    hint: 'Establece el orden de actuación en cada sesión.',
-    noTeams: 'Sin equipos inscritos para esta sesión.',
-    noSections: 'Sin sesiones definidas. Ve a Estructura.',
-    panelN: (n: number) => `Panel ${n}`,
-    sectionN: (n: number) => `Jornada ${n}`,
-    shuffle: 'Aleatorio',
-    lock: 'Publicar',
-    unlock: 'Publicado',
-    notCompeting: 'No compiten',
-    baja: 'Baja',
-    warmup: 'C',
-    compete: 'A',
-    viewSessions: 'Sesiones',
-    viewTimeline: 'Línea de tiempo',
-    print: 'Imprimir',
-    addBreak: 'Añadir pausa',
-    breakLabel: 'Pausa',
-    saveStartingOrder: 'Guardar orden de salida',
-    saveStartingOrderHint: 'Reescribe la línea de tiempo con el orden de sesión actual (mantiene las pausas existentes).',
-    downloadAllTs: 'Descargar todas las TS (ZIP)',
-    downloadAllMusic: 'Descargar toda la música (ZIP)',
-    downloadZipWorking: 'Generando ZIP…',
-    downloadZipSummary: (included: number, missing: number, failed: number) =>
-      `ZIP listo: ${included} archivo(s).` +
-      (missing ? ` ${missing} sin archivo en base de datos.` : '') +
-      (failed ? ` ${failed} error(es) de descarga.` : ''),
-  },
-}
+import { useT } from '@/lib/useT'
 
 const PANEL_HEADER: Record<number, string> = {
   1: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -118,7 +58,7 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
   onReorder: (sessionId: string, teamIds: string[]) => void
   onToggleLock: (sessionId: string) => void
 }) {
-  const t = T[lang]
+  const t = useT('StartingOrderTab', lang)
 
   // Split entries into active and dropout for this session's category + age group
   const sessionEntries = entries.filter((e) => {
@@ -358,7 +298,7 @@ function PanelColumn({ lang, panel, sessions, globalTeams, clubs, entries, sessi
   onReorder: (sessionId: string, teamIds: string[]) => void
   onToggleLock: (sessionId: string) => void
 }) {
-  const t = T[lang]
+  const t = useT('StartingOrderTab', lang)
   const headerCls = PANEL_HEADER[panel.panel_number] ?? PANEL_HEADER[1]
 
   return (
@@ -411,7 +351,7 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
   ageGroupRules: AgeGroupRule[]
   onReorderTimeline: (sectionId: string, order: Array<TimelineEntry>) => void
 }) {
-  const t = T[lang]
+  const t = useT('StartingOrderTab', lang)
   const [dragInfo, setDragInfo] = useState<TimelineDragInfo | null>(null)
   const [overIdx, setOverIdx] = useState<number | null>(null)
 
@@ -796,7 +736,7 @@ export default function StartingOrderTab({
   lang, competitionId, competitionName, globalTeams, clubs, entries, sections, panels, sessions,
   sessionOrders, lockedSessions, agLabels, ageGroupRules, onReorder, onToggleLock, onReorderTimeline,
 }: StartingOrderTabProps) {
-  const t = T[lang]
+  const t = useT('StartingOrderTab', lang)
   const supabase = createClient()
   const [zipBusy, setZipBusy] = useState<'ts' | 'music' | null>(null)
   const sortedSections = [...sections].sort((a, b) => a.section_number - b.section_number)

@@ -10,113 +10,7 @@ import { formatDateRange } from '@/lib/formatDate'
 import { RoutineRow } from './RoutineRow'
 import { InviteJudgeForm } from './shared/InviteJudgeForm'
 import type { InviteForm } from './shared/InviteJudgeForm'
-
-const T = {
-  en: {
-    back: 'Competitions',
-    register: 'Register',
-    registered: 'Registered',
-    dropout: 'Dropout',
-    toggleDropout: 'Declare dropout',
-    undoDropout: 'Undo dropout',
-    registrationClosed: 'Registration closed',
-    quotaFull: 'Quota full',
-    notInEntry: 'Not in your entry',
-    quotaOf: (used: number, limit: number) => `${used}/${limit}`,
-    notAllowedTitle: 'Registration not available for your club',
-    notAllowedHint: 'Your club has not been approved to register teams for this competition. Contact the organiser if you believe this is an error.',
-    noEligibleTeams: 'None of your teams match the age groups of this competition.',
-    noTeams: 'Create teams first to be able to register.',
-    teamsTitle: 'Your teams',
-    deadline: 'Entry deadline',
-    tsMusicDeadline: 'TS & Music deadline',
-    filesLocked: 'File upload closed',
-    coachesTitle: 'Coaches',
-    registerCoach: 'Register',
-    unregisterCoach: 'Remove',
-    noCoaches: 'No coaches registered for this competition.',
-    noCoachesInClub: 'Add coaches in the Coaches tab first.',
-    judgesTitle: 'Judges',
-    nominated: 'Nominated',
-    removeNomination: 'Remove',
-    noJudges: 'No judges nominated yet.',
-    judgesWarning: 'At least 1 judge must be nominated for this competition.',
-    addFromPool: '+ Add from pool',
-    inviteNew: '+ Invite new judge',
-    noPoolJudges: 'No other judges available in the pool.',
-    searchJudges: 'Search judges…',
-    licenciaWarning: 'Missing licencia',
-    licenciaWarningFull: 'One or more gymnasts in this team have no licencia uploaded.',
-    rgRegister: 'Apply',
-    rgPending: 'Pending approval',
-    rgInscriptionApproved: 'Inscription approved',
-    rgPaymentPending: 'Payment submitted',
-    rgRegistered: 'Registered',
-    rgUploadPayment: 'Upload payment document',
-    status: {
-      draft: 'Draft',
-      provisional_entry: 'Provisional entry',
-      definitive_entry: 'Definitive entry',
-      registration_open: 'Open',
-      registration_closed: 'Closed',
-      published: 'Published',
-      active: 'Live',
-      finished: 'Finished',
-    } as Record<string, string>,
-  },
-  es: {
-    back: 'Competiciones',
-    register: 'Inscribir',
-    registered: 'Inscrito',
-    dropout: 'Baja',
-    toggleDropout: 'Declarar baja',
-    undoDropout: 'Deshacer baja',
-    registrationClosed: 'Inscripción cerrada',
-    quotaFull: 'Cupo completo',
-    notInEntry: 'No está en tu inscripción',
-    quotaOf: (used: number, limit: number) => `${used}/${limit}`,
-    notAllowedTitle: 'Inscripción no disponible para tu club',
-    notAllowedHint: 'Tu club no ha sido autorizado para inscribir equipos en esta competición. Contacta con el organizador si crees que es un error.',
-    noEligibleTeams: 'Ningún equipo coincide con los grupos de edad de esta competición.',
-    noTeams: 'Crea equipos primero para poder inscribirte.',
-    teamsTitle: 'Tus equipos',
-    deadline: 'Inscripción hasta',
-    tsMusicDeadline: 'Plazo de TS y música',
-    filesLocked: 'Entrega de archivos cerrada',
-    coachesTitle: 'Entrenadores',
-    registerCoach: 'Inscribir',
-    unregisterCoach: 'Quitar',
-    noCoaches: 'Ningún entrenador inscrito en esta competición.',
-    noCoachesInClub: 'Añade entrenadores en la pestaña Entrenadores primero.',
-    judgesTitle: 'Jueces',
-    nominated: 'Nominado',
-    removeNomination: 'Quitar',
-    noJudges: 'Aún no hay jueces nominados.',
-    judgesWarning: 'Debes nominar al menos 1 juez para esta competición.',
-    addFromPool: '+ Añadir del pool',
-    inviteNew: '+ Invitar nuevo juez',
-    noPoolJudges: 'No hay otros jueces disponibles en el pool.',
-    searchJudges: 'Buscar jueces…',
-    licenciaWarning: 'Licencia pendiente',
-    licenciaWarningFull: 'Uno o más gimnastas de este equipo no tienen la licencia subida.',
-    rgRegister: 'Inscribir',
-    rgPending: 'Pendiente de aprobación',
-    rgInscriptionApproved: 'Inscripción aprobada',
-    rgPaymentPending: 'Pago enviado',
-    rgRegistered: 'Inscrita',
-    rgUploadPayment: 'Subir justificante de pago',
-    status: {
-      draft: 'Borrador',
-      provisional_entry: 'Inscripción provisional',
-      definitive_entry: 'Inscripción definitiva',
-      registration_open: 'Abierta',
-      registration_closed: 'Cerrada',
-      published: 'Publicada',
-      active: 'En vivo',
-      finished: 'Finalizada',
-    } as Record<string, string>,
-  },
-}
+import { useT } from '@/lib/useT'
 
 const STATUS_BADGE: Record<string, string> = {
   draft:               'bg-slate-100 text-slate-500',
@@ -194,7 +88,7 @@ export function CompetitionDetailView({
   onSetFile: (teamId: string, routineType: 'Balance' | 'Dynamic' | 'Combined', field: 'music' | 'ts', file: File | null) => void
   onNominate: (judgeId: string) => void
   onRemoveNomination: (nominationId: string) => void
-  onInviteJudge: (f: { full_name: string; email: string; phone?: string; licence?: string }) => Promise<void>
+  onInviteJudge: (f: { full_name: string; email: string; phone?: string; licence?: string; sport_type: string }) => Promise<void>
   onRegisterCoach: (coachId: string) => void
   onUnregisterCoach: (coachId: string) => void
   // RG-specific (optional — only used when competition.sport_type === 'rg')
@@ -204,7 +98,7 @@ export function CompetitionDetailView({
   onRGUploadPaymentDoc?: (regId: string, file: File) => void
   onSetRGMusic?: (teamId: string, routineType: RoutineMusic['routine_type'], file: File | null) => void
 }) {
-  const t = T[lang]
+  const t = useT('CompetitionDetailView', lang)
   const isOpen = competition.status === 'registration_open'
   const dateStr = formatDateRange(competition.start_date, competition.end_date)
   const today = new Date().toISOString().slice(0, 10)
@@ -509,7 +403,7 @@ export function CompetitionDetailView({
                   <InviteJudgeForm
                     lang={lang}
                     onSend={async (f: InviteForm) => {
-                      await onInviteJudge({ full_name: f.full_name, email: f.email, phone: f.phone || undefined, licence: f.licence || undefined })
+                      await onInviteJudge({ full_name: f.full_name, email: f.email, phone: f.phone || undefined, licence: f.licence || undefined, sport_type: f.sport_type })
                     }}
                     onCancel={() => setShowInviteForm(false)}
                   />

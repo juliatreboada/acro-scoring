@@ -4,21 +4,7 @@ import { useState } from 'react'
 import type { Lang } from '@/components/scoring/types'
 import type { Json } from '@/lib/database.types'
 import { RJ_PENALTY_CATEGORIES, calcRJPenalty } from './scoringRulesRG'
-
-const T = {
-  en: {
-    title:   'RJ Penalties',
-    total:   'Total penalty',
-    manual:  'Manual penalty (temp.)',
-    coming:  'Penalty categories coming soon — paste them into scoringRulesRG.ts',
-  },
-  es: {
-    title:   'Penalizaciones RJ',
-    total:   'Penalización total',
-    manual:  'Penalización manual (provisional)',
-    coming:  'Categorías de penalización próximamente — añádelas en scoringRulesRG.ts',
-  },
-}
+import { useT } from '@/lib/useT'
 
 type PenaltyState = Record<string, number | boolean>
 const DEFAULT_STATE: PenaltyState = {}
@@ -28,7 +14,7 @@ export function RJPenaltyGrid({ lang, ruleset, onChange }: {
   ruleset?: 'Individual' | 'Group'
   onChange: (total: number, detail: Json) => void
 }) {
-  const t = T[lang]
+  const t = useT('RJPenaltyGrid', lang)
   const [state, setState] = useState<PenaltyState>(DEFAULT_STATE)
   const [manualValue, setManualValue] = useState(0)
 

@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, Section, Panel, Session, SessionOrder, Team, Club, CompetitionEntry, AgeGroupRule } from '@/components/admin/types'
+import { ageGroupLabel } from '@/components/admin/types'
 import { categoryLabel } from '@/components/admin/types'
 import ClickableImg from '@/components/shared/ClickableImg'
 import { ClubAvatar } from '@/components/admin/Avatar'
 import { formatDateRange } from '@/lib/formatDate'
+import { useT } from '@/lib/useT'
 
 // ─── time helpers ─────────────────────────────────────────────────────────────
 
@@ -103,49 +105,6 @@ function calcInterleavedTimes(
   return result
 }
 
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    title: 'Starting Order',
-    notPublished: 'Not published yet',
-    notPublishedSub: 'The starting order for this session has not been published yet.',
-    dropout: 'Dropout',
-    noSessions: 'No sessions in this section.',
-    panel: 'Panel',
-    section: 'Section',
-    location: 'Location',
-    dates: 'Dates',
-    pendingSession: 'Order not yet published',
-    print: 'Print',
-    breakLabel: 'Break',
-    searchPlaceholder: 'Highlight text...',
-    previousMatch: 'Previous match',
-    nextMatch: 'Next match',
-    matchesCount: (current: number, total: number) => `${current}/${total}`,
-    finishedCompetition: 'Finished competition',
-  },
-  es: {
-    title: 'Orden de salida',
-    notPublished: 'No publicado aún',
-    notPublishedSub: 'El orden de salida para esta sesión aún no ha sido publicado.',
-    dropout: 'Baja',
-    noSessions: 'No hay sesiones en esta jornada.',
-    panel: 'Panel',
-    section: 'Jornada',
-    location: 'Sede',
-    dates: 'Fechas',
-    pendingSession: 'Orden no publicado aún',
-    print: 'Imprimir',
-    breakLabel: 'Pausa',
-    searchPlaceholder: 'Resaltar texto...',
-    previousMatch: 'Coincidencia anterior',
-    nextMatch: 'Siguiente coincidencia',
-    matchesCount: (current: number, total: number) => `${current}/${total}`,
-    finishedCompetition: 'Competición finalizada',
-  },
-}
-
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function escapeRegExp(value: string): string {
@@ -186,7 +145,7 @@ function SessionOrderCard({
   completedRoutineKeys: Set<string>
   ongoingRoutineKey: string | null
 }) {
-  const t = T[lang]
+  const t = useT('StartingOrderView', lang)
 
   // teams entered in this session's age_group + category
   const matchingTeams = globalTeams.filter(
@@ -450,7 +409,7 @@ function InterleavedTimeline({
   completedRoutineKeys: Set<string>
   ongoingRoutineKey: string | null
 }) {
-  const t = T[lang]
+  const t = useT('StartingOrderView', lang)
   const [p1, p2] = panels.slice(0, 2)
   const droppedIds = new Set(entries.filter(e => e.dropped_out).map(e => e.team_id))
   const slots1 = buildPanelSlots(p1, sessions, sessionOrders, lockedSessions, entries, globalTeams)
@@ -642,14 +601,14 @@ export default function StartingOrderView({
   sessionOrders, lockedSessions, globalTeams, clubs, entries, ageGroupRules, completedRoutineKeys, ongoingRoutineKey,
 }: StartingOrderViewProps) {
   const completedRoutineSet = new Set(completedRoutineKeys)
-  const t = T[lang]
+  const t = useT('StartingOrderView', lang)
   const [activeSection, setActiveSection] = useState<string>(sections[0]?.id ?? '')
   const [highlightQuery, setHighlightQuery] = useState('')
   const [matchCount, setMatchCount] = useState(0)
   const [activeMatchIndex, setActiveMatchIndex] = useState(0)
   const rootRef = useRef<HTMLDivElement | null>(null)
 
-  const agLabels: Record<string, string> = Object.fromEntries(ageGroupRules.map(r => [r.id, r.age_group]))
+  const agLabels: Record<string, string> = Object.fromEntries(ageGroupRules.map(r => [r.id, ageGroupLabel(r)]))
 
   const dateStr = formatDateRange(competition.start_date, competition.end_date)
   const currentSection = sections.find((s) => s.id === activeSection)

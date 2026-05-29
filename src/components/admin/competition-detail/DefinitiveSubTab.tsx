@@ -6,87 +6,7 @@ import type { DefinitiveEntry, Club, CompetitionEntry, AgeGroupRule } from '@/co
 import { categoriesForRuleset, sortByAgeGroupAndCategory, CATEGORY_LABELS } from '@/components/admin/types'
 import { createClient } from '@/lib/supabase'
 import { INPUT_CLS } from '@/lib/uiConstants'
-
-const T = {
-  en: {
-    subTabs: { definitive: 'Definitive' },
-    noDefinitive: 'No definitive entries yet.',
-    contact: 'Contact',
-    judgeProvided: 'Judge',
-    noJudge: 'No judge',
-    totalAmount: 'Total',
-    viewPayment: 'View payment',
-    statusPending: 'Pending',
-    statusPaymentUploaded: 'Payment uploaded',
-    statusApproved: 'Approved',
-    statusRejected: 'Rejected',
-    approve: 'Approve',
-    reject: 'Reject',
-    allowedClubs: 'Allowed clubs',
-    noAllowedClubs: 'No clubs allowed yet.',
-    addManually: 'Add club',
-    removeAllowed: 'Remove',
-    sourceAuto: 'Auto',
-    sourceManual: 'Manual',
-    selectClub: 'Select a club…',
-    add: 'Add',
-    cancel: 'Cancel',
-    confirmRemoveWithEntries: (name: string, n: number) =>
-      `${name} has ${n} registered team${n !== 1 ? 's' : ''}. Removing will delete their registrations. Continue?`,
-    confirmRemoveSimple: (name: string) => `Remove ${name} from allowed clubs?`,
-    confirm: 'Confirm',
-    adminNotes: 'Admin notes',
-    saveNotes: 'Save',
-    withDefinitiveEntry: 'With definitive entry',
-    noDefinitiveEntry: 'Other clubs',
-    inviteNewClub: '+ Invite new club',
-    inviteClubTitle: 'Invite new club',
-    emailLabel: 'Email',
-    sendInvite: 'Send invitation',
-    inviteSent: 'Invitation sent to',
-    inviteClubInfo: 'The club will receive an email to set up their account.',
-    sending: 'Sending…',
-  },
-  es: {
-    subTabs: { definitive: 'Definitiva' },
-    noDefinitive: 'Sin inscripciones definitivas todavía.',
-    contact: 'Contacto',
-    judgeProvided: 'Juez',
-    noJudge: 'Sin juez',
-    totalAmount: 'Total',
-    viewPayment: 'Ver pago',
-    statusPending: 'Pendiente',
-    statusPaymentUploaded: 'Pago subido',
-    statusApproved: 'Aprobado',
-    statusRejected: 'Rechazado',
-    approve: 'Aprobar',
-    reject: 'Rechazar',
-    allowedClubs: 'Clubes autorizados',
-    noAllowedClubs: 'Aún no hay clubes autorizados.',
-    addManually: 'Añadir club',
-    removeAllowed: 'Quitar',
-    sourceAuto: 'Auto',
-    sourceManual: 'Manual',
-    selectClub: 'Selecciona un club…',
-    add: 'Añadir',
-    cancel: 'Cancelar',
-    confirmRemoveWithEntries: (name: string, n: number) =>
-      `${name} tiene ${n} equipo${n !== 1 ? 's' : ''} inscrito${n !== 1 ? 's' : ''}. Al quitar el club se eliminarán sus inscripciones. ¿Continuar?`,
-    confirmRemoveSimple: (name: string) => `¿Quitar a ${name} de los clubes autorizados?`,
-    confirm: 'Confirmar',
-    adminNotes: 'Notas del admin',
-    saveNotes: 'Guardar',
-    withDefinitiveEntry: 'Con inscripción definitiva',
-    noDefinitiveEntry: 'Otros clubes',
-    inviteNewClub: '+ Invitar nuevo club',
-    inviteClubTitle: 'Invitar nuevo club',
-    emailLabel: 'Email',
-    sendInvite: 'Enviar invitación',
-    inviteSent: 'Invitación enviada a',
-    inviteClubInfo: 'El club recibirá un email para crear su cuenta.',
-    sending: 'Enviando…',
-  },
-}
+import { useT } from '@/lib/useT'
 
 export type AllowedClub = {
   id: string
@@ -108,7 +28,7 @@ function InviteClubForm({ lang, competitionId, onDone, onCancel }: {
   onDone: () => void
   onCancel: () => void
 }) {
-  const t = T[lang]
+  const t = useT('DefinitiveSubTab', lang)
   const [email, setEmail] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState<string | null>(null)
@@ -196,7 +116,7 @@ export function DefinitiveSubTab({ lang, competitionId, definitiveEntries, allow
   onUpdateEntry: (entry: DefinitiveEntry) => void
   onRemoveClubEntries: (clubId: string) => void
 }) {
-  const t = T[lang]
+  const t = useT('DefinitiveSubTab', lang)
   const supabase = createClient()
 
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
@@ -299,6 +219,7 @@ export function DefinitiveSubTab({ lang, competitionId, definitiveEntries, allow
               const teamTotals = categoryRows
                 .map(row => ({ label: `${row.ageGroupName} · ${CATEGORY_LABELS[lang]?.[row.category] ?? row.category}`, count: entry.teams_per_category[`${row.ageGroupId}|${row.category}`] ?? 0 }))
                 .filter(r => r.count > 0)
+              const totalTeams = teamTotals.reduce((sum, r) => sum + r.count, 0)
               const canAct = entry.status === 'pending' || entry.status === 'payment_uploaded'
 
               return (
@@ -319,6 +240,7 @@ export function DefinitiveSubTab({ lang, competitionId, definitiveEntries, allow
                   <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
                     <span>{t.contact}: <span className="text-slate-700 font-medium">{entry.contact_name}</span>{entry.contact_phone ? ` · ${entry.contact_phone}` : ''}{entry.contact_email ? ` · ${entry.contact_email}` : ''}</span>
                     <span>{t.judgeProvided}: <span className="text-slate-700 font-medium">{entry.judge_name ?? t.noJudge}</span></span>
+                    <span>{t.totalTeams}: <span className="text-slate-700 font-semibold">{totalTeams}</span></span>
                     <span>{t.totalAmount}: <span className="text-slate-700 font-semibold">{entry.total_amount.toFixed(2)} €</span></span>
                   </div>
 

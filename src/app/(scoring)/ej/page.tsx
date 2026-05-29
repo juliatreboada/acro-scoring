@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useJudgeSession } from '@/hooks/useJudgeSession'
-import EJView from '@/components/scoring/views/EJView'
+import ScoringView from '@/components/scoring/ScoringView'
 import { JudgeScoringShell } from '@/components/shared/JudgeScoringShell'
 import type { Lang } from '@/components/scoring/types'
 import type { JudgeScore, ScoreDetail } from '@/components/scoring/types'
@@ -31,15 +31,15 @@ export default function Page() {
   return (
     <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} submitError={submitError} onClearError={clearSubmitError} practiceMode={practiceMode}>
       <div className="md:flex-1 md:min-h-0 px-0 md:px-4 md:flex md:flex-col">
-        <EJView
+        <ScoringView
+          roles={['EJ']} lang={lang}
           currentPerf={currentPerf}
-          lang={lang}
           elements={currentPerf?.elements ?? []}
-          mode={(ejMethod as 'elements' | 'keyboard') ?? 'elements'}
-          onSubmit={handleSubmit}
-          mySubmittedScore={mySubmittedScore}
+          ejMode={(ejMethod as 'elements' | 'keyboard') ?? 'elements'}
+          onEJSubmit={handleSubmit}
+          mySubmittedEJScore={mySubmittedScore}
           panelJudges={myScore ? panelJudges : undefined}
-          judgeScores={myScore ? currentScores : undefined}
+          singleJudgeScores={myScore ? currentScores : undefined}
           waitingForOtherScores={waitingForOtherScores}
           result={currentResult ?? undefined}
         />

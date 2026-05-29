@@ -9,25 +9,7 @@ import CoachesTab from './CoachesTab'
 import TeamsTab from './TeamsTab'
 import CompetitionsTab from './CompetitionsTab'
 import ClubProfileTab from './ClubProfileTab'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    tabs: { gymnasts: 'Gymnasts', coaches: 'Coaches', teams: 'Teams', competitions: 'Competitions', judges: 'Judges', profile: 'Profile' },
-    gymnasts: 'gymnasts',
-    coaches: 'coaches',
-    teams: 'teams',
-    registrations: 'registrations',
-  },
-  es: {
-    tabs: { gymnasts: 'Gimnastas', coaches: 'Entrenadores', teams: 'Equipos', competitions: 'Competiciones', judges: 'Jueces', profile: 'Perfil' },
-    gymnasts: 'gimnastas',
-    coaches: 'entrenadores',
-    teams: 'equipos',
-    registrations: 'inscripciones',
-  },
-}
+import { useT } from '@/lib/useT'
 
 type Tab = 'gymnasts' | 'coaches' | 'teams' | 'competitions' | 'profile'
 
@@ -73,7 +55,7 @@ export type ClubPortalProps = {
   onRestoreTeam: (id: string) => void
   onUploadTeamPhoto: (id: string, file: File) => Promise<void>
   // judges
-  onInviteJudge: (j: { full_name: string; email: string; phone?: string; licence?: string }) => Promise<void>
+  onInviteJudge: (j: { full_name: string; email: string; phone?: string; licence?: string; sport_type: string }) => Promise<void>
   onUpdateJudge: (id: string, j: Omit<Judge, 'id' | 'avatar_url'>) => void
   onDeleteJudge: (id: string) => void
   onUploadJudgePhoto: (id: string, file: File) => Promise<void>
@@ -102,7 +84,7 @@ export default function ClubPortal({
   onNominate, onRemoveNomination,
   onUpdateClub, onUploadAvatar,
 }: ClubPortalProps) {
-  const t = T[lang]
+  const t = useT('ClubPortal', lang)
   const [activeTab, setActiveTab] = useState<Tab>('gymnasts')
 
   const activeEntries = entries.filter((e) => !e.dropped_out)

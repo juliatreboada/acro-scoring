@@ -4,11 +4,7 @@ import { useState } from 'react'
 import type { Lang } from '@/components/scoring/types'
 import type { ProvisionalEntry, Club, AgeGroupRule, Level } from '@/components/admin/types'
 import { categoriesForRuleset, sortByAgeGroupAndCategory, CATEGORY_LABELS, LEVEL_ORDER, getLevel } from '@/components/admin/types'
-
-const T = {
-  en: { noProvisional: 'No provisional entries yet.', teams: 'teams' },
-  es: { noProvisional: 'Sin inscripciones provisionales todavía.', teams: 'equipos' },
-}
+import { useT } from '@/lib/useT'
 
 export function ProvisionalSubTab({ lang, provisionalEntries, clubs, ageGroupRules, competitionAgeGroups }: {
   lang: Lang
@@ -17,7 +13,7 @@ export function ProvisionalSubTab({ lang, provisionalEntries, clubs, ageGroupRul
   ageGroupRules: AgeGroupRule[]
   competitionAgeGroups: string[]
 }) {
-  const t = T[lang]
+  const t = useT('ProvisionalSubTab', lang)
   const [openLevels, setOpenLevels] = useState<Set<string>>(new Set())
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
 

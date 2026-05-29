@@ -7,32 +7,12 @@ import type { Lang } from '@/components/scoring/types'
 import type { Database } from '@/lib/database.types'
 import { formatDateRange } from '@/lib/formatDate'
 import { STATUS_BADGE } from '@/lib/uiConstants'
+import { useT } from '@/lib/useT'
 
 type Competition = Pick<
   Database['public']['Tables']['competitions']['Row'],
   'id' | 'name' | 'status' | 'location' | 'start_date' | 'end_date'
 >
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    title: 'Results',
-    subtitle: 'Select a competition to view its results.',
-    live: 'Live',
-    finished: 'Finished',
-    finishedCompetition: 'Finished competition',
-    noCompetitions: 'No results available yet.',
-  },
-  es: {
-    title: 'Resultados',
-    subtitle: 'Selecciona una competición para ver sus resultados.',
-    live: 'En vivo',
-    finished: 'Finalizada',
-    finishedCompetition: 'Competición finalizada',
-    noCompetitions: 'Aún no hay resultados disponibles.',
-  },
-}
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -44,7 +24,7 @@ export default function Page() {
   const [loading, setLoading] = useState(true)
   const router   = useRouter()
   const supabase = createClient()
-  const t = T[lang]
+  const t = useT('ResultsPage', lang)
 
   useEffect(() => {
     async function load() {

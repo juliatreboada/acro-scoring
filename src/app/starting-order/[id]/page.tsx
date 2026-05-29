@@ -51,7 +51,7 @@ export default function Page() {
           .select('id, competition_id, team_id, dorsal, dropped_out, gymnast_display, gymnast_ids')
           .eq('competition_id', id),
         supabase.from('age_group_rules')
-          .select('id, age_group, level, ruleset, min_age, max_age, routine_count')
+          .select('id, age_group, level, ruleset, min_age, max_age, routine_count, sport_type')
           .order('sort_order'),
         supabase.from('routine_results')
           .select('session_id, team_id')

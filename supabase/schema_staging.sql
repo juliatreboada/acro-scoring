@@ -4,9 +4,7 @@
 --
 -- Run this in the Supabase SQL editor on a brand-new project.
 -- After running this file, also run:
---   supabase/migrations/20260501000000_age_groups_rg.sql   (RG age group seed)
---   supabase/migrations/20260501000001_rg_apparatus_rules.sql (RG apparatus rules)
---   supabase/migrations/20260508000000_age_group_level.sql  (normalise level column)
+--   supabase/seed_rg.sql   (RG age groups + apparatus rules, in final normalised form)
 -- =============================================================================
 
 -- ─── Extensions ───────────────────────────────────────────────────────────────
@@ -991,18 +989,4 @@ insert into public.age_group_rules (age_group, level, ruleset, routine_count, mi
   ('Benxamín',  'Escolar',  'FGX',  1,  6,   11, 20, 'acro')
 on conflict (age_group, level, ruleset) do nothing;
 
--- ─── RG seed data ─────────────────────────────────────────────────────────────
--- Run these migration files separately for full RG support:
---   supabase/migrations/20260501000000_age_groups_rg.sql
---   supabase/migrations/20260501000001_rg_apparatus_rules.sql
---   supabase/migrations/20260508000000_age_group_level.sql
---
--- NOTE: the age_group_level migration uses hardcoded UUIDs for 3 "Juvenil Base"
--- rows. On a fresh DB those rows will be inserted with different UUIDs; manually
--- update those 3 rows after running the migration, OR insert them directly:
---
--- insert into public.age_group_rules (age_group, level, ruleset, routine_count, min_age, max_age, sort_order, sport_type) values
---   ('Juvenil (2010-2009)', 'Base', 'Individual', 0, 16, 17, 98, 'rg'),
---   ('Juvenil (2008-2007)', 'Base', 'Individual', 0, 18, 19, 99, 'rg'),
---   ('Juvenil (2006+)',     'Base', 'Individual', 0, 20, null, 100, 'rg')
--- on conflict (age_group, level, ruleset) do nothing;
+-- After this file, run supabase/seed_rg.sql for RG age groups and apparatus rules.

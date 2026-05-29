@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useJudgeSession } from '@/hooks/useJudgeSession'
-import CJPDJView from '@/components/scoring/views/CJPDJView'
+import ScoringView from '@/components/scoring/ScoringView'
 import { JudgeScoringShell } from '@/components/shared/JudgeScoringShell'
 import type { Lang } from '@/components/scoring/types'
 import type { JudgeScore, ScoreDetail } from '@/components/scoring/types'
@@ -18,30 +18,24 @@ export default function Page() {
   } = useJudgeSession()
 
   function handleSubmitDJScore(_perfId: string, difficulty: number, penalty: number, detail: ScoreDetail) {
-    const djRole = assignedRoles.find(r => r.role === 'DJ')
-    if (!djRole) return
-    const s: JudgeScore = { panelJudgeId: djRole.id, ejScore: null, ajScore: null, djDifficulty: difficulty, djPenalty: penalty, cjpPenalty: null, detail }
+    const r = assignedRoles.find(r => r.role === 'DJ')
+    if (!r) return
+    const s: JudgeScore = { panelJudgeId: r.id, ejScore: null, ajScore: null, djDifficulty: difficulty, djPenalty: penalty, cjpPenalty: null, detail }
     handleJudgeScoreSubmit(s)
   }
 
   return (
     <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} className="min-h-screen bg-slate-100" submitError={submitError} onClearError={clearSubmitError} practiceMode={practiceMode} canControlPractice onStartPractice={() => { void startSectionPractice() }} onStopPractice={() => { void stopSectionPractice() }}>
-      <CJPDJView
-        lang={lang}
+      <ScoringView
+        roles={['CJP', 'DJ']} lang={lang}
         elements={performances.find(p => p.id === currentPerfId)?.elements ?? []}
         djMode={djMethod === 'keyboard' ? 'keyboard' : 'elements'}
-        panelJudges={panelJudges}
-        performances={performances}
+        panelJudges={panelJudges} performances={performances}
         rankingPerformances={rankingPerformances}
-        currentPerfId={currentPerfId}
-        judgeScores={judgeScores}
-        results={results}
-        onOpen={handleOpen}
-        onSkip={handleSkip}
+        currentPerfId={currentPerfId} judgeScores={judgeScores} results={results}
+        onOpen={handleOpen} onSkip={handleSkip}
         onSubmitDJScore={handleSubmitDJScore}
-        onSubmit={handleCJPSubmit}
-        onReopenScore={handleReopenScore} onUnpublishResult={handleUnpublishResult}
-        onEditScore={handleEditScore}
+        onCJPSubmit={handleCJPSubmit} onReopenScore={handleReopenScore} onUnpublishResult={handleUnpublishResult} onEditScore={handleEditScore}
       />
     </JudgeScoringShell>
   )

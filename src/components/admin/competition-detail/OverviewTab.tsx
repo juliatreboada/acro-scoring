@@ -5,49 +5,7 @@ import type { Lang } from '@/components/scoring/types'
 import type { Competition, AdminUser, AgeGroupRule, Panel, Session } from '@/components/admin/types'
 import { groupByLevel, ageGroupLabel, rgRulesetLabel } from '@/components/admin/types'
 import { formatDateRange } from '@/lib/formatDate'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    none: '—',
-    noAdmin: '— assign later —',
-    warningPanelChange: 'Changing to 1 panel will reassign all sessions to Panel 1.',
-    posterUpload: 'Upload image',
-    posterReplace: 'Replace',
-    posterUploading: 'Uploading…',
-    ageGroups: 'Age groups',
-    panels: 'Judging panels',
-    panelN: (n: number) => `${n} panel${n !== 1 ? 's' : ''}`,
-    feesTitle: 'Entry fees',
-    feePerTeam: 'Per team',
-    feePerGymnast: 'Per gymnast',
-    judgeMissingFine: 'Missing judge fine (€)',
-    provisionalEntryDeadline: 'Provisional entry deadline',
-    definitiveEntryDeadline: 'Definitive entry deadline',
-    registrationDeadline: 'Registration deadline',
-    tsMusicDeadline: 'TS & Music deadline',
-  },
-  es: {
-    none: '—',
-    noAdmin: '— asignar después —',
-    warningPanelChange: 'Cambiar a 1 panel reasignará todas las sesiones al Panel 1.',
-    posterUpload: 'Subir imagen',
-    posterReplace: 'Reemplazar',
-    posterUploading: 'Subiendo…',
-    ageGroups: 'Grupos de edad',
-    panels: 'Paneles de jueces',
-    panelN: (n: number) => `${n} panel${n !== 1 ? 'es' : ''}`,
-    feesTitle: 'Tasas de inscripción',
-    feePerTeam: 'Por equipo',
-    feePerGymnast: 'Por gimnasta',
-    judgeMissingFine: 'Penalización sin juez (€)',
-    provisionalEntryDeadline: 'Fecha límite inscripción provisional',
-    definitiveEntryDeadline: 'Fecha límite inscripción definitiva',
-    registrationDeadline: 'Fecha límite de inscripción',
-    tsMusicDeadline: 'Fecha límite de TS y música',
-  },
-}
+import { useT } from '@/lib/useT'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -81,7 +39,7 @@ export default function OverviewTab({ competition, lang, availableAdmins, ageGro
   onSetPanelCount: (count: 1 | 2) => void
   onUploadPoster: (file: File) => Promise<void>
 }) {
-  const t = T[lang]
+  const t = useT('OverviewTab', lang)
   const filteredAGs = ageGroupRules.filter(r => r.sport_type === competition.sport_type)
   const agLabels = Object.fromEntries(ageGroupRules.map(r => [r.id, ageGroupLabel(r)]))
   const [uploading, setUploading] = useState(false)

@@ -1,25 +1,7 @@
 'use client'
 
 import type { Lang } from '../scoring/types'
-
-const T = {
-  en: {
-    title: 'Choose your scoring mode',
-    sub: 'This applies to the full session and cannot be changed once you start.',
-    keypadTitle: 'Keypad',
-    keypadDesc: 'Enter difficulty and penalty directly using a numeric keypad. Fast and simple.',
-    elementsTitle: 'Elements',
-    elementsDesc: 'Score each element individually — mark done / not done, retries, SR, forbidden.',
-  },
-  es: {
-    title: 'Elige tu modo de puntuación',
-    sub: 'Se aplica a toda la sesión y no puede cambiarse una vez empezada.',
-    keypadTitle: 'Teclado',
-    keypadDesc: 'Introduce dificultad y penalización directamente con teclado numérico. Rápido y sencillo.',
-    elementsTitle: 'Elementos',
-    elementsDesc: 'Puntúa cada elemento individualmente — realizado / no realizado, reintentos, SR, prohibido.',
-  },
-}
+import { useT } from '@/lib/useT'
 
 export type DJPhoneMode = 'keypad' | 'elements'
 
@@ -27,7 +9,7 @@ export default function DJModeSelector({ lang, onSelect }: {
   lang: Lang
   onSelect: (mode: DJPhoneMode) => void
 }) {
-  const t = T[lang]
+  const t = useT('DJModeSelector', lang)
 
   return (
     <div className="px-4 py-10 flex flex-col items-center gap-6 min-h-[60vh] justify-center">

@@ -6,11 +6,7 @@ import type { RoutineMusic } from '@/components/admin/types'
 import { FileChip } from './FileChip'
 import { PDFViewerModal } from './PDFViewerModal'
 import { MusicPlayerModal } from './MusicPlayerModal'
-
-const T = {
-  en: { ts: 'TS', music: 'Music' },
-  es: { ts: 'TS', music: 'Música' },
-}
+import { useT } from '@/lib/useT'
 
 export function RoutineRow({
   lang, routineType, record, locked, reviewStatus, reviewComment, onSet,
@@ -23,7 +19,7 @@ export function RoutineRow({
   reviewComment?: string | null
   onSet: (field: 'music' | 'ts', file: File | null) => void
 }) {
-  const t = T[lang]
+  const t = useT('RoutineRow', lang)
   const [tsPreviewUrl, setTsPreviewUrl] = useState<string | null>(null)
   const [musicPreviewUrl, setMusicPreviewUrl] = useState<string | null>(null)
   return (

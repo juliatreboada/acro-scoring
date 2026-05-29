@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRGJudgeSession } from '@/hooks/useRGJudgeSession'
+import { useJudgeSession } from '@/hooks/useJudgeSession'
 import { RJView } from '@/components/rg/RJView'
 import { JudgeScoringShell } from '@/components/shared/JudgeScoringShell'
 import type { Lang } from '@/components/scoring/types'
@@ -13,7 +13,7 @@ export default function Page() {
     panelJudges, performances, currentPerfId, judgeScores, results,
     handleOpen, handleSkip, handleRJSubmit, handleReopenScore,
     submitError, clearSubmitError,
-  } = useRGJudgeSession()
+  } = useJudgeSession('rg')
 
   return (
     <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} submitError={submitError} onClearError={clearSubmitError}>

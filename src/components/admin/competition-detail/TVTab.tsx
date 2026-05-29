@@ -7,81 +7,7 @@ import type { Competition, Session, Team, Club, CompetitionEntry, Section, Panel
 import { orderedTimelinePerformances } from '@/lib/timelinePerformances'
 import { categoryLabel } from '@/components/admin/types'
 import { TV_SPONSOR_BUCKET, parseTvSponsorVideos, type TvSponsorClip } from '@/lib/tvSponsorVideos'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    tvUrl:        'TV URL',
-    copy:         'Copy',
-    copied:       'Copied!',
-    open:         'Open TV',
-    noState:      'No TV session active.',
-    noStateSub:   'Queue a participant below to start displaying on screen.',
-    currentlyOn:  'Currently on TV',
-    idle:         'Idle',
-    hidden:       'Score hidden',
-    revealed:     'Score revealed',
-    reveal:       'Reveal score',
-    hide:         'Hide score',
-    queue:        'Queue',
-    queued:       'Queued',
-    results:      'Participants',
-    noResults:    'No sessions defined for this competition.',
-    autoQueue:    'Auto-queue new results',
-    balance:      'Balance', dynamic: 'Dynamic', combined: 'Combined',
-    prov:         'Prov.',
-    final:        'Final',
-    team:         'Team',
-    waitingScore: 'Waiting for judge score',
-    dropout:      'Dropout',
-    clearTv:      'Clear screen (poster)',
-    sponsorVideos: 'Sponsor videos (TV loop)',
-    sponsorReel:  'Sponsor reel on air',
-    sponsorReelHint:
-      'When on, the public TV loops these clips whenever no team is queued. Queuing scores pauses the loop; clearing the queue resumes.',
-    uploadVideo:  'Upload MP4',
-    noSponsors:   'No videos yet. Upload MP4 files (playlist order = play order).',
-    removeClip:   'Remove',
-    moveUp:       'Up',
-    moveDown:     'Down',
-  },
-  es: {
-    tvUrl:        'URL para la TV',
-    copy:         'Copiar',
-    copied:       '¡Copiado!',
-    open:         'Abrir TV',
-    noState:      'No hay sesión de TV activa.',
-    noStateSub:   'Pon en cola a un participante para empezar a mostrar en pantalla.',
-    currentlyOn:  'En pantalla ahora',
-    idle:         'En espera',
-    hidden:       'Puntuación oculta',
-    revealed:     'Puntuación revelada',
-    reveal:       'Revelar puntuación',
-    hide:         'Ocultar puntuación',
-    queue:        'Poner en cola',
-    queued:       'En cola',
-    results:      'Participantes',
-    noResults:    'No hay sesiones definidas para esta competición.',
-    autoQueue:    'Poner en cola automáticamente',
-    balance:      'Equilibrio', dynamic: 'Dinámico', combined: 'Combinado',
-    prov:         'Prov.',
-    final:        'Final',
-    team:         'Equipo',
-    waitingScore: 'Esperando puntuación del juez',
-    dropout:      'Baja',
-    clearTv:      'Quitar de pantalla (cartel)',
-    sponsorVideos: 'Vídeos patrocinadores (bucle TV)',
-    sponsorReel:  'Bucle de patrocinadores en pantalla',
-    sponsorReelHint:
-      'Si está activo, la TV pública reproduce estos vídeos en bucle cuando no hay equipo en cola. Al poner puntuaciones se pausa; al limpiar la cola se reanuda.',
-    uploadVideo:  'Subir MP4',
-    noSponsors:   'Aún no hay vídeos. Sube MP4 (el orden de la lista es el de reproducción).',
-    removeClip:   'Quitar',
-    moveUp:       'Arriba',
-    moveDown:     'Abajo',
-  },
-}
+import { useT } from '@/lib/useT'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -199,7 +125,7 @@ export default function TVTab({
   entries: CompetitionEntry[]
   agLabels: Record<string, string>
 }) {
-  const t = T[lang]
+  const t = useT('TVTab', lang)
   const supabase = createClient()
 
   const [tvUrl, setTvUrl]             = useState('')

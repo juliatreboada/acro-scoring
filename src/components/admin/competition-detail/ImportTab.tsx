@@ -5,111 +5,7 @@ import * as XLSX from 'xlsx'
 import type { Lang } from '@/components/scoring/types'
 import type { AgeGroupRule } from '@/components/admin/types'
 import { CATEGORY_LABELS } from '@/components/admin/types'
-
-// ─── translations ──────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    title: 'Import registrations',
-    step1: 'File & club',
-    step2: 'Review',
-    clubLabel: 'Club',
-    clubPlaceholder: 'Search club…',
-    newClub: 'New club (not in system)',
-    clubName: 'Club name',
-    contactName: 'Contact name',
-    inviteEmail: 'Invite email',
-    ruleset: 'Ruleset',
-    fileLabel: 'File (.ods, .xlsx, .csv)',
-    parse: 'Parse file',
-    noFile: 'Select a file first',
-    noClub: 'Select or create a club first',
-    noRuleset: 'Select a ruleset',
-    parseError: 'Could not read file. Make sure it is a valid .ods, .xlsx or .csv.',
-    noTeams: 'No teams found in the file. Check the format (first column must be TOP/BASE).',
-    reviewTitle: (n: number) => `${n} team${n !== 1 ? 's' : ''} found — review and edit before confirming`,
-    teamN: (n: number) => `Team ${n}`,
-    ageGroup: 'Age group',
-    category: 'Category',
-    coach: 'Coach',
-    firstName: 'First name',
-    lastName1: 'Surname 1',
-    lastName2: 'Surname 2',
-    dob: 'Date of birth',
-    pairType: 'Pair type',
-    womensPair: "Women's Pair",
-    mensPair: "Men's Pair",
-    mixedPair: "Mixed Pair",
-    selectPair: '— select pair type —',
-    ageGroupUnmatched: 'Age group not matched — select manually',
-    ageGroupNotInCompetition: 'Age group not in this competition — team will not be registered',
-    pairTypeRequired: 'Pair type required',
-    dobInvalid: 'Invalid date of birth',
-    missingName: 'Missing name fields',
-    ageOutOfRange: (name: string, age: number, min: number, max: number | null) =>
-      `${name}: age ${age} not valid for this group (${min}–${max ?? '∞'})`,
-    confirm: 'Confirm import',
-    confirming: 'Importing…',
-    errorsRemain: 'Fix all errors before confirming',
-    back: '← Back',
-    done: 'Import complete',
-    doneDesc: (teams: number, invite: boolean) =>
-      `${teams} team${teams !== 1 ? 's' : ''} registered.${invite ? ' Invite email sent to the new club.' : ''}`,
-    inviteError: 'Invite email failed',
-    importAnother: 'Import another file',
-    gymnast: (n: number) => `Gymnast ${n}`,
-  },
-  es: {
-    title: 'Importar inscripciones',
-    step1: 'Archivo y club',
-    step2: 'Revisión',
-    clubLabel: 'Club',
-    clubPlaceholder: 'Buscar club…',
-    newClub: 'Club nuevo (no registrado)',
-    clubName: 'Nombre del club',
-    contactName: 'Persona de contacto',
-    inviteEmail: 'Email de invitación',
-    ruleset: 'Tipo de competición',
-    fileLabel: 'Archivo (.ods, .xlsx, .csv)',
-    parse: 'Leer archivo',
-    noFile: 'Selecciona un archivo primero',
-    noClub: 'Selecciona o crea un club primero',
-    noRuleset: 'Selecciona el tipo de competición',
-    parseError: 'No se pudo leer el archivo. Comprueba que sea un .ods, .xlsx o .csv válido.',
-    noTeams: 'No se encontraron equipos. Comprueba el formato (primera columna debe ser TOP/BASE).',
-    reviewTitle: (n: number) => `${n} equipo${n !== 1 ? 's' : ''} encontrado${n !== 1 ? 's' : ''} — revisa y edita antes de confirmar`,
-    teamN: (n: number) => `Equipo ${n}`,
-    ageGroup: 'Grupo de edad',
-    category: 'Categoría',
-    coach: 'Entrenador/a',
-    firstName: 'Nombre',
-    lastName1: 'Primer apellido',
-    lastName2: 'Segundo apellido',
-    dob: 'Fecha de nacimiento',
-    pairType: 'Tipo de pareja',
-    womensPair: 'Pareja Femenina',
-    mensPair: 'Pareja Masculina',
-    mixedPair: 'Pareja Mixta',
-    selectPair: '— seleccionar tipo —',
-    ageGroupUnmatched: 'Grupo de edad no encontrado — seleccionar manualmente',
-    ageGroupNotInCompetition: 'Grupo de edad no incluido en esta competición — el equipo no se inscribirá',
-    pairTypeRequired: 'Debes seleccionar el tipo de pareja',
-    dobInvalid: 'Fecha de nacimiento inválida',
-    missingName: 'Faltan campos de nombre',
-    ageOutOfRange: (name: string, age: number, min: number, max: number | null) =>
-      `${name}: edad ${age} no válida para este grupo (${min}–${max ?? '∞'})`,
-    confirm: 'Confirmar importación',
-    confirming: 'Importando…',
-    errorsRemain: 'Corrige todos los errores antes de confirmar',
-    back: '← Volver',
-    done: 'Importación completada',
-    doneDesc: (teams: number, invite: boolean) =>
-      `${teams} equipo${teams !== 1 ? 's' : ''} registrado${teams !== 1 ? 's' : ''}.${invite ? ' Email de invitación enviado al nuevo club.' : ''}`,
-    inviteError: 'Fallo al enviar la invitación',
-    importAnother: 'Importar otro archivo',
-    gymnast: (n: number) => `Gimnasta ${n}`,
-  },
-}
+import { useT } from '@/lib/useT'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -142,19 +38,13 @@ function normalizeStr(s: string): string {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 }
 
-// Filter age group rules by ruleset using the age_group name:
-//   Base     → rules whose name contains "base"
-//   Escolar  → rules whose name contains "escolar"
-//   Nacional → rules whose name contains neither
+// Filter age group rules by level:
+//   Base     → rules with level === 'Base'
+//   Escolar  → rules with level === 'Escolar'
+//   Nacional → rules with any other level (FIG, Nacional, …)
 function filterRulesByRuleset(rules: AgeGroupRule[], ruleset: Ruleset): AgeGroupRule[] {
-  const key = normalizeStr(ruleset)
-  if (key === 'nacional') {
-    return rules.filter(r => {
-      const ag = normalizeStr(r.age_group)
-      return !ag.includes('base') && !ag.includes('escolar')
-    })
-  }
-  return rules.filter(r => normalizeStr(r.age_group).includes(key))
+  if (ruleset === 'Nacional') return rules.filter(r => r.level !== 'Base' && r.level !== 'Escolar')
+  return rules.filter(r => r.level === ruleset)
 }
 
 function parseDob(raw: string): { iso: string; valid: boolean } {
@@ -211,7 +101,7 @@ function computeWarnings(
   ageGroupRules: AgeGroupRule[],
   competitionYear: number,
 ): string[] {
-  const t = T[lang]
+  const t = useT('ImportTab', lang)
   const w: string[] = []
 
   if (!team.ageGroupId) {
@@ -340,7 +230,7 @@ export default function ImportTab({
   competitionAgeGroups: string[]
   competitionYear: number
 }) {
-  const t = T[lang]
+  const t = useT('ImportTab', lang)
   const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
   const fileRef = useRef<HTMLInputElement>(null)
 

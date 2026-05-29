@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useJudgeSession } from '@/hooks/useJudgeSession'
-import AJView from '@/components/scoring/views/AJView'
+import ScoringView from '@/components/scoring/ScoringView'
 import { JudgeScoringShell } from '@/components/shared/JudgeScoringShell'
 import type { Lang } from '@/components/scoring/types'
 import type { JudgeScore } from '@/components/scoring/types'
@@ -31,12 +31,12 @@ export default function Page() {
     <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} className="min-h-[100dvh] flex flex-col md:h-[100dvh] md:overflow-hidden bg-slate-50" submitError={submitError} onClearError={clearSubmitError} practiceMode={practiceMode}>
       <div className="flex-1 min-h-0 overflow-auto">
         <div className="max-w-lg mx-auto py-4">
-          <AJView
+          <ScoringView
+            roles={['AJ']} lang={lang}
             currentPerf={currentPerf}
-            lang={lang}
-            onSubmit={handleSubmit}
+            onAJSubmit={handleSubmit}
             panelJudges={panelJudges}
-            judgeScores={currentScores}
+            singleJudgeScores={currentScores}
             waitingForOtherScores={waitingForOtherScores}
             result={currentResult ?? undefined}
           />

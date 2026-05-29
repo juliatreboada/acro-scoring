@@ -6,34 +6,8 @@ import type { TsElement, ElementType } from '../scoring/types'
 import type { ElementFlag, ElementFlags } from '../scoring/types'
 import { DEFAULT_FLAG } from '../scoring/types'
 import { MAX_RETRIES } from '@/lib/scoringRules'
+import { useT } from '@/lib/useT'
 export { MAX_RETRIES } from '@/lib/scoringRules'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    done: 'Done', notDone: 'Not done', tf: 'TF',
-    srNotDone: 'SR not done', forbidden: 'Forbidden', noSupport: 'No support',
-    note: 'Note…', addRetry: 'Add retry', retry: 'Retry',
-    difficulty: 'D', elementLabel: 'Element description…', isStatic: 'Static',
-    incorrectTs: 'Incorrect TS', incorrectTsNote: '−0.3 · order or element differs from declared',
-    noElements: 'No elements in tariff sheet', noElementsNote: 'You can submit immediately',
-    addElement: '+ Add unlisted element',
-    submit: 'Submit', difficultyTotal: 'Difficulty', djPenalty: 'DJ Penalty',
-    scoreHint: 'Enter difficulty and penalty',
-  },
-  es: {
-    done: 'Realizado', notDone: 'No realizado', tf: 'FT',
-    srNotDone: 'SR no realizado', forbidden: 'Prohibido', noSupport: 'Sin apoyo',
-    note: 'Nota…', addRetry: 'Añadir reintento', retry: 'Reintento',
-    difficulty: 'D', elementLabel: 'Descripción del elemento…', isStatic: 'Estático',
-    incorrectTs: 'TS incorrecta', incorrectTsNote: '−0.3 · orden o elemento difiere de lo declarado en TS',
-    noElements: 'No hay elementos en la TS', noElementsNote: 'Puedes enviar directamente',
-    addElement: '+ Añadir elemento no listado',
-    submit: 'Enviar', difficultyTotal: 'Dificultad', djPenalty: 'Pen. DJ',
-    scoreHint: 'Introduce dificultad y penalización',
-  },
-}
 
 // ─── element config ───────────────────────────────────────────────────────────
 
@@ -133,7 +107,7 @@ export function TfCounter({ value, onChange, max }: { value: number; onChange: (
 export function IncorrectTsToggle({ active, onToggle, lang }: {
   active: boolean; onToggle: () => void; lang: Lang
 }) {
-  const t = T[lang]
+  const t = useT('DJElementsShared', lang)
   return (
     <button onClick={onToggle}
       className={['flex items-start gap-3 w-full px-3 py-2.5 rounded-xl border text-left transition-all', active ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white hover:border-slate-300'].join(' ')}>
@@ -160,7 +134,7 @@ export function DJFlagRow({ flag, elementId, attemptNumber, flags, lang, config,
   onChange: (elementId: string, attemptNumber: number, patch: Partial<ElementFlag>) => void
   onOpenRetry: (elementId: string, nextAttemptNumber: number) => void
 }) {
-  const t = T[lang]
+  const t = useT('DJElementsShared', lang)
   const [showNote, setShowNote] = useState(false)
   const maxAttempt = maxAttemptInFlags(elementId, flags)
   const canAddRetry = attemptNumber === maxAttempt && maxAttempt <= MAX_RETRIES
@@ -223,7 +197,7 @@ export function DJElementRow({ element, flags, lang, onChange, onOpenRetry, isEx
   onLabelChange?: (id: string, label: string) => void
   onTypeChange?: (id: string, type: ElementType, isStatic?: boolean) => void
 }) {
-  const t = T[lang]
+  const t = useT('DJElementsShared', lang)
   const config = getElementConfig(element)
   const maxAttempt = maxAttemptInFlags(element.id, flags)
   const mainFlag = flags[`${element.id}:1`] ?? DEFAULT_FLAG
@@ -282,7 +256,7 @@ export function DualKeypad({ lang, onSubmit }: {
   lang: Lang
   onSubmit: (difficulty: number, penalty: number) => void
 }) {
-  const t = T[lang]
+  const t = useT('DJElementsShared', lang)
   const [focused, setFocused] = useState<'d' | 'p'>('d')
   const [dInput, setDInput] = useState('')
   const [pInput, setPInput] = useState('')
@@ -362,7 +336,7 @@ export function PhoneDJElementsList({ lang, elements, extraElements, flags, inco
   onToggleIncorrectTs: () => void
   onSubmit: (difficulty: number, penalty: number) => void
 }) {
-  const t = T[lang]
+  const t = useT('DJElementsShared', lang)
   const allElements = [...elements, ...extraElements]
   const { difficulty, penalty } = calcDJTotals(elements, extraElements, flags, incorrectTs)
 

@@ -4,83 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import type { Lang } from '@/components/scoring/types'
 import type { Panel, Section, Session, AgeGroupRule, Apparatus, ApparatusRule, RankingMergeGroup } from '@/components/admin/types'
 import { ROUTINE_TYPES, categoriesForRuleset, CATEGORY_LABELS, rgRulesetLabel } from '@/components/admin/types'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    sections: 'Sections',
-    addSection: 'Add section',
-    sectionLabel: 'Label',
-    sectionLabelPlaceholder: 'e.g. Morning, Afternoon…',
-    startingTime: 'Start time',
-    waitingSec: 'Wait (s)',
-    warmupMin: 'Warmup (min)',
-    deleteSection: 'Delete section',
-    noSections: 'No sections yet',
-    noSectionsSub: 'Add a section to start building the schedule.',
-    addSession: 'Add session',
-    noSessions: 'No sessions in this section yet.',
-    panelLabel: 'Panel',
-    ageGroup: 'Age group',
-    ruleset: 'Modality',
-    category: 'Category',
-    routineType: 'Routine type',
-    apparatus: 'Apparatus',
-    save: 'Add',
-    cancel: 'Cancel',
-    deleteSession: 'Remove',
-    sessionName: (ag: string, cat: string, rt: string) => `${ag} · ${cat} · ${rt}`,
-    sectionN: (n: number) => `Section ${n}`,
-    panelBadge: (n: number) => `P${n}`,
-    panelN: (n: number) => `Panel ${n}`,
-    mergeRanking: 'Shared ranking (TV & results)',
-    mergeNone: 'Per category (default)',
-    newMergeGroup: 'New merge group',
-    newMergeGroupShort: 'New',
-    labelEs: 'Label (ES)',
-    labelEn: 'Label (EN)',
-    createGroup: 'Create & assign',
-    smallFieldHint: (n: number) =>
-      `Only ${n} team(s) registered in this category. You can assign a shared ranking with another session (same age group & routine type) below — optional.`,
-   },
-  es: {
-    sections: 'Jornadas',
-    addSection: 'Añadir jornada',
-    sectionLabel: 'Etiqueta',
-    sectionLabelPlaceholder: 'p.ej. Mañana, Tarde…',
-    startingTime: 'Hora inicio',
-    waitingSec: 'Espera (s)',
-    warmupMin: 'Calent. (min)',
-    deleteSection: 'Eliminar jornada',
-    noSections: 'Sin jornadas',
-    noSectionsSub: 'Añade una joranada para empezar a construir el programa.',
-    addSession: 'Añadir sesión',
-    noSessions: 'Sin sesiones en esta jornada.',
-    panelLabel: 'Panel',
-    ageGroup: 'Grupo de edad',
-    ruleset: 'Modalidad',
-    category: 'Categoría',
-    routineType: 'Tipo de rutina',
-    apparatus: 'Aparato',
-    save: 'Añadir',
-    cancel: 'Cancelar',
-    deleteSession: 'Eliminar',
-    sessionName: (ag: string, cat: string, rt: string) => `${ag} · ${cat} · ${rt}`,
-    sectionN: (n: number) => `Jornada ${n}`,
-    panelBadge: (n: number) => `P${n}`,
-    panelN: (n: number) => `Panel ${n}`,
-    mergeRanking: 'Clasificación conjunta (TV y resultados)',
-    mergeNone: 'Por categoría (predeterminado)',
-    newMergeGroup: 'Nuevo grupo de fusión',
-    newMergeGroupShort: 'Nuevo',
-    labelEs: 'Etiqueta (ES)',
-    labelEn: 'Etiqueta (EN)',
-    createGroup: 'Crear y asignar',
-    smallFieldHint: (n: number) =>
-      `Solo ${n} equipo(s) inscrito(s) en esta categoría. Puedes usar una clasificación conjunta con otra sesión (mismo grupo de edad y tipo de rutina) abajo — opcional.`,
-   },
-}
+import { useT } from '@/lib/useT'
 
 // ─── panel colours ────────────────────────────────────────────────────────────
 
@@ -139,7 +63,7 @@ type AddSessionFormProps = {
 }
 
 function AddSessionForm({ lang, panel, sportType, competitionYear, ageGroups, agLabels, ageGroupRules, apparatus, apparatusRules, sectionId, nextOrderIndex, onAdd, onCancel }: AddSessionFormProps) {
-  const t = T[lang]
+  const t = useT('StructureTab', lang)
   const isRG = sportType === 'rg'
 
   // Acro state
@@ -375,7 +299,7 @@ function SessionRow({
   onAssignMergeGroup: (sessionId: string, mergeGroupId: string | null) => void | Promise<void>
   onCreateMergeGroup: (labelEs: string, labelEn: string) => Promise<string | null>
 }) {
-  const t = T[lang]
+  const t = useT('StructureTab', lang)
   const rowGroups = mergeGroupsForSessionRow(session, allSessions, rankingMergeGroups)
   const showSmallFieldHint = eligibleTeamCount < 3
   const [creating, setCreating] = useState(false)
@@ -494,7 +418,7 @@ function PanelColumn({ lang, panel, sportType, competitionYear, sessions, ageGro
   onAssignMergeGroup: (sessionId: string, mergeGroupId: string | null) => void | Promise<void>
   onCreateMergeGroup: (labelEs: string, labelEn: string) => Promise<string | null>
 }) {
-  const t = T[lang]
+  const t = useT('StructureTab', lang)
   const [showForm, setShowForm] = useState(false)
   const styles = PANEL_STYLES[panel.panel_number]
 
@@ -588,7 +512,7 @@ function SectionBlock({
   apparatus, apparatusRules, rankingMergeGroups, sessionEligibleTeamCounts,
   onUpdateLabel, onUpdateTimes, onDelete, onAddSession, onDeleteSession, onAssignMergeGroup, onCreateMergeGroup,
 }: SectionBlockProps) {
-  const t = T[lang]
+  const t = useT('StructureTab', lang)
   const [showForm, setShowForm] = useState(false)
   const [label, setLabel] = useState(section.label ?? '')
   const [startingTime, setStartingTime]   = useState(section.starting_time?.slice(0, 5) ?? '')
@@ -770,7 +694,7 @@ export default function StructureTab({
   onAddSection, onUpdateSectionLabel, onUpdateSectionTimes, onDeleteSection,
   onAddSession, onDeleteSession, onAssignSessionMergeGroup, onCreateRankingMergeGroup,
 }: StructureTabProps) {
-  const t = T[lang]
+  const t = useT('StructureTab', lang)
   const sorted = [...sections].sort((a, b) => a.section_number - b.section_number)
   const [activeSectionId, setActiveSectionId] = useState<string>(sorted[0]?.id ?? '')
 
@@ -812,31 +736,33 @@ export default function StructureTab({
   return (
     <div>
       {/* section tab bar */}
-      <div className="flex items-center border-b border-slate-200 mb-6 gap-0">
-        {sorted.map((sec) => (
+      <div className="relative border-b border-slate-200 mb-6">
+        <div className="flex items-center gap-0 overflow-x-auto [&::-webkit-scrollbar]:h-0">
+          {sorted.map((sec) => (
+            <button
+              key={sec.id}
+              onClick={() => setActiveSectionId(sec.id)}
+              className={[
+                'shrink-0 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all whitespace-nowrap',
+                activeSectionId === sec.id
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-slate-400 hover:text-slate-600',
+              ].join(' ')}
+            >
+              {sec.label ?? t.sectionN(sec.section_number)}
+            </button>
+          ))}
+          {/* add section button as a + tab */}
           <button
-            key={sec.id}
-            onClick={() => setActiveSectionId(sec.id)}
-            className={[
-              'px-4 py-2.5 text-sm font-semibold border-b-2 transition-all whitespace-nowrap',
-              activeSectionId === sec.id
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-slate-400 hover:text-slate-600',
-            ].join(' ')}
+            onClick={onAddSection}
+            className="shrink-0 px-3 py-2.5 text-slate-400 hover:text-blue-600 border-b-2 border-transparent transition-all"
+            title={t.addSection}
           >
-            {sec.label ?? t.sectionN(sec.section_number)}
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
           </button>
-        ))}
-        {/* add section button as a + tab */}
-        <button
-          onClick={onAddSection}
-          className="px-3 py-2.5 text-slate-400 hover:text-blue-600 border-b-2 border-transparent transition-all"
-          title={t.addSection}
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-        </button>
+        </div>
       </div>
 
       {/* active section content */}

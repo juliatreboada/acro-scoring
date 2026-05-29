@@ -13,65 +13,8 @@ import {
 } from '@/lib/clubTrophyRanking'
 import type { OpenCombinadosActaData } from '@/lib/openCombinadosBracket'
 import type { ResultsPageCompetitionMeta } from '@/lib/loadResultsPageBundle'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    balance: 'Balance',
-    dynamic: 'Dynamic',
-    combined: 'Combined',
-    allRound: 'All-Around',
-    team: 'Team',
-    eScore: 'E',
-    aScore: 'A',
-    dScore: 'D',
-    pen: 'Pen.',
-    total: 'Total',
-    prov: 'PROV',
-    someProvisional: 'provisional',
-    result: (n: number) => `${n} result${n !== 1 ? 's' : ''}`,
-    noResults: 'No results yet',
-    noResultsSub: 'Scores will appear here as they are submitted.',
-    combinedCategories: 'Combined categories',
-    trophyEscolar: 'Gondomar Trophy — Escolar',
-    trophyBase: 'Gondomar Trophy — Base',
-    trophyExplain:
-      'Club ranking: sum of the three highest routine scores in this block (each Balance / Dynamic / Combined routine counts once).',
-    trophyClub: 'Club',
-    trophyTop3: 'Total (best 3)',
-    trophyBreakdown: 'Top scores',
-    trophyRoutines: 'Routines',
-    finishedCompetition: 'Finished competition',
-  },
-  es: {
-    balance: 'Equilibrio',
-    dynamic: 'Dinámico',
-    combined: 'Combinado',
-    allRound: 'All-Around',
-    team: 'Equipo',
-    eScore: 'E',
-    aScore: 'A',
-    dScore: 'D',
-    pen: 'Pen.',
-    total: 'Total',
-    prov: 'PROV',
-    someProvisional: 'provisional',
-    result: (n: number) => `${n} resultado${n !== 1 ? 's' : ''}`,
-    noResults: 'Sin resultados',
-    noResultsSub: 'Las puntuaciones aparecerán aquí a medida que se envíen.',
-    combinedCategories: 'Categorías combinadas',
-    trophyEscolar: 'Trofeo Gondomar — Escolar',
-    trophyBase: 'Trofeo Gondomar — Base',
-    trophyExplain:
-      'Clasificación por club: suma de las tres mejores puntuaciones de rutina en este bloque (cada rutina de equilibrio, dinámico o combinado cuenta una vez).',
-    trophyClub: 'Club',
-    trophyTop3: 'Total (3 mejores)',
-    trophyBreakdown: 'Puntuaciones',
-    trophyRoutines: 'Rutinas',
-    finishedCompetition: 'Competición finalizada',
-  },
-}
+import { useT } from '@/lib/useT'
+import { ResultsView as ResultsViewT } from '@/locales/en'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -130,7 +73,7 @@ function ResultsPrintSectionBanner({
   lang: Lang
   officialDocument: boolean
   hasProvisional: boolean
-  t: typeof T['en']
+  t: typeof ResultsViewT
 }) {
   const datesStr = formatCompetitionDatesLong(competitionMeta, lang)
   const name = competitionMeta?.name?.trim()
@@ -227,7 +170,7 @@ function TeamGymnastsClubBlock({
   )
 }
 
-function trophyRoutineLabel(routineType: string, t: typeof T['en']): string {
+function trophyRoutineLabel(routineType: string, t: typeof ResultsViewT): string {
   return (
     ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined } as Record<string, string>)[routineType] ??
     routineType
@@ -244,7 +187,7 @@ function ClubTrophyClubScoresTable({
   compactHeader,
 }: {
   row: ClubTrophyRow
-  t: typeof T['en']
+  t: typeof ResultsViewT
   /** Mobile: rank (and avatar) in first cell with club name. */
   rankSlot?: ReactNode
   /** Slightly smaller total on narrow screens. */
@@ -327,7 +270,7 @@ function ClubTrophyBlock({
   performances: ScoringPerformance[]
   results: Record<string, RoutineResult>
   teamClubInfo: Record<string, TeamClubInfo>
-  t: typeof T['en']
+  t: typeof ResultsViewT
 }) {
   if (Object.keys(teamClubInfo).length === 0) return null
   const rows = computeClubTrophyRanking(performances, results, teamClubInfo, ruleset)
@@ -371,7 +314,7 @@ function ClubTrophyBlock({
   )
 }
 
-function ClubTrophyRowDesktop({ row, t }: { row: ClubTrophyRow; t: typeof T['en'] }) {
+function ClubTrophyRowDesktop({ row, t }: { row: ClubTrophyRow; t: typeof ResultsViewT }) {
   const medal = row.rank <= 3 ? MEDALS[row.rank - 1] : null
   return (
     <tr className={['border-b border-slate-50', medal ? medal.row : '', row.hasProvisional && !medal ? 'bg-amber-50/40' : ''].join(' ')}>
@@ -385,7 +328,7 @@ function ClubTrophyRowDesktop({ row, t }: { row: ClubTrophyRow; t: typeof T['en'
   )
 }
 
-function ClubTrophyRowMobile({ row, t }: { row: ClubTrophyRow; t: typeof T['en'] }) {
+function ClubTrophyRowMobile({ row, t }: { row: ClubTrophyRow; t: typeof ResultsViewT }) {
   const medal = row.rank <= 3 ? MEDALS[row.rank - 1] : null
   return (
     <div
@@ -413,7 +356,7 @@ function ClubTrophyRowMobile({ row, t }: { row: ClubTrophyRow; t: typeof T['en']
 function GroupRanking({ rows, results, t, clubAvatarByTeam, teamClubInfo }: {
   rows: ScoringPerformance[]
   results: Record<string, RoutineResult>
-  t: typeof T['en']
+  t: typeof ResultsViewT
   clubAvatarByTeam: Record<string, string | null>
   teamClubInfo: Record<string, TeamClubInfo>
 }) {
@@ -564,7 +507,7 @@ function GroupRanking({ rows, results, t, clubAvatarByTeam, teamClubInfo }: {
 
 function AllRoundRanking({ entries, t, clubAvatarByTeam, teamClubInfo }: {
   entries: AllRoundEntry[]
-  t: typeof T['en']
+  t: typeof ResultsViewT
   clubAvatarByTeam: Record<string, string | null>
   teamClubInfo: Record<string, TeamClubInfo>
 }) {
@@ -761,7 +704,7 @@ function AccordionSection({
   isOpen: boolean
   onToggle: () => void
   children: React.ReactNode
-  t: typeof T['en']
+  t: typeof ResultsViewT
   lang: Lang
   /** Official document: static heading, all sections visible (screen + print). */
   forceExpanded?: boolean
@@ -862,7 +805,7 @@ function CategoryBlock({
   category: string
   performances: ScoringPerformance[]
   results: Record<string, RoutineResult>
-  t: typeof T['en']
+  t: typeof ResultsViewT
   clubAvatarByTeam: Record<string, string | null>
   teamClubInfo: Record<string, TeamClubInfo>
   officialDocument?: boolean
@@ -988,7 +931,7 @@ function accordionLabelForSection(
   sectionKey: string,
   performances: ScoringPerformance[],
   lang: Lang,
-  t: typeof T['en'],
+  t: typeof ResultsViewT,
 ): string {
   const sample = performances.find((p) => resultsSectionKey(p) === sectionKey)
   if (!sample) return sectionKey
@@ -1028,7 +971,7 @@ export default function ResultsView({
   openCombinadosActa = null,
   competitionMeta = null,
 }: ResultsViewProps) {
-  const t = T[lang]
+  const t = useT('ResultsView', lang)
 
   const routineLabel = (rt: string) =>
     ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)

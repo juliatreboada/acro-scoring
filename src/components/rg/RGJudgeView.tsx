@@ -3,42 +3,10 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Lang, ScoringPerformance, RoutineResult } from '@/components/scoring/types'
 import { RGNumericKeyboard } from './RGNumericKeyboard'
-
-const T = {
-  en: {
-    waiting:     'Waiting for performance…',
-    waitingSub:  'The RJ has not opened a routine yet.',
-    submitted:   'Score submitted',
-    yourScore:   'Your score',
-    waiting2:    'Waiting for other scores…',
-    approved:    'Result approved',
-    finalScore:  'Final score',
-    roleHint: {
-      E:  'Execution · enter deduction (stored as 10 − entered)',
-      A:  'Artistry · direct score 0–10',
-      DA: 'Difficulty A · direct score 0–10',
-      DB: 'Difficulty B · direct score 0–10',
-    },
-  },
-  es: {
-    waiting:     'Esperando actuación…',
-    waitingSub:  'El juez coordinador no ha abierto ninguna rutina todavía.',
-    submitted:   'Puntuación enviada',
-    yourScore:   'Tu puntuación',
-    waiting2:    'Esperando otras puntuaciones…',
-    approved:    'Resultado aprobado',
-    finalScore:  'Nota final',
-    roleHint: {
-      E:  'Ejecución · introduce la deducción (almacenado como 10 − deducción)',
-      A:  'Artística · nota directa 0–10',
-      DA: 'Dificultad A · nota directa 0–10',
-      DB: 'Dificultad B · nota directa 0–10',
-    },
-  },
-}
+import { useT } from '@/lib/useT'
 
 function WaitingScreen({ lang }: { lang: Lang }) {
-  const t = T[lang]
+  const t = useT('RGJudgeView', lang)
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6 gap-4">
       <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center">
@@ -71,7 +39,7 @@ export function RGJudgeView({ lang, role, currentPerf, mySubmittedScore, result,
   result: RoutineResult | null
   onSubmit: (value: number) => void
 }) {
-  const t = T[lang]
+  const t = useT('RGJudgeView', lang)
   const prevPerfId = useRef<string | null>(null)
   const [localSubmitted, setLocalSubmitted] = useState(false)
   const [localScore, setLocalScore] = useState<number | null>(null)

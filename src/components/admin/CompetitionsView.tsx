@@ -6,91 +6,7 @@ import type { Competition, AgeGroupRule, AdminUser } from './types'
 import { groupByLevel, rgRulesetLabel } from './types'
 import ClickableImg from '@/components/shared/ClickableImg'
 import { formatDateRange } from '@/lib/formatDate'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    title: 'Competitions',
-    newCompetition: 'New competition',
-    cancel: 'Cancel',
-    create: 'Create competition',
-    noCompetitions: 'No competitions yet',
-    noCompetitionsSub: 'Create your first competition to get started.',
-    manage: 'Manage',
-    // form
-    formTitle: 'New competition',
-    name: 'Name',
-    namePlaceholder: 'e.g. Spanish National Championships 2026',
-    location: 'Location',
-    locationPlaceholder: 'e.g. Madrid, Spain',
-    startDate: 'Start date',
-    endDate: 'End date',
-    ageGroups: 'Age groups',
-    ageGroupsHint: 'Select at least one',
-    registrationDeadline: 'Registration deadline',
-    poster: 'Poster / logo',
-    posterPlaceholder: 'Image URL (upload coming soon)',
-    competitionAdmin: 'Competition admin',
-    noAdmin: '— assign later —',
-    sportType: 'Sport',
-    acro: 'Acrobatic Gymnastics',
-    rg: 'Rhythmic Gymnastics',
-    // status
-    draft:                'Draft',
-    provisional_entry:    'Provisional entry',
-    definitive_entry:     'Definitive entry',
-    registration_open:    'Registration open',
-    registration_closed:  'Registration closed',
-    published:            'Published',
-    active:               'Live',
-    finished:             'Finished',
-    // card
-    noLocation: 'No location set',
-    noDates: 'Dates not set',
-    noAdminAssigned: 'No admin assigned',
-  },
-  es: {
-    title: 'Competiciones',
-    newCompetition: 'Nueva competición',
-    cancel: 'Cancelar',
-    create: 'Crear competición',
-    noCompetitions: 'Sin competiciones',
-    noCompetitionsSub: 'Crea tu primera competición para empezar.',
-    manage: 'Gestionar',
-    // form
-    formTitle: 'Nueva competición',
-    name: 'Nombre',
-    namePlaceholder: 'p.ej. Campeonato Nacional 2026',
-    location: 'Sede',
-    locationPlaceholder: 'p.ej. Madrid, España',
-    startDate: 'Fecha inicio',
-    endDate: 'Fecha fin',
-    ageGroups: 'Grupos de edad',
-    ageGroupsHint: 'Selecciona al menos uno',
-    registrationDeadline: 'Fecha límite de inscripción',
-    poster: 'Póster / logo',
-    posterPlaceholder: 'URL de imagen (subida próximamente)',
-    competitionAdmin: 'Admin de competición',
-    noAdmin: '— asignar después —',
-    sportType: 'Deporte',
-    acro: 'Gimnasia Acrobática',
-    rg: 'Gimnasia Rítmica',
-    // status
-    draft:                'Borrador',
-    provisional_entry:    'Inscripción provisional',
-    definitive_entry:     'Inscripción definitiva',
-    registration_open:    'Inscripción abierta',
-    registration_closed:  'Inscripción cerrada',
-    published:            'Publicada',
-    active:               'En vivo',
-    finished:             'Finalizada',
-    // card
-    noLocation: 'Sin sede',
-    noDates: 'Fechas no definidas',
-    noAdminAssigned: 'Sin admin asignado',
-  },
-}
+import { useT } from '@/lib/useT'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -115,7 +31,7 @@ type CreateFormProps = {
 }
 
 function CreateForm({ lang, ageGroupRules, availableAdmins, onSubmit, onCancel }: CreateFormProps) {
-  const t = T[lang]
+  const t = useT('CompetitionsView', lang)
   const [name, setName]           = useState('')
   const [location, setLocation]   = useState('')
   const [startDate, setStartDate] = useState('')
@@ -365,7 +281,7 @@ type CompetitionCardProps = {
 }
 
 function CompetitionCard({ competition: c, lang, onManage }: CompetitionCardProps) {
-  const t       = T[lang]
+  const t = useT('CompetitionsView', lang)
   const dateStr = formatDateRange(c.start_date, c.end_date)
 
   return (
@@ -448,7 +364,7 @@ export type CompetitionsViewProps = {
 export default function CompetitionsView({
   lang, ageGroupRules, availableAdmins, competitions, canCreate = true, onCreate, onManage,
 }: CompetitionsViewProps) {
-  const t = T[lang]
+  const t = useT('CompetitionsView', lang)
   const [showForm, setShowForm] = useState(false)
 
   function handleCreate(data: Omit<Competition, 'id' | 'created_at'>) {

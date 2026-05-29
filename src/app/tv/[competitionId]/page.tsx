@@ -9,6 +9,7 @@ import type { ElementFlags } from '@/components/scoring/types'
 import { categoryLabel } from '@/components/admin/types'
 import { fetchPeerSessionIdsForRanking } from '@/lib/rankingPeers'
 import { TV_SPONSOR_BUCKET, parseTvSponsorVideos, type TvSponsorClip } from '@/lib/tvSponsorVideos'
+import { useT } from '@/lib/useT'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -59,42 +60,13 @@ type CompetitionData = {
   sport_type: string
 }
 
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    waiting: 'Waiting for results',
-    waitingHint: 'Scores will appear here when the competition team shows them on screen.',
-    balance: 'Balance', dynamic: 'Dynamic', combined: 'Combined',
-    e: 'E×2', a: 'A', d: 'D', pen: 'Pen.',
-    eRg: 'E', da: 'DA', db: 'DB', penRj: 'Pen.RJ',
-    total: 'TOTAL',
-    rank: (n: number, total: number) => `#${n} of ${total}`,
-    penLabel: 'Penalties',
-    dorsal: (n: number) => `#${n}`,
-    provisional: 'PROVISIONAL',
-  },
-  es: {
-    waiting: 'Esperando resultados',
-    waitingHint: 'Las puntuaciones aparecerán cuando el equipo de competición las muestre en pantalla.',
-    balance: 'Equilibrio', dynamic: 'Dinámico', combined: 'Combinado',
-    e: 'E×2', a: 'A', d: 'D', pen: 'Pen.',
-    eRg: 'E', da: 'DA', db: 'DB', penRj: 'Pen.RJ',
-    total: 'TOTAL',
-    rank: (n: number, total: number) => `#${n} de ${total}`,
-    penLabel: 'Penalizaciones',
-    dorsal: (n: number) => `#${n}`,
-    provisional: 'PROVISIONAL',
-  },
-}
-
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function TVPage() {
   const { competitionId } = useParams<{ competitionId: string }>()
   const searchParams = useSearchParams()
   const lang: Lang = (searchParams.get('lang') as Lang) === 'en' ? 'en' : 'es'
-  const t = T[lang]
+  const t = useT('TVPage', lang)
 
   const supabase = createClient()
 
@@ -111,6 +83,8 @@ export default function TVPage() {
   // not on team switch (team switch resets immediately, no animation).
   const [scoreVisible, setScoreVisible] = useState(false)
   const prevRevealedRef = useRef<boolean | null>(null)
+  const prevSessionIdRef = useRef<string | null>(null)
+  const prevTeamIdRef = useRef<string | null>(null)
 
   // ── fetch competition info once ──────────────────────────────────────────────
 
@@ -205,6 +179,41 @@ export default function TVPage() {
     return () => { supabase.removeChannel(ch) }
   }, [competitionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── subscribe to routine_results for live score updates ─────────────────────
+
+  useEffect(() => {
+    if (!tvState?.session_id || !tvState?.team_id) return
+    const { session_id, team_id } = tvState
+
+    const ch = supabase
+      .channel(`tv-result-${session_id}-${team_id}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'routine_results',
+        filter: `session_id=eq.${session_id}`,
+      }, (payload) => {
+        const row = payload.new as ResultData & { team_id: string }
+        if (row.team_id !== team_id) return
+        setResult({
+          e_score:            row.e_score            ?? null,
+          a_score:            row.a_score            ?? null,
+          dif_score:          row.dif_score          ?? null,
+          dif_penalty:        row.dif_penalty        ?? null,
+          cjp_penalty:        row.cjp_penalty        ?? null,
+          da_score:           row.da_score           ?? null,
+          db_score:           row.db_score           ?? null,
+          rj_penalty:         row.rj_penalty         ?? null,
+          final_score:        row.final_score        ?? null,
+          status:             row.status             ?? null,
+          cjp_penalty_detail: row.cjp_penalty_detail as PenaltyState | null,
+          dj_penalty_detail:  row.dj_penalty_detail  as ElementFlags | null,
+          rj_penalty_detail:  row.rj_penalty_detail  as Record<string, unknown> | null,
+        })
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(ch) }
+  }, [tvState?.session_id, tvState?.team_id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── handle team/session change ───────────────────────────────────────────────
 
   useEffect(() => {
@@ -217,19 +226,29 @@ export default function TVPage() {
       setRankTotal(0)
       setScoreVisible(false)
       prevRevealedRef.current = false
+      prevSessionIdRef.current = null
+      prevTeamIdRef.current = null
       return
     }
 
     const { session_id, team_id, revealed } = tvState
 
-    // If only revealed changed (same team+session), just update scoreVisible.
-    // If team changed, reset score visibility immediately before fetching.
-    const teamChanged = team?.gymnast_display !== undefined &&
-      prevRevealedRef.current !== null &&
-      (tvState.session_id !== session?.age_group) // rough check handled below
-
     setScoreVisible(revealed)
     prevRevealedRef.current = revealed
+
+    // When only revealed changed, skip the full re-fetch — Realtime handles result updates.
+    if (session_id === prevSessionIdRef.current && team_id === prevTeamIdRef.current) {
+      return
+    }
+    prevSessionIdRef.current = session_id
+    prevTeamIdRef.current = team_id
+
+    setTeam(null)
+    setSession(null)
+    setResult(null)
+    setDorsal(null)
+    setRank(null)
+    setRankTotal(0)
 
     async function fetchDisplay() {
       const [teamRes, sessionRes, entryRes, resultRes] = await Promise.all([

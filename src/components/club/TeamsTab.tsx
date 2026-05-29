@@ -5,59 +5,7 @@ import type { Lang } from '@/components/scoring/types'
 import type { Gymnast, Team, AgeGroupRule, Apparatus, ApparatusRule } from '@/components/admin/types'
 import { CATEGORY_SIZE, categoriesForRuleset, CATEGORY_LABELS } from '@/components/admin/types'
 import { gymnastFullName, PhotoAvatar } from './GymnastsTab'
-
-const T = {
-  en: {
-    addTeam: 'Add team',
-    sportType: 'Sport',
-    acro: 'Acro',
-    rg: 'RG',
-    category: 'Category',
-    ageGroup: 'Age group',
-    apparatus: 'Apparatus',
-    groupSize: 'Group size',
-    gymnast: (n: number) => `Gymnast ${n}`,
-    save: 'Save',
-    cancel: 'Cancel',
-    empty: 'No teams yet.',
-    confirmDelete: 'Permanently delete this team? This cannot be undone.',
-    confirmArchive: 'Remove this team from your roster? It will stay in competitions you already entered.',
-    confirmRestore: 'Restore this team to your active roster?',
-    archivedSection: 'Archived teams (still in competitions)',
-    restore: 'Restore',
-    noGymnasts: 'Add gymnasts to your roster before creating a team.',
-    selectCategory: 'Select category',
-    selectAgeGroup: 'Select age group',
-    selectGymnast: '— select gymnast —',
-    individual: 'Individual',
-    group: 'Group',
-  },
-  es: {
-    addTeam: 'Añadir equipo',
-    sportType: 'Deporte',
-    acro: 'Acro',
-    rg: 'GR',
-    category: 'Categoría',
-    ageGroup: 'Grupo de edad',
-    apparatus: 'Aparatos',
-    groupSize: 'Tamaño del grupo',
-    gymnast: (n: number) => `Gimnasta ${n}`,
-    save: 'Guardar',
-    cancel: 'Cancelar',
-    empty: 'Aún no hay equipos.',
-    confirmDelete: '¿Eliminar permanentemente este equipo? Esta acción no se puede deshacer.',
-    confirmArchive: '¿Quitar este equipo del listado? Seguirá en las competiciones en las que ya esté inscrito.',
-    confirmRestore: '¿Restaurar este equipo al listado activo?',
-    archivedSection: 'Equipos archivados (siguen en competiciones)',
-    restore: 'Restaurar',
-    noGymnasts: 'Añade gimnastas antes de crear un equipo.',
-    selectCategory: 'Seleccionar categoría',
-    selectAgeGroup: 'Seleccionar grupo de edad',
-    selectGymnast: '— seleccionar gimnasta —',
-    individual: 'Individual',
-    group: 'Grupo',
-  },
-}
+import { useT } from '@/lib/useT'
 
 function birthYear(g: Gymnast): number {
   return parseInt(g.date_of_birth.slice(0, 4), 10)
@@ -112,7 +60,7 @@ function TeamForm({
   onSave: (data: SaveData) => void
   onCancel: () => void
 }) {
-  const t = T[lang]
+  const t = useT('TeamsTab', lang)
   const isEditing = initial !== EMPTY_FORM
 
   const [form, setForm] = useState<FormState>(() => {
@@ -389,7 +337,7 @@ export default function TeamsTab({
   onRestore: (id: string) => void
   onUploadPhoto: (id: string, file: File) => Promise<void>
 }) {
-  const t = T[lang]
+  const t = useT('TeamsTab', lang)
   const [showAdd, setShowAdd] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
 

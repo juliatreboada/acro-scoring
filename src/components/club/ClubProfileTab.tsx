@@ -5,31 +5,7 @@ import type { Lang } from '@/components/scoring/types'
 import type { Club } from '@/components/admin/types'
 import ClickableImg from '@/components/shared/ClickableImg'
 import { INPUT_CLS } from '@/lib/uiConstants'
-
-const T = {
-  en: {
-    clubName: 'Club name',
-    contactName: 'Contact person',
-    phone: 'Phone',
-    save: 'Save changes',
-    saved: 'Saved',
-    cancel: 'Cancel',
-    edit: 'Edit profile',
-    avatar: 'Change photo',
-    uploading: 'Uploading…',
-  },
-  es: {
-    clubName: 'Nombre del club',
-    contactName: 'Persona de contacto',
-    phone: 'Teléfono',
-    save: 'Guardar cambios',
-    saved: 'Guardado',
-    cancel: 'Cancelar',
-    edit: 'Editar perfil',
-    avatar: 'Cambiar foto',
-    uploading: 'Subiendo…',
-  },
-}
+import { useT } from '@/lib/useT'
 
 export default function ClubProfileTab({ lang, club, onUpdate, onUploadAvatar }: {
   lang: Lang
@@ -37,7 +13,7 @@ export default function ClubProfileTab({ lang, club, onUpdate, onUploadAvatar }:
   onUpdate: (data: Partial<Pick<Club, 'club_name' | 'contact_name' | 'phone'>>) => void
   onUploadAvatar: (file: File) => Promise<void>
 }) {
-  const t = T[lang]
+  const t = useT('ClubProfileTab', lang)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({ club_name: club.club_name, contact_name: club.contact_name ?? '', phone: club.phone ?? '' })
   const [saved, setSaved] = useState(false)

@@ -8,6 +8,7 @@ import { ScoreGrid } from '../CJPTabletShell'
 import { ScoringPerformanceHeader } from '../../shared/ScoringPerformanceHeader'
 import { MAX_RETRIES, getElementConfig, calcDJTotals, maxAttemptInFlags } from '../DJElementsShared'
 import type { ElementConfig } from '../DJElementsShared'
+import { useT } from '@/lib/useT'
 
 function safeRead<T>(key: string): T | null {
   if (typeof window === 'undefined') return null
@@ -16,81 +17,6 @@ function safeRead<T>(key: string): T | null {
 function safeWrite(key: string, val: unknown) {
   if (typeof window === 'undefined') return
   try { localStorage.setItem(key, JSON.stringify(val)) } catch {}
-}
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    waiting: 'Waiting for performance…',
-    waitingSub: 'The panel chief has not opened a routine yet.',
-    pdfPlaceholder: 'Tariff Sheet PDF',
-    pdfNote: 'PDF will appear here once uploaded',
-    noElements: 'No elements in tariff sheet',
-    noElementsNote: 'You can submit immediately',
-    difficulty: 'D',
-    done: 'Done',
-    notDone: 'Not done',
-    tf: 'TF',
-    srNotDone: 'SR not done',
-    forbidden: 'Forbidden',
-    noSupport: 'No support',
-    note: 'Note…',
-    addRetry: 'Add retry',
-    retry: 'Retry',
-    addElement: '+ Add unlisted element',
-    elementLabel: 'Element description…',
-    isStatic: 'Static',
-    incorrectTs: 'Incorrect TS',
-    incorrectTsNote: '−0.3 · order or element differs from declared',
-    difficultyTotal: 'Difficulty',
-    penaltyTotal: 'Penalty',
-    submit: 'Submit',
-    submitted: 'Score submitted',
-    waitingOtherScores: 'Waiting for your other scores…',
-    scoreHint: 'Enter difficulty and penalty',
-    balance: 'Balance',
-    mount: 'Mount',
-    dynamic: 'Dynamic',
-    individual: 'Individual',
-    motion: 'Motion',
-    combined: 'Combined',
-  },
-  es: {
-    waiting: 'Esperando actuación…',
-    waitingSub: 'El juez coordinador no ha abierto ninguna rutina todavía.',
-    pdfPlaceholder: 'PDF TS',
-    pdfNote: 'El PDF aparecerá aquí una vez subido',
-    noElements: 'No hay elementos en la TS',
-    noElementsNote: 'Puedes enviar directamente',
-    difficulty: 'D',
-    done: 'Realizado',
-    notDone: 'No realizado',
-    tf: 'FT',
-    srNotDone: 'SR no realizado',
-    forbidden: 'Prohibido',
-    noSupport: 'Sin apoyo',
-    note: 'Nota…',
-    addRetry: 'Añadir reintento',
-    retry: 'Reintento',
-    addElement: '+ Añadir elemento no listado',
-    elementLabel: 'Descripción del elemento…',
-    isStatic: 'Estático',
-    incorrectTs: 'TS incorrecta',
-    incorrectTsNote: '−0.3 · orden o elemento difiere de lo declarado en TS',
-    difficultyTotal: 'Dificultad',
-    penaltyTotal: 'Penalización',
-    submit: 'Enviar',
-    submitted: 'Puntuación enviada',
-    waitingOtherScores: 'Esperando tus otras puntuaciones…',
-    scoreHint: 'Introduce dificultad y penalización',
-    balance: 'Balance',
-    mount: 'Mount',
-    dynamic: 'Dinámico',
-    individual: 'Individual',
-    motion: 'Motion',
-    combined: 'Combinado',
-  },
 }
 
 // ─── sub-components ───────────────────────────────────────────────────────────
@@ -132,7 +58,7 @@ function FlagRow({ flag, elementId, attemptNumber, flags, lang, config, onChange
   onChange: (elementId: string, attemptNumber: number, patch: Partial<ElementFlag>) => void
   onOpenRetry: (elementId: string, nextAttemptNumber: number) => void
 }) {
-  const t = T[lang]
+  const t = useT('DJView', lang)
   const [showNote, setShowNote] = useState(false)
   const maxAttempt = maxAttemptInFlags(elementId, flags)
   const canAddRetry = attemptNumber === maxAttempt && maxAttempt <= MAX_RETRIES
@@ -198,7 +124,7 @@ function ElementRow({ element, flags, lang, onChange, onOpenRetry, isExtra, onLa
   onLabelChange?: (id: string, label: string) => void
   onTypeChange?: (id: string, type: ElementType, isStatic?: boolean) => void
 }) {
-  const t = T[lang]
+  const t = useT('DJView', lang)
   const config = getElementConfig(element)
   const maxAttempt = maxAttemptInFlags(element.id, flags)
   const mainFlag = flags[`${element.id}:1`] ?? DEFAULT_FLAG
@@ -260,7 +186,7 @@ function ElementRow({ element, flags, lang, onChange, onOpenRetry, isExtra, onLa
 function DualKeypad({ lang, perf, onSubmit }: {
   lang: Lang; perf: Performance; onSubmit: (difficulty: number, penalty: number) => void
 }) {
-  const t = T[lang]
+  const t = useT('DJView', lang)
   const [focused, setFocused] = useState<'d' | 'p'>('d')
   const [dInput, setDInput] = useState('')
   const [pInput, setPInput] = useState('')
@@ -334,7 +260,7 @@ function DualKeypad({ lang, perf, onSubmit }: {
 // ─── pdf panel ────────────────────────────────────────────────────────────────
 
 function PdfPanel({ tsUrl, lang }: { tsUrl: string | null | undefined; lang: Lang }) {
-  const t = T[lang]
+  const t = useT('DJView', lang)
   return tsUrl ? (
     <iframe src={tsUrl} className="w-full h-full rounded-2xl border border-slate-200 bg-white min-h-0" title={t.pdfPlaceholder} />
   ) : (
@@ -364,7 +290,7 @@ type DJViewProps = {
 }
 
 export default function DJView({ currentPerf, lang, elements, mode = 'elements', onSubmit, waitingForOtherScores, judgeScores, panelJudges, result }: DJViewProps) {
-  const t = T[lang]
+  const t = useT('DJView', lang)
   const [flags, setFlags] = useState<ElementFlags>({})
   const [incorrectTs, setIncorrectTs] = useState(false)
   // orderedAll = listed elements + any added unlisted elements, in display order

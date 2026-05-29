@@ -6,6 +6,7 @@ import type { PanelJudge, JudgeScore, RoutineResult, ScoreDetail } from '../type
 import { ScoreGrid } from '../CJPTabletShell'
 import { ScoringPerformanceHeader } from '../../shared/ScoringPerformanceHeader'
 import { MAX_RETRIES, DEDUCTION_VALUES } from '@/lib/scoringRules'
+import { useT } from '@/lib/useT'
 
 function safeRead<T>(key: string): T | null {
   if (typeof window === 'undefined') return null
@@ -14,51 +15,6 @@ function safeRead<T>(key: string): T | null {
 function safeWrite(key: string, val: unknown) {
   if (typeof window === 'undefined') return
   try { localStorage.setItem(key, JSON.stringify(val)) } catch {}
-}
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    waiting: 'Waiting for performance…',
-    waitingSub: 'The panel chief has not opened a routine yet.',
-    pdfPlaceholder: 'Tariff Sheet PDF',
-    pdfNote: 'PDF will appear here once uploaded',
-    noElements: 'No elements in tariff sheet',
-    noElementsNote: 'You can submit a score of 10.0',
-    difficulty: 'D',
-    addRetry: 'Add retry',
-    retry: 'Retry',
-    addElement: '+ Add unlisted element',
-    elementLabel: 'Element description…',
-    submit: 'Submit score',
-    submitted: 'Score submitted',
-    waitingOtherScores: 'Waiting for your other scores…',
-    scoreHint: '0.0 – 10.0 · 1 decimal place',
-    balance: 'Balance',
-    dynamic: 'Dynamic',
-    combined: 'Combined',
-  },
-  es: {
-    waiting: 'Esperando actuación…',
-    waitingSub: 'El juez coordinador no ha abierto ninguna rutina todavía.',
-    pdfPlaceholder: 'PDF TS',
-    pdfNote: 'El PDF aparecerá aquí una vez subido',
-    noElements: 'No hay elementos en la TS',
-    noElementsNote: 'Puedes enviar una puntuación de 10.0',
-    difficulty: 'D',
-    addRetry: 'Añadir reintento',
-    retry: 'Reintento',
-    addElement: '+ Añadir elemento no listado',
-    elementLabel: 'Descripción del elemento…',
-    submit: 'Enviar puntuación',
-    submitted: 'Puntuación enviada',
-    waitingOtherScores: 'Esperando tus otras puntuaciones…',
-    scoreHint: '0.0 – 10.0 · 1 decimal',
-    balance: 'Equilibrio',
-    dynamic: 'Dinámico',
-    combined: 'Combinado',
-  },
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -135,7 +91,7 @@ function ElementRow({ element, deductions, lang, onLock, onOpenRetry, isExtra, o
   isExtra?: boolean
   onLabelChange?: (id: string, label: string) => void
 }) {
-  const t = T[lang]
+  const t = useT('EJView', lang)
   const mainLocked = deductions[`${element.id}:1`]?.locked ?? false
   const maxAttempt = maxAttemptNumber(element.id, deductions)
   const lastAttemptLocked = deductions[`${element.id}:${maxAttempt}`]?.locked ?? false
@@ -183,7 +139,7 @@ function ElementRow({ element, deductions, lang, onLock, onOpenRetry, isExtra, o
 function NumericKeypad({ lang, perf, onSubmit }: {
   lang: Lang; perf: Performance; onSubmit: (score: number) => void
 }) {
-  const t = T[lang]
+  const t = useT('EJView', lang)
   const [input, setInput] = useState('')
   const score = input === '' ? null : parseFloat(input)
   const isValid = score !== null && !isNaN(score) && score >= 0 && score <= 10
@@ -240,7 +196,7 @@ function NumericKeypad({ lang, perf, onSubmit }: {
 // ─── pdf panel ────────────────────────────────────────────────────────────────
 
 function PdfPanel({ tsUrl, lang }: { tsUrl: string | null | undefined; lang: Lang }) {
-  const t = T[lang]
+  const t = useT('EJView', lang)
   return tsUrl ? (
     <iframe src={tsUrl} className="w-full h-full rounded-2xl border border-slate-200 bg-white min-h-0" title={t.pdfPlaceholder} />
   ) : (
@@ -271,7 +227,7 @@ type EJViewProps = {
 }
 
 export default function EJView({ currentPerf, lang, elements, mode = 'elements', onSubmit, waitingForOtherScores, judgeScores, panelJudges, result, mySubmittedScore }: EJViewProps) {
-  const t = T[lang]
+  const t = useT('EJView', lang)
   const [deductions, setDeductions] = useState<Deductions>({})
   // orderedAll = listed + added unlisted elements in display order
   const [orderedAll, setOrderedAll] = useState<TsElement[]>([])

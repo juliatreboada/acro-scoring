@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRGJudgeSession } from '@/hooks/useRGJudgeSession'
+import { useJudgeSession } from '@/hooks/useJudgeSession'
 import { RJView } from '@/components/rg/RJView'
 import { RGJudgeView } from '@/components/rg/RGJudgeView'
 import { JudgeScoringShell } from '@/components/shared/JudgeScoringShell'
@@ -15,7 +15,7 @@ export default function Page() {
     assignedRoles, panelJudges, performances, currentPerf, currentPerfId, judgeScores, results,
     handleOpen, handleSkip, handleRJSubmit, handleReopenScore,
     handleRGJudgeScoreSubmit, submitError, clearSubmitError,
-  } = useRGJudgeSession()
+  } = useJudgeSession('rg')
 
   const daRole = assignedRoles.find(r => r.role === 'DA')
   const currentScores = currentPerfId ? (judgeScores[currentPerfId] ?? []) : []

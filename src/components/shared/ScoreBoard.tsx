@@ -1,35 +1,7 @@
 import type { Lang } from '../scoring/types'
 import type { PanelJudge, JudgeScore, RoutineResult } from '../scoring/types'
 import { droppedIndices } from '../scoring/types'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    ej: 'EJ', aj: 'AJ', dj: 'DJ',
-    avg: 'Avg',
-    djDif: 'Dif.',
-    djPen: 'Pen.',
-    cjpPen: 'CJP',
-    pen: 'Pen',
-    final: 'Final',
-    prov: 'Provisional',
-    panelScores: 'Panel scores',
-    djMismatch: 'DJ scores differ — averaged',
-  },
-  es: {
-    ej: 'EJ', aj: 'AJ', dj: 'DJ',
-    avg: 'Media',
-    djDif: 'Dif.',
-    djPen: 'Pen.',
-    cjpPen: 'CJP',
-    pen: 'Pen',
-    final: 'Final',
-    prov: 'Provisional',
-    panelScores: 'Puntuaciones del panel',
-    djMismatch: 'Puntuaciones DJ distintas — promediadas',
-  },
-}
+import { useT } from '@/lib/useT'
 
 // ─── component ────────────────────────────────────────────────────────────────
 
@@ -39,7 +11,7 @@ export default function ScoreBoard({ judgeScores, panelJudges, result, lang }: {
   result?: RoutineResult | null
   lang: Lang
 }) {
-  const t = T[lang]
+  const t = useT('ScoreBoard', lang)
 
   const ejJudges = panelJudges.filter((j) => j.role === 'EJ').sort((a, b) => a.roleNumber - b.roleNumber)
   const ajJudges = panelJudges.filter((j) => j.role === 'AJ').sort((a, b) => a.roleNumber - b.roleNumber)

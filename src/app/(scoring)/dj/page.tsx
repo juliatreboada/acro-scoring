@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useJudgeSession } from '@/hooks/useJudgeSession'
-import DJView from '@/components/scoring/views/DJView'
+import ScoringView from '@/components/scoring/ScoringView'
 import { JudgeScoringShell } from '@/components/shared/JudgeScoringShell'
 import type { Lang } from '@/components/scoring/types'
 import type { JudgeScore, ScoreDetail } from '@/components/scoring/types'
@@ -30,14 +30,14 @@ export default function Page() {
   return (
     <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} submitError={submitError} onClearError={clearSubmitError} practiceMode={practiceMode}>
       <div className="flex-1 min-h-0 px-0 md:px-4 flex flex-col">
-        <DJView
+        <ScoringView
+          roles={['DJ']} lang={lang}
           currentPerf={currentPerf}
-          lang={lang}
           elements={currentPerf?.elements ?? []}
-          mode={(djMethod as 'elements' | 'keyboard') ?? 'elements'}
-          onSubmit={handleSubmit}
+          djMode={(djMethod as 'elements' | 'keyboard') ?? 'elements'}
+          onDJSubmit={handleSubmit}
           panelJudges={panelJudges}
-          judgeScores={currentScores}
+          singleJudgeScores={currentScores}
           waitingForOtherScores={waitingForOtherScores}
           result={currentResult ?? undefined}
         />

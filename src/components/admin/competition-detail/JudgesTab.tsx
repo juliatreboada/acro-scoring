@@ -5,63 +5,7 @@ import type { Lang } from '@/components/scoring/types'
 import type { Judge, Panel, Section, SectionPanelJudge, Role, Club, CompetitionJudgeNomination } from '@/components/admin/types'
 import { ROLE_CONFIG } from '@/components/admin/types'
 import { JudgeAvatar } from '@/components/admin/Avatar'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    pool: 'Competition judges',
-    poolHint: 'Add judges from the global pool who will attend this competition.',
-    addJudge: 'Add judge',
-    newJudge: 'Invite judge',
-    noPool: 'No judges added yet.',
-    removeFromPool: 'Remove',
-    assignments: 'Role assignments',
-    assignmentsHint: 'Assign judges to each role per section and panel. Assignments can differ between sections.',
-    unassigned: 'Unassigned',
-    selectJudge: 'Select judge…',
-    sectionN: (n: number) => `Section ${n}`,
-    panelN: (n: number) => `Panel ${n}`,
-    noSections: 'No sections defined yet. Go to Structure to add sections.',
-    warningRemove: 'This judge is assigned to one or more roles. Remove anyway?',
-    fieldName: 'Full name',
-    fieldEmail: 'Email',
-    fieldPhone: 'Phone (optional)',
-    fieldLicence: 'Licence',
-    cancel: 'Cancel',
-    create: 'Send invite',
-    inviteSent: (email: string) => `Invite sent to ${email}`,
-    inviteError: 'Failed to send invite',
-    lock: 'Lock assignments',
-    unlock: 'Unlock',
-  },
-  es: {
-    pool: 'Jueces de la competición',
-    poolHint: 'Añade jueces del pool global que asistirán a esta competición.',
-    addJudge: 'Añadir juez',
-    newJudge: 'Invitar juez',
-    noPool: 'Sin jueces añadidos.',
-    removeFromPool: 'Quitar',
-    assignments: 'Asignación de roles',
-    assignmentsHint: 'Asigna jueces a cada rol por jornada y panel. Las asignaciones pueden cambiar entre jornadas.',
-    unassigned: 'Sin asignar',
-    selectJudge: 'Seleccionar juez…',
-    sectionN: (n: number) => `Jornada ${n}`,
-    panelN: (n: number) => `Panel ${n}`,
-    noSections: 'Sin jornadas definidas. Ve a Estructura para añadir jornadas.',
-    warningRemove: 'Este juez tiene roles asignados. ¿Quitar igualmente?',
-    fieldName: 'Nombre completo',
-    fieldEmail: 'Email',
-    fieldPhone: 'Teléfono (opcional)',
-    fieldLicence: 'Licencia',
-    cancel: 'Cancelar',
-    create: 'Enviar invitación',
-    inviteSent: (email: string) => `Invitación enviada a ${email}`,
-    inviteError: 'Error al enviar la invitación',
-    lock: 'Bloquear asignación',
-    unlock: 'Desbloquear',
-  },
-}
+import { useT } from '@/lib/useT'
 
 const ROLE_ORDER: Role[] = ['CJP', 'DJ', 'EJ', 'AJ']
 
@@ -86,7 +30,7 @@ function JudgePool({ lang, sportType, judges, globalJudges, assignments, nominat
   onRemove: (judgeId: string) => void
   onCreateJudge?: (data: Omit<Judge, 'id' | 'avatar_url'>) => Promise<void>
 }) {
-  const t = T[lang]
+  const t = useT('JudgesTab', lang)
   const [collapsed, setCollapsed] = useState(false)
   const [showPicker, setShowPicker] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -308,7 +252,7 @@ function SlotCell({ label, slot, poolJudges, locked, selectPlaceholder, onAssign
 
 // ─── panel assignment column ──────────────────────────────────────────────────
 
-function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked, onToggleLock, onAssign, onAddSlot, onRemoveSlot }: {
+function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked, onToggleLock, onAssign, onAddSlot, onRemoveSlot, onCopyToOtherSections, hasOtherSections }: {
   lang: Lang
   panel: Panel
   section: Section
@@ -319,8 +263,10 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
   onAssign: (slotId: string, judgeId: string | null) => void
   onAddSlot: (role: Role) => void
   onRemoveSlot: (role: Role) => void
+  onCopyToOtherSections: () => void
+  hasOtherSections: boolean
 }) {
-  const t = T[lang]
+  const t = useT('JudgesTab', lang)
   const headerCls = PANEL_HEADER[panel.panel_number] ?? PANEL_HEADER[1]
 
   const byRole = (role: Role) =>
@@ -360,12 +306,25 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
             </select>
           </div>
         )}
-        <button
-          onClick={onToggleLock}
-          className={['ml-auto shrink-0 px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
-            locked ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-white/60 text-slate-500 hover:bg-white border border-transparent hover:border-slate-200'].join(' ')}>
-          {locked ? `🔒 ${t.unlock}` : `🔓 ${t.lock}`}
-        </button>
+        <div className="ml-auto flex items-center gap-2 shrink-0">
+          {hasOtherSections && (
+            <button
+              onClick={onCopyToOtherSections}
+              title={t.copyToOtherSections}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 bg-white/60 text-slate-500 hover:bg-white border border-transparent hover:border-slate-200">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              {t.copyToOtherSections}
+            </button>
+          )}
+          <button
+            onClick={onToggleLock}
+            className={['px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5',
+              locked ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-white/60 text-slate-500 hover:bg-white border border-transparent hover:border-slate-200'].join(' ')}>
+            {locked ? `🔒 ${t.unlock}` : `🔓 ${t.lock}`}
+          </button>
+        </div>
       </div>
 
       <div className="p-4 space-y-3">
@@ -462,19 +421,21 @@ function PanelAssignmentColumn({ lang, panel, section, slots, poolJudges, locked
 
 // ─── section assignment block ─────────────────────────────────────────────────
 
-function SectionAssignmentBlock({ lang, section, panels, slots, poolJudges, panelLocks, onToggleLock, onAssign, onAddSlot, onRemoveSlot }: {
+function SectionAssignmentBlock({ lang, section, panels, slots, poolJudges, panelLocks, hasOtherSections, onToggleLock, onAssign, onAddSlot, onRemoveSlot, onCopyPanel }: {
   lang: Lang
   section: Section
   panels: Panel[]
   slots: SectionPanelJudge[]
   poolJudges: Judge[]
   panelLocks: PanelLock[]
+  hasOtherSections: boolean
   onToggleLock: (sectionId: string, panelId: string) => void
   onAssign: (slotId: string, judgeId: string | null) => void
   onAddSlot: (sectionId: string, panelId: string, role: Role) => void
   onRemoveSlot: (sectionId: string, panelId: string, role: Role) => void
+  onCopyPanel: (fromSectionId: string, panelId: string) => Promise<void>
 }) {
-  const t = T[lang]
+  const t = useT('JudgesTab', lang)
   const label = section.label ? `${t.sectionN(section.section_number)} · ${section.label}` : t.sectionN(section.section_number)
 
   return (
@@ -492,10 +453,12 @@ function SectionAssignmentBlock({ lang, section, panels, slots, poolJudges, pane
               slots={slots.filter((s) => s.panel_id === panel.id)}
               poolJudges={poolJudges}
               locked={locked}
+              hasOtherSections={hasOtherSections}
               onToggleLock={() => onToggleLock(section.id, panel.id)}
               onAssign={onAssign}
               onAddSlot={(role) => onAddSlot(section.id, panel.id, role)}
               onRemoveSlot={(role) => onRemoveSlot(section.id, panel.id, role)}
+              onCopyToOtherSections={() => onCopyPanel(section.id, panel.id)}
             />
           )
         })}
@@ -525,15 +488,16 @@ export type JudgesTabProps = {
   onAddSlot: (sectionId: string, panelId: string, role: Role) => void
   onRemoveSlot: (sectionId: string, panelId: string, role: Role) => void
   onTogglePanelLock: (sectionId: string, panelId: string) => Promise<void>
+  onCopyPanel: (fromSectionId: string, panelId: string) => Promise<void>
   onCreateJudge?: (data: Omit<Judge, 'id' | 'avatar_url'>) => Promise<void>
 }
 
 export default function JudgesTab({
   lang, sportType, globalJudges, judgePool, nominations, clubs, assignments, sections, panels,
   panelLocks, onAddToPool, onRemoveFromPool, onAssignJudge, onAddSlot, onRemoveSlot,
-  onTogglePanelLock, onCreateJudge,
+  onTogglePanelLock, onCopyPanel, onCreateJudge,
 }: JudgesTabProps) {
-  const t = T[lang]
+  const t = useT('JudgesTab', lang)
   const poolJudges = globalJudges.filter((j) => judgePool.includes(j.id))
   const sortedSections = [...sections].sort((a, b) => a.section_number - b.section_number)
   const [activeSectionId, setActiveSectionId] = useState<string>(sortedSections[0]?.id ?? '')
@@ -570,21 +534,23 @@ export default function JudgesTab({
         ) : (
           <>
             {/* section tabs */}
-            <div className="flex border-b border-slate-200 mb-6 gap-0">
-              {sortedSections.map((sec) => (
-                <button
-                  key={sec.id}
-                  onClick={() => setActiveSectionId(sec.id)}
-                  className={[
-                    'px-4 py-2 text-sm font-semibold border-b-2 transition-all whitespace-nowrap',
-                    activeSectionId === sec.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-slate-400 hover:text-slate-600',
-                  ].join(' ')}
-                >
-                  {tabLabel(sec)}
-                </button>
-              ))}
+            <div className="relative border-b border-slate-200 mb-6">
+              <div className="flex items-center gap-0 overflow-x-auto [&::-webkit-scrollbar]:h-0">
+                {sortedSections.map((sec) => (
+                  <button
+                    key={sec.id}
+                    onClick={() => setActiveSectionId(sec.id)}
+                    className={[
+                      'shrink-0 px-4 py-2 text-sm font-semibold border-b-2 transition-all whitespace-nowrap',
+                      activeSectionId === sec.id
+                        ? 'border-blue-500 text-blue-600'
+                        : 'border-transparent text-slate-400 hover:text-slate-600',
+                    ].join(' ')}
+                  >
+                    {tabLabel(sec)}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* active section */}
@@ -596,10 +562,12 @@ export default function JudgesTab({
                 slots={assignments.filter((a) => a.section_id === activeSection.id)}
                 poolJudges={poolJudges}
                 panelLocks={panelLocks}
+                hasOtherSections={sortedSections.length > 1}
                 onToggleLock={onTogglePanelLock}
                 onAssign={onAssignJudge}
                 onAddSlot={onAddSlot}
                 onRemoveSlot={onRemoveSlot}
+                onCopyPanel={onCopyPanel}
               />
             )}
           </>

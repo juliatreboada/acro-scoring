@@ -7,39 +7,7 @@ import { PhotoAvatar } from './GymnastsTab'
 import { normalizeForSearch } from '@/lib/normalizeString'
 import { LicenciaChip } from './shared/LicenciaChip'
 import { INPUT_CLS } from '@/lib/uiConstants'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    add: 'Add coach',
-    search: 'Search by name…',
-    fullName: 'Full name',
-    licence: 'Licence no.',
-    save: 'Save',
-    cancel: 'Cancel',
-    empty: 'No coaches yet. Add the first one to get started.',
-    coaches: (n: number) => `${n} coach${n !== 1 ? 'es' : ''}`,
-    confirmDelete: 'Remove this coach?',
-    licencia: 'Licence',
-    uploadLicencia: 'Upload licence',
-    replaceLicencia: 'Replace',
-  },
-  es: {
-    add: 'Añadir entrenador',
-    search: 'Buscar por nombre…',
-    fullName: 'Nombre completo',
-    licence: 'Nº de licencia',
-    save: 'Guardar',
-    cancel: 'Cancelar',
-    empty: 'Aún no hay entrenadores. Añade el primero para empezar.',
-    coaches: (n: number) => `${n} entrenador${n !== 1 ? 'es' : ''}`,
-    confirmDelete: '¿Eliminar este entrenador?',
-    licencia: 'Licencia',
-    uploadLicencia: 'Subir licencia',
-    replaceLicencia: 'Reemplazar',
-  },
-}
+import { useT } from '@/lib/useT'
 
 // ─── coach form ───────────────────────────────────────────────────────────────
 
@@ -52,7 +20,7 @@ function CoachForm({ lang, initial, onSave, onCancel }: {
   onSave: (f: FormState) => void
   onCancel: () => void
 }) {
-  const t = T[lang]
+  const t = useT('CoachesTab', lang)
   const [form, setForm] = useState<FormState>(initial)
   const inputCls = INPUT_CLS
 
@@ -105,7 +73,7 @@ export default function CoachesTab({
   onUploadPhoto: (id: string, file: File) => Promise<void>
   onUploadLicencia: (id: string, file: File) => Promise<void>
 }) {
-  const t = T[lang]
+  const t = useT('CoachesTab', lang)
   const licenciaLabels = { view: t.licencia, upload: t.uploadLicencia, replace: t.replaceLicencia }
   const [showAdd, setShowAdd] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)

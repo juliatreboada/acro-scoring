@@ -6,6 +6,7 @@ import { useProfile } from '@/contexts/ProfileContext'
 import { slugify } from '@/lib/normalizeString'
 import { uploadFile } from '@/lib/uploadFile'
 import type { Club, Gymnast, Coach, CompetitionCoach, Team, Competition, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule, Apparatus, ApparatusRule, RGRegistration } from '@/components/admin/types'
+import { ageGroupLabel } from '@/components/admin/types'
 
 type TsReviewStatus = { team_id: string; competition_id: string; routine_type: string; status: string; final_comment: string | null }
 
@@ -104,8 +105,8 @@ export function useClubData() {
         }))
 
         const agLabelsMap = Object.fromEntries(
-          ((rulesRes.data ?? []) as unknown as { id: string; age_group: string; ruleset: string }[])
-            .map(r => [r.id, `${r.age_group} (${r.ruleset})`])
+          ((rulesRes.data ?? []) as unknown as AgeGroupRule[])
+            .map(r => [r.id, ageGroupLabel(r, true)])
         )
 
         const rawJudges = judgesRes.data ?? []
@@ -362,23 +363,33 @@ export function useClubData() {
   // ── Acro registrations ────────────────────────────────────────────────────────
   async function handleRegister(competitionId: string, teamId: string) {
     if (entries.some(e => e.competition_id === competitionId && e.team_id === teamId)) return
+    const tempId = `temp-${Date.now()}`
+    const tempEntry: CompetitionEntry = { id: tempId, competition_id: competitionId, team_id: teamId, dropped_out: false, dorsal: null, gymnast_display: null, gymnast_ids: null }
+    setEntries(prev => [...prev, tempEntry])
     const { data, error } = await supabase.from('competition_entries')
       .insert({ competition_id: competitionId, team_id: teamId, dropped_out: false }).select().single()
-    if (error) { setActionError(error.message); return }
-    if (data) setEntries(prev => [...prev, data as CompetitionEntry])
+    if (error) {
+      setEntries(prev => prev.filter(e => e.id !== tempId))
+      setActionError(error.message)
+      return
+    }
+    if (data) setEntries(prev => prev.map(e => e.id === tempId ? data as CompetitionEntry : e))
   }
 
   async function handleDropout(entryId: string) {
     const entry = entries.find(e => e.id === entryId)
     if (!entry) return
     const newValue = !entry.dropped_out
-    const { error } = await supabase.from('competition_entries').update({ dropped_out: newValue }).eq('id', entryId)
-    if (error) { setActionError(error.message); return }
     setEntries(prev => prev.map(e => e.id === entryId ? { ...e, dropped_out: newValue } : e))
+    const { error } = await supabase.from('competition_entries').update({ dropped_out: newValue }).eq('id', entryId)
+    if (error) {
+      setEntries(prev => prev.map(e => e.id === entryId ? { ...e, dropped_out: entry.dropped_out } : e))
+      setActionError(error.message)
+    }
   }
 
   // ── judges ────────────────────────────────────────────────────────────────────
-  async function handleInviteJudge(j: { full_name: string; email: string; phone?: string; licence?: string }) {
+  async function handleInviteJudge(j: { full_name: string; email: string; phone?: string; licence?: string; sport_type: string }) {
     const res = await fetch('/api/club/invite-judge', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

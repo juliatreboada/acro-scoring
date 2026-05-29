@@ -4,49 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, RGRegistration, RGRegistrationStatus, Apparatus } from '@/components/admin/types'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    loading:  'Loading…',
-    empty:    'No registrations yet.',
-    status: {
-      pending:              'Pending',
-      inscription_approved: 'Inscription approved',
-      payment_pending:      'Payment pending',
-      registered:           'Registered',
-    } as Record<RGRegistrationStatus, string>,
-    approveInscription: 'Approve inscription',
-    approvePayment:     'Approve payment',
-    note:               'Note',
-    notePlaceholder:    'Admin note visible to club…',
-    saveNote:           'Save',
-    registeredOn:       'Registered',
-    club:               'Club',
-    apparatus:          'Apparatus',
-    hasFee:             'Fee required',
-  },
-  es: {
-    loading:  'Cargando…',
-    empty:    'Aún no hay inscripciones.',
-    status: {
-      pending:              'Pendiente',
-      inscription_approved: 'Inscripción aprobada',
-      payment_pending:      'Pago pendiente',
-      registered:           'Inscrita',
-    } as Record<RGRegistrationStatus, string>,
-    approveInscription: 'Aprobar inscripción',
-    approvePayment:     'Aprobar pago',
-    note:               'Nota',
-    notePlaceholder:    'Nota del administrador (visible al club)…',
-    saveNote:           'Guardar',
-    registeredOn:       'Inscrita el',
-    club:               'Club',
-    apparatus:          'Aparatos',
-    hasFee:             'Requiere pago',
-  },
-}
+import { useT } from '@/lib/useT'
 
 const STATUS_ORDER: RGRegistrationStatus[] = ['pending', 'inscription_approved', 'payment_pending', 'registered']
 
@@ -71,7 +29,7 @@ export default function RGRegistrationsTab({
   lang: Lang
   competition: Competition
 }) {
-  const t = T[lang]
+  const t = useT('RGRegistrationsTab', lang)
   const supabase = createClient()
   const hasFee = !!(competition.fee_per_team || competition.fee_per_gymnast)
 

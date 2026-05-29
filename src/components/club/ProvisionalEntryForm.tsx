@@ -5,31 +5,7 @@ import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, AgeGroupRule } from '@/components/admin/types'
 import { categoriesForRuleset, categoryLabel } from '@/components/admin/types'
-
-const T = {
-  en: {
-    title: 'Provisional Entry',
-    clubLabel: 'Club',
-    instructions: 'Indicate how many teams you expect to bring for each category.',
-    zeroHint: 'Leave at 0 for categories you will not participate in.',
-    save: 'Save',
-    saving: 'Saving…',
-    saved: 'Saved',
-    close: 'Close',
-    error: 'Failed to save. Please try again.',
-  },
-  es: {
-    title: 'Inscripción provisional',
-    clubLabel: 'Club',
-    instructions: 'Indica cuántos equipos prevés presentar por categoría.',
-    zeroHint: 'Deja en 0 las categorías en las que no participarás.',
-    save: 'Guardar',
-    saving: 'Guardando…',
-    saved: 'Guardado',
-    close: 'Cerrar',
-    error: 'Error al guardar. Inténtalo de nuevo.',
-  },
-}
+import { useT } from '@/lib/useT'
 
 type Props = {
   lang: Lang
@@ -42,7 +18,7 @@ type Props = {
 }
 
 export default function ProvisionalEntryForm({ lang, competition, clubId, clubName, ageGroupRules, onClose, onSaved }: Props) {
-  const t = T[lang]
+  const t = useT('ProvisionalEntryForm', lang)
   const supabase = createClient()
 
   const [counts, setCounts] = useState<Record<string, number>>({})

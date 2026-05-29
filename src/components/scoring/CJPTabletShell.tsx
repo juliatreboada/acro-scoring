@@ -5,49 +5,7 @@ import type { Lang } from '../scoring/types'
 import type { PanelJudge, ScoringPerformance, JudgeScore, RoutineResult, PenaltyState } from '../scoring/types'
 import { calcCjpPenalty, droppedIndices, computeResult, DEFAULT_PENALTY } from '../scoring/types'
 import { categoryLabel } from '@/components/admin/types'
-
-// ─── translations ──────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    performances: 'Performances',
-    open: 'Open', skip: 'Skip', skipped: 'Skipped',
-    final: 'Final', prov: 'Prov.',
-    noPerf: 'No performance open',
-    noPerfSub: 'Select a performance from the list to open it.',
-    reviewing: 'Reviewing', backToLive: 'Back to live',
-    submitProv: 'Submit provisional', submitFinal: 'Submit final',
-    confirmFinal: 'Confirm final', modifyFinal: 'Modify', nextPerf: 'Next performance',
-    updateProv: 'Update provisional',
-    tsPdfTitle: 'Tariff Sheet', pdfNote: 'PDF will appear here once uploaded',
-    ej: 'EJ', aj: 'AJ', dj: 'DJ',
-    avg: 'Avg', djDif: 'DJ Dif.', djPen: 'Pen.',
-    cjpPen: 'CJP Pen.',
-    reopenAll: 'Re-open all', reopen: 'Re-open', editScore: 'Edit score', addScore: 'Add score',
-    scoreE: 'E', scoreA: 'A', scoreD: 'D', scorePen: 'Pen.', scoreTotal: 'Total',
-    ranking: 'Ranking', rankCol: '#', teamCol: 'Team',
-    balance: 'Balance', dynamic: 'Dynamic', combined: 'Combined',
-  },
-  es: {
-    performances: 'Actuaciones',
-    open: 'Abrir', skip: 'Saltar', skipped: 'Saltada',
-    final: 'Final', prov: 'Prov.',
-    noPerf: 'Sin actuación abierta',
-    noPerfSub: 'Selecciona una actuación de la lista para abrirla.',
-    reviewing: 'Revisando', backToLive: 'Volver en directo',
-    submitProv: 'Enviar provisional', submitFinal: 'Enviar final',
-    confirmFinal: 'Confirmar final', modifyFinal: 'Modificar', nextPerf: 'Siguiente actuación',
-    updateProv: 'Actualizar provisional',
-    tsPdfTitle: 'TS', pdfNote: 'El PDF aparecerá aquí una vez subido',
-    ej: 'EJ', aj: 'AJ', dj: 'DJ',
-    avg: 'Media', djDif: 'DJ Dif.', djPen: 'Pen.',
-    cjpPen: 'CJP Pen.',
-    reopenAll: 'Reabrir todo', reopen: 'Reabrir', editScore: 'Editar puntuación', addScore: 'Añadir puntuación',
-    scoreE: 'E', scoreA: 'A', scoreD: 'D', scorePen: 'Pen.', scoreTotal: 'Total',
-    ranking: 'Clasificación', rankCol: '#', teamCol: 'Equipo',
-    balance: 'Balance', dynamic: 'Dinámico', combined: 'Combinado',
-  },
-}
+import { useT } from '@/lib/useT'
 
 // ─── score cell ────────────────────────────────────────────────────────────────
 
@@ -138,7 +96,7 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, res
   onReopen: (panelJudgeId: string | 'all') => void
   onEditScore?: (panelJudgeId: string, field: 'ejScore' | 'ajScore' | 'djDifficulty' | 'djPenalty', value: number) => void
 }) {
-  const t = T[lang]
+  const t = useT('CJPTabletShell', lang)
   const ejJudges = panelJudges.filter((j) => j.role === 'EJ').sort((a, b) => a.roleNumber - b.roleNumber)
   const ajJudges = panelJudges.filter((j) => j.role === 'AJ').sort((a, b) => a.roleNumber - b.roleNumber)
   const djJudges = panelJudges.filter((j) => j.role === 'DJ').sort((a, b) => a.roleNumber - b.roleNumber)
@@ -456,12 +414,12 @@ export function ScoreGrid({ scores, panelJudges, lang, locked, hideLabelCol, res
             <span>A <span className="text-slate-200 font-mono tabular-nums">{result.aScore.toFixed(3)}</span></span>
             <span>D <span className="text-slate-200 font-mono tabular-nums">{result.difScore.toFixed(2)}</span></span>
             {(result.difPenalty + result.cjpPenalty) > 0 && (
-              <span>{T[lang].scorePen} <span className="text-red-400 font-mono tabular-nums">−{(result.difPenalty + result.cjpPenalty).toFixed(1)}</span></span>
+              <span>{t.scorePen} <span className="text-red-400 font-mono tabular-nums">−{(result.difPenalty + result.cjpPenalty).toFixed(1)}</span></span>
             )}
           </div>
           <div className="flex items-center justify-between">
             <span className={['text-xs font-semibold px-2 py-0.5 rounded-full', result.status === 'approved' ? 'bg-emerald-500 text-white' : 'bg-slate-600 text-slate-300'].join(' ')}>
-              {result.status === 'approved' ? T[lang].final : T[lang].prov}
+              {result.status === 'approved' ? t.final : t.prov}
             </span>
             <p className="text-4xl font-bold tabular-nums">{result.finalScore.toFixed(3)}</p>
           </div>
@@ -480,7 +438,7 @@ export function ScorePreview({ scores, panelJudges, cjpPenalty, lang, compact }:
   lang: Lang
   compact?: boolean
 }) {
-  const t = T[lang]
+  const t = useT('CJPTabletShell', lang)
   const ejJudges = panelJudges.filter((j) => j.role === 'EJ')
   const ajJudges = panelJudges.filter((j) => j.role === 'AJ')
   const djJudges = panelJudges.filter((j) => j.role === 'DJ')
@@ -538,7 +496,7 @@ export function RankingTable({ performances, results, lang, selectedPerfId, onSe
   selectedPerfId?: string | null
   onSelectPerf?: (perfId: string) => void
 }) {
-  const t = T[lang]
+  const t = useT('CJPTabletShell', lang)
   const hasAnyScored = performances.some((p) => results[p.id])
   if (!hasAnyScored) return null
 
@@ -661,7 +619,7 @@ export default function CJPTabletShell({
   penaltyStates, onOpen, onSkip, onSubmit, onReopenScore, onUnpublishResult, onEditScore,
   renderRightPanel, rightPanelClassName = 'w-80',
 }: CJPTabletShellProps) {
-  const t = T[lang]
+  const t = useT('CJPTabletShell', lang)
   const rankPerfs = rankingPerformances ?? performances
   const [reviewPerfId,    setReviewPerfId]    = useState<string | null>(null)
   const [leftOpen,        setLeftOpen]        = useState(true)

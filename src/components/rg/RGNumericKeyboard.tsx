@@ -2,11 +2,7 @@
 
 import { useState } from 'react'
 import type { Lang } from '@/components/scoring/types'
-
-const T = {
-  en: { submit: 'Confirm', score: 'Score', hint1: '0.0 – 10.0', hint2: '0.00 – 10.00' },
-  es: { submit: 'Confirmar', score: 'Nota', hint1: '0.0 – 10.0', hint2: '0.00 – 10.00' },
-}
+import { useT } from '@/lib/useT'
 
 const KEYS = [['7','8','9'],['4','5','6'],['1','2','3'],['.','0','⌫']]
 
@@ -17,7 +13,7 @@ export function RGNumericKeyboard({ lang, maxDecimals = 1, inverted = false, onS
   inverted?: boolean
   onSubmit: (value: number) => void
 }) {
-  const t = T[lang]
+  const t = useT('RGNumericKeyboard', lang)
   const [input, setInput] = useState('')
 
   const parsed = input === '' ? null : parseFloat(input)
@@ -36,7 +32,7 @@ export function RGNumericKeyboard({ lang, maxDecimals = 1, inverted = false, onS
     const next = input + key
     if (input === '0' && key !== '.') return
     const dotIdx = next.indexOf('.')
-    if (dotIdx !== -1 && next.length - dotIdx > maxDecimals) return
+    if (dotIdx !== -1 && next.length - dotIdx - 1 > maxDecimals) return
     const val = parseFloat(next)
     if (!isNaN(val) && val > 10) return
     setInput(next)

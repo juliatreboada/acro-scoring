@@ -4,45 +4,7 @@ import type { Lang } from '@/components/scoring/types'
 import type { Team, Club, Gymnast, CompetitionEntry, AgeGroupRule, Level } from '@/components/admin/types'
 import { sortByAgeGroupAndCategory, categoryLabel, LEVEL_ORDER, getLevel } from '@/components/admin/types'
 import { ClubAvatar, TeamAvatar } from '@/components/admin/Avatar'
-
-const T = {
-  en: {
-    noRegistrations: 'No teams registered yet.',
-    import: 'Import',
-    registered: (n: number) => `${n} registered`,
-    dropout: (n: number) => `${n} dropout`,
-    dropouts: (n: number) => `${n} dropouts`,
-    markDropout: 'Mark as dropout',
-    undoDropout: 'Undo dropout',
-    baja: 'Dropout',
-    licenciaWarning: 'Missing licencia',
-    licenciaWarningFull: 'One or more gymnasts have no licencia uploaded.',
-    tsWarning: 'Missing TS',
-    tsWarningFull: 'No TS uploaded.',
-    musicWarning: 'Missing music',
-    musicWarningFull: 'No music file uploaded.',
-    expandAll: 'Expand all',
-    collapseAll: 'Collapse all',
-  },
-  es: {
-    noRegistrations: 'Sin equipos registrados todavía.',
-    import: 'Importar',
-    registered: (n: number) => `${n} inscrito${n === 1 ? '' : 's'}`,
-    dropout: (n: number) => `${n} baja`,
-    dropouts: (n: number) => `${n} bajas`,
-    markDropout: 'Declarar baja',
-    undoDropout: 'Deshacer baja',
-    baja: 'Baja',
-    licenciaWarning: 'Licencia pendiente',
-    licenciaWarningFull: 'Uno o más gimnastas no tienen la licencia subida.',
-    tsWarning: 'Falta TS',
-    tsWarningFull: 'No se ha subido la TS.',
-    musicWarning: 'Falta música',
-    musicWarningFull: 'No se ha subido el archivo de música.',
-    expandAll: 'Expandir todo',
-    collapseAll: 'Contraer todo',
-  },
-}
+import { useT } from '@/lib/useT'
 
 type GroupItem = { entry: CompetitionEntry; team: Team; club: Club | undefined; missingLicencia: boolean; missingTS: boolean; missingMusic: boolean }
 
@@ -56,7 +18,7 @@ function RegistrationGroup({ age_group, category, items, lang, agLabels, open, o
   onToggle: () => void
   onToggleDropout: (entryId: string) => void
 }) {
-  const t = T[lang]
+  const t = useT('NominativeSubTab', lang)
   const activeCount = items.filter((i) => !i.entry.dropped_out).length
   const dropoutCount = items.filter((i) => i.entry.dropped_out).length
 
@@ -158,7 +120,7 @@ export function NominativeView({ lang, globalTeams, clubs, gymnasts, entries, ag
   competitionAgeGroups: string[]
   competitionYear: number
 }) {
-  const t = T[lang]
+  const t = useT('NominativeSubTab', lang)
 
   type Group = { age_group: string; category: string; items: GroupItem[] }
   const groupMap = new Map<string, Group>()

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useJudgeSession } from '@/hooks/useJudgeSession'
-import DJEJAJView from '@/components/scoring/views/DJEJAJView'
+import ScoringView from '@/components/scoring/ScoringView'
 import { JudgeScoringShell } from '@/components/shared/JudgeScoringShell'
 import type { Lang } from '@/components/scoring/types'
 import type { JudgeScore, ScoreDetail } from '@/components/scoring/types'
@@ -26,25 +26,39 @@ export default function Page() {
   const currentResult = currentPerfId ? (results[currentPerfId] ?? null) : null
   const waitingForOtherScores = mySubmitted && !currentResult
 
-  function handleSubmit(djDifficulty: number, djPenalty: number, ejScore: number, ajScore: number, detail: ScoreDetail) {
-    const scores: JudgeScore[] = []
-    if (djRole) scores.push({ panelJudgeId: djRole.id, ejScore: null, ajScore: null, djDifficulty, djPenalty, cjpPenalty: null,
-      detail: { djFlags: detail.djFlags, djExtraElements: detail.djExtraElements, djIncorrectTs: detail.djIncorrectTs } })
-    if (ejRole) scores.push({ panelJudgeId: ejRole.id, ejScore, ajScore: null, djDifficulty: null, djPenalty: null, cjpPenalty: null,
-      detail: { ejDeductions: detail.ejDeductions, ejExtraElements: detail.ejExtraElements } })
-    if (ajRole) scores.push({ panelJudgeId: ajRole.id, ejScore: null, ajScore, djDifficulty: null, djPenalty: null, cjpPenalty: null })
-    scores.forEach(s => handleJudgeScoreSubmit(s))
+  function handleDJSubmit(difficulty: number, penalty: number, detail: ScoreDetail) {
+    if (!djRole) return
+    const s: JudgeScore = { panelJudgeId: djRole.id, ejScore: null, ajScore: null, djDifficulty: difficulty, djPenalty: penalty, cjpPenalty: null,
+      detail: { djFlags: detail.djFlags, djExtraElements: detail.djExtraElements, djIncorrectTs: detail.djIncorrectTs } }
+    handleJudgeScoreSubmit(s)
+  }
+
+  function handleEJSubmit(score: number, detail: ScoreDetail) {
+    if (!ejRole) return
+    const s: JudgeScore = { panelJudgeId: ejRole.id, ejScore: score, ajScore: null, djDifficulty: null, djPenalty: null, cjpPenalty: null,
+      detail: { ejDeductions: detail.ejDeductions, ejExtraElements: detail.ejExtraElements } }
+    handleJudgeScoreSubmit(s)
+  }
+
+  function handleAJSubmit(score: number) {
+    if (!ajRole) return
+    const s: JudgeScore = { panelJudgeId: ajRole.id, ejScore: null, ajScore: score, djDifficulty: null, djPenalty: null, cjpPenalty: null }
+    handleJudgeScoreSubmit(s)
   }
 
   return (
     <JudgeScoringShell loading={loading} sessionId={sessionId} lang={lang} onLangChange={setLang} submitError={submitError} onClearError={clearSubmitError} practiceMode={practiceMode}>
       <div className="md:flex-1 md:min-h-0 md:flex md:flex-col">
-        <DJEJAJView
-          currentPerf={currentPerf} lang={lang} elements={currentPerf?.elements ?? []}
+        <ScoringView
+          roles={['DJ', 'EJ', 'AJ']} lang={lang}
+          currentPerf={currentPerf}
+          elements={currentPerf?.elements ?? []}
           djMode={(djMethod as 'elements' | 'keyboard') ?? 'elements'}
           ejMode={(ejMethod as 'elements' | 'keyboard') ?? 'elements'}
-          onSubmit={handleSubmit}
-          panelJudges={panelJudges} judgeScores={currentScores}
+          onDJSubmit={handleDJSubmit}
+          onEJSubmit={handleEJSubmit}
+          onAJSubmit={handleAJSubmit}
+          panelJudges={panelJudges} singleJudgeScores={currentScores}
           waitingForOtherScores={waitingForOtherScores}
           result={currentResult ?? undefined}
           myDJSubmittedScore={myDJScore ? { difficulty: myDJScore.djDifficulty!, penalty: myDJScore.djPenalty! } : null}

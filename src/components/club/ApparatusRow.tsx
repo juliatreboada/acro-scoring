@@ -5,11 +5,7 @@ import type { Lang } from '@/components/scoring/types'
 import type { RoutineMusic, Apparatus } from '@/components/admin/types'
 import { FileChip } from './FileChip'
 import { MusicPlayerModal } from './MusicPlayerModal'
-
-const T = {
-  en: { music: 'Music' },
-  es: { music: 'Música' },
-}
+import { useT } from '@/lib/useT'
 
 export function ApparatusRow({
   lang, apparatus, record, locked, onSet,
@@ -20,7 +16,7 @@ export function ApparatusRow({
   locked: boolean
   onSet: (file: File | null) => void
 }) {
-  const t = T[lang]
+  const t = useT('ApparatusRow', lang)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const appName = lang === 'es' && apparatus.name_es ? apparatus.name_es : apparatus.name
 

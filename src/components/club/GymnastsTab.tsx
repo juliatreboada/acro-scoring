@@ -6,67 +6,7 @@ import type { Lang } from '@/components/scoring/types'
 import type { Gymnast } from '@/components/admin/types'
 import { normalizeForSearch } from '@/lib/normalizeString'
 import { LicenciaChip } from './shared/LicenciaChip'
-
-const T = {
-  en: {
-    addGymnast: 'Add gymnast',
-    search: 'Search by name or surname…',
-    importGymnasts: 'Import from Excel RFEG',
-    importTitle: 'Import gymnasts',
-    importFound: (n: number) => `${n} gymnast${n !== 1 ? 's' : ''} found in file`,
-    importDuplicateNote: (n: number) => `${n} already exist and will be skipped`,
-    importDuplicate: 'Already exists',
-    importConfirm: 'Add gymnasts',
-    importConfirming: 'Saving…',
-    importCancel: 'Cancel',
-    importEmpty: 'No valid gymnasts found in the file.',
-    importDone: (n: number) => `${n} gymnast${n !== 1 ? 's' : ''} added.`,
-    licenciaNacional: 'Nat. Licence',
-    firstName: 'First name',
-    lastName1: 'First surname',
-    lastName2: 'Second surname',
-    dob: 'Date of birth',
-    save: 'Save',
-    cancel: 'Cancel',
-    empty: 'No gymnasts yet. Add your first gymnast to get started.',
-    yrs: 'yrs',
-    confirmDelete: 'Remove this gymnast from the roster?',
-    gymnasts: (n: number) => `${n} gymnast${n !== 1 ? 's' : ''}`,
-    licencia: 'Licence',
-    uploadLicencia: 'Upload licence',
-    replaceLicencia: 'Replace',
-    removeLicencia: 'Remove licence',
-  },
-  es: {
-    addGymnast: 'Añadir gimnasta',
-    search: 'Buscar por nombre o apellido…',
-    importGymnasts: 'Importar desde Excel de licencias RFEG',
-    importTitle: 'Importar gimnastas',
-    importFound: (n: number) => `${n} gimnasta${n !== 1 ? 's' : ''} encontrado${n !== 1 ? 's' : ''} en el archivo`,
-    importDuplicateNote: (n: number) => `${n} ya existen y se omitirán`,
-    importDuplicate: 'Ya existe',
-    importConfirm: 'Añadir gimnastas',
-    importConfirming: 'Guardando…',
-    importCancel: 'Cancelar',
-    importEmpty: 'No se encontraron gimnastas válidos en el archivo.',
-    importDone: (n: number) => `${n} gimnasta${n !== 1 ? 's' : ''} añadido${n !== 1 ? 's' : ''}.`,
-    licenciaNacional: 'Lic. Nacional',
-    firstName: 'Nombre',
-    lastName1: 'Primer apellido',
-    lastName2: 'Segundo apellido',
-    dob: 'Fecha de nacimiento',
-    save: 'Guardar',
-    cancel: 'Cancelar',
-    empty: 'Aún no hay gimnastas. Añade el primero para empezar.',
-    yrs: 'años',
-    confirmDelete: '¿Eliminar este gimnasta del registro?',
-    gymnasts: (n: number) => `${n} gimnasta${n !== 1 ? 's' : ''}`,
-    licencia: 'Licencia',
-    uploadLicencia: 'Subir licencia',
-    replaceLicencia: 'Reemplazar',
-    removeLicencia: 'Eliminar licencia',
-  },
-}
+import { useT } from '@/lib/useT'
 
 // ─── gymnast excel import ─────────────────────────────────────────────────────
 
@@ -126,7 +66,7 @@ function GymnastImportModal({ lang, rows, onConfirm, onClose }: {
   onConfirm: (gymnasts: Array<Omit<Gymnast, 'id' | 'club_id'>>) => Promise<void>
   onClose: () => void
 }) {
-  const t = T[lang]
+  const t = useT('GymnastsTab', lang)
   const inputCls = 'w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
   const [list, setList] = useState<ImportRow[]>(rows)
   const [saving, setSaving] = useState(false)
@@ -194,13 +134,13 @@ function GymnastImportModal({ lang, rows, onConfirm, onClose }: {
               <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <input value={row.first_name} disabled={row.removed || row.isDuplicate}
                   onChange={e => update(row._id, { first_name: e.target.value })}
-                  placeholder={T[lang].firstName} className={inputCls} />
+                  placeholder={t.firstName} className={inputCls} />
                 <input value={row.last_name_1} disabled={row.removed || row.isDuplicate}
                   onChange={e => update(row._id, { last_name_1: e.target.value })}
-                  placeholder={T[lang].lastName1} className={inputCls} />
+                  placeholder={t.lastName1} className={inputCls} />
                 <input value={row.last_name_2} disabled={row.removed || row.isDuplicate}
                   onChange={e => update(row._id, { last_name_2: e.target.value })}
-                  placeholder={T[lang].lastName2} className={inputCls} />
+                  placeholder={t.lastName2} className={inputCls} />
                 <input type="date" value={row.date_of_birth} disabled={row.removed || row.isDuplicate}
                   onChange={e => update(row._id, { date_of_birth: e.target.value })}
                   className={inputCls} />
@@ -310,7 +250,7 @@ function GymnastForm({ lang, initial, onSave, onCancel }: {
   onSave: (f: FormState) => void
   onCancel: () => void
 }) {
-  const t = T[lang]
+  const t = useT('GymnastsTab', lang)
   const [form, setForm] = useState<FormState>(initial)
   const inputCls = 'w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
 
@@ -369,7 +309,7 @@ export default function GymnastsTab({
   onUploadLicencia: (id: string, file: File) => Promise<void>
   onRemoveLicencia: (id: string) => Promise<void>
 }) {
-  const t = T[lang]
+  const t = useT('GymnastsTab', lang)
   const licenciaLabels = { view: t.licencia, upload: t.uploadLicencia, replace: t.replaceLicencia, remove: t.removeLicencia }
   const [showAdd, setShowAdd] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)

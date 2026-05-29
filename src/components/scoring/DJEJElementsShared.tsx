@@ -11,35 +11,7 @@ import {
 } from './DJElementsShared'
 
 import { DEDUCTION_VALUES } from '@/lib/scoringRules'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    done: 'Done', notDone: 'Not done', tf: 'TF',
-    srNotDone: 'SR not done', forbidden: 'Forbidden', noSupport: 'No support',
-    note: 'Note…', addRetry: 'Add retry', retry: 'Retry',
-    djLabel: 'DJ', ejLabel: 'EJ', deduction: 'Deduction',
-    difficulty: 'D', elementLabel: 'Element description…', isStatic: 'Static',
-    noElements: 'No elements in tariff sheet', noElementsNote: 'You can submit immediately',
-    addElement: '+ Add unlisted element',
-    submit: 'Submit', difficultyTotal: 'Difficulty', djPenalty: 'DJ Penalty', ejScore: 'EJ Score',
-    ejHint: 'EJ score (0.0 – 10.0)',
-    incorrectTs: 'Incorrect TS', incorrectTsNote: '−0.3 · order or element differs from declared',
-  },
-  es: {
-    done: 'Realizado', notDone: 'No realizado', tf: 'FT',
-    srNotDone: 'SR no realizado', forbidden: 'Prohibido', noSupport: 'Sin apoyo',
-    note: 'Nota…', addRetry: 'Añadir reintento', retry: 'Reintento',
-    djLabel: 'DJ', ejLabel: 'EJ', deduction: 'Deducción',
-    difficulty: 'D', elementLabel: 'Descripción del elemento…', isStatic: 'Estático',
-    noElements: 'No hay elementos en la TS', noElementsNote: 'Puedes enviar directamente',
-    addElement: '+ Añadir elemento no listado',
-    submit: 'Enviar', difficultyTotal: 'Dificultad', djPenalty: 'Pen. DJ', ejScore: 'Nota EJ',
-    ejHint: 'Nota EJ (0.0 – 10.0)',
-    incorrectTs: 'TS incorrecta', incorrectTsNote: '−0.3 · orden o elemento difiere de lo declarado en TS',
-  },
-}
+import { useT } from '@/lib/useT'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -72,7 +44,7 @@ export function CombinedAttemptRow({ flag, elementId, attemptNumber, flags, dedu
   onLock: (elementId: string, attemptNumber: number, value: number) => void
   onOpenRetry: (elementId: string, nextAttemptNumber: number) => void
 }) {
-  const t = T[lang]
+  const t = useT('DJEJElementsShared', lang)
   const [showNote, setShowNote] = useState(false)
   const maxAttempt = maxAttemptInFlags(elementId, flags)
   const canAddRetry = attemptNumber === maxAttempt && maxAttempt <= MAX_RETRIES
@@ -165,7 +137,7 @@ export function CombinedElementRow({ element, flags, deductions, lang, onFlagCha
   onLabelChange?: (id: string, label: string) => void
   onTypeChange?: (id: string, type: ElementType, isStatic?: boolean) => void
 }) {
-  const t = T[lang]
+  const t = useT('DJEJElementsShared', lang)
   const config = getElementConfig(element)
   const maxAttempt = Math.max(maxAttemptInFlags(element.id, flags), maxAttemptInDeductions(element.id, deductions))
   const mainFlag = flags[`${element.id}:1`] ?? DEFAULT_FLAG
@@ -223,7 +195,7 @@ export function EJKeypad({ lang, onSubmit }: {
   lang: Lang
   onSubmit: (score: number) => void
 }) {
-  const t = T[lang]
+  const t = useT('DJEJElementsShared', lang)
   const [input, setInput] = useState('')
   const score = input === '' ? null : parseFloat(input)
   const isValid = score !== null && !isNaN(score) && score >= 0 && score <= 10
@@ -277,7 +249,7 @@ export function EJElementRow({ element, deductions, lang, onLock, onLabelChange 
   onLock: (elementId: string, attemptNumber: number, value: number) => void
   onLabelChange?: (id: string, label: string) => void
 }) {
-  const t = T[lang]
+  const t = useT('DJEJElementsShared', lang)
   const dedKey = `${element.id}:1`
   const dedState = deductions[dedKey]
   const dedLocked = dedState?.locked ?? false
@@ -348,7 +320,7 @@ export function DJEJTabContent({ lang, elements, extraElements, flags, deduction
   djPenalty: number
   ejScore: number
 }) {
-  const t = T[lang]
+  const t = useT('DJEJElementsShared', lang)
   const allElements = [...elements, ...extraElements]
 
   if (isSubmitted) {
@@ -427,7 +399,7 @@ export function DJTabContent({ lang, elements, extraElements, flags, incorrectTs
   djDifficulty: number
   djPenalty: number
 }) {
-  const t = T[lang]
+  const t = useT('DJEJElementsShared', lang)
   const allElements = [...elements, ...extraElements]
 
   if (isSubmitted) {

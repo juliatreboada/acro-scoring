@@ -3,37 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Lang, Answers } from '../scoring/types'
 import { getSections, getQuestionValues, calcSectionScore, calcTotal } from '../scoring/aj-content'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    section: 'Section',
-    of: 'of',
-    next: 'Next section',
-    summary: 'Summary',
-    total: 'Total',
-    submit: 'Submit score',
-    submitted: 'Score submitted',
-    info: 'More info',
-    sectionScore: 'Section score',
-    scoreRange: '(range 1.0 – 2.0)',
-    totalRange: '(range 5.0 – 10.0)',
-  },
-  es: {
-    section: 'Jornada',
-    of: 'de',
-    next: 'Siguiente Jornada',
-    summary: 'Resumen',
-    total: 'Total',
-    submit: 'Enviar puntuación',
-    submitted: 'Puntuación enviada',
-    info: 'Más info',
-    sectionScore: 'Puntuación jornada',
-    scoreRange: '(rango 1.0 – 2.0)',
-    totalRange: '(rango 5.0 – 10.0)',
-  },
-}
+import { useT } from '@/lib/useT'
 
 // ─── progress bar ─────────────────────────────────────────────────────────────
 
@@ -95,7 +65,7 @@ type QuestionRowProps = {
 
 function QuestionRow({ text, description, qIndex, sIndex, value, locked, lang, onAnswer }: QuestionRowProps) {
   const [showInfo, setShowInfo] = useState(false)
-  const t = T[lang]
+  const t = useT('AJScoringPanel', lang)
   const vals = getQuestionValues(qIndex)
 
   const buttons: { label: string; color: string; activeColor: string; val: number }[] = [
@@ -174,7 +144,7 @@ export type AJScoringPanelProps = {
 }
 
 export default function AJScoringPanel({ lang, perfId, onSubmit }: AJScoringPanelProps) {
-  const t = T[lang]
+  const t = useT('AJScoringPanel', lang)
   const sections = getSections(lang)
 
   const [answers, setAnswers] = useState<Answers>({})

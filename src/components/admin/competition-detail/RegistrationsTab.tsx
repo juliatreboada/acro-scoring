@@ -11,71 +11,7 @@ import ImportTab from './ImportTab'
 import { createClient } from '@/lib/supabase'
 import { ProvisionalSubTab } from './ProvisionalSubTab'
 import { DefinitiveSubTab } from './DefinitiveSubTab'
-
-const T = {
-  en: {
-    backToList: 'Back to registrations',
-    registered: (n: number) => `${n} registered`,
-    dropout: (n: number) => `${n} dropout`,
-    dropouts: (n: number) => `${n} dropouts`,
-    markDropout: 'Mark as dropout',
-    undoDropout: 'Undo dropout',
-    baja: 'Dropout',
-    licenciaWarning: 'Missing licencia',
-    licenciaWarningFull: 'One or more gymnasts have no licencia uploaded.',
-    tsWarning: 'Missing TS',
-    tsWarningFull: 'No TS uploaded.',
-    musicWarning: 'Missing music',
-    musicWarningFull: 'No music file uploaded.',
-    reopenMusic: 'Reopen music upload',
-    closeMusicReopen: 'Close music reopen',
-    expandAll: 'Expand all',
-    collapseAll: 'Collapse all',
-    cancel: 'Cancel',
-    import: 'Import',
-    noRegistrations: 'No registrations yet.',
-    // invite club form
-    inviteClubTitle: 'Invite club',
-    emailLabel: 'Email address',
-    sendInvite: 'Send invitation',
-    sending: 'Sending…',
-    inviteSent: 'Invitation sent to',
-    inviteClubInfo: 'The club will receive an email with a link to register.',
-    // sub-tabs
-    subTabs: { provisional: 'Provisional', definitive: 'Definitive', nominative: 'Nominative' },
-  },
-  es: {
-    backToList: 'Volver a inscripciones',
-    registered: (n: number) => `${n} inscrito${n === 1 ? '' : 's'}`,
-    dropout: (n: number) => `${n} baja`,
-    dropouts: (n: number) => `${n} bajas`,
-    markDropout: 'Declarar baja',
-    undoDropout: 'Deshacer baja',
-    baja: 'Baja',
-    licenciaWarning: 'Licencia pendiente',
-    licenciaWarningFull: 'Uno o más gimnastas no tienen la licencia subida.',
-    tsWarning: 'Falta TS',
-    tsWarningFull: 'No se ha subido la TS.',
-    musicWarning: 'Falta música',
-    musicWarningFull: 'No se ha subido el archivo de música.',
-    reopenMusic: 'Reabrir subida música',
-    closeMusicReopen: 'Cerrar reapertura música',
-    expandAll: 'Expandir todo',
-    collapseAll: 'Contraer todo',
-    cancel: 'Cancelar',
-    import: 'Importar',
-    noRegistrations: 'Sin inscripciones aún.',
-    // invite club form
-    inviteClubTitle: 'Invitar club',
-    emailLabel: 'Correo electrónico',
-    sendInvite: 'Enviar invitación',
-    sending: 'Enviando…',
-    inviteSent: 'Invitación enviada a',
-    inviteClubInfo: 'El club recibirá un correo con un enlace para inscribirse.',
-    // sub-tabs
-    subTabs: { provisional: 'Provisional', definitive: 'Definitiva', nominative: 'Nominativa' },
-  },
-}
+import { useT } from '@/lib/useT'
 
 // ─── local DB types ───────────────────────────────────────────────────────────
 
@@ -116,9 +52,9 @@ type Level = 'Escolar' | 'Base' | 'Nacional'
 const LEVEL_ORDER: Level[] = ['Escolar', 'Base', 'Nacional']
 
 function getLevel(ageGroupId: string, rules: AgeGroupRule[]): Level {
-  const ag = rules.find(r => r.id === ageGroupId)?.age_group ?? ''
-  if (ag.includes('Escolar')) return 'Escolar'
-  if (ag.includes('Base'))    return 'Base'
+  const level = rules.find(r => r.id === ageGroupId)?.level ?? ''
+  if (level === 'Escolar') return 'Escolar'
+  if (level === 'Base')    return 'Base'
   return 'Nacional'
 }
 
@@ -131,7 +67,7 @@ function InviteClubForm({ lang, competitionId, onDone, onCancel }: {
   onDone: () => void
   onCancel: () => void
 }) {
-  const t = T[lang]
+  const t = useT('RegistrationsTab', lang)
   const [email, setEmail] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState<string | null>(null)
@@ -223,7 +159,7 @@ function RegistrationGroup({ age_group, category, items, lang, agLabels, open, o
   musicUnlockByTeam: Record<string, boolean>
   onToggleMusicUnlock: (teamId: string, enabled: boolean) => Promise<void> | void
 }) {
-  const t = T[lang]
+  const t = useT('RegistrationsTab', lang)
   const activeCount = items.filter((i) => !i.entry.dropped_out).length
   const dropoutCount = items.filter((i) => i.entry.dropped_out).length
 
@@ -354,7 +290,7 @@ export default function RegistrationsTab({
   competitionId, ageGroupRules, competitionAgeGroups, competitionYear, competitionStatus,
   provisionalEntries: initialProvisionalEntries, definitiveEntries: initialDefinitiveEntries,
 }: RegistrationsTabProps) {
-  const t = T[lang]
+  const t = useT('RegistrationsTab', lang)
   const [activeSubTab, setActiveSubTab] = useState<SubTab>(() => defaultSubTab(competitionStatus))
   const [showImport, setShowImport] = useState(false)
 
@@ -541,7 +477,7 @@ function NominativeView({ lang, globalTeams, clubs, gymnasts, entries, agLabels,
   competitionAgeGroups: string[]
   competitionYear: number
 }) {
-  const t = T[lang]
+  const t = useT('RegistrationsTab', lang)
 
   type Group = { age_group: string; category: string; items: GroupItem[] }
   const groupMap = new Map<string, Group>()

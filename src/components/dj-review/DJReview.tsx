@@ -6,107 +6,8 @@ import { createClient } from '@/lib/supabase'
 import type { Lang } from '../scoring/types'
 import type { Sheet, ReviewElement, ElementType, TsReviewStatus } from './types'
 import { categoryLabel } from '@/components/admin/types'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    title: 'Tariff Sheet Review',
-    reviewed: 'reviewed',
-    of: 'of',
-    sheets: 'sheets reviewed',
-    pdfPlaceholder: 'Tariff Sheet PDF',
-    pdfNote: 'PDF will appear here once uploaded',
-    openPdf: 'Open in new tab',
-    elements: 'Elements',
-    noElements: 'No elements added yet',
-    position: 'Pos',
-    type: 'Type',
-    label: 'Label (optional)',
-    difficulty: 'Difficulty',
-    difficultyHint: '0.00 – 4.00',
-    difficultyHintInt: 'e.g. 30 → 0.30',
-    isStatic: 'Static',
-    addElement: 'Add element',
-    markReviewed: 'Mark as reviewed',
-    markIncorrect: 'Mark as incorrect',
-    incorrectPlaceholder: 'Describe what is wrong with this tariff sheet…',
-    send: 'Send',
-    cancel: 'Cancel',
-    reopen: 'Reopen',
-    reviewedBy: 'Reviewed',
-    clubNotified: 'Club notified — TS marked as incorrect',
-    waitingDJ2: 'Waiting for the other DJ to confirm…',
-    dj2Header: 'The other DJ marked this TS as:',
-    dj2MarkCorrect: 'Mark as correct',
-    dj2Confirm: 'Confirm & send to club',
-    newTs: 'Club uploaded a new TS — please review again',
-    incorrect: 'Incorrect',
-    deleteElement: 'Delete',
-    editElement: 'Edit',
-    saveElement: 'Save',
-    cancelEdit: 'Cancel',
-    balance: 'Balance',
-    mount: 'Mount',
-    dynamic: 'Dynamic',
-    individual: 'Individual',
-    motion: 'Motion',
-    routineBalance: 'Balance',
-    routineDynamic: 'Dynamic',
-    routineCombined: 'Combined',
-    totalDifficulty: 'Total D',
-    refresh: 'Refresh',
-    back: 'Back',
-  },
-  es: {
-    title: 'Revisión de TS',
-    reviewed: 'revisadas',
-    of: 'de',
-    sheets: 'hojas revisadas',
-    pdfPlaceholder: 'PDF TS',
-    pdfNote: 'El PDF aparecerá aquí una vez subido',
-    openPdf: 'Abrir en nueva pestaña',
-    elements: 'Elementos',
-    noElements: 'No hay elementos añadidos',
-    position: 'Pos',
-    type: 'Tipo',
-    label: 'Etiqueta (opcional)',
-    difficulty: 'Dificultad',
-    difficultyHint: '0.00 – 4.00',
-    difficultyHintInt: 'ej. 30 → 0.30',
-    isStatic: 'Estático',
-    addElement: 'Añadir elemento',
-    markReviewed: 'Marcar como revisada',
-    markIncorrect: 'Marcar como incorrecta',
-    incorrectPlaceholder: 'Describe qué hay incorrecto en esta TS…',
-    send: 'Enviar',
-    cancel: 'Cancelar',
-    reopen: 'Reabrir',
-    reviewedBy: 'Revisada',
-    clubNotified: 'Club notificado — TS marcada como incorrecta',
-    waitingDJ2: 'Esperando confirmación del otro DJ…',
-    dj2Header: 'El otro DJ ha marcado esta TS como:',
-    dj2MarkCorrect: 'Marcar como correcta',
-    dj2Confirm: 'Confirmar y enviar al club',
-    newTs: 'El club ha subido una nueva TS — revísala de nuevo',
-    incorrect: 'Incorrecta',
-    deleteElement: 'Eliminar',
-    editElement: 'Editar',
-    saveElement: 'Guardar',
-    cancelEdit: 'Cancelar',
-    balance: 'Balance',
-    mount: 'Mount',
-    dynamic: 'Dinámico',
-    individual: 'Individual',
-    motion: 'Motion',
-    routineBalance: 'Equilibrio',
-    routineDynamic: 'Dinámico',
-    routineCombined: 'Combinado',
-    totalDifficulty: 'D total',
-    refresh: 'Actualizar',
-    back: 'Volver',
-  },
-}
+import { useT } from '@/lib/useT'
+import { DJReview as DJReviewT } from '@/locales/en'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -120,7 +21,7 @@ function usesIntegerDifficulty(ageGroup: string): boolean {
   )
 }
 
-function typeBadge(type: ElementType, isStatic: boolean, t: typeof T['en']) {
+function typeBadge(type: ElementType, isStatic: boolean, t: typeof DJReviewT) {
   if (type === 'balance') return { label: t.balance,  color: 'bg-blue-100 text-blue-700' }
   if (type === 'mount')   return { label: t.mount,    color: 'bg-blue-100 text-blue-700' }
   if (type === 'dynamic') return { label: t.dynamic,  color: 'bg-purple-100 text-purple-700' }
@@ -150,7 +51,7 @@ function ElementForm({ lang, integerMode, onAdd }: {
   integerMode: boolean
   onAdd: (el: Omit<ReviewElement, 'id' | 'position'>) => Promise<void>
 }) {
-  const t = T[lang]
+  const t = useT('DJReview', lang)
   const [form, setForm] = useState<ElementFormState>(EMPTY_FORM)
 
   const rawNum = parseFloat(form.difficultyValue)
@@ -257,7 +158,7 @@ function ElementEditRow({ el, lang, integerMode, onSave, onCancel }: {
   onSave: (updated: Omit<ReviewElement, 'id' | 'position'>) => void
   onCancel: () => void
 }) {
-  const t = T[lang]
+  const t = useT('DJReview', lang)
   const [form, setForm] = useState<ElementFormState>({
     elementType: el.elementType,
     isStatic: el.isStatic,
@@ -353,7 +254,7 @@ function ReviewActions({ sheet, myJudgeId, lang, onMarkChecked, onMarkIncorrect,
   onDJ2Confirm: (decision: 'checked' | 'incorrect', comment: string) => void
   onReopen: () => void
 }) {
-  const t = T[lang]
+  const t = useT('DJReview', lang)
   const [showIncorrectForm, setShowIncorrectForm] = useState(false)
   const [comment, setComment] = useState(sheet.dj1Comment ?? '')
 
@@ -543,7 +444,7 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
   onDJ2Confirm: (sheetId: string, decision: 'checked' | 'incorrect', comment: string) => Promise<void>
   onReopen: (sheetId: string) => Promise<void>
 }) {
-  const t = T[lang]
+  const t = useT('DJReview', lang)
   const isLocked = sheet.reviewStatus === 'checked' || sheet.reviewStatus === 'incorrect' || sheet.reviewStatus === 'awaiting_dj2'
   const integerMode = usesIntegerDifficulty(sheet.ageGroup)
   const totalD = sheet.elements.reduce((s, el) => s + el.difficultyValue, 0)
@@ -670,7 +571,7 @@ type DJReviewProps = {
 export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode = false, judgeLobbyHref }: DJReviewProps) {
   const router = useRouter()
   const supabase = createClient()
-  const t = T[lang]
+  const t = useT('DJReview', lang)
   const [sheets, setSheets] = useState<Sheet[]>(initialSheets)
   const [modalSheetId, setModalSheetId] = useState<string | null>(null)
 

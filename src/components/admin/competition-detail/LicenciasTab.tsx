@@ -6,67 +6,7 @@ import type { Team, Club, CompetitionEntry, Gymnast, Coach, AgeGroupRule, Compet
 import { categoryLabel, sortByAgeGroupAndCategory, CATEGORY_SIZE } from '@/components/admin/types'
 import { SubTabSwitcher } from './SubTabSwitcher'
 import { createClient } from '@/lib/supabase'
-
-// ─── translations ─────────────────────────────────────────────────────────────
-
-const T = {
-  en: {
-    title: 'Licencias',
-    noEntries: 'No registered teams.',
-    noLicencia: 'No licencia',
-    viewLicencia: 'View licencia',
-    viewPhoto: 'View photo',
-    downloadAll: 'Download all',
-    droppedOut: 'Dropped out',
-    noGymnasts: 'No gymnasts linked',
-    coaches: 'Coaches',
-    gymnasts: 'Teams',
-    subTabs: { provisional: 'Provisional', definitive: 'Definitive', nominative: 'Nominative' },
-    // provisional
-    noProvisional: 'No provisional entries yet.',
-    totalTeams: 'est. teams',
-    totalGymnasts: 'est. gymnasts',
-    // definitive
-    noDefinitive: 'No definitive entries yet.',
-    contact: 'Contact',
-    totalAmount: 'Total',
-    judgeProvided: 'Judge',
-    noJudge: 'No judge',
-    statusPending: 'Pending',
-    statusPaymentUploaded: 'Payment uploaded',
-    statusApproved: 'Approved',
-    statusRejected: 'Rejected',
-    viewPayment: 'View payment',
-  },
-  es: {
-    title: 'Licencias',
-    noEntries: 'No hay equipos inscritos.',
-    noLicencia: 'Sin licencia',
-    viewLicencia: 'Ver licencia',
-    viewPhoto: 'Ver foto',
-    downloadAll: 'Descargar todo',
-    droppedOut: 'Retirado',
-    noGymnasts: 'Sin gimnastas vinculados',
-    coaches: 'Entrenadores',
-    gymnasts: 'Equipos',
-    subTabs: { provisional: 'Provisional', definitive: 'Definitiva', nominative: 'Nominativa' },
-    // provisional
-    noProvisional: 'Sin inscripciones provisionales todavía.',
-    totalTeams: 'equipos est.',
-    totalGymnasts: 'gimnastas est.',
-    // definitive
-    noDefinitive: 'Sin inscripciones definitivas todavía.',
-    contact: 'Contacto',
-    totalAmount: 'Total',
-    judgeProvided: 'Juez',
-    noJudge: 'Sin juez',
-    statusPending: 'Pendiente',
-    statusPaymentUploaded: 'Pago subido',
-    statusApproved: 'Aprobado',
-    statusRejected: 'Rechazado',
-    viewPayment: 'Ver pago',
-  },
-}
+import { useT } from '@/lib/useT'
 
 const DEF_STATUS_BADGE: Record<string, string> = {
   pending:          'bg-amber-50 text-amber-700 border-amber-200',
@@ -102,7 +42,7 @@ function defaultSubTab(status: CompetitionStatus): SubTab {
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function LicenciasTab({ lang, competitionStatus, provisionalEntries, definitiveEntries, globalTeams, clubs, entries, competitionGymnasts, competitionCoaches, globalCoaches, ageGroupRules }: Props) {
-  const t = T[lang]
+  const t = useT('LicenciasTab', lang)
   const supabase = createClient()
   const [activeSubTab, setActiveSubTab] = useState<SubTab>(() => defaultSubTab(competitionStatus))
 
@@ -231,7 +171,7 @@ export default function LicenciasTab({ lang, competitionStatus, provisionalEntri
 // ─── nominative view (existing content extracted) ─────────────────────────────
 
 function NominativeView({ lang, globalTeams, clubs, entries, competitionGymnasts, competitionCoaches, globalCoaches, ageGroupRules }: Omit<Props, 'competitionStatus' | 'provisionalEntries' | 'definitiveEntries'>) {
-  const t = T[lang]
+  const t = useT('LicenciasTab', lang)
 
   const clubMap    = Object.fromEntries(clubs.map(c => [c.id, c]))
   const teamMap    = Object.fromEntries(globalTeams.map(tm => [tm.id, tm]))
@@ -299,6 +239,7 @@ function ClubBlock({
   ageGroupRules: AgeGroupRule[]
   onBulkDownload: (gymnasts: Gymnast[]) => void
 }) {
+  const t = useT('LicenciasTab', lang)
   const [open, setOpen] = useState(true)
 
   const sortableEntries = clubEntries.map(e => ({
@@ -333,9 +274,9 @@ function ClubBlock({
           )}
           <p className="text-sm font-semibold text-slate-800 truncate">{club?.club_name ?? '—'}</p>
           <span className="text-xs text-slate-400 shrink-0">
-            {clubCoaches.length > 0 && `${clubCoaches.length} ${T[lang].coaches.toLowerCase()}`}
+            {clubCoaches.length > 0 && `${clubCoaches.length} ${t.coaches.toLowerCase()}`}
             {clubCoaches.length > 0 && activeEntries.length > 0 && ' · '}
-            {activeEntries.length > 0 && `${activeEntries.length} ${T[lang].gymnasts.toLowerCase()}`}
+            {activeEntries.length > 0 && `${activeEntries.length} ${t.gymnasts.toLowerCase()}`}
           </span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -351,7 +292,7 @@ function ClubBlock({
                 : 'border-slate-100 text-slate-300 cursor-default pointer-events-none',
             ].join(' ')}
           >
-            {T[lang].downloadAll}
+            {t.downloadAll}
           </span>
           <svg className={['w-4 h-4 text-slate-300 transition-transform', open ? 'rotate-180' : ''].join(' ')}
             fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -365,7 +306,7 @@ function ClubBlock({
           {clubCoaches.length > 0 && (
             <div>
               <p className="px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-400 bg-slate-50">
-                {T[lang].coaches}
+                {t.coaches}
               </p>
               <ul className="divide-y divide-slate-50">
                 {clubCoaches.map(c => (
@@ -382,17 +323,17 @@ function ClubBlock({
                     {c.photo_url && (
                       <a href={c.photo_url} target="_blank" rel="noopener noreferrer"
                         className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all shrink-0">
-                        {T[lang].viewPhoto}
+                        {t.viewPhoto}
                       </a>
                     )}
                     {c.licencia_url ? (
                       <a href={c.licencia_url} target="_blank" rel="noopener noreferrer"
                         className="text-xs px-2.5 py-1 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-all shrink-0">
-                        {T[lang].viewLicencia}
+                        {t.viewLicencia}
                       </a>
                     ) : (
                       <span className="text-xs px-2.5 py-1 rounded-lg border border-slate-100 text-slate-300 shrink-0">
-                        {T[lang].noLicencia}
+                        {t.noLicencia}
                       </span>
                     )}
                   </li>
@@ -404,7 +345,7 @@ function ClubBlock({
           {(activeEntries.length > 0 || droppedEntries.length > 0) && (
             <div>
               <p className="px-4 py-2 text-xs font-semibold uppercase tracking-widest text-slate-400 bg-slate-50">
-                {T[lang].gymnasts}
+                {t.gymnasts}
               </p>
               <div className="divide-y divide-slate-50">
                 {[...activeEntries, ...droppedEntries].map(entry => {
@@ -418,11 +359,11 @@ function ClubBlock({
                         <p className="text-xs font-medium text-slate-600 truncate flex-1">{team.gymnast_display}</p>
                         <span className="text-xs text-slate-400">{categoryLabel(team.category, lang)}</span>
                         {dropped && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-500 font-medium">{T[lang].droppedOut}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-500 font-medium">{t.droppedOut}</span>
                         )}
                       </div>
                       {gymnasts.length === 0 ? (
-                        <p className="px-4 py-3 text-xs text-slate-400">{T[lang].noGymnasts}</p>
+                        <p className="px-4 py-3 text-xs text-slate-400">{t.noGymnasts}</p>
                       ) : (
                         <ul className="divide-y divide-slate-50">
                           {gymnasts.map(g => {
@@ -441,17 +382,17 @@ function ClubBlock({
                                 {g.photo_url && (
                                   <a href={g.photo_url} target="_blank" rel="noopener noreferrer"
                                     className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all shrink-0">
-                                    {T[lang].viewPhoto}
+                                    {t.viewPhoto}
                                   </a>
                                 )}
                                 {g.licencia_url ? (
                                   <a href={g.licencia_url} target="_blank" rel="noopener noreferrer"
                                     className="text-xs px-2.5 py-1 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-all shrink-0">
-                                    {T[lang].viewLicencia}
+                                    {t.viewLicencia}
                                   </a>
                                 ) : (
                                   <span className="text-xs px-2.5 py-1 rounded-lg border border-slate-100 text-slate-300 shrink-0">
-                                    {T[lang].noLicencia}
+                                    {t.noLicencia}
                                   </span>
                                 )}
                               </li>

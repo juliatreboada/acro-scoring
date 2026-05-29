@@ -5,39 +5,7 @@ import type { Lang } from '@/components/scoring/types'
 import type { Competition, CompetitionEntry, CompetitionJudgeNomination, AgeGroupRule, Team } from '@/components/admin/types'
 import { categoriesForRuleset } from '@/components/admin/types'
 import { formatDateRange } from '@/lib/formatDate'
-
-const T = {
-  en: {
-    empty: 'No competitions available yet.',
-    judgesWarning: 'At least 1 judge must be nominated for this competition.',
-    teamCount: (n: number) => n === 0 ? 'Not registered' : `${n} team${n !== 1 ? 's' : ''} registered`,
-    status: {
-      draft: 'Draft',
-      provisional_entry: 'Provisional entry',
-      definitive_entry: 'Definitive entry',
-      registration_open: 'Open',
-      registration_closed: 'Closed',
-      published: 'Published',
-      active: 'Live',
-      finished: 'Finished',
-    } as Record<string, string>,
-  },
-  es: {
-    empty: 'Aún no hay competiciones disponibles.',
-    judgesWarning: 'Debes nominar al menos 1 juez para esta competición.',
-    teamCount: (n: number) => n === 0 ? 'Sin inscripción' : `${n} equipo${n !== 1 ? 's' : ''} inscrito${n !== 1 ? 's' : ''}`,
-    status: {
-      draft: 'Borrador',
-      provisional_entry: 'Inscripción provisional',
-      definitive_entry: 'Inscripción definitiva',
-      registration_open: 'Abierta',
-      registration_closed: 'Cerrada',
-      published: 'Publicada',
-      active: 'En vivo',
-      finished: 'Finalizada',
-    } as Record<string, string>,
-  },
-}
+import { useT } from '@/lib/useT'
 
 const STATUS_BADGE: Record<string, string> = {
   draft:               'bg-slate-100 text-slate-500',
@@ -99,7 +67,7 @@ export function CompetitionListView({
   onOpenProvisionalEntry: (comp: Competition) => void
   onOpenDefinitiveEntry: (comp: Competition) => void
 }) {
-  const t = T[lang]
+  const t = useT('CompetitionListView', lang)
   const teamIds = new Set(teams.map((tm) => tm.id))
 
   const visible = competitions.filter((c) =>

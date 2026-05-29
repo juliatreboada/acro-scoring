@@ -53,7 +53,18 @@ export async function POST(req: NextRequest) {
 
   const auth_id = existing[0].auth_id
 
-  if (existing.some(p => p.role === role)) {
+  if (role === 'judge') {
+    // For judges, allow one acro profile + one rg profile — check sport_type specifically
+    const existingJudgeIds = existing.filter(p => p.role === 'judge').map(p => p.id)
+    if (existingJudgeIds.length > 0) {
+      const { data: existingJudges } = await db
+        .from('judges').select('sport_type').in('id', existingJudgeIds)
+      const newSportType = body.sport_type ?? 'acro'
+      if (existingJudges?.some(j => j.sport_type === newSportType)) {
+        return NextResponse.json({ error: `User already has a ${newSportType} judge profile` }, { status: 409 })
+      }
+    }
+  } else if (existing.some(p => p.role === role)) {
     return NextResponse.json({ error: 'User already has this role' }, { status: 409 })
   }
 

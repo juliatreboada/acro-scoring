@@ -3,39 +3,17 @@
 import { useState } from 'react'
 import type { Lang } from '@/components/scoring/types'
 import { INPUT_CLS } from '@/lib/uiConstants'
+import { useT } from '@/lib/useT'
 
-const T = {
-  en: {
-    name: 'Full name',
-    email: 'Email',
-    phone: 'Phone',
-    licence: 'Licence no.',
-    send: 'Send invitation',
-    cancel: 'Cancel',
-    inviteSent: 'Invitation sent to',
-    inviteInfo: 'The judge will receive an email to set up their account and will appear in the list once they accept.',
-  },
-  es: {
-    name: 'Nombre completo',
-    email: 'Email',
-    phone: 'Teléfono',
-    licence: 'Nº licencia',
-    send: 'Enviar invitación',
-    cancel: 'Cancelar',
-    inviteSent: 'Invitación enviada a',
-    inviteInfo: 'El juez recibirá un email para crear su cuenta y aparecerá en la lista cuando acepte.',
-  },
-}
-
-export type InviteForm = { full_name: string; email: string; phone: string; licence: string }
-const EMPTY_INVITE: InviteForm = { full_name: '', email: '', phone: '', licence: '' }
+export type InviteForm = { full_name: string; email: string; phone: string; licence: string; sport_type: string }
+const EMPTY_INVITE: InviteForm = { full_name: '', email: '', phone: '', licence: '', sport_type: 'acro' }
 
 export function InviteJudgeForm({ lang, onSend, onCancel }: {
   lang: Lang
   onSend: (f: InviteForm) => Promise<void>
   onCancel: () => void
 }) {
-  const t = T[lang]
+  const t = useT('InviteJudgeForm', lang)
   const [form, setForm] = useState<InviteForm>(EMPTY_INVITE)
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState<string | null>(null)
@@ -91,6 +69,22 @@ export function InviteJudgeForm({ lang, onSend, onCancel }: {
         <div>
           <label className="block text-xs font-medium text-slate-500 mb-1">{t.licence}</label>
           <input type="text" value={form.licence} onChange={(e) => set('licence', e.target.value)} className={inputCls} />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="block text-xs font-medium text-slate-500 mb-1">{t.sportType} *</label>
+          <div className="flex gap-2">
+            {(['acro', 'rg'] as const).map(s => (
+              <button key={s} type="button" onClick={() => set('sport_type', s)}
+                className={[
+                  'flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-colors',
+                  form.sport_type === s
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300',
+                ].join(' ')}>
+                {s === 'acro' ? t.acro : t.rg}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       {error && <p className="text-xs text-red-600">{error}</p>}

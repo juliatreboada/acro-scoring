@@ -27,7 +27,7 @@ export default function Page() {
     handleAddSection, handleUpdateSectionLabel, handleUpdateSectionTimes, handleDeleteSection,
     handleAddSession, handleDeleteSession,
     handleAddToPool, handleRemoveFromPool, handleAssignJudge,
-    handleAddSlot, handleRemoveSlot, handleTogglePanelLock,
+    handleAddSlot, handleRemoveSlot, handleTogglePanelLock, handleCopyPanel,
     handleToggleDropout, handleRemoveClubEntries,
     handleReorder, handleReorderTimeline,
     handleUpdateCompetition, handleUpdateFees, handleUploadPoster, handleUploadLogo, handleSetDJReviewDeadline,
@@ -180,6 +180,7 @@ export default function Page() {
         onAddSlot={handleAddSlot}
         onRemoveSlot={handleRemoveSlot}
         onTogglePanelLock={handleTogglePanelLock}
+        onCopyPanel={handleCopyPanel}
         onCreateJudge={handleCreateJudge}
         globalTeams={globalTeams}
         clubs={clubs}
