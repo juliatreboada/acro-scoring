@@ -282,6 +282,8 @@ export type Database = {
           start_date: string | null
           status: Database["public"]["Enums"]["competition_status"]
           sport_type: string
+          tshirt_deadline: string | null
+          tshirt_sizes: string[]
           ts_music_deadline: string | null
           tv_sponsor_videos: Json
           updated_at: string
@@ -307,6 +309,8 @@ export type Database = {
           sport_type?: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["competition_status"]
+          tshirt_deadline?: string | null
+          tshirt_sizes?: string[]
           ts_music_deadline?: string | null
           tv_sponsor_videos?: Json
           updated_at?: string
@@ -332,6 +336,8 @@ export type Database = {
           sport_type?: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["competition_status"]
+          tshirt_deadline?: string | null
+          tshirt_sizes?: string[]
           ts_music_deadline?: string | null
           tv_sponsor_videos?: Json
           updated_at?: string
@@ -1118,6 +1124,7 @@ export type Database = {
       sessions: {
         Row: {
           age_group: string
+          bracket_phase: string | null
           category: string
           competition_id: string
           current_team_id: string | null
@@ -1137,6 +1144,7 @@ export type Database = {
         }
         Insert: {
           age_group: string
+          bracket_phase?: string | null
           category: string
           competition_id: string
           current_team_id?: string | null
@@ -1156,6 +1164,7 @@ export type Database = {
         }
         Update: {
           age_group?: string
+          bracket_phase?: string | null
           category?: string
           competition_id?: string
           current_team_id?: string | null
@@ -1530,6 +1539,8 @@ export type Database = {
           open_semi_count: number
           open_final_count: number
           updated_at: string
+          bracket_section_id: string | null
+          bracket_panel_id: string | null
         }
         Insert: {
           competition_id: string
@@ -1539,6 +1550,8 @@ export type Database = {
           open_semi_count?: number
           open_final_count?: number
           updated_at?: string
+          bracket_section_id?: string | null
+          bracket_panel_id?: string | null
         }
         Update: {
           competition_id?: string
@@ -1548,6 +1561,8 @@ export type Database = {
           open_semi_count?: number
           open_final_count?: number
           updated_at?: string
+          bracket_section_id?: string | null
+          bracket_panel_id?: string | null
         }
         Relationships: [
           {
@@ -1678,6 +1693,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tshirt_orders: {
+        Row: {
+          id: string
+          competition_id: string
+          person_type: string
+          person_id: string
+          size: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          competition_id: string
+          person_type: string
+          person_id: string
+          size: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          competition_id?: string
+          person_type?: string
+          person_id?: string
+          size?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       tv_state: {
         Row: {

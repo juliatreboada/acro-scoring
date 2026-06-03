@@ -49,11 +49,11 @@ export function useCompetitionPage(id: string) {
                nominationsRes, entriesRes, rulesRes, adminsRes, provRes, defRes,
                apparatusRes, apparatusRulesRes, mergeGroupsRes] = await Promise.all([
           supabase.from('competitions')
-            .select('id,name,status,sport_type,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,age_groups,poster_url,logo_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine,open_combinados_enabled')
+            .select('id,name,status,sport_type,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,tshirt_sizes,tshirt_deadline,age_groups,poster_url,logo_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine,open_combinados_enabled')
             .eq('id', id).single(),
           supabase.from('panels').select('id,competition_id,panel_number').eq('competition_id', id).order('panel_number'),
           supabase.from('sections').select('id,competition_id,section_number,label,starting_time,waiting_time_seconds,warmup_duration_minutes,timeline_order').eq('competition_id', id).order('section_number'),
-          supabase.from('sessions').select('id,competition_id,panel_id,section_id,name,age_group,category,routine_type,status,order_index,order_locked,dj_method,ej_method,ranking_merge_group_id').eq('competition_id', id).order('order_index'),
+          supabase.from('sessions').select('id,competition_id,panel_id,section_id,name,age_group,category,routine_type,status,order_index,order_locked,dj_method,ej_method,ranking_merge_group_id,bracket_phase').eq('competition_id', id).order('order_index'),
           supabase.from('judges').select('id,full_name,phone,licence,avatar_url,sport_type'),
           supabase.from('competition_judge_nominations').select('id,competition_id,judge_id,club_id').eq('competition_id', id),
           supabase.from('competition_entries').select('id,competition_id,team_id,dorsal,dropped_out,gymnast_display,gymnast_ids').eq('competition_id', id),
@@ -510,6 +510,11 @@ export function useCompetitionPage(id: string) {
     setCompetition(prev => prev ? { ...prev, ts_music_deadline: date } : prev)
   }
 
+  async function handleUpdateTshirtConfig(sizes: string[], deadline: string | null) {
+    await supabase.from('competitions').update({ tshirt_sizes: sizes, tshirt_deadline: deadline }).eq('id', id)
+    setCompetition(prev => prev ? { ...prev, tshirt_sizes: sizes, tshirt_deadline: deadline } : prev)
+  }
+
   // ── competition day ───────────────────────────────────────────────────────────
   async function handleStartSession(sessionId: string) {
     await supabase.from('sessions').update({ status: 'active' }).eq('id', sessionId)
@@ -586,7 +591,7 @@ export function useCompetitionPage(id: string) {
     handleAddSlot, handleRemoveSlot, handleTogglePanelLock, handleCopyPanel,
     handleToggleDropout, handleRemoveClubEntries,
     handleToggleLock, handleReorder, handleReorderTimeline,
-    handleUpdateCompetition, handleUpdateFees, handleUploadPoster, handleUploadLogo, handleSetDJReviewDeadline,
+    handleUpdateCompetition, handleUpdateFees, handleUploadPoster, handleUploadLogo, handleSetDJReviewDeadline, handleUpdateTshirtConfig,
     handleStartSession, handleFinishSession, handleRevertSession,
     handleAssignSessionMergeGroup, handleCreateRankingMergeGroup,
     clearActionError: () => setActionError(null),

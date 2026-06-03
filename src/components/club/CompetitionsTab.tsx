@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, Team, Gymnast, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule, Coach, CompetitionCoach } from '@/components/admin/types'
-import { ROUTINE_TYPES, categoriesForRuleset } from '@/components/admin/types'
+import { ROUTINE_TYPES, categoriesForRuleset, ageGroupLabel } from '@/components/admin/types'
 import { formatDate, formatDateRange } from '@/lib/formatDate'
 import { STATUS_BADGE, INPUT_CLS } from '@/lib/uiConstants'
 import ProvisionalEntryForm from './ProvisionalEntryForm'
@@ -460,7 +460,57 @@ function CompetitionDetailView({
   )
   const registeredCoaches = coaches.filter(c => registeredCoachIds.has(c.id))
   const unregisteredCoaches = coaches.filter(c => !registeredCoachIds.has(c.id))
-  const [coachesOpen, setCoachesOpen] = useState(false)
+  const hasCoachWarning = registeredCoaches.length === 0 && registrationFlowOpen && enteredTeamIds.size > 0
+  const [coachesOpen, setCoachesOpen] = useState(hasCoachWarning)
+
+  // ── tshirt section ────────────────────────────────────────────────────────────
+  const hasTshirts = (competition.tshirt_sizes?.length ?? 0) > 0
+  const isTshirtLocked = !!competition.tshirt_deadline && today > competition.tshirt_deadline
+  const [tshirtOpen, setTshirtOpen] = useState(false)
+  const [tshirtOrders, setTshirtOrders] = useState<Record<string, string>>({})  // key: `type:id`
+
+  useEffect(() => {
+    if (!hasTshirts) return
+    const supabase = createClient()
+    supabase
+      .from('tshirt_orders')
+      .select('person_type,person_id,size')
+      .eq('competition_id', competition.id)
+      .then(({ data }) => {
+        const map: Record<string, string> = {}
+        for (const row of data ?? []) map[`${row.person_type}:${row.person_id}`] = row.size
+        setTshirtOrders(map)
+      })
+  }, [competition.id, hasTshirts])
+
+  async function handleTshirtSize(personType: 'gymnast' | 'coach', personId: string, size: string) {
+    const key = `${personType}:${personId}`
+    setTshirtOrders(prev => ({ ...prev, [key]: size }))
+    const supabase = createClient()
+    if (size) {
+      await supabase.from('tshirt_orders').upsert(
+        { competition_id: competition.id, person_type: personType, person_id: personId, size },
+        { onConflict: 'competition_id,person_type,person_id' }
+      )
+    } else {
+      await supabase.from('tshirt_orders')
+        .delete()
+        .eq('competition_id', competition.id)
+        .eq('person_type', personType)
+        .eq('person_id', personId)
+    }
+  }
+
+  // gymnasts in entered teams (deduplicated)
+  const enteredGymnastIds = new Set(
+    [...enteredTeamIds].flatMap(tid => {
+      const team = teams.find(t => t.id === tid)
+      return team?.gymnast_ids ?? []
+    })
+  )
+  const tshirtGymnasts = gymnasts.filter(g => enteredGymnastIds.has(g.id))
+  const tshirtCoaches = registeredCoaches
+
   const [showPoolPicker, setShowPoolPicker] = useState(false)
   const [showInviteForm, setShowInviteForm] = useState(false)
   const [poolSearch, setPoolSearch] = useState('')
@@ -553,14 +603,21 @@ function CompetitionDetailView({
         {/* judges collapsible */}
         {/* ── coaches section ── */}
         <button onClick={() => setCoachesOpen(o => !o)}
-          className="w-full flex items-center justify-between px-5 py-2.5 border-t border-slate-100 bg-slate-50 hover:bg-slate-100 text-left transition-colors">
+          className={[
+            'w-full flex items-center justify-between px-5 py-2.5 border-t text-left transition-colors',
+            hasCoachWarning ? 'border-amber-200 bg-amber-50 hover:bg-amber-100' : 'border-slate-100 bg-slate-50 hover:bg-slate-100',
+          ].join(' ')}>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">{t.coachesTitle}</span>
-            {registeredCoaches.length > 0 && (
+            <span className={['text-xs font-semibold uppercase tracking-widest', hasCoachWarning ? 'text-amber-600' : 'text-slate-400'].join(' ')}>
+              {t.coachesTitle}
+            </span>
+            {registeredCoaches.length > 0 ? (
               <span className="text-xs font-semibold px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded-full">{registeredCoaches.length}</span>
-            )}
+            ) : hasCoachWarning ? (
+              <span className="text-xs font-semibold text-amber-600">⚠ {t.coachesWarning}</span>
+            ) : null}
           </div>
-          <svg className={['w-4 h-4 text-slate-300 transition-transform', coachesOpen ? 'rotate-180' : ''].join(' ')}
+          <svg className={['w-4 h-4 transition-transform', coachesOpen ? 'rotate-180' : '', hasCoachWarning ? 'text-amber-400' : 'text-slate-300'].join(' ')}
             fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
           </svg>
@@ -739,6 +796,81 @@ function CompetitionDetailView({
               </div>
             )}
           </div>
+        )}
+
+        {/* ── tshirt section ── */}
+        {hasTshirts && (
+          <>
+            <button onClick={() => setTshirtOpen(o => !o)}
+              className="w-full flex items-center justify-between px-5 py-2.5 border-t border-slate-100 bg-slate-50 hover:bg-slate-100 text-left transition-colors">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                  {t.tshirtTitle}
+                </span>
+                {isTshirtLocked && (
+                  <span className="text-xs font-semibold px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded-full">{t.filesLocked}</span>
+                )}
+              </div>
+              <svg className={['w-4 h-4 transition-transform text-slate-300', tshirtOpen ? 'rotate-180' : ''].join(' ')}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+            </button>
+
+            {tshirtOpen && (
+              <div className="px-5 py-4 border-t border-slate-100 space-y-2">
+                {isTshirtLocked && (
+                  <p className="text-xs text-slate-400 mb-3">{t.tshirtDeadlinePast}</p>
+                )}
+                {tshirtGymnasts.map(g => {
+                  const name = [g.first_name, g.last_name_1, g.last_name_2].filter(Boolean).join(' ')
+                  const key = `gymnast:${g.id}`
+                  return (
+                    <div key={g.id} className="flex items-center gap-3 py-1">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-slate-800 font-medium truncate">{name}</p>
+                        <p className="text-xs text-slate-400">{t.tshirtGymnast}</p>
+                      </div>
+                      <select
+                        value={tshirtOrders[key] ?? ''}
+                        onChange={e => handleTshirtSize('gymnast', g.id, e.target.value)}
+                        disabled={isTshirtLocked}
+                        className="text-sm border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <option value="">{t.tshirtNoSize}</option>
+                        {(competition.tshirt_sizes ?? []).map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )
+                })}
+                {tshirtCoaches.map(c => {
+                  const key = `coach:${c.id}`
+                  return (
+                    <div key={c.id} className="flex items-center gap-3 py-1">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-slate-800 font-medium truncate">{c.full_name}</p>
+                        <p className="text-xs text-slate-400">{t.tshirtCoach}</p>
+                      </div>
+                      <select
+                        value={tshirtOrders[key] ?? ''}
+                        onChange={e => handleTshirtSize('coach', c.id, e.target.value)}
+                        disabled={isTshirtLocked}
+                        className="text-sm border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <option value="">{t.tshirtNoSize}</option>
+                        {(competition.tshirt_sizes ?? []).map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )
+                })}
+                {tshirtGymnasts.length === 0 && tshirtCoaches.length === 0 && (
+                  <p className="text-sm text-slate-400 text-center py-2">{t.noTeams}</p>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -947,7 +1079,7 @@ function EntrySummary({ lang, rows, accentClass }: { lang: Lang; rows: EntrySumm
 }
 
 function CompetitionListView({
-  lang, competitions, teams, entries, nominations, clubProvisionalEntries, clubDefinitiveEntries,
+  lang, competitions, teams, entries, nominations, competitionCoaches, clubProvisionalEntries, clubDefinitiveEntries,
   ageGroupRules, onSelect, onOpenProvisionalEntry, onOpenDefinitiveEntry,
 }: {
   lang: Lang
@@ -955,6 +1087,7 @@ function CompetitionListView({
   teams: Team[]
   entries: CompetitionEntry[]
   nominations: CompetitionJudgeNomination[]
+  competitionCoaches: CompetitionCoach[]
   clubProvisionalEntries: Record<string, { teams_per_category: Record<string, number> }>
   clubDefinitiveEntries: Record<string, { teams_per_category: Record<string, number>; status: string }>
   ageGroupRules: AgeGroupRule[]
@@ -982,8 +1115,8 @@ function CompetitionListView({
     return comp.age_groups.flatMap(agId => {
       const rule = ageGroupRules.find(r => r.id === agId)
       if (!rule) return []
-      return categoriesForRuleset(rule.age_group)
-        .map(cat => ({ label: `${rule.age_group} · ${cat}`, count: tpc[`${agId}|${cat}`] ?? 0 }))
+      return categoriesForRuleset(rule.level)
+        .map(cat => ({ label: `${ageGroupLabel(rule)} · ${cat}`, count: tpc[`${agId}|${cat}`] ?? 0 }))
         .filter(r => r.count > 0)
     })
   }
@@ -1002,6 +1135,8 @@ function CompetitionListView({
         const defEntry = clubDefinitiveEntries[comp.id]
         const nominalOpenForClub = comp.status === 'definitive_entry' && defEntry?.status === 'approved'
         const needsJudge = (comp.status === 'registration_open' || nominalOpenForClub) && registeredCount > 0 && nominatedCount === 0
+        const registeredCoachCount = competitionCoaches.filter(cc => cc.competition_id === comp.id).length
+        const needsCoach = (comp.status === 'registration_open' || nominalOpenForClub) && registeredCount > 0 && registeredCoachCount === 0
         return (
           <div key={comp.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-blue-300 hover:shadow-sm transition-all group">
             <button onClick={() => onSelect(comp.id)} className="w-full text-left px-5 py-4">
@@ -1025,6 +1160,11 @@ function CompetitionListView({
                     {needsJudge && (
                       <span className="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
                         ⚠ {t.judgesWarning}
+                      </span>
+                    )}
+                    {needsCoach && (
+                      <span className="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                        ⚠ {t.coachesWarning}
                       </span>
                     )}
                   </div>
@@ -1204,6 +1344,7 @@ export default function CompetitionsTab({
           teams={teams}
           entries={entries}
           nominations={nominations}
+          competitionCoaches={competitionCoaches}
           clubProvisionalEntries={clubProvisionalEntries}
           clubDefinitiveEntries={clubDefinitiveEntries}
           ageGroupRules={ageGroupRules}

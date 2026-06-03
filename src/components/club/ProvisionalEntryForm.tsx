@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, AgeGroupRule } from '@/components/admin/types'
-import { categoriesForRuleset, categoryLabel } from '@/components/admin/types'
+import { categoriesForRuleset, categoryLabel, ageGroupLabel } from '@/components/admin/types'
 import { useT } from '@/lib/useT'
 
 type Props = {
@@ -104,7 +104,7 @@ export default function ProvisionalEntryForm({ lang, competition, clubId, clubNa
             return (
               <div key={rule.id}>
                 <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-2">
-                  {rule.age_group}
+                  {ageGroupLabel(rule)}
                 </p>
                 <div className="space-y-1.5">
                   {categories.map(cat => {

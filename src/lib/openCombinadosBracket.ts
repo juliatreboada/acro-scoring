@@ -2,14 +2,13 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/database.types'
 
 export type OpenCombinadosPhaseKey =
-  | 'qualification_open_balance'
-  | 'qualification_open_dynamic'
-  | 'qualification_combinados_combined'
+  | 'qualification_open'
+  | 'qualification_combinados'
   | 'open_quarter'
   | 'open_semi'
   | 'open_final'
-  | 'combinados_semi_combined'
-  | 'combinados_final_combined'
+  | 'combinados_semi'
+  | 'combinados_final'
 
 export type BracketConfig = {
   combinadosSemiCount: number
@@ -40,7 +39,7 @@ export type SessionMapRow = {
   session_id: string
 }
 
-type ResultRow = {
+export type ResultRow = {
   session_id: string
   team_id: string
   final_score: number | null
@@ -55,6 +54,10 @@ function getSessionForPhase(rows: SessionMapRow[], phase: OpenCombinadosPhaseKey
   return rows.find((r) => r.phase_key === phase)?.session_id ?? null
 }
 
+function getSessionsForPhase(rows: SessionMapRow[], phase: OpenCombinadosPhaseKey): string[] {
+  return rows.filter((r) => r.phase_key === phase).map((r) => r.session_id)
+}
+
 function scoreBySession(results: ResultRow[], sessionId: string | null): Map<string, number> {
   if (!sessionId) return new Map()
   const m = new Map<string, number>()
@@ -65,37 +68,46 @@ function scoreBySession(results: ResultRow[], sessionId: string | null): Map<str
   return m
 }
 
+// Sums scores for a team across all provided sessions (used for multi-session qualification phases).
+function scoreByPhase(results: ResultRow[], sessionIds: string[]): Map<string, number> {
+  const idSet = new Set(sessionIds)
+  const m = new Map<string, number>()
+  for (const r of results) {
+    if (!idSet.has(r.session_id)) continue
+    m.set(r.team_id, (m.get(r.team_id) ?? 0) + (r.final_score ?? 0))
+  }
+  return m
+}
+
+// mappings contains only advancement phases (open_quarter, open_semi, open_final,
+// combinados_semi, combinados_final). Qualification is computed automatically from
+// all results whose session is NOT an advancement session.
 export function computeOpenCombinadosActaFromRows(
   mappings: SessionMapRow[],
   results: ResultRow[],
+  openTeamIds: Set<string>,
+  combinadosTeamIds: Set<string>,
 ): OpenCombinadosActaData {
-  const openBal = scoreBySession(results, getSessionForPhase(mappings, 'qualification_open_balance'))
-  const openDyn = scoreBySession(results, getSessionForPhase(mappings, 'qualification_open_dynamic'))
-  const combQ = scoreBySession(results, getSessionForPhase(mappings, 'qualification_combinados_combined'))
+  const advSessionIds = new Set(mappings.map((m) => m.session_id))
 
-  const openQualification = rankTeams(
-    [...new Set([...openBal.keys(), ...openDyn.keys()])].map((teamId) => ({
-      teamId,
-      score: (openBal.get(teamId) ?? 0) + (openDyn.get(teamId) ?? 0),
-    })),
-  )
-  const combinadosQualification = rankTeams(
-    [...combQ.entries()].map(([teamId, score]) => ({ teamId, score })),
-  )
+  // Qualification results = everything not in an advancement session
+  const openQual = new Map<string, number>()
+  const combQual = new Map<string, number>()
+  for (const r of results) {
+    if (advSessionIds.has(r.session_id)) continue
+    const score = r.final_score ?? 0
+    if (openTeamIds.has(r.team_id)) openQual.set(r.team_id, (openQual.get(r.team_id) ?? 0) + score)
+    else if (combinadosTeamIds.has(r.team_id)) combQual.set(r.team_id, (combQual.get(r.team_id) ?? 0) + score)
+  }
+
+  const openQualification = rankTeams([...openQual.entries()].map(([teamId, score]) => ({ teamId, score })))
+  const combinadosQualification = rankTeams([...combQual.entries()].map(([teamId, score]) => ({ teamId, score })))
 
   const openQuarter = rankTeams([...scoreBySession(results, getSessionForPhase(mappings, 'open_quarter')).entries()].map(([teamId, score]) => ({ teamId, score })))
   const openSemi = rankTeams([...scoreBySession(results, getSessionForPhase(mappings, 'open_semi')).entries()].map(([teamId, score]) => ({ teamId, score })))
   const openFinal = rankTeams([...scoreBySession(results, getSessionForPhase(mappings, 'open_final')).entries()].map(([teamId, score]) => ({ teamId, score })))
-  const combinadosSemi = rankTeams(
-    [...scoreBySession(results, getSessionForPhase(mappings, 'combinados_semi_combined')).entries()].map(
-      ([teamId, score]) => ({ teamId, score }),
-    ),
-  )
-  const combinadosFinal = rankTeams(
-    [...scoreBySession(results, getSessionForPhase(mappings, 'combinados_final_combined')).entries()].map(
-      ([teamId, score]) => ({ teamId, score }),
-    ),
-  )
+  const combinadosSemi = rankTeams([...scoreBySession(results, getSessionForPhase(mappings, 'combinados_semi')).entries()].map(([teamId, score]) => ({ teamId, score })))
+  const combinadosFinal = rankTeams([...scoreBySession(results, getSessionForPhase(mappings, 'combinados_final')).entries()].map(([teamId, score]) => ({ teamId, score })))
 
   return {
     openQualification,

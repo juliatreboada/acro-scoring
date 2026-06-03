@@ -229,6 +229,7 @@ export const CompetitionDetail = {
       licencias:     'Licencias',
       tv:            'TV',
       bracket:       'Bracket',
+      tshirt:        'T-shirts',
     },
     soon: 'Coming soon',
     soonSub: 'This section is not built yet.',
@@ -341,6 +342,7 @@ export const CompetitionDetailView = {
     unregisterCoach: 'Remove',
     noCoaches: 'No coaches registered for this competition.',
     noCoachesInClub: 'Add coaches in the Coaches tab first.',
+    coachesWarning: 'No coaches registered. Gymnasts cannot attend without a coach.',
     judgesTitle: 'Judges',
     nominated: 'Nominated',
     removeNomination: 'Remove',
@@ -419,6 +421,7 @@ export const CompetitionsTab = {
     unregisterCoach: 'Remove',
     noCoaches: 'No coaches registered for this competition.',
     noCoachesInClub: 'Add coaches in the Coaches tab first.',
+    coachesWarning: 'No coaches registered. Gymnasts cannot attend without a coach.',
     judgesTitle: 'Judges',
     nominate: 'Nominate',
     nominated: 'Nominated',
@@ -455,6 +458,13 @@ export const CompetitionsTab = {
     licenciaWarningFull: 'One or more gymnasts in this team have no licencia uploaded.',
     nominalEntryOpen: 'Nominal entry open',
     nominalEntryCta: 'Nominal entry →',
+    tshirtTitle: 'T-shirt sizes',
+    tshirtDeadlinePast: 'The deadline for selecting sizes has passed.',
+    tshirtDeadlineLabel: 'Deadline',
+    tshirtGymnast: 'Gymnast',
+    tshirtCoach: 'Coach',
+    tshirtNoSize: 'No size',
+    tshirtSaved: 'Saved',
   }
 
 // components/admin/CompetitionsView.tsx
@@ -972,6 +982,7 @@ export const LicenciasTab = {
     statusApproved: 'Approved',
     statusRejected: 'Rejected',
     viewPayment: 'View payment',
+    print: 'Print list',
   }
 
 // app/login/page.tsx
@@ -1174,6 +1185,7 @@ export const RegistrationsTab = {
     collapseAll: 'Collapse all',
     cancel: 'Cancel',
     import: 'Import',
+    print: 'Print list',
     noRegistrations: 'No registrations yet.',
     // invite club form
     inviteClubTitle: 'Invite club',

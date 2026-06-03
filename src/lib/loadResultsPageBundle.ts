@@ -71,7 +71,7 @@ export async function loadResultsPageBundle(
       .from('sessions')
       .select('id, age_group, category, routine_type, ranking_merge_group_id')
       .eq('competition_id', competitionId),
-    supabase.from('age_group_rules').select('id, age_group, level, sort_order, ruleset, sport_type'),
+    supabase.from('age_group_rules').select('id, age_group, level, sort_order, ruleset, sport_type, routine_count'),
     supabase.from('ranking_merge_groups').select('id, label_es, label_en').eq('competition_id', competitionId),
   ])
   const sessions = sessionsRes.data
@@ -106,10 +106,10 @@ export async function loadResultsPageBundle(
   const rawRes = resultsRes.data ?? []
   const entries = entriesRes.data ?? []
 
-  const teamIds = [...new Set(orders.map((o) => o.team_id))]
+  const teamIds = [...new Set([...orders.map((o) => o.team_id), ...rawRes.map((r) => r.team_id)])]
   const { data: teams } =
     teamIds.length > 0
-      ? await supabase.from('teams').select('id, gymnast_display, club_id').in('id', teamIds)
+      ? await supabase.from('teams').select('id, gymnast_display, club_id, age_group').in('id', teamIds)
       : { data: [] }
 
   const entryDisplayMap = Object.fromEntries(entries.map(e => [e.team_id, (e as any).gymnast_display as string | null]))
@@ -196,12 +196,30 @@ export async function loadResultsPageBundle(
       .from('open_combinados_phase_sessions')
       .select('phase_key,session_id')
       .eq('competition_id', competitionId)
-    if ((mappings ?? []).length > 0) {
-      openCombinadosActa = computeOpenCombinadosActaFromRows(
-        (mappings ?? []) as Array<{ phase_key: any; session_id: string }>,
-        (rawRes ?? []) as Array<{ session_id: string; team_id: string; final_score: number | null }>,
-      )
+
+    // Classify active teams into OPEN (routine_count >= 2) vs COMBINADOS (routine_count === 1)
+    const agRuleById = Object.fromEntries(agRules.map((r) => [r.id, r as unknown as { routine_count: number }]))
+    const activeEntryIds = new Set(entries.filter((e) => !e.dropped_out).map((e) => e.team_id))
+    const openTeamIds = new Set<string>()
+    const combinadosTeamIds = new Set<string>()
+    for (const t of teams ?? []) {
+      if (!activeEntryIds.has(t.id)) continue
+      const rule = agRuleById[(t as unknown as { age_group: string }).age_group]
+      if (!rule) continue
+      if (rule.routine_count >= 2) openTeamIds.add(t.id)
+      else combinadosTeamIds.add(t.id)
     }
+
+    // Only pass advancement phases; qualification is automatic from all other results
+    const advMappings = (mappings ?? []).filter(
+      (m) => m.phase_key !== 'qualification_open' && m.phase_key !== 'qualification_combinados',
+    )
+    openCombinadosActa = computeOpenCombinadosActaFromRows(
+      advMappings as Array<{ phase_key: any; session_id: string }>,
+      (rawRes ?? []) as Array<{ session_id: string; team_id: string; final_score: number | null }>,
+      openTeamIds,
+      combinadosTeamIds,
+    )
   }
 
   return {

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, CompetitionEntry, CompetitionJudgeNomination, AgeGroupRule, Team } from '@/components/admin/types'
-import { categoriesForRuleset } from '@/components/admin/types'
+import { categoriesForRuleset, ageGroupLabel } from '@/components/admin/types'
 import { formatDateRange } from '@/lib/formatDate'
 import { useT } from '@/lib/useT'
 
@@ -88,7 +88,7 @@ export function CompetitionListView({
       const rule = ageGroupRules.find(r => r.id === agId)
       if (!rule) return []
       return categoriesForRuleset(rule.level)
-        .map(cat => ({ label: `${rule.age_group} · ${cat}`, count: tpc[`${agId}|${cat}`] ?? 0 }))
+        .map(cat => ({ label: `${ageGroupLabel(rule)} · ${cat}`, count: tpc[`${agId}|${cat}`] ?? 0 }))
         .filter(r => r.count > 0)
     })
   }

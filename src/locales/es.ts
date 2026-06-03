@@ -229,6 +229,7 @@ export const CompetitionDetail = {
       licencias:     'Licencias',
       tv:            'TV',
       bracket:       'Bracket',
+      tshirt:        'Camisetas',
     },
     soon: 'Próximamente',
     soonSub: 'Esta jornada aún no está construida.',
@@ -339,6 +340,7 @@ export const CompetitionDetailView = {
     unregisterCoach: 'Quitar',
     noCoaches: 'Ningún entrenador inscrito en esta competición.',
     noCoachesInClub: 'Añade entrenadores en la pestaña Entrenadores primero.',
+    coachesWarning: 'Sin entrenadores inscritos. Los gimnastas no pueden asistir sin entrenador.',
     judgesTitle: 'Jueces',
     nominated: 'Nominado',
     removeNomination: 'Quitar',
@@ -417,6 +419,7 @@ export const CompetitionsTab = {
     unregisterCoach: 'Quitar',
     noCoaches: 'Ningún entrenador inscrito en esta competición.',
     noCoachesInClub: 'Añade entrenadores en la pestaña Entrenadores primero.',
+    coachesWarning: 'Sin entrenadores inscritos. Los gimnastas no pueden asistir sin entrenador.',
     judgesTitle: 'Jueces',
     nominate: 'Nominar',
     nominated: 'Nominado',
@@ -453,6 +456,13 @@ export const CompetitionsTab = {
     licenciaWarningFull: 'Uno o más gimnastas de este equipo no tienen la licencia subida.',
     nominalEntryOpen: 'Inscripción nominativa abierta',
     nominalEntryCta: 'Inscripción nominativa →',
+    tshirtTitle: 'Tallas de camiseta',
+    tshirtDeadlinePast: 'El plazo para seleccionar tallas ha finalizado.',
+    tshirtDeadlineLabel: 'Plazo',
+    tshirtGymnast: 'Gimnasta',
+    tshirtCoach: 'Entrenador/a',
+    tshirtNoSize: 'Sin talla',
+    tshirtSaved: 'Guardado',
   }
 
 // components/admin/CompetitionsView.tsx
@@ -970,6 +980,7 @@ export const LicenciasTab = {
     statusApproved: 'Aprobado',
     statusRejected: 'Rechazado',
     viewPayment: 'Ver pago',
+    print: 'Imprimir listado',
   }
 
 // app/login/page.tsx
@@ -1172,6 +1183,7 @@ export const RegistrationsTab = {
     collapseAll: 'Contraer todo',
     cancel: 'Cancelar',
     import: 'Importar',
+    print: 'Imprimir listado',
     noRegistrations: 'Sin inscripciones aún.',
     // invite club form
     inviteClubTitle: 'Invitar club',

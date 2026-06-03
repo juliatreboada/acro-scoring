@@ -1,0 +1,323 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+import { createClient } from '@/lib/supabase'
+
+type TshirtOrder = {
+  id: string
+  person_type: string
+  person_id: string
+  size: string
+}
+
+type Person = {
+  id: string
+  name: string
+  club_id: string
+  club_name: string
+  type: 'gymnast' | 'coach'
+}
+
+type Props = {
+  competitionId: string
+  sizes: string[]
+  deadline: string | null
+  onUpdateConfig: (sizes: string[], deadline: string | null) => Promise<void>
+}
+
+export default function TshirtTab({ competitionId, sizes, deadline, onUpdateConfig }: Props) {
+  const supabase = createClient()
+  const [orders, setOrders] = useState<TshirtOrder[]>([])
+  const [people, setPeople] = useState<Person[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // config editing
+  const [editingConfig, setEditingConfig] = useState(false)
+  const [sizeInput, setSizeInput] = useState('')
+  const [sizesForm, setSizesForm] = useState<string[]>(sizes)
+  const [deadlineForm, setDeadlineForm] = useState(deadline ?? '')
+
+  useEffect(() => { setSizesForm(sizes) }, [sizes])
+  useEffect(() => { setDeadlineForm(deadline ?? '') }, [deadline])
+
+  async function load() {
+    setLoading(true)
+    const { data: ordersData } = await supabase
+      .from('tshirt_orders' as any)
+      .select('id,person_type,person_id,size')
+      .eq('competition_id', competitionId)
+
+    const rawOrders = (ordersData ?? []) as unknown as TshirtOrder[]
+    setOrders(rawOrders)
+
+    // fetch person details for all orders
+    const gymnastIds = rawOrders.filter(o => o.person_type === 'gymnast').map(o => o.person_id)
+    const coachIds   = rawOrders.filter(o => o.person_type === 'coach').map(o => o.person_id)
+
+    const [gymnastsRes, coachesRes] = await Promise.all([
+      gymnastIds.length > 0
+        ? supabase.from('gymnasts' as any).select('id,first_name,last_name_1,club_id').in('id', gymnastIds)
+        : Promise.resolve({ data: [] }),
+      coachIds.length > 0
+        ? supabase.from('coaches' as any).select('id,first_name,last_name_1,club_id').in('id', coachIds)
+        : Promise.resolve({ data: [] }),
+    ])
+
+    // fetch club names
+    const clubIds = [
+      ...new Set([
+        ...((gymnastsRes.data ?? []) as any[]).map((g: any) => g.club_id),
+        ...((coachesRes.data ?? []) as any[]).map((c: any) => c.club_id),
+      ])
+    ]
+    const clubsRes = clubIds.length > 0
+      ? await supabase.from('clubs').select('id,club_name').in('id', clubIds)
+      : { data: [] }
+
+    const clubNameMap: Record<string, string> = Object.fromEntries(
+      ((clubsRes.data ?? []) as any[]).map((c: any) => [c.id, c.club_name])
+    )
+
+    const all: Person[] = [
+      ...((gymnastsRes.data ?? []) as any[]).map((g: any) => ({
+        id: g.id,
+        name: [g.first_name, g.last_name_1].filter(Boolean).join(' '),
+        club_id: g.club_id,
+        club_name: clubNameMap[g.club_id] ?? '—',
+        type: 'gymnast' as const,
+      })),
+      ...((coachesRes.data ?? []) as any[]).map((c: any) => ({
+        id: c.id,
+        name: [c.first_name, c.last_name_1].filter(Boolean).join(' '),
+        club_id: c.club_id,
+        club_name: clubNameMap[c.club_id] ?? '—',
+        type: 'coach' as const,
+      })),
+    ]
+    setPeople(all)
+    setLoading(false)
+  }
+
+  useEffect(() => { void load() }, [competitionId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // totals per size
+  const totals = useMemo(() => {
+    const map: Record<string, number> = {}
+    for (const o of orders) map[o.size] = (map[o.size] ?? 0) + 1
+    return map
+  }, [orders])
+
+  // orders grouped by club
+  const byClub = useMemo(() => {
+    const map: Record<string, { club_name: string; rows: { person: Person; size: string }[] }> = {}
+    for (const order of orders) {
+      const person = people.find(p => p.id === order.person_id && p.type === order.person_type)
+      if (!person) continue
+      if (!map[person.club_id]) map[person.club_id] = { club_name: person.club_name, rows: [] }
+      map[person.club_id].rows.push({ person, size: order.size })
+    }
+    return Object.values(map).sort((a, b) => a.club_name.localeCompare(b.club_name))
+  }, [orders, people])
+
+  const totalOrders = orders.length
+
+  function handlePrint() {
+    const html = `
+      <!DOCTYPE html><html><head><meta charset="utf-8">
+      <title>Tallas camisetas</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; margin: 24px; }
+        h1 { font-size: 16px; margin-bottom: 4px; }
+        h2 { font-size: 13px; margin: 16px 0 4px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        th, td { border: 1px solid #ddd; padding: 4px 8px; text-align: left; }
+        th { background: #f5f5f5; font-weight: 600; }
+        .totals td { font-weight: bold; }
+        .badge { display:inline-block; padding:1px 6px; border-radius:9px; font-size:10px; background:#e0e7ff; color:#3730a3; margin-right:2px; }
+        @media print { body { margin: 10px; } }
+      </style>
+      </head><body>
+      <h1>Tallas camisetas</h1>
+      <p style="color:#666;margin-bottom:12px">Total pedidos: ${totalOrders}</p>
+      <h2>Resumen por talla</h2>
+      <table class="totals"><thead><tr><th>Talla</th><th>Cantidad</th></tr></thead><tbody>
+      ${sizes.map(s => `<tr><td>${s}</td><td>${totals[s] ?? 0}</td></tr>`).join('')}
+      </tbody></table>
+      ${byClub.map(club => `
+        <h2>${club.club_name} (${club.rows.length})</h2>
+        <table><thead><tr><th>Nombre</th><th>Tipo</th><th>Talla</th></tr></thead><tbody>
+        ${club.rows.map(r => `<tr><td>${r.person.name}</td><td>${r.person.type === 'gymnast' ? 'Gimnasta' : 'Entrenador/a'}</td><td>${r.size}</td></tr>`).join('')}
+        </tbody></table>
+      `).join('')}
+      </body></html>`
+    const w = window.open('', '_blank')
+    if (!w) return
+    w.document.write(html)
+    w.document.close()
+    w.focus()
+    w.print()
+  }
+
+  if (loading) return <div className="text-sm text-slate-500 py-8 text-center">Cargando...</div>
+
+  return (
+    <div className="space-y-6">
+
+      {/* Config card */}
+      <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Configuración de tallas</p>
+            <p className="text-xs text-slate-500 mt-0.5">Define las tallas disponibles y el plazo para que los clubes elijan.</p>
+          </div>
+          {!editingConfig && (
+            <button onClick={() => setEditingConfig(true)} className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all">
+              Editar
+            </button>
+          )}
+        </div>
+        <div className="p-4">
+          {editingConfig ? (
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-slate-600 block mb-1">Tallas disponibles</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {sizesForm.map(s => (
+                    <span key={s} className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 text-xs rounded-full">
+                      {s}
+                      <button onClick={() => setSizesForm(prev => prev.filter(x => x !== s))} className="text-blue-400 hover:text-blue-700 font-bold">×</button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    value={sizeInput}
+                    onChange={e => setSizeInput(e.target.value.toUpperCase())}
+                    onKeyDown={e => {
+                      if ((e.key === 'Enter' || e.key === ',') && sizeInput.trim()) {
+                        e.preventDefault()
+                        const s = sizeInput.trim()
+                        if (!sizesForm.includes(s)) setSizesForm(prev => [...prev, s])
+                        setSizeInput('')
+                      }
+                    }}
+                    placeholder="Ej: XS, S, M, L, XL… (Enter para añadir)"
+                    className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={() => {
+                      const s = sizeInput.trim()
+                      if (s && !sizesForm.includes(s)) setSizesForm(prev => [...prev, s])
+                      setSizeInput('')
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700 transition-all"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-600 block mb-1">Fecha límite para elegir talla</label>
+                <input
+                  type="date"
+                  value={deadlineForm}
+                  onChange={e => setDeadlineForm(e.target.value)}
+                  className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={async () => { await onUpdateConfig(sizesForm, deadlineForm || null); setEditingConfig(false) }}
+                  className="px-4 py-1.5 text-sm font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all"
+                >
+                  Guardar
+                </button>
+                <button onClick={() => { setSizesForm(sizes); setDeadlineForm(deadline ?? ''); setEditingConfig(false) }}
+                  className="px-4 py-1.5 text-sm bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-all">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : sizes.length === 0 ? (
+            <p className="text-sm text-slate-400">No hay tallas configuradas. Pulsa Editar para añadir.</p>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1.5">
+                {sizes.map(s => (
+                  <span key={s} className="px-2.5 py-0.5 bg-blue-50 border border-blue-100 text-blue-700 text-sm font-medium rounded-full">{s}</span>
+                ))}
+              </div>
+              {deadline && (
+                <p className="text-xs text-slate-500">Plazo: <span className="font-medium text-slate-700">{deadline}</span></p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Summary + breakdown */}
+      {sizes.length > 0 && (
+        <>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-slate-700">
+              {totalOrders} pedido{totalOrders !== 1 ? 's' : ''} recibido{totalOrders !== 1 ? 's' : ''}
+            </p>
+            {totalOrders > 0 && (
+              <button onClick={handlePrint}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.056 48.056 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
+                </svg>
+                Imprimir
+              </button>
+            )}
+          </div>
+
+          {/* Totals per size */}
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            {sizes.map(s => (
+              <div key={s} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-center">
+                <p className="text-xl font-bold tabular-nums text-slate-800">{totals[s] ?? 0}</p>
+                <p className="text-xs font-semibold text-slate-500 mt-0.5">{s}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Per-club breakdown */}
+          {byClub.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-8">Ningún club ha enviado tallas todavía.</p>
+          ) : (
+            <div className="space-y-3">
+              {byClub.map(club => (
+                <div key={club.club_name} className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                  <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                    <p className="text-sm font-semibold text-slate-700">{club.club_name}</p>
+                    <span className="text-xs text-slate-500">{club.rows.length} persona{club.rows.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  <table className="w-full text-xs">
+                    <thead className="bg-slate-50/60 border-b border-slate-100">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-semibold text-slate-500">Nombre</th>
+                        <th className="px-4 py-2 text-left font-semibold text-slate-500">Rol</th>
+                        <th className="px-4 py-2 text-right font-semibold text-slate-500">Talla</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {club.rows.map(({ person, size }, i) => (
+                        <tr key={person.id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
+                          <td className="px-4 py-2 font-medium text-slate-800">{person.name}</td>
+                          <td className="px-4 py-2 text-slate-500">{person.type === 'gymnast' ? 'Gimnasta' : 'Entrenador/a'}</td>
+                          <td className="px-4 py-2 text-right font-semibold text-slate-700">{size}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}

@@ -28,16 +28,20 @@ export type OverviewUpdate = {
 
 // ─── component ────────────────────────────────────────────────────────────────
 
-export default function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels, sessions, onUpdate, onSetPanelCount, onUploadPoster }: {
+export default function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels, sessions, gymnastCount, coachCount, judgeCount, onUpdate, onSetPanelCount, onUploadPoster }: {
   competition: Competition
   lang: Lang
   availableAdmins: AdminUser[]
   ageGroupRules: AgeGroupRule[]
   panels: Panel[]
   sessions: Session[]
+  gymnastCount: number
+  coachCount: number
+  judgeCount: number
   onUpdate: (updates: OverviewUpdate) => void
   onSetPanelCount: (count: 1 | 2) => void
   onUploadPoster: (file: File) => Promise<void>
+  onUploadLogo?: (file: File) => Promise<void>
 }) {
   const t = useT('OverviewTab', lang)
   const filteredAGs = ageGroupRules.filter(r => r.sport_type === competition.sport_type)
@@ -265,6 +269,20 @@ export default function OverviewTab({ competition, lang, availableAdmins, ageGro
             )}
           </div>
         </div>
+      </div>
+
+      {/* Participant stats */}
+      <div className="flex gap-3 mb-6">
+        {[
+          { label: 'Gimnastas', value: gymnastCount, color: 'text-blue-700 bg-blue-50 border-blue-100' },
+          { label: 'Entrenadores', value: coachCount, color: 'text-violet-700 bg-violet-50 border-violet-100' },
+          { label: 'Jueces', value: judgeCount, color: 'text-emerald-700 bg-emerald-50 border-emerald-100' },
+        ].map(({ label, value, color }) => (
+          <div key={label} className={`flex-1 rounded-xl border px-4 py-3 text-center ${color}`}>
+            <p className="text-2xl font-bold tabular-nums">{value}</p>
+            <p className="text-xs font-medium mt-0.5 opacity-70">{label}</p>
+          </div>
+        ))}
       </div>
 
       {/* Two-column layout: Poster + Info Cards */}

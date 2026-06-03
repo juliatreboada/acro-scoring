@@ -48,7 +48,7 @@ export function useClubData() {
           (supabase as any).from('coaches').select('id,club_id,full_name,licence,photo_url,licencia_url').eq('club_id', cid),
           supabase.from('teams').select('id,club_id,category,age_group,gymnast_display,photo_url,sport_type').eq('club_id', cid),
           supabase.from('competitions')
-            .select('id,name,status,sport_type,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,age_groups,poster_url,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine')
+            .select('id,name,status,sport_type,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,tshirt_sizes,tshirt_deadline,age_groups,poster_url,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine')
             .neq('status', 'draft')
             .order('start_date', { ascending: false }),
           supabase.from('competition_judge_nominations').select('id,competition_id,judge_id,club_id').eq('club_id', cid),

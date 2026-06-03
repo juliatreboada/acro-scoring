@@ -14,6 +14,7 @@ import StartingOrderTab from './StartingOrderTab'
 import CompetitionDayTab from './CompetitionDayTab'
 import LicenciasTab from './LicenciasTab'
 import TVTab from './TVTab'
+import TshirtTab from './TshirtTab'
 import OpenCombinadosTab from './OpenCombinadosTab'
 import { isOpenCombinadosCompetitionName } from '@/lib/openCombinadosCompetition'
 import RGRegistrationsTab from './RGRegistrationsTab'
@@ -29,7 +30,7 @@ const ACTION_STYLE: Partial<Record<CompetitionStatus, string>> = {
   active:               'border-red-200 text-red-600 hover:bg-red-50',
 }
 
-type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias' | 'tv' | 'bracket'
+type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias' | 'tv' | 'bracket' | 'tshirt'
 
 
 // ─── placeholder tab ──────────────────────────────────────────────────────────
@@ -69,13 +70,16 @@ type OverviewUpdate = {
   judge_missing_fine: number | null
 }
 
-function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels, sessions, onUpdate, onSetPanelCount, onUploadPoster, onUploadLogo }: {
+function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels, sessions, gymnastCount, coachCount, judgeCount, onUpdate, onSetPanelCount, onUploadPoster, onUploadLogo }: {
   competition: Competition
   lang: Lang
   availableAdmins: AdminUser[]
   ageGroupRules: AgeGroupRule[]
   panels: Panel[]
   sessions: Session[]
+  gymnastCount: number
+  coachCount: number
+  judgeCount: number
   onUpdate: (updates: OverviewUpdate) => void
   onSetPanelCount: (count: 1 | 2) => void
   onUploadPoster: (file: File) => Promise<void>
@@ -466,6 +470,20 @@ const dateCls = 'border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate
         </div>
       </div>
 
+      {/* Participant stats */}
+      <div className="flex gap-3 mb-6">
+        {[
+          { label: 'Gimnastas', value: gymnastCount, color: 'text-blue-700 bg-blue-50 border-blue-100' },
+          { label: 'Entrenadores', value: coachCount, color: 'text-violet-700 bg-violet-50 border-violet-100' },
+          { label: 'Jueces', value: judgeCount, color: 'text-emerald-700 bg-emerald-50 border-emerald-100' },
+        ].map(({ label, value, color }) => (
+          <div key={label} className={`flex-1 rounded-xl border px-4 py-3 text-center ${color}`}>
+            <p className="text-2xl font-bold tabular-nums">{value}</p>
+            <p className="text-xs font-medium mt-0.5 opacity-70">{label}</p>
+          </div>
+        ))}
+      </div>
+
       {/* Two-column layout: Poster + Logo + Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div className="md:col-span-1 space-y-4 md:sticky md:top-6 md:self-start">
@@ -797,6 +815,8 @@ export type CompetitionDetailProps = {
   onUpdateFees: (fees: { fee_per_team: number | null; fee_per_gymnast: number | null; judge_missing_fine: number | null }) => void
   // dj review
   onSetDJReviewDeadline: (date: string | null) => void
+  // tshirt
+  onUpdateTshirtConfig: (sizes: string[], deadline: string | null) => Promise<void>
   // competition day
   onStartSession: (sessionId: string) => void
   onFinishSession: (sessionId: string) => void
@@ -819,6 +839,7 @@ export default function CompetitionDetail({
   availableAdmins, ageGroupRules, apparatus, apparatusRules, onUpdateCompetition, onUploadPoster, onUploadLogo, onUpdateFees,
   onSetDJReviewDeadline, onStartSession, onFinishSession, onRevertSession,
   competitionGymnasts, competitionCoaches, globalCoaches,
+  onUpdateTshirtConfig,
 }: CompetitionDetailProps) {
   const t = useT('CompetitionDetail', lang)
   const [activeTab, setActiveTab] = useState<Tab>('structure')
@@ -839,6 +860,7 @@ export default function CompetitionDetail({
     { key: 'day',           label: t.tabs.day, live: competition.status === 'active' },
     { key: 'tv',            label: t.tabs.tv            },
     ...(openCombinadosEnabled ? [{ key: 'bracket' as const, label: t.tabs.bracket }] : []),
+    { key: 'tshirt' as const, label: t.tabs.tshirt },
     { key: 'overview',      label: t.tabs.overview      },
   ]
 
@@ -983,6 +1005,7 @@ export default function CompetitionDetail({
           sessions={sessions}
           rankingMergeGroups={rankingMergeGroups}
           sessionEligibleTeamCounts={sessionEligibleTeamCounts}
+          openCombinadosEnabled={openCombinadosEnabled}
           onAddSection={onAddSection}
           onUpdateSectionLabel={onUpdateSectionLabel}
           onUpdateSectionTimes={onUpdateSectionTimes}
@@ -1001,11 +1024,15 @@ export default function CompetitionDetail({
           ageGroupRules={ageGroupRules}
           panels={panels}
           sessions={sessions}
+          gymnastCount={competitionGymnasts.length}
+          coachCount={competitionCoaches.length}
+          judgeCount={judgePool.length}
           onUpdate={onUpdateCompetition}
           onUploadPoster={onUploadPoster}
           onUploadLogo={onUploadLogo}
           onSetPanelCount={onSetPanelCount}
         />
+
       )}
       {activeTab === 'judges' && (
         <JudgesTab
@@ -1063,6 +1090,8 @@ export default function CompetitionDetail({
           onToggleDropout={onToggleDropout}
           onRemoveClubEntries={onRemoveClubEntries}
           competitionId={competition.id}
+          competitionName={competition.name}
+          competitionLogoUrl={competition.logo_url}
           ageGroupRules={ageGroupRules}
           competitionAgeGroups={competition.age_groups}
           competitionYear={competition.start_date ? new Date(competition.start_date + 'T00:00:00').getFullYear() : new Date().getFullYear()}
@@ -1075,6 +1104,8 @@ export default function CompetitionDetail({
         <LicenciasTab
           lang={lang}
           competitionStatus={competition.status}
+          competitionName={competition.name}
+          competitionLogoUrl={competition.logo_url}
           provisionalEntries={provisionalEntries}
           definitiveEntries={definitiveEntries}
           globalTeams={globalTeams}
@@ -1124,6 +1155,17 @@ export default function CompetitionDetail({
           sessionOrders={sessionOrders}
           teams={globalTeams}
           entries={entries}
+          ageGroupRules={ageGroupRules}
+          panels={panels}
+          sections={sections}
+        />
+      )}
+      {activeTab === 'tshirt' && (
+        <TshirtTab
+          competitionId={competition.id}
+          sizes={competition.tshirt_sizes ?? []}
+          deadline={competition.tshirt_deadline ?? null}
+          onUpdateConfig={onUpdateTshirtConfig}
         />
       )}
     </div>

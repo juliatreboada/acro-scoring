@@ -910,7 +910,7 @@ export default function StartingOrderTab({
         </p>
       ) : (
         <div className="so-print-area">
-          <div className="flex border-b border-slate-200 gap-0 print:hidden">
+          <div className="flex border-b border-slate-200 gap-0 print:hidden overflow-x-auto [&::-webkit-scrollbar]:h-0">
             {sortedSections.map((sec) => (
               <button
                 key={sec.id}
