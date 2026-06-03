@@ -229,6 +229,7 @@ export const CompetitionDetail = {
       licencias:     'Licencias',
       tv:            'TV',
       bracket:       'Bracket',
+      tshirt:        'Camisetas',
     },
     soon: 'Próximamente',
     soonSub: 'Esta jornada aún no está construida.',
@@ -455,6 +456,13 @@ export const CompetitionsTab = {
     licenciaWarningFull: 'Uno o más gimnastas de este equipo no tienen la licencia subida.',
     nominalEntryOpen: 'Inscripción nominativa abierta',
     nominalEntryCta: 'Inscripción nominativa →',
+    tshirtTitle: 'Tallas de camiseta',
+    tshirtDeadlinePast: 'El plazo para seleccionar tallas ha finalizado.',
+    tshirtDeadlineLabel: 'Plazo',
+    tshirtGymnast: 'Gimnasta',
+    tshirtCoach: 'Entrenador/a',
+    tshirtNoSize: 'Sin talla',
+    tshirtSaved: 'Guardado',
   }
 
 // components/admin/CompetitionsView.tsx

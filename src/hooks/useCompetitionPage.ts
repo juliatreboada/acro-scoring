@@ -49,7 +49,7 @@ export function useCompetitionPage(id: string) {
                nominationsRes, entriesRes, rulesRes, adminsRes, provRes, defRes,
                apparatusRes, apparatusRulesRes, mergeGroupsRes] = await Promise.all([
           supabase.from('competitions')
-            .select('id,name,status,sport_type,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,age_groups,poster_url,logo_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine,open_combinados_enabled')
+            .select('id,name,status,sport_type,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,tshirt_sizes,tshirt_deadline,age_groups,poster_url,logo_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine,open_combinados_enabled')
             .eq('id', id).single(),
           supabase.from('panels').select('id,competition_id,panel_number').eq('competition_id', id).order('panel_number'),
           supabase.from('sections').select('id,competition_id,section_number,label,starting_time,waiting_time_seconds,warmup_duration_minutes,timeline_order').eq('competition_id', id).order('section_number'),
@@ -510,6 +510,11 @@ export function useCompetitionPage(id: string) {
     setCompetition(prev => prev ? { ...prev, ts_music_deadline: date } : prev)
   }
 
+  async function handleUpdateTshirtConfig(sizes: string[], deadline: string | null) {
+    await supabase.from('competitions').update({ tshirt_sizes: sizes, tshirt_deadline: deadline }).eq('id', id)
+    setCompetition(prev => prev ? { ...prev, tshirt_sizes: sizes, tshirt_deadline: deadline } : prev)
+  }
+
   // ── competition day ───────────────────────────────────────────────────────────
   async function handleStartSession(sessionId: string) {
     await supabase.from('sessions').update({ status: 'active' }).eq('id', sessionId)
@@ -586,7 +591,7 @@ export function useCompetitionPage(id: string) {
     handleAddSlot, handleRemoveSlot, handleTogglePanelLock, handleCopyPanel,
     handleToggleDropout, handleRemoveClubEntries,
     handleToggleLock, handleReorder, handleReorderTimeline,
-    handleUpdateCompetition, handleUpdateFees, handleUploadPoster, handleUploadLogo, handleSetDJReviewDeadline,
+    handleUpdateCompetition, handleUpdateFees, handleUploadPoster, handleUploadLogo, handleSetDJReviewDeadline, handleUpdateTshirtConfig,
     handleStartSession, handleFinishSession, handleRevertSession,
     handleAssignSessionMergeGroup, handleCreateRankingMergeGroup,
     clearActionError: () => setActionError(null),

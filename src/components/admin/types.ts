@@ -73,6 +73,8 @@ export type Competition = {
   judge_missing_fine: number | null    // extra charge if club doesn't provide a judge
   open_combinados_enabled?: boolean
   sport_type: string                   // 'acro' | 'rg'
+  tshirt_sizes?: string[]              // sizes available for this competition
+  tshirt_deadline?: string | null      // after this date clubs cannot edit their orders
 }
 
 export type Panel = {

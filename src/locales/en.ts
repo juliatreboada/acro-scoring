@@ -229,6 +229,7 @@ export const CompetitionDetail = {
       licencias:     'Licencias',
       tv:            'TV',
       bracket:       'Bracket',
+      tshirt:        'T-shirts',
     },
     soon: 'Coming soon',
     soonSub: 'This section is not built yet.',
@@ -457,6 +458,13 @@ export const CompetitionsTab = {
     licenciaWarningFull: 'One or more gymnasts in this team have no licencia uploaded.',
     nominalEntryOpen: 'Nominal entry open',
     nominalEntryCta: 'Nominal entry →',
+    tshirtTitle: 'T-shirt sizes',
+    tshirtDeadlinePast: 'The deadline for selecting sizes has passed.',
+    tshirtDeadlineLabel: 'Deadline',
+    tshirtGymnast: 'Gymnast',
+    tshirtCoach: 'Coach',
+    tshirtNoSize: 'No size',
+    tshirtSaved: 'Saved',
   }
 
 // components/admin/CompetitionsView.tsx

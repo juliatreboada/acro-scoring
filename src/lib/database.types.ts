@@ -282,6 +282,8 @@ export type Database = {
           start_date: string | null
           status: Database["public"]["Enums"]["competition_status"]
           sport_type: string
+          tshirt_deadline: string | null
+          tshirt_sizes: string[]
           ts_music_deadline: string | null
           tv_sponsor_videos: Json
           updated_at: string
@@ -307,6 +309,8 @@ export type Database = {
           sport_type?: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["competition_status"]
+          tshirt_deadline?: string | null
+          tshirt_sizes?: string[]
           ts_music_deadline?: string | null
           tv_sponsor_videos?: Json
           updated_at?: string
@@ -332,6 +336,8 @@ export type Database = {
           sport_type?: string
           start_date?: string | null
           status?: Database["public"]["Enums"]["competition_status"]
+          tshirt_deadline?: string | null
+          tshirt_sizes?: string[]
           ts_music_deadline?: string | null
           tv_sponsor_videos?: Json
           updated_at?: string
@@ -1687,6 +1693,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tshirt_orders: {
+        Row: {
+          id: string
+          competition_id: string
+          person_type: string
+          person_id: string
+          size: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          competition_id: string
+          person_type: string
+          person_id: string
+          size: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          competition_id?: string
+          person_type?: string
+          person_id?: string
+          size?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       tv_state: {
         Row: {

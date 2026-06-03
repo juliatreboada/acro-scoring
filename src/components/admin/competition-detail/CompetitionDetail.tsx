@@ -14,6 +14,7 @@ import StartingOrderTab from './StartingOrderTab'
 import CompetitionDayTab from './CompetitionDayTab'
 import LicenciasTab from './LicenciasTab'
 import TVTab from './TVTab'
+import TshirtTab from './TshirtTab'
 import OpenCombinadosTab from './OpenCombinadosTab'
 import { isOpenCombinadosCompetitionName } from '@/lib/openCombinadosCompetition'
 import RGRegistrationsTab from './RGRegistrationsTab'
@@ -29,7 +30,7 @@ const ACTION_STYLE: Partial<Record<CompetitionStatus, string>> = {
   active:               'border-red-200 text-red-600 hover:bg-red-50',
 }
 
-type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias' | 'tv' | 'bracket'
+type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias' | 'tv' | 'bracket' | 'tshirt'
 
 
 // ─── placeholder tab ──────────────────────────────────────────────────────────
@@ -814,6 +815,8 @@ export type CompetitionDetailProps = {
   onUpdateFees: (fees: { fee_per_team: number | null; fee_per_gymnast: number | null; judge_missing_fine: number | null }) => void
   // dj review
   onSetDJReviewDeadline: (date: string | null) => void
+  // tshirt
+  onUpdateTshirtConfig: (sizes: string[], deadline: string | null) => Promise<void>
   // competition day
   onStartSession: (sessionId: string) => void
   onFinishSession: (sessionId: string) => void
@@ -836,6 +839,7 @@ export default function CompetitionDetail({
   availableAdmins, ageGroupRules, apparatus, apparatusRules, onUpdateCompetition, onUploadPoster, onUploadLogo, onUpdateFees,
   onSetDJReviewDeadline, onStartSession, onFinishSession, onRevertSession,
   competitionGymnasts, competitionCoaches, globalCoaches,
+  onUpdateTshirtConfig,
 }: CompetitionDetailProps) {
   const t = useT('CompetitionDetail', lang)
   const [activeTab, setActiveTab] = useState<Tab>('structure')
@@ -856,6 +860,7 @@ export default function CompetitionDetail({
     { key: 'day',           label: t.tabs.day, live: competition.status === 'active' },
     { key: 'tv',            label: t.tabs.tv            },
     ...(openCombinadosEnabled ? [{ key: 'bracket' as const, label: t.tabs.bracket }] : []),
+    { key: 'tshirt' as const, label: t.tabs.tshirt },
     { key: 'overview',      label: t.tabs.overview      },
   ]
 
@@ -1153,6 +1158,14 @@ export default function CompetitionDetail({
           ageGroupRules={ageGroupRules}
           panels={panels}
           sections={sections}
+        />
+      )}
+      {activeTab === 'tshirt' && (
+        <TshirtTab
+          competitionId={competition.id}
+          sizes={competition.tshirt_sizes ?? []}
+          deadline={competition.tshirt_deadline ?? null}
+          onUpdateConfig={onUpdateTshirtConfig}
         />
       )}
     </div>
