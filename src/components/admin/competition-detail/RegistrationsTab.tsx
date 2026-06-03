@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase'
 import { ProvisionalSubTab } from './ProvisionalSubTab'
 import { DefinitiveSubTab } from './DefinitiveSubTab'
 import { useT } from '@/lib/useT'
+import { printParticipantList } from '@/lib/printParticipants'
 
 // ─── local DB types ───────────────────────────────────────────────────────────
 
@@ -277,6 +278,8 @@ export type RegistrationsTabProps = {
   onToggleDropout: (entryId: string) => void
   onRemoveClubEntries?: (clubId: string) => void
   competitionId: string
+  competitionName: string
+  competitionLogoUrl: string | null
   ageGroupRules: AgeGroupRule[]
   competitionAgeGroups: string[]
   competitionYear: number
@@ -287,7 +290,7 @@ export type RegistrationsTabProps = {
 
 export default function RegistrationsTab({
   lang, globalTeams, clubs, gymnasts, entries, agLabels, onToggleDropout, onRemoveClubEntries,
-  competitionId, ageGroupRules, competitionAgeGroups, competitionYear, competitionStatus,
+  competitionId, competitionName, competitionLogoUrl, ageGroupRules, competitionAgeGroups, competitionYear, competitionStatus,
   provisionalEntries: initialProvisionalEntries, definitiveEntries: initialDefinitiveEntries,
 }: RegistrationsTabProps) {
   const t = useT('RegistrationsTab', lang)
@@ -446,6 +449,8 @@ export default function RegistrationsTab({
           onToggleMusicUnlock={toggleMusicUnlock}
           onShowImport={() => setShowImport(true)}
           competitionId={competitionId}
+          competitionName={competitionName}
+          competitionLogoUrl={competitionLogoUrl}
           competitionAgeGroups={competitionAgeGroups}
           competitionYear={competitionYear}
         />
@@ -456,7 +461,7 @@ export default function RegistrationsTab({
 
 // ─── nominative view (extracted) ─────────────────────────────────────────────
 
-function NominativeView({ lang, globalTeams, clubs, gymnasts, entries, agLabels, onToggleDropout, ageGroupRules, routineMusic, openLevels, openGroups, setOpenLevels, setOpenGroups, musicUnlockByTeam, onToggleMusicUnlock, onShowImport }: {
+function NominativeView({ lang, globalTeams, clubs, gymnasts, entries, agLabels, onToggleDropout, ageGroupRules, routineMusic, openLevels, openGroups, setOpenLevels, setOpenGroups, musicUnlockByTeam, onToggleMusicUnlock, onShowImport, competitionName, competitionLogoUrl }: {
   lang: Lang
   globalTeams: Team[]
   clubs: Club[]
@@ -474,6 +479,8 @@ function NominativeView({ lang, globalTeams, clubs, gymnasts, entries, agLabels,
   onToggleMusicUnlock: (teamId: string, enabled: boolean) => Promise<void> | void
   onShowImport: () => void
   competitionId: string
+  competitionName: string
+  competitionLogoUrl: string | null
   competitionAgeGroups: string[]
   competitionYear: number
 }) {
@@ -534,6 +541,14 @@ function NominativeView({ lang, globalTeams, clubs, gymnasts, entries, agLabels,
             <button onClick={collapseAll} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">{t.collapseAll}</button>
           </>
         )}
+        <button
+          onClick={() => printParticipantList({ competitionName, logoUrl: competitionLogoUrl, entries, teams: globalTeams, clubs, ageGroupRules, showPhotoStatus: true })}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.056 48.056 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
+          </svg>
+          {t.print}
+        </button>
         <button onClick={onShowImport}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

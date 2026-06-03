@@ -46,6 +46,14 @@ function groupOptionLabel(g: RankingMergeGroup, lang: Lang) {
 
 // ─── add-session form ─────────────────────────────────────────────────────────
 
+const BRACKET_PHASES = [
+  { key: 'open_quarter',     group: 'OPEN',       round: 'Cuartos de Final',  roundEn: 'Quarter-Finals' },
+  { key: 'open_semi',        group: 'OPEN',       round: 'Semifinal',         roundEn: 'Semi-Finals'    },
+  { key: 'open_final',       group: 'OPEN',       round: 'Final',             roundEn: 'Final'          },
+  { key: 'combinados_semi',  group: 'COMBINADOS', round: 'Semifinal',         roundEn: 'Semi-Finals'    },
+  { key: 'combinados_final', group: 'COMBINADOS', round: 'Final',             roundEn: 'Final'          },
+] as const
+
 type AddSessionFormProps = {
   lang: Lang
   panel: Panel
@@ -58,13 +66,18 @@ type AddSessionFormProps = {
   apparatusRules: ApparatusRule[]
   sectionId: string
   nextOrderIndex: number
+  openCombinadosEnabled?: boolean
   onAdd: (s: Omit<Session, 'id'>) => void
   onCancel: () => void
 }
 
-function AddSessionForm({ lang, panel, sportType, competitionYear, ageGroups, agLabels, ageGroupRules, apparatus, apparatusRules, sectionId, nextOrderIndex, onAdd, onCancel }: AddSessionFormProps) {
+function AddSessionForm({ lang, panel, sportType, competitionYear, ageGroups, agLabels, ageGroupRules, apparatus, apparatusRules, sectionId, nextOrderIndex, openCombinadosEnabled, onAdd, onCancel }: AddSessionFormProps) {
   const t = useT('StructureTab', lang)
   const isRG = sportType === 'rg'
+
+  // bracket mode (Open/Combinados competitions only)
+  const [bracketMode, setBracketMode] = useState(false)
+  const [bracketPhaseKey, setBracketPhaseKey] = useState(BRACKET_PHASES[0].key)
 
   // Acro state
   const [ageGroup, setAgeGroupState] = useState('')
@@ -155,6 +168,27 @@ function AddSessionForm({ lang, panel, sportType, competitionYear, ageGroups, ag
   function handleRgRulesetChange(rs: string) { setRgRuleset(rs); setRgApparatus('') }
 
   function handleAdd() {
+    if (bracketMode) {
+      const phase = BRACKET_PHASES.find(p => p.key === bracketPhaseKey)
+      if (!phase) return
+      const name = lang === 'en' ? `${phase.group} ${phase.roundEn}` : `${phase.group} ${phase.round}`
+      onAdd({
+        competition_id: panel.competition_id,
+        panel_id: panel.id,
+        section_id: sectionId,
+        name,
+        age_group: phase.group,
+        category: phase.roundEn,
+        routine_type: 'Combined',
+        status: 'waiting',
+        order_index: nextOrderIndex,
+        dj_method: null,
+        ej_method: null,
+        ranking_merge_group_id: null,
+        bracket_phase: phase.key,
+      })
+      return
+    }
     if (isRG) {
       if (!resolvedRuleId || !rgRuleset || !rgApparatus) return
       const [ag, lv] = rgBaseKey.split('||')
@@ -192,13 +226,44 @@ function AddSessionForm({ lang, panel, sportType, competitionYear, ageGroups, ag
     }
   }
 
-  const canAdd = isRG ? !!(resolvedRuleId && rgRuleset && rgApparatus) : !!(ageGroup && category && routineType)
+  const canAdd = bracketMode ? true : (isRG ? !!(resolvedRuleId && rgRuleset && rgApparatus) : !!(ageGroup && category && routineType))
   const selectCls = 'w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
 
   return (
     <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+      {openCombinadosEnabled && (
+        <div className="flex gap-1 p-0.5 bg-slate-100 rounded-lg">
+          <button
+            onClick={() => setBracketMode(false)}
+            className={`flex-1 py-1 text-xs font-medium rounded-md transition-all ${!bracketMode ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500'}`}
+          >
+            Sesión regular
+          </button>
+          <button
+            onClick={() => setBracketMode(true)}
+            className={`flex-1 py-1 text-xs font-medium rounded-md transition-all ${bracketMode ? 'bg-white text-violet-700 shadow-sm' : 'text-slate-500'}`}
+          >
+            Fase bracket
+          </button>
+        </div>
+      )}
       <div className="space-y-2">
-        {isRG ? (
+        {bracketMode ? (
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-slate-500">Fase</label>
+            <select
+              value={bracketPhaseKey}
+              onChange={(e) => setBracketPhaseKey(e.target.value as typeof bracketPhaseKey)}
+              className={selectCls}
+            >
+              {BRACKET_PHASES.map((p) => (
+                <option key={p.key} value={p.key}>
+                  {p.group} — {lang === 'en' ? p.roundEn : p.round}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : isRG ? (
           <>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-slate-500">{t.ageGroup}</label>
@@ -398,7 +463,7 @@ function SessionRow({
 
 // ─── panel column ─────────────────────────────────────────────────────────────
 
-function PanelColumn({ lang, panel, sportType, competitionYear, sessions, ageGroups, agLabels, ageGroupRules, apparatus, apparatusRules, sectionId, onAddSession, onDeleteSession, allCompetitionSessions, rankingMergeGroups, sessionEligibleTeamCounts, onAssignMergeGroup, onCreateMergeGroup }: {
+function PanelColumn({ lang, panel, sportType, competitionYear, sessions, ageGroups, agLabels, ageGroupRules, apparatus, apparatusRules, sectionId, onAddSession, onDeleteSession, allCompetitionSessions, rankingMergeGroups, sessionEligibleTeamCounts, openCombinadosEnabled, onAssignMergeGroup, onCreateMergeGroup }: {
   lang: Lang
   panel: Panel
   sportType: string
@@ -415,6 +480,7 @@ function PanelColumn({ lang, panel, sportType, competitionYear, sessions, ageGro
   allCompetitionSessions: Session[]
   rankingMergeGroups: RankingMergeGroup[]
   sessionEligibleTeamCounts: Record<string, number>
+  openCombinadosEnabled?: boolean
   onAssignMergeGroup: (sessionId: string, mergeGroupId: string | null) => void | Promise<void>
   onCreateMergeGroup: (labelEs: string, labelEn: string) => Promise<string | null>
 }) {
@@ -459,6 +525,7 @@ function PanelColumn({ lang, panel, sportType, competitionYear, sessions, ageGro
           apparatusRules={apparatusRules}
           sectionId={sectionId}
           nextOrderIndex={sessions.length + 1}
+          openCombinadosEnabled={openCombinadosEnabled}
           onAdd={(s) => { onAddSession(s); setShowForm(false) }}
           onCancel={() => setShowForm(false)}
         />
@@ -498,6 +565,7 @@ type SectionBlockProps = {
   apparatusRules: ApparatusRule[]
   rankingMergeGroups: RankingMergeGroup[]
   sessionEligibleTeamCounts: Record<string, number>
+  openCombinadosEnabled?: boolean
   onUpdateLabel: (label: string) => void
   onUpdateTimes: (times: SectionTimes) => void
   onDelete: () => void
@@ -509,7 +577,7 @@ type SectionBlockProps = {
 
 function SectionBlock({
   lang, section, sessions, allCompetitionSessions, panels, sportType, competitionYear, ageGroups, agLabels, ageGroupRules,
-  apparatus, apparatusRules, rankingMergeGroups, sessionEligibleTeamCounts,
+  apparatus, apparatusRules, rankingMergeGroups, sessionEligibleTeamCounts, openCombinadosEnabled,
   onUpdateLabel, onUpdateTimes, onDelete, onAddSession, onDeleteSession, onAssignMergeGroup, onCreateMergeGroup,
 }: SectionBlockProps) {
   const t = useT('StructureTab', lang)
@@ -604,6 +672,7 @@ function SectionBlock({
                 allCompetitionSessions={allCompetitionSessions}
                 rankingMergeGroups={rankingMergeGroups}
                 sessionEligibleTeamCounts={sessionEligibleTeamCounts}
+                openCombinadosEnabled={openCombinadosEnabled}
                 onAssignMergeGroup={onAssignMergeGroup}
                 onCreateMergeGroup={onCreateMergeGroup}
               />
@@ -641,6 +710,7 @@ function SectionBlock({
                 apparatusRules={apparatusRules}
                 sectionId={section.id}
                 nextOrderIndex={sessions.length + 1}
+                openCombinadosEnabled={openCombinadosEnabled}
                 onAdd={(s) => { onAddSession(s); setShowForm(false) }}
                 onCancel={() => setShowForm(false)}
               />
@@ -678,6 +748,7 @@ export type StructureTabProps = {
   sessions: Session[]
   rankingMergeGroups: RankingMergeGroup[]
   sessionEligibleTeamCounts: Record<string, number>
+  openCombinadosEnabled?: boolean
   onAddSection: () => void
   onUpdateSectionLabel: (sectionId: string, label: string) => void
   onUpdateSectionTimes: (sectionId: string, times: SectionTimes) => void
@@ -690,7 +761,7 @@ export type StructureTabProps = {
 
 export default function StructureTab({
   lang, competitionId, sportType, competitionYear, ageGroups, agLabels, ageGroupRules,
-  apparatus, apparatusRules, rankingMergeGroups, sessionEligibleTeamCounts, panels, sections, sessions,
+  apparatus, apparatusRules, rankingMergeGroups, sessionEligibleTeamCounts, openCombinadosEnabled, panels, sections, sessions,
   onAddSection, onUpdateSectionLabel, onUpdateSectionTimes, onDeleteSection,
   onAddSession, onDeleteSession, onAssignSessionMergeGroup, onCreateRankingMergeGroup,
 }: StructureTabProps) {
@@ -785,6 +856,7 @@ export default function StructureTab({
           apparatusRules={apparatusRules}
           rankingMergeGroups={rankingMergeGroups}
           sessionEligibleTeamCounts={sessionEligibleTeamCounts}
+          openCombinadosEnabled={openCombinadosEnabled}
           onUpdateLabel={(label) => onUpdateSectionLabel(activeSection.id, label)}
           onUpdateTimes={(times) => onUpdateSectionTimes(activeSection.id, times)}
           onDelete={() => handleDelete(activeSection)}

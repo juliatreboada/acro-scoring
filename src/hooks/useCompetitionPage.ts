@@ -53,7 +53,7 @@ export function useCompetitionPage(id: string) {
             .eq('id', id).single(),
           supabase.from('panels').select('id,competition_id,panel_number').eq('competition_id', id).order('panel_number'),
           supabase.from('sections').select('id,competition_id,section_number,label,starting_time,waiting_time_seconds,warmup_duration_minutes,timeline_order').eq('competition_id', id).order('section_number'),
-          supabase.from('sessions').select('id,competition_id,panel_id,section_id,name,age_group,category,routine_type,status,order_index,order_locked,dj_method,ej_method,ranking_merge_group_id').eq('competition_id', id).order('order_index'),
+          supabase.from('sessions').select('id,competition_id,panel_id,section_id,name,age_group,category,routine_type,status,order_index,order_locked,dj_method,ej_method,ranking_merge_group_id,bracket_phase').eq('competition_id', id).order('order_index'),
           supabase.from('judges').select('id,full_name,phone,licence,avatar_url,sport_type'),
           supabase.from('competition_judge_nominations').select('id,competition_id,judge_id,club_id').eq('competition_id', id),
           supabase.from('competition_entries').select('id,competition_id,team_id,dorsal,dropped_out,gymnast_display,gymnast_ids').eq('competition_id', id),

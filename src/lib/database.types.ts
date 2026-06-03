@@ -1118,6 +1118,7 @@ export type Database = {
       sessions: {
         Row: {
           age_group: string
+          bracket_phase: string | null
           category: string
           competition_id: string
           current_team_id: string | null
@@ -1137,6 +1138,7 @@ export type Database = {
         }
         Insert: {
           age_group: string
+          bracket_phase?: string | null
           category: string
           competition_id: string
           current_team_id?: string | null
@@ -1156,6 +1158,7 @@ export type Database = {
         }
         Update: {
           age_group?: string
+          bracket_phase?: string | null
           category?: string
           competition_id?: string
           current_team_id?: string | null
@@ -1530,6 +1533,8 @@ export type Database = {
           open_semi_count: number
           open_final_count: number
           updated_at: string
+          bracket_section_id: string | null
+          bracket_panel_id: string | null
         }
         Insert: {
           competition_id: string
@@ -1539,6 +1544,8 @@ export type Database = {
           open_semi_count?: number
           open_final_count?: number
           updated_at?: string
+          bracket_section_id?: string | null
+          bracket_panel_id?: string | null
         }
         Update: {
           competition_id?: string
@@ -1548,6 +1555,8 @@ export type Database = {
           open_semi_count?: number
           open_final_count?: number
           updated_at?: string
+          bracket_section_id?: string | null
+          bracket_panel_id?: string | null
         }
         Relationships: [
           {

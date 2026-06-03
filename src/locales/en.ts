@@ -341,6 +341,7 @@ export const CompetitionDetailView = {
     unregisterCoach: 'Remove',
     noCoaches: 'No coaches registered for this competition.',
     noCoachesInClub: 'Add coaches in the Coaches tab first.',
+    coachesWarning: 'No coaches registered. Gymnasts cannot attend without a coach.',
     judgesTitle: 'Judges',
     nominated: 'Nominated',
     removeNomination: 'Remove',
@@ -419,6 +420,7 @@ export const CompetitionsTab = {
     unregisterCoach: 'Remove',
     noCoaches: 'No coaches registered for this competition.',
     noCoachesInClub: 'Add coaches in the Coaches tab first.',
+    coachesWarning: 'No coaches registered. Gymnasts cannot attend without a coach.',
     judgesTitle: 'Judges',
     nominate: 'Nominate',
     nominated: 'Nominated',
@@ -972,6 +974,7 @@ export const LicenciasTab = {
     statusApproved: 'Approved',
     statusRejected: 'Rejected',
     viewPayment: 'View payment',
+    print: 'Print list',
   }
 
 // app/login/page.tsx
@@ -1174,6 +1177,7 @@ export const RegistrationsTab = {
     collapseAll: 'Collapse all',
     cancel: 'Cancel',
     import: 'Import',
+    print: 'Print list',
     noRegistrations: 'No registrations yet.',
     // invite club form
     inviteClubTitle: 'Invite club',

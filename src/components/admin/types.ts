@@ -113,6 +113,8 @@ export type Session = {
   ej_method:  ScoringMethod | null
   /** Pool sessions for a single public/TV/CJP ranking (optional). */
   ranking_merge_group_id: string | null
+  /** For Open/Combinados bracket advancement sessions only. */
+  bracket_phase?: string | null
 }
 
 export type RankingMergeGroup = {

@@ -69,13 +69,16 @@ type OverviewUpdate = {
   judge_missing_fine: number | null
 }
 
-function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels, sessions, onUpdate, onSetPanelCount, onUploadPoster, onUploadLogo }: {
+function OverviewTab({ competition, lang, availableAdmins, ageGroupRules, panels, sessions, gymnastCount, coachCount, judgeCount, onUpdate, onSetPanelCount, onUploadPoster, onUploadLogo }: {
   competition: Competition
   lang: Lang
   availableAdmins: AdminUser[]
   ageGroupRules: AgeGroupRule[]
   panels: Panel[]
   sessions: Session[]
+  gymnastCount: number
+  coachCount: number
+  judgeCount: number
   onUpdate: (updates: OverviewUpdate) => void
   onSetPanelCount: (count: 1 | 2) => void
   onUploadPoster: (file: File) => Promise<void>
@@ -464,6 +467,20 @@ const dateCls = 'border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate
             )}
           </div>
         </div>
+      </div>
+
+      {/* Participant stats */}
+      <div className="flex gap-3 mb-6">
+        {[
+          { label: 'Gimnastas', value: gymnastCount, color: 'text-blue-700 bg-blue-50 border-blue-100' },
+          { label: 'Entrenadores', value: coachCount, color: 'text-violet-700 bg-violet-50 border-violet-100' },
+          { label: 'Jueces', value: judgeCount, color: 'text-emerald-700 bg-emerald-50 border-emerald-100' },
+        ].map(({ label, value, color }) => (
+          <div key={label} className={`flex-1 rounded-xl border px-4 py-3 text-center ${color}`}>
+            <p className="text-2xl font-bold tabular-nums">{value}</p>
+            <p className="text-xs font-medium mt-0.5 opacity-70">{label}</p>
+          </div>
+        ))}
       </div>
 
       {/* Two-column layout: Poster + Logo + Info Cards */}
@@ -983,6 +1000,7 @@ export default function CompetitionDetail({
           sessions={sessions}
           rankingMergeGroups={rankingMergeGroups}
           sessionEligibleTeamCounts={sessionEligibleTeamCounts}
+          openCombinadosEnabled={openCombinadosEnabled}
           onAddSection={onAddSection}
           onUpdateSectionLabel={onUpdateSectionLabel}
           onUpdateSectionTimes={onUpdateSectionTimes}
@@ -1001,11 +1019,15 @@ export default function CompetitionDetail({
           ageGroupRules={ageGroupRules}
           panels={panels}
           sessions={sessions}
+          gymnastCount={competitionGymnasts.length}
+          coachCount={competitionCoaches.length}
+          judgeCount={judgePool.length}
           onUpdate={onUpdateCompetition}
           onUploadPoster={onUploadPoster}
           onUploadLogo={onUploadLogo}
           onSetPanelCount={onSetPanelCount}
         />
+
       )}
       {activeTab === 'judges' && (
         <JudgesTab
@@ -1063,6 +1085,8 @@ export default function CompetitionDetail({
           onToggleDropout={onToggleDropout}
           onRemoveClubEntries={onRemoveClubEntries}
           competitionId={competition.id}
+          competitionName={competition.name}
+          competitionLogoUrl={competition.logo_url}
           ageGroupRules={ageGroupRules}
           competitionAgeGroups={competition.age_groups}
           competitionYear={competition.start_date ? new Date(competition.start_date + 'T00:00:00').getFullYear() : new Date().getFullYear()}
@@ -1075,6 +1099,8 @@ export default function CompetitionDetail({
         <LicenciasTab
           lang={lang}
           competitionStatus={competition.status}
+          competitionName={competition.name}
+          competitionLogoUrl={competition.logo_url}
           provisionalEntries={provisionalEntries}
           definitiveEntries={definitiveEntries}
           globalTeams={globalTeams}
@@ -1124,6 +1150,9 @@ export default function CompetitionDetail({
           sessionOrders={sessionOrders}
           teams={globalTeams}
           entries={entries}
+          ageGroupRules={ageGroupRules}
+          panels={panels}
+          sections={sections}
         />
       )}
     </div>
