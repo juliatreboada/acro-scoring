@@ -353,6 +353,12 @@ function SessionRow({
   eligibleTeamCount,
   onAssignMergeGroup,
   onCreateMergeGroup,
+  isDragging,
+  isDragOver,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: {
   session: Session
   borderStyle: string
@@ -363,6 +369,12 @@ function SessionRow({
   eligibleTeamCount: number
   onAssignMergeGroup: (sessionId: string, mergeGroupId: string | null) => void | Promise<void>
   onCreateMergeGroup: (labelEs: string, labelEn: string) => Promise<string | null>
+  isDragging?: boolean
+  isDragOver?: boolean
+  onDragStart?: () => void
+  onDragOver?: (e: React.DragEvent) => void
+  onDrop?: (e: React.DragEvent) => void
+  onDragEnd?: () => void
 }) {
   const t = useT('StructureTab', lang)
   const rowGroups = mergeGroupsForSessionRow(session, allSessions, rankingMergeGroups)
@@ -390,12 +402,22 @@ function SessionRow({
 
   return (
     <div
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
       className={[
-        'flex flex-col gap-2 px-3 py-2.5 bg-white border border-slate-200 rounded-xl border-l-4',
+        'flex flex-col gap-2 px-3 py-2.5 bg-white border border-slate-200 rounded-xl border-l-4 cursor-grab active:cursor-grabbing transition-opacity',
         borderStyle,
+        isDragging ? 'opacity-40' : '',
+        isDragOver ? 'ring-2 ring-blue-400 ring-offset-1' : '',
       ].join(' ')}
     >
       <div className="flex items-start gap-3">
+        <svg className="w-3.5 h-3.5 mt-0.5 shrink-0 text-slate-300" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M7 4a1 1 0 100 2 1 1 0 000-2zm6 0a1 1 0 100 2 1 1 0 000-2zM7 9a1 1 0 100 2 1 1 0 000-2zm6 0a1 1 0 100 2 1 1 0 000-2zM7 14a1 1 0 100 2 1 1 0 000-2zm6 0a1 1 0 100 2 1 1 0 000-2z" />
+        </svg>
         <div className="flex-1 min-w-0 space-y-1">
           <p className="text-xs font-medium text-slate-700 leading-snug">{session.name}</p>
           {showSmallFieldHint && (
@@ -463,7 +485,7 @@ function SessionRow({
 
 // ─── panel column ─────────────────────────────────────────────────────────────
 
-function PanelColumn({ lang, panel, sportType, competitionYear, sessions, ageGroups, agLabels, ageGroupRules, apparatus, apparatusRules, sectionId, onAddSession, onDeleteSession, allCompetitionSessions, rankingMergeGroups, sessionEligibleTeamCounts, openCombinadosEnabled, onAssignMergeGroup, onCreateMergeGroup }: {
+function PanelColumn({ lang, panel, sportType, competitionYear, sessions, ageGroups, agLabels, ageGroupRules, apparatus, apparatusRules, sectionId, onAddSession, onDeleteSession, allCompetitionSessions, rankingMergeGroups, sessionEligibleTeamCounts, openCombinadosEnabled, onAssignMergeGroup, onCreateMergeGroup, onReorderSessions }: {
   lang: Lang
   panel: Panel
   sportType: string
@@ -483,10 +505,26 @@ function PanelColumn({ lang, panel, sportType, competitionYear, sessions, ageGro
   openCombinadosEnabled?: boolean
   onAssignMergeGroup: (sessionId: string, mergeGroupId: string | null) => void | Promise<void>
   onCreateMergeGroup: (labelEs: string, labelEn: string) => Promise<string | null>
+  onReorderSessions: (ids: string[]) => void
 }) {
   const t = useT('StructureTab', lang)
   const [showForm, setShowForm] = useState(false)
+  const [dragSrcId, setDragSrcId] = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
   const styles = PANEL_STYLES[panel.panel_number]
+
+  function handleDrop(targetId: string) {
+    if (!dragSrcId || dragSrcId === targetId) { setDragSrcId(null); setDragOverId(null); return }
+    const ids = sessions.map(s => s.id)
+    const srcIdx = ids.indexOf(dragSrcId)
+    const dstIdx = ids.indexOf(targetId)
+    const reordered = [...ids]
+    reordered.splice(srcIdx, 1)
+    reordered.splice(dstIdx, 0, dragSrcId)
+    onReorderSessions(reordered)
+    setDragSrcId(null)
+    setDragOverId(null)
+  }
 
   return (
     <div className="flex flex-col gap-2">
@@ -508,6 +546,12 @@ function PanelColumn({ lang, panel, sportType, competitionYear, sessions, ageGro
           eligibleTeamCount={sessionEligibleTeamCounts[s.id] ?? 0}
           onAssignMergeGroup={onAssignMergeGroup}
           onCreateMergeGroup={onCreateMergeGroup}
+          isDragging={dragSrcId === s.id}
+          isDragOver={dragOverId === s.id}
+          onDragStart={() => setDragSrcId(s.id)}
+          onDragOver={(e) => { e.preventDefault(); setDragOverId(s.id) }}
+          onDrop={() => handleDrop(s.id)}
+          onDragEnd={() => { setDragSrcId(null); setDragOverId(null) }}
         />
       ))}
 
@@ -573,15 +617,31 @@ type SectionBlockProps = {
   onDeleteSession: (id: string) => void
   onAssignMergeGroup: (sessionId: string, mergeGroupId: string | null) => void | Promise<void>
   onCreateMergeGroup: (labelEs: string, labelEn: string) => Promise<string | null>
+  onReorderSessions: (ids: string[]) => void
 }
 
 function SectionBlock({
   lang, section, sessions, allCompetitionSessions, panels, sportType, competitionYear, ageGroups, agLabels, ageGroupRules,
   apparatus, apparatusRules, rankingMergeGroups, sessionEligibleTeamCounts, openCombinadosEnabled,
-  onUpdateLabel, onUpdateTimes, onDelete, onAddSession, onDeleteSession, onAssignMergeGroup, onCreateMergeGroup,
+  onUpdateLabel, onUpdateTimes, onDelete, onAddSession, onDeleteSession, onAssignMergeGroup, onCreateMergeGroup, onReorderSessions,
 }: SectionBlockProps) {
   const t = useT('StructureTab', lang)
   const [showForm, setShowForm] = useState(false)
+  const [dragSrcId, setDragSrcId] = useState<string | null>(null)
+  const [dragOverId, setDragOverId] = useState<string | null>(null)
+
+  function handleSinglePanelDrop(targetId: string) {
+    if (!dragSrcId || dragSrcId === targetId) { setDragSrcId(null); setDragOverId(null); return }
+    const ids = sessions.map(s => s.id)
+    const srcIdx = ids.indexOf(dragSrcId)
+    const dstIdx = ids.indexOf(targetId)
+    const reordered = [...ids]
+    reordered.splice(srcIdx, 1)
+    reordered.splice(dstIdx, 0, dragSrcId)
+    onReorderSessions(reordered)
+    setDragSrcId(null)
+    setDragOverId(null)
+  }
   const [label, setLabel] = useState(section.label ?? '')
   const [startingTime, setStartingTime]   = useState(section.starting_time?.slice(0, 5) ?? '')
   const [waitingSec, setWaitingSec]       = useState(section.waiting_time_seconds?.toString() ?? '')
@@ -675,6 +735,7 @@ function SectionBlock({
                 openCombinadosEnabled={openCombinadosEnabled}
                 onAssignMergeGroup={onAssignMergeGroup}
                 onCreateMergeGroup={onCreateMergeGroup}
+                onReorderSessions={onReorderSessions}
               />
             ))}
           </div>
@@ -695,6 +756,12 @@ function SectionBlock({
                 eligibleTeamCount={sessionEligibleTeamCounts[s.id] ?? 0}
                 onAssignMergeGroup={onAssignMergeGroup}
                 onCreateMergeGroup={onCreateMergeGroup}
+                isDragging={dragSrcId === s.id}
+                isDragOver={dragOverId === s.id}
+                onDragStart={() => setDragSrcId(s.id)}
+                onDragOver={(e) => { e.preventDefault(); setDragOverId(s.id) }}
+                onDrop={() => handleSinglePanelDrop(s.id)}
+                onDragEnd={() => { setDragSrcId(null); setDragOverId(null) }}
               />
             ))}
             {showForm ? (
@@ -755,6 +822,7 @@ export type StructureTabProps = {
   onDeleteSection: (sectionId: string) => void
   onAddSession: (s: Omit<Session, 'id'>) => void
   onDeleteSession: (sessionId: string) => void
+  onReorderSessions: (ids: string[]) => void
   onAssignSessionMergeGroup: (sessionId: string, mergeGroupId: string | null) => void | Promise<void>
   onCreateRankingMergeGroup: (labelEs: string, labelEn: string) => Promise<string | null>
 }
@@ -763,7 +831,7 @@ export default function StructureTab({
   lang, competitionId, sportType, competitionYear, ageGroups, agLabels, ageGroupRules,
   apparatus, apparatusRules, rankingMergeGroups, sessionEligibleTeamCounts, openCombinadosEnabled, panels, sections, sessions,
   onAddSection, onUpdateSectionLabel, onUpdateSectionTimes, onDeleteSection,
-  onAddSession, onDeleteSession, onAssignSessionMergeGroup, onCreateRankingMergeGroup,
+  onAddSession, onDeleteSession, onReorderSessions, onAssignSessionMergeGroup, onCreateRankingMergeGroup,
 }: StructureTabProps) {
   const t = useT('StructureTab', lang)
   const sorted = [...sections].sort((a, b) => a.section_number - b.section_number)
@@ -862,6 +930,7 @@ export default function StructureTab({
           onDelete={() => handleDelete(activeSection)}
           onAddSession={onAddSession}
           onDeleteSession={onDeleteSession}
+          onReorderSessions={onReorderSessions}
           onAssignMergeGroup={onAssignSessionMergeGroup}
           onCreateMergeGroup={onCreateRankingMergeGroup}
         />

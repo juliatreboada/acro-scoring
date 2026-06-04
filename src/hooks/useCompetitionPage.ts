@@ -327,6 +327,20 @@ export function useCompetitionPage(id: string) {
     setSessions(prev => prev.filter(s => s.id !== sessionId))
   }
 
+  async function handleReorderStructureSessions(sessionIds: string[]) {
+    setSessions(prev =>
+      prev.map(s => {
+        const idx = sessionIds.indexOf(s.id)
+        return idx >= 0 ? { ...s, order_index: idx + 1 } : s
+      })
+    )
+    await Promise.all(
+      sessionIds.map((id, idx) =>
+        supabase.from('sessions').update({ order_index: idx + 1 }).eq('id', id)
+      )
+    )
+  }
+
   // ── judges ────────────────────────────────────────────────────────────────────
   async function handleAddToPool(judgeId: string) {
     const { data: nom, error } = await supabase.from('competition_judge_nominations')
@@ -586,7 +600,7 @@ export function useCompetitionPage(id: string) {
     // handlers
     handleAdvanceStatus, handleRevertStatus, handleSetPanelCount,
     handleAddSection, handleUpdateSectionLabel, handleUpdateSectionTimes, handleDeleteSection,
-    handleAddSession, handleDeleteSession,
+    handleAddSession, handleDeleteSession, handleReorderStructureSessions,
     handleAddToPool, handleRemoveFromPool, handleAssignJudge,
     handleAddSlot, handleRemoveSlot, handleTogglePanelLock, handleCopyPanel,
     handleToggleDropout, handleRemoveClubEntries,

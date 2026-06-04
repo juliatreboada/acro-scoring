@@ -13,9 +13,9 @@ type TshirtOrder = {
 type Person = {
   id: string
   name: string
-  club_id: string
+  club_id: string | null
   club_name: string
-  type: 'gymnast' | 'coach'
+  type: 'gymnast' | 'coach' | 'judge'
 }
 
 type Props = {
@@ -29,6 +29,8 @@ export default function TshirtTab({ competitionId, sizes, deadline, onUpdateConf
   const supabase = createClient()
   const [orders, setOrders] = useState<TshirtOrder[]>([])
   const [people, setPeople] = useState<Person[]>([])
+  const [adminJudges, setAdminJudges] = useState<{ id: string; name: string }[]>([])
+  const [adminJudgeSizes, setAdminJudgeSizes] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
 
   // config editing
@@ -50,32 +52,61 @@ export default function TshirtTab({ competitionId, sizes, deadline, onUpdateConf
     const rawOrders = (ordersData ?? []) as unknown as TshirtOrder[]
     setOrders(rawOrders)
 
-    // fetch person details for all orders
-    const gymnastIds = rawOrders.filter(o => o.person_type === 'gymnast').map(o => o.person_id)
-    const coachIds   = rawOrders.filter(o => o.person_type === 'coach').map(o => o.person_id)
+    // Load admin-added judges (nominations with no club)
+    const { data: adminNomData } = await supabase
+      .from('competition_judge_nominations')
+      .select('judge_id')
+      .eq('competition_id', competitionId)
+      .is('club_id', null)
+    const adminJudgeIds = (adminNomData ?? []).map((n: any) => n.judge_id as string)
 
-    const [gymnastsRes, coachesRes] = await Promise.all([
+    // Person IDs by type
+    const gymnastIds  = rawOrders.filter(o => o.person_type === 'gymnast').map(o => o.person_id)
+    const coachIds    = rawOrders.filter(o => o.person_type === 'coach').map(o => o.person_id)
+    const judgeOrderIds = rawOrders.filter(o => o.person_type === 'judge').map(o => o.person_id)
+    const allJudgeIds = [...new Set([...judgeOrderIds, ...adminJudgeIds])]
+
+    const [gymnastsRes, coachesRes, judgesRes] = await Promise.all([
       gymnastIds.length > 0
         ? supabase.from('gymnasts' as any).select('id,first_name,last_name_1,club_id').in('id', gymnastIds)
         : Promise.resolve({ data: [] }),
       coachIds.length > 0
-        ? supabase.from('coaches' as any).select('id,first_name,last_name_1,club_id').in('id', coachIds)
+        ? supabase.from('coaches' as any).select('id,full_name,club_id').in('id', coachIds)
+        : Promise.resolve({ data: [] }),
+      allJudgeIds.length > 0
+        ? supabase.from('judges').select('id,full_name').in('id', allJudgeIds)
         : Promise.resolve({ data: [] }),
     ])
 
-    // fetch club names
+    // For judges in orders, find their nominating club
+    const judgeNomRes = judgeOrderIds.length > 0
+      ? await supabase.from('competition_judge_nominations')
+          .select('judge_id,club_id')
+          .eq('competition_id', competitionId)
+          .in('judge_id', judgeOrderIds)
+      : { data: [] }
+    const judgeClubMap: Record<string, string | null> = {}
+    for (const n of (judgeNomRes.data ?? []) as any[]) {
+      judgeClubMap[n.judge_id] = n.club_id
+    }
+
+    // Fetch all club names
     const clubIds = [
       ...new Set([
         ...((gymnastsRes.data ?? []) as any[]).map((g: any) => g.club_id),
         ...((coachesRes.data ?? []) as any[]).map((c: any) => c.club_id),
-      ])
+        ...Object.values(judgeClubMap).filter(Boolean),
+      ].filter(Boolean))
     ]
     const clubsRes = clubIds.length > 0
       ? await supabase.from('clubs').select('id,club_name').in('id', clubIds)
       : { data: [] }
-
     const clubNameMap: Record<string, string> = Object.fromEntries(
       ((clubsRes.data ?? []) as any[]).map((c: any) => [c.id, c.club_name])
+    )
+
+    const judgeNameMap: Record<string, string> = Object.fromEntries(
+      ((judgesRes.data ?? []) as any[]).map((j: any) => [j.id, j.full_name])
     )
 
     const all: Person[] = [
@@ -88,17 +119,58 @@ export default function TshirtTab({ competitionId, sizes, deadline, onUpdateConf
       })),
       ...((coachesRes.data ?? []) as any[]).map((c: any) => ({
         id: c.id,
-        name: [c.first_name, c.last_name_1].filter(Boolean).join(' '),
+        name: c.full_name,
         club_id: c.club_id,
         club_name: clubNameMap[c.club_id] ?? '—',
         type: 'coach' as const,
       })),
+      ...judgeOrderIds.map((jid) => ({
+        id: jid,
+        name: judgeNameMap[jid] ?? jid,
+        club_id: judgeClubMap[jid] ?? null,
+        club_name: judgeClubMap[jid] ? (clubNameMap[judgeClubMap[jid]!] ?? '—') : 'Administración',
+        type: 'judge' as const,
+      })),
     ]
     setPeople(all)
+
+    // Admin judges (no club) + their current sizes
+    const adminJudgeList = adminJudgeIds.map(id => ({ id, name: judgeNameMap[id] ?? id }))
+    setAdminJudges(adminJudgeList)
+    const sizeMap: Record<string, string> = {}
+    for (const o of rawOrders) {
+      if (o.person_type === 'judge' && adminJudgeIds.includes(o.person_id)) {
+        sizeMap[o.person_id] = o.size
+      }
+    }
+    setAdminJudgeSizes(sizeMap)
+
     setLoading(false)
   }
 
   useEffect(() => { void load() }, [competitionId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleAdminJudgeSize(judgeId: string, size: string) {
+    setAdminJudgeSizes(prev => ({ ...prev, [judgeId]: size }))
+    if (size) {
+      await supabase.from('tshirt_orders' as any).upsert(
+        { competition_id: competitionId, person_type: 'judge', person_id: judgeId, size },
+        { onConflict: 'competition_id,person_type,person_id' }
+      )
+      setOrders(prev => {
+        const existing = prev.find(o => o.person_type === 'judge' && o.person_id === judgeId)
+        if (existing) return prev.map(o => o.person_type === 'judge' && o.person_id === judgeId ? { ...o, size } : o)
+        return [...prev, { id: '', person_type: 'judge', person_id: judgeId, size }]
+      })
+    } else {
+      await supabase.from('tshirt_orders' as any)
+        .delete()
+        .eq('competition_id', competitionId)
+        .eq('person_type', 'judge')
+        .eq('person_id', judgeId)
+      setOrders(prev => prev.filter(o => !(o.person_type === 'judge' && o.person_id === judgeId)))
+    }
+  }
 
   // totals per size
   const totals = useMemo(() => {
@@ -107,16 +179,21 @@ export default function TshirtTab({ competitionId, sizes, deadline, onUpdateConf
     return map
   }, [orders])
 
-  // orders grouped by club
+  // orders grouped by club (including 'Administración' for admin-set judges)
   const byClub = useMemo(() => {
     const map: Record<string, { club_name: string; rows: { person: Person; size: string }[] }> = {}
     for (const order of orders) {
       const person = people.find(p => p.id === order.person_id && p.type === order.person_type)
       if (!person) continue
-      if (!map[person.club_id]) map[person.club_id] = { club_name: person.club_name, rows: [] }
-      map[person.club_id].rows.push({ person, size: order.size })
+      const key = person.club_id ?? '__admin__'
+      if (!map[key]) map[key] = { club_name: person.club_name, rows: [] }
+      map[key].rows.push({ person, size: order.size })
     }
-    return Object.values(map).sort((a, b) => a.club_name.localeCompare(b.club_name))
+    return Object.values(map).sort((a, b) => {
+      if (a.club_name === 'Administración') return 1
+      if (b.club_name === 'Administración') return -1
+      return a.club_name.localeCompare(b.club_name)
+    })
   }, [orders, people])
 
   const totalOrders = orders.length
@@ -133,7 +210,6 @@ export default function TshirtTab({ competitionId, sizes, deadline, onUpdateConf
         th, td { border: 1px solid #ddd; padding: 4px 8px; text-align: left; }
         th { background: #f5f5f5; font-weight: 600; }
         .totals td { font-weight: bold; }
-        .badge { display:inline-block; padding:1px 6px; border-radius:9px; font-size:10px; background:#e0e7ff; color:#3730a3; margin-right:2px; }
         @media print { body { margin: 10px; } }
       </style>
       </head><body>
@@ -146,7 +222,7 @@ export default function TshirtTab({ competitionId, sizes, deadline, onUpdateConf
       ${byClub.map(club => `
         <h2>${club.club_name} (${club.rows.length})</h2>
         <table><thead><tr><th>Nombre</th><th>Tipo</th><th>Talla</th></tr></thead><tbody>
-        ${club.rows.map(r => `<tr><td>${r.person.name}</td><td>${r.person.type === 'gymnast' ? 'Gimnasta' : 'Entrenador/a'}</td><td>${r.size}</td></tr>`).join('')}
+        ${club.rows.map(r => `<tr><td>${r.person.name}</td><td>${r.person.type === 'gymnast' ? 'Gimnasta' : r.person.type === 'coach' ? 'Entrenador/a' : 'Juez/a'}</td><td>${r.size}</td></tr>`).join('')}
         </tbody></table>
       `).join('')}
       </body></html>`
@@ -255,6 +331,35 @@ export default function TshirtTab({ competitionId, sizes, deadline, onUpdateConf
         </div>
       </div>
 
+      {/* Admin judges section */}
+      {sizes.length > 0 && adminJudges.length > 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+            <p className="text-sm font-semibold text-slate-800">Jueces (sin club)</p>
+            <p className="text-xs text-slate-500 mt-0.5">Jueces asignados directamente por el administrador, no nominados por ningún club.</p>
+          </div>
+          <div className="p-4 space-y-2">
+            {adminJudges.map(j => (
+              <div key={j.id} className="flex items-center gap-3 py-1">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-slate-800 font-medium truncate">{j.name}</p>
+                  <p className="text-xs text-slate-400">Juez/a</p>
+                </div>
+                <select
+                  value={adminJudgeSizes[j.id] ?? ''}
+                  onChange={e => handleAdminJudgeSize(j.id, e.target.value)}
+                  className="text-sm border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-400">
+                  <option value="">Sin talla</option>
+                  {sizes.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Summary + breakdown */}
       {sizes.length > 0 && (
         <>
@@ -306,7 +411,9 @@ export default function TshirtTab({ competitionId, sizes, deadline, onUpdateConf
                       {club.rows.map(({ person, size }, i) => (
                         <tr key={person.id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
                           <td className="px-4 py-2 font-medium text-slate-800">{person.name}</td>
-                          <td className="px-4 py-2 text-slate-500">{person.type === 'gymnast' ? 'Gimnasta' : 'Entrenador/a'}</td>
+                          <td className="px-4 py-2 text-slate-500">
+                            {person.type === 'gymnast' ? 'Gimnasta' : person.type === 'coach' ? 'Entrenador/a' : 'Juez/a'}
+                          </td>
                           <td className="px-4 py-2 text-right font-semibold text-slate-700">{size}</td>
                         </tr>
                       ))}

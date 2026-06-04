@@ -25,7 +25,7 @@ export default function Page() {
     setLockedSessions, setSessionOrders,
     handleAdvanceStatus, handleRevertStatus, handleSetPanelCount,
     handleAddSection, handleUpdateSectionLabel, handleUpdateSectionTimes, handleDeleteSection,
-    handleAddSession, handleDeleteSession,
+    handleAddSession, handleDeleteSession, handleReorderStructureSessions,
     handleAddToPool, handleRemoveFromPool, handleAssignJudge,
     handleAddSlot, handleRemoveSlot, handleTogglePanelLock, handleCopyPanel,
     handleToggleDropout, handleRemoveClubEntries,
@@ -166,6 +166,7 @@ export default function Page() {
         onDeleteSection={handleDeleteSection}
         onAddSession={handleAddSession}
         onDeleteSession={handleDeleteSession}
+        onReorderSessions={handleReorderStructureSessions}
         rankingMergeGroups={rankingMergeGroups}
         sessionEligibleTeamCounts={sessionEligibleTeamCounts}
         onAssignSessionMergeGroup={handleAssignSessionMergeGroup}
