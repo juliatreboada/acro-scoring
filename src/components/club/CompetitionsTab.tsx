@@ -483,7 +483,7 @@ function CompetitionDetailView({
       })
   }, [competition.id, hasTshirts])
 
-  async function handleTshirtSize(personType: 'gymnast' | 'coach', personId: string, size: string) {
+  async function handleTshirtSize(personType: 'gymnast' | 'coach' | 'judge', personId: string, size: string) {
     const key = `${personType}:${personId}`
     setTshirtOrders(prev => ({ ...prev, [key]: size }))
     const supabase = createClient()
@@ -510,6 +510,8 @@ function CompetitionDetailView({
   )
   const tshirtGymnasts = gymnasts.filter(g => enteredGymnastIds.has(g.id))
   const tshirtCoaches = registeredCoaches
+  const nominatedJudgeIds = new Set(compNominations.map(n => n.judge_id))
+  const tshirtJudges = judges.filter(j => nominatedJudgeIds.has(j.id))
 
   const [showPoolPicker, setShowPoolPicker] = useState(false)
   const [showInviteForm, setShowInviteForm] = useState(false)
@@ -865,7 +867,28 @@ function CompetitionDetailView({
                     </div>
                   )
                 })}
-                {tshirtGymnasts.length === 0 && tshirtCoaches.length === 0 && (
+                {tshirtJudges.map(j => {
+                  const key = `judge:${j.id}`
+                  return (
+                    <div key={j.id} className="flex items-center gap-3 py-1">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-slate-800 font-medium truncate">{j.full_name}</p>
+                        <p className="text-xs text-slate-400">{t.judgesTitle}</p>
+                      </div>
+                      <select
+                        value={tshirtOrders[key] ?? ''}
+                        onChange={e => handleTshirtSize('judge', j.id, e.target.value)}
+                        disabled={isTshirtLocked}
+                        className="text-sm border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <option value="">{t.tshirtNoSize}</option>
+                        {(competition.tshirt_sizes ?? []).map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )
+                })}
+                {tshirtGymnasts.length === 0 && tshirtCoaches.length === 0 && tshirtJudges.length === 0 && (
                   <p className="text-sm text-slate-400 text-center py-2">{t.noTeams}</p>
                 )}
               </div>

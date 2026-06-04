@@ -772,6 +772,7 @@ export type CompetitionDetailProps = {
   onDeleteSection: (sectionId: string) => void
   onAddSession: (s: Omit<Session, 'id'>) => void
   onDeleteSession: (sessionId: string) => void
+  onReorderSessions: (ids: string[]) => void
   rankingMergeGroups: RankingMergeGroup[]
   sessionEligibleTeamCounts: Record<string, number>
   onAssignSessionMergeGroup: (sessionId: string, mergeGroupId: string | null) => void | Promise<void>
@@ -830,7 +831,7 @@ export type CompetitionDetailProps = {
 export default function CompetitionDetail({
   lang, competition, panels, sections, sessions, onBack, onAdvanceStatus, onRevertStatus,
   onSetPanelCount, onAddSection, onUpdateSectionLabel, onUpdateSectionTimes,
-  onDeleteSection, onAddSession, onDeleteSession,
+  onDeleteSection, onAddSession, onDeleteSession, onReorderSessions,
   rankingMergeGroups, sessionEligibleTeamCounts, onAssignSessionMergeGroup, onCreateRankingMergeGroup,
   globalJudges, judgePool, nominations, assignments,
   panelLocks, onAddToPool, onRemoveFromPool, onAssignJudge, onAddSlot, onRemoveSlot,
@@ -1012,6 +1013,7 @@ export default function CompetitionDetail({
           onDeleteSection={onDeleteSection}
           onAddSession={onAddSession}
           onDeleteSession={onDeleteSession}
+          onReorderSessions={onReorderSessions}
           onAssignSessionMergeGroup={onAssignSessionMergeGroup}
           onCreateRankingMergeGroup={onCreateRankingMergeGroup}
         />
