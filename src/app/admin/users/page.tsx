@@ -378,7 +378,7 @@ export default function Page() {
         <span className="text-sm font-semibold text-slate-700">{t.title}</span>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-8">
         {/* tab bar */}
         <div className="flex items-center gap-0 border-b border-slate-200 mb-6">
           {(['admin', 'judge', 'club'] as Role[]).map((r) => (

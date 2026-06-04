@@ -262,6 +262,7 @@ export type Database = {
       }
       competitions: {
         Row: {
+          accreditation_config: Json | null
           admin_id: string | null
           age_groups: string[]
           created_at: string
@@ -289,6 +290,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accreditation_config?: Json | null
           admin_id?: string | null
           age_groups?: string[]
           created_at?: string
@@ -316,6 +318,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accreditation_config?: Json | null
           admin_id?: string | null
           age_groups?: string[]
           created_at?: string

@@ -52,6 +52,24 @@ export type AdminUser = {
   email: string
 }
 
+export type AccreditationConfig = {
+  gymnast_color: string          // hex, default '#3b82f6'
+  coach_color: string            // hex, default '#10b981'
+  judge_color: string            // hex, default '#f59e0b'
+  show_logo: boolean
+  show_competition_name: boolean
+  header_height: number          // % of card height, 10–50, default 22
+  photo_size: number             // % of card width, 15–65, default 43
+  photo_x: number                // horizontal position 0–100, default 50 (center)
+  name_size: number              // multiplier 0.5–2.0, default 1.0
+  club_size: number              // multiplier 0.5–2.0, default 1.0
+  badge_size: number             // multiplier 0.5–2.0, default 1.0
+  text_x: number                 // horizontal position 0–100, default 50 (center)
+  text_bg_opacity: number        // 0–100, semi-transparent white behind name/club, default 0
+  bg_image_url: string | null    // null = white background
+  bg_image_opacity: number       // 0–100, default 100
+}
+
 export type Competition = {
   id: string
   name: string
@@ -75,6 +93,7 @@ export type Competition = {
   sport_type: string                   // 'acro' | 'rg'
   tshirt_sizes?: string[]              // sizes available for this competition
   tshirt_deadline?: string | null      // after this date clubs cannot edit their orders
+  accreditation_config?: AccreditationConfig | null
 }
 
 export type Panel = {

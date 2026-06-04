@@ -54,7 +54,7 @@ export default function Page() {
 
       {/* tab bar */}
       <div className="bg-white border-b border-slate-200">
-        <div className="max-w-4xl mx-auto px-4 flex">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 flex">
           {(['competitions', 'profile'] as const).map(v => (
             <button key={v} onClick={() => setView(v)}
               className={[
@@ -68,7 +68,7 @@ export default function Page() {
       </div>
 
       {view === 'profile' && (
-        <div className="max-w-4xl mx-auto px-4 py-6">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6">
           <ProfileEditor lang={lang} />
         </div>
       )}

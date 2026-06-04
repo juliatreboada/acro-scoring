@@ -686,7 +686,7 @@ export default function StartingOrderView({
     <div ref={rootRef} className="so-print-area h-screen bg-slate-50 flex flex-col overflow-hidden print:h-auto print:block">
       {/* header */}
       <div className="bg-white border-b border-slate-200">
-        <div className="max-w-4xl mx-auto px-4 py-3.5">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-3.5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-500 mb-0.5">{t.title}</p>
@@ -728,7 +728,7 @@ export default function StartingOrderView({
 
         {/* section tabs */}
         {sections.length > 1 && (
-          <div className="max-w-4xl mx-auto px-4 flex overflow-x-auto">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-6 flex overflow-x-auto">
             {sections.map((sec) => (
               <button
                 key={sec.id}
@@ -745,7 +745,7 @@ export default function StartingOrderView({
             ))}
           </div>
         )}
-        <div className="max-w-4xl mx-auto px-4 pb-3 print:hidden">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 pb-3 print:hidden">
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/80 bg-white/95 px-2.5 py-1.5 shadow-sm backdrop-blur">
             <label className="relative block max-w-sm flex-1 min-w-[14rem]">
               <span className="sr-only">{t.searchPlaceholder}</span>
@@ -790,7 +790,7 @@ export default function StartingOrderView({
 
       {/* content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-4 py-6">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6">
           {panels.length === 1 ? (
           (() => {
             const timesMap = currentSection

@@ -15,14 +15,14 @@ export function CompetitionPageSkeleton({ lang, onLangChange }: {
         <div className="h-4 w-px bg-slate-200" />
         <div className="h-4 w-48 bg-slate-100 rounded animate-pulse" />
       </div>
-      <div className="bg-white border-b border-slate-200 px-4">
-        <div className="max-w-5xl mx-auto flex gap-1 py-1">
+      <div className="bg-white border-b border-slate-200">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 flex gap-1 py-1">
           {[80, 64, 72, 88, 56, 76, 60].map((w, i) => (
             <div key={i} className="h-8 bg-slate-100 rounded-lg animate-pulse" style={{ width: w }} />
           ))}
         </div>
       </div>
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-4">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 space-y-4">
         <div className="bg-white rounded-2xl border border-slate-100 p-6 space-y-4">
           <div className="h-5 w-40 bg-slate-100 rounded animate-pulse" />
           <div className="grid grid-cols-2 gap-4">

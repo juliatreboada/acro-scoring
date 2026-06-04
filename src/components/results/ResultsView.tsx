@@ -1140,7 +1140,7 @@ export default function ResultsView({
     <div className="min-h-screen bg-slate-50 print:w-full print:max-w-none">
       {!officialDocument && activeRulesets.length > 1 && (
         <div className="bg-white border-b border-slate-200 sticky top-[49px] z-10 print:hidden">
-          <div className="max-w-3xl mx-auto print:max-w-none print:w-full print:mx-0 px-4 flex">
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-6 flex">
             {activeRulesets.map((rs) => (
               <button
                 key={rs}
@@ -1170,7 +1170,7 @@ export default function ResultsView({
             return (
               <div key={rs} className={idx > 0 ? 'print:break-before-page' : ''}>
                 <div className="bg-white border-b border-slate-200">
-                  <div className="max-w-3xl mx-auto print:max-w-none print:w-full print:mx-0 px-4 py-3">
+                  <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-3">
                     <h2 className="text-lg font-bold text-slate-800">{rs}</h2>
                   </div>
                 </div>
@@ -1188,7 +1188,7 @@ export default function ResultsView({
             )
           })}
           {openCombinadosActa && (
-            <div className="max-w-3xl mx-auto print:max-w-none print:w-full print:mx-0 px-4 py-6 space-y-3">
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 space-y-3">
               <h2 className="text-lg font-bold text-slate-800">OPEN / COMBINADOS</h2>
               {renderOpenCombinadosTable('OPEN Qualification', openCombinadosActa.openQualification)}
               {renderOpenCombinadosTable('COMBINADOS Qualification', openCombinadosActa.combinadosQualification)}
@@ -1213,7 +1213,7 @@ export default function ResultsView({
             />
           )}
           {openCombinadosActa && (
-            <div className="max-w-3xl mx-auto print:max-w-none print:w-full print:mx-0 px-4 py-6 space-y-3">
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 space-y-3">
               <h2 className="text-lg font-bold text-slate-800">OPEN / COMBINADOS</h2>
               {renderOpenCombinadosTable('OPEN Qualification', openCombinadosActa.openQualification)}
               {renderOpenCombinadosTable('COMBINADOS Qualification', openCombinadosActa.combinadosQualification)}

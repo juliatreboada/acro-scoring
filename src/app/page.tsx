@@ -286,7 +286,7 @@ export default function HomePage() {
       </div> */}
 
       {/* competitions */}
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-8">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 space-y-8">
         {loading && (
           <div className="flex justify-center py-12">
             <div className="w-6 h-6 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
