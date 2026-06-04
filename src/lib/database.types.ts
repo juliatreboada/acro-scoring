@@ -565,6 +565,7 @@ export type Database = {
           full_name: string
           id: string
           licence: string | null
+          licencia_url: string | null
           phone: string | null
           sport_type: string
         }
@@ -573,6 +574,7 @@ export type Database = {
           full_name: string
           id: string
           licence?: string | null
+          licencia_url?: string | null
           phone?: string | null
           sport_type?: string
         }
@@ -581,6 +583,7 @@ export type Database = {
           full_name?: string
           id?: string
           licence?: string | null
+          licencia_url?: string | null
           phone?: string | null
           sport_type?: string
         }

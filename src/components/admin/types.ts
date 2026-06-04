@@ -176,6 +176,7 @@ export type Judge = {
   email: string | null    // from profiles.email
   phone: string | null
   licence: string | null
+  licencia_url?: string | null
   avatar_url: string | null
   sport_type: string
 }
