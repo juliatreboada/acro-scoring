@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase'
 import { useProfile } from '@/contexts/ProfileContext'
 import type { Lang } from '@/components/scoring/types'
 import ClickableImg from '@/components/shared/ClickableImg'
+import { LicenciaChip } from '@/components/club/shared/LicenciaChip'
 import { INPUT_CLS } from '@/lib/uiConstants'
 import { useT } from '@/lib/useT'
 
@@ -15,8 +16,9 @@ type ProfileData = {
   full_name: string
   email: string | null
   phone: string | null
-  licence?: string | null   // judges only
-  sport_type?: string | null // judges only
+  licence?: string | null     // judges only — licence number text
+  licencia_url?: string | null // judges only — licence document PDF
+  sport_type?: string | null  // judges only
   avatar_url: string | null
   role: 'judge' | 'admin'
 }
@@ -29,11 +31,13 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { activeProfile } = useProfile()
 
-  const [loading, setLoading]     = useState(true)
-  const [profile, setProfile]     = useState<ProfileData | null>(null)
-  const [editing, setEditing]     = useState(false)
-  const [saved, setSaved]         = useState(false)
-  const [uploading, setUploading] = useState(false)
+  const licenciaInputRef = useRef<HTMLInputElement>(null)
+  const [loading, setLoading]               = useState(true)
+  const [profile, setProfile]               = useState<ProfileData | null>(null)
+  const [editing, setEditing]               = useState(false)
+  const [saved, setSaved]                   = useState(false)
+  const [uploading, setUploading]           = useState(false)
+  const [uploadingLicencia, setUploadingLicencia] = useState(false)
   const [form, setForm] = useState({ full_name: '', phone: '', licence: '' })
 
   useEffect(() => {
@@ -44,19 +48,20 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
       const role = activeProfile.role as 'judge' | 'admin'
       const table = role === 'judge' ? 'judges' : 'admins'
       const fields = role === 'judge'
-        ? 'id,full_name,phone,licence,sport_type,avatar_url'
+        ? 'id,full_name,phone,licence,licencia_url,sport_type,avatar_url'
         : 'id,full_name,phone,avatar_url'
 
       const { data: row } = await supabase.from(table as 'judges').select(fields).eq('id', activeProfile.id).single()
 
       setProfile({
-        id:         activeProfile.id,
-        full_name:  (row as any)?.full_name ?? '',
-        email:      user?.email ?? null,
-        phone:      (row as any)?.phone ?? null,
-        licence:     role === 'judge' ? ((row as any)?.licence ?? null) : undefined,
-        sport_type:  role === 'judge' ? ((row as any)?.sport_type ?? 'acro') : undefined,
-        avatar_url: (row as any)?.avatar_url ?? null,
+        id:           activeProfile.id,
+        full_name:    (row as any)?.full_name ?? '',
+        email:        user?.email ?? null,
+        phone:        (row as any)?.phone ?? null,
+        licence:      role === 'judge' ? ((row as any)?.licence ?? null) : undefined,
+        licencia_url: role === 'judge' ? ((row as any)?.licencia_url ?? null) : undefined,
+        sport_type:   role === 'judge' ? ((row as any)?.sport_type ?? 'acro') : undefined,
+        avatar_url:   (row as any)?.avatar_url ?? null,
         role,
       })
       setLoading(false)
@@ -117,6 +122,22 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
     } finally {
       setUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  async function handleLicenciaUpload(file: File) {
+    if (!profile || profile.role !== 'judge') return
+    setUploadingLicencia(true)
+    try {
+      const ext = file.name.split('.').pop() ?? 'pdf'
+      const path = `${profile.id}/licencia.${ext}`
+      await supabase.storage.from('judge-licencias').upload(path, file, { upsert: true })
+      const { data } = supabase.storage.from('judge-licencias').getPublicUrl(path)
+      const url = data.publicUrl + `?t=${Date.now()}`
+      await supabase.from('judges').update({ licencia_url: url } as any).eq('id', profile.id)
+      setProfile(prev => prev ? { ...prev, licencia_url: url } : prev)
+    } finally {
+      setUploadingLicencia(false)
     }
   }
 
@@ -233,6 +254,20 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
                   <p className="text-sm text-slate-800 mt-0.5">{value ?? <span className="text-slate-300">—</span>}</p>
                 </div>
               ))}
+              {profile.role === 'judge' && (
+                <div>
+                  <p className="text-xs font-medium text-slate-400 mb-1.5">{t.licenciaDoc}</p>
+                  {uploadingLicencia ? (
+                    <span className="text-xs text-blue-500">{t.uploading}</span>
+                  ) : (
+                    <LicenciaChip
+                      url={profile.licencia_url}
+                      onUpload={handleLicenciaUpload}
+                      labels={{ view: t.viewLicencia, upload: t.uploadLicencia, replace: t.replaceLicencia }}
+                    />
+                  )}
+                </div>
+              )}
               <div className="flex items-center gap-3 pt-2">
                 <button onClick={startEdit}
                   className="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all">

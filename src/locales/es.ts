@@ -951,6 +951,8 @@ export const JudgesTab = {
     lock: 'Bloquear asignación',
     unlock: 'Desbloquear',
     copyToOtherSections: 'Copiar a todas',
+    viewLicencia: 'Ver licencia',
+    noLicencia: 'Sin licencia subida',
   }
 
 // components/admin/competition-detail/LicenciasTab.tsx
@@ -1121,18 +1123,22 @@ export const OverviewTab = {
 
 // components/shared/ProfileEditor.tsx
 export const ProfileEditor = {
-    profile:     'Perfil',
-    fullName:    'Nombre completo',
-    email:       'Email',
-    phone:       'Teléfono',
-    licence:     'Licencia',
-    edit:        'Editar perfil',
-    save:        'Guardar cambios',
-    cancel:      'Cancelar',
-    saved:       'Guardado',
-    uploading:   'Subiendo…',
-    changePhoto: 'Cambiar foto',
-    loading:     'Cargando…',
+    profile:           'Perfil',
+    fullName:          'Nombre completo',
+    email:             'Email',
+    phone:             'Teléfono',
+    licence:           'Número de licencia',
+    licenciaDoc:       'Documento de licencia',
+    viewLicencia:      'Ver licencia',
+    uploadLicencia:    'Subir licencia',
+    replaceLicencia:   'Reemplazar',
+    edit:              'Editar perfil',
+    save:              'Guardar cambios',
+    cancel:            'Cancelar',
+    saved:             'Guardado',
+    uploading:         'Subiendo…',
+    changePhoto:       'Cambiar foto',
+    loading:           'Cargando…',
   }
 
 // components/club/ProvisionalEntryForm.tsx
