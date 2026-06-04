@@ -984,6 +984,28 @@ export const LicenciasTab = {
     print: 'Imprimir listado',
   }
 
+// components/admin/competition-detail/TshirtDesigner.tsx
+export const TshirtDesigner = {
+  title: 'Diseño de camiseta',
+  front: 'Delantera',
+  back: 'Trasera',
+  shirtColor: 'Color de camiseta',
+  elements: 'Elementos',
+  scale: 'Tamaño',
+  textColor: 'Color texto',
+  save: 'Guardar diseño',
+  saved: 'Guardado',
+  previewNote: 'Vista previa aproximada',
+  competition_logo: 'Logo de la competición',
+  competition_poster: 'Póster de la competición',
+  event_name: 'Nombre del evento',
+  event_dates: 'Fechas del evento',
+  club_logos: 'Logos de clubes',
+  gymnast_names: 'Nombres de gimnastas',
+  coach_names: 'Nombres de entrenadores/as',
+  judge_names: 'Nombres de jueces/as',
+}
+
 // components/admin/competition-detail/AccreditationsTab.tsx
 export const AccreditationsTab = {
   config: 'Diseño',

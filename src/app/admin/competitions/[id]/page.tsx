@@ -33,7 +33,7 @@ export default function Page() {
     handleUpdateCompetition, handleUpdateFees, handleUploadPoster, handleUploadLogo, handleSetDJReviewDeadline,
     handleStartSession, handleFinishSession, handleRevertSession,
     handleAssignSessionMergeGroup, handleCreateRankingMergeGroup,
-    handleUpdateTshirtConfig, handleUpdateAccreditationConfig,
+    handleUpdateTshirtConfig, handleUpdateAccreditationConfig, handleUpdateTshirtDesign,
     clearActionError,
   } = useCompetitionPage(id)
 
@@ -212,6 +212,7 @@ export default function Page() {
         globalCoaches={globalCoaches}
         competitionCoaches={competitionCoaches}
         onUpdateTshirtConfig={handleUpdateTshirtConfig}
+        onUpdateTshirtDesign={handleUpdateTshirtDesign}
         onUpdateAccreditationConfig={handleUpdateAccreditationConfig}
       />
     </div>

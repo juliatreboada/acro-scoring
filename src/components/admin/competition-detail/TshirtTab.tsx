@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import TshirtDesigner from './TshirtDesigner'
+import type { Lang } from '@/components/scoring/types'
+import type { Competition, Club, Gymnast, Coach, Judge, CompetitionJudgeNomination, TshirtDesignConfig } from '@/components/admin/types'
 
 type TshirtOrder = {
   id: string
@@ -19,13 +22,22 @@ type Person = {
 }
 
 type Props = {
+  lang: Lang
+  competition: Competition
+  clubs: Club[]
+  competitionGymnasts: Gymnast[]
+  competitionCoaches: Coach[]
+  globalJudges: Judge[]
+  judgePool: string[]
+  nominations: CompetitionJudgeNomination[]
   competitionId: string
   sizes: string[]
   deadline: string | null
   onUpdateConfig: (sizes: string[], deadline: string | null) => Promise<void>
+  onUpdateDesign: (config: TshirtDesignConfig) => Promise<void>
 }
 
-export default function TshirtTab({ competitionId, sizes, deadline, onUpdateConfig }: Props) {
+export default function TshirtTab({ lang, competition, clubs, competitionGymnasts, competitionCoaches, globalJudges, judgePool, nominations, competitionId, sizes, deadline, onUpdateConfig, onUpdateDesign }: Props) {
   const supabase = createClient()
   const [orders, setOrders] = useState<TshirtOrder[]>([])
   const [people, setPeople] = useState<Person[]>([])
@@ -238,6 +250,19 @@ export default function TshirtTab({ competitionId, sizes, deadline, onUpdateConf
 
   return (
     <div className="space-y-6">
+
+      {/* T-shirt designer */}
+      <TshirtDesigner
+        lang={lang}
+        competition={competition}
+        clubs={clubs}
+        competitionGymnasts={competitionGymnasts}
+        competitionCoaches={competitionCoaches}
+        globalJudges={globalJudges}
+        judgePool={judgePool}
+        nominations={nominations}
+        onUpdateDesign={onUpdateDesign}
+      />
 
       {/* Config card */}
       <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { formatDateRange } from '@/lib/formatDate'
 import { STATUS_BADGE } from '@/lib/uiConstants'
 import type { Lang } from '@/components/scoring/types'
-import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry, ProvisionalEntry, DefinitiveEntry, RankingMergeGroup } from '@/components/admin/types'
+import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry, ProvisionalEntry, DefinitiveEntry, RankingMergeGroup, TshirtDesignConfig } from '@/components/admin/types'
 import { NEXT_STATUS, PREV_STATUS, ageGroupLabel } from '@/components/admin/types'
 import type { Apparatus, ApparatusRule } from '@/components/admin/types'
 import StructureTab from './StructureTab'
@@ -819,6 +819,7 @@ export type CompetitionDetailProps = {
   onSetDJReviewDeadline: (date: string | null) => void
   // tshirt
   onUpdateTshirtConfig: (sizes: string[], deadline: string | null) => Promise<void>
+  onUpdateTshirtDesign: (config: TshirtDesignConfig) => Promise<void>
   // accreditations
   onUpdateAccreditationConfig: (config: import('@/components/admin/types').AccreditationConfig) => Promise<void>
   // competition day
@@ -843,7 +844,7 @@ export default function CompetitionDetail({
   availableAdmins, ageGroupRules, apparatus, apparatusRules, onUpdateCompetition, onUploadPoster, onUploadLogo, onUpdateFees,
   onSetDJReviewDeadline, onStartSession, onFinishSession, onRevertSession,
   competitionGymnasts, competitionCoaches, globalCoaches,
-  onUpdateTshirtConfig, onUpdateAccreditationConfig,
+  onUpdateTshirtConfig, onUpdateTshirtDesign, onUpdateAccreditationConfig,
 }: CompetitionDetailProps) {
   const t = useT('CompetitionDetail', lang)
   const [activeTab, setActiveTab] = useState<Tab>('structure')
@@ -1168,10 +1169,19 @@ export default function CompetitionDetail({
       )}
       {activeTab === 'tshirt' && (
         <TshirtTab
+          lang={lang}
+          competition={competition}
+          clubs={clubs}
+          competitionGymnasts={competitionGymnasts}
+          competitionCoaches={competitionCoaches}
+          globalJudges={globalJudges}
+          judgePool={judgePool}
+          nominations={nominations}
           competitionId={competition.id}
           sizes={competition.tshirt_sizes ?? []}
           deadline={competition.tshirt_deadline ?? null}
           onUpdateConfig={onUpdateTshirtConfig}
+          onUpdateDesign={onUpdateTshirtDesign}
         />
       )}
       {activeTab === 'acreditaciones' && (
