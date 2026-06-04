@@ -92,7 +92,7 @@ function ResultsPageInner() {
       </div>
 
       <div className="bg-white border-b border-slate-200 print:hidden">
-        <div className="max-w-3xl mx-auto px-4 py-5">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-5">
           <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 mb-1">
             {isOfficial
               ? lang === 'en'
@@ -144,7 +144,7 @@ function ResultsPageInner() {
       />
 
       {isOfficial && (
-        <footer className="max-w-3xl mx-auto print:max-w-none print:w-full print:mx-0 px-4 py-10 print:py-14 border-t border-slate-200 mt-6 print:mt-10 print:break-inside-avoid">
+        <footer className="max-w-screen-xl mx-auto px-4 sm:px-6 py-10 print:py-14 border-t border-slate-200 mt-6 print:mt-10 print:break-inside-avoid">
           <p className="text-xs text-slate-500 mb-8">
             {lang === 'en'
               ? `Document generated: ${new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}`

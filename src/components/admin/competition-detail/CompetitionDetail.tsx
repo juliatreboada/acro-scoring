@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { formatDateRange } from '@/lib/formatDate'
 import { STATUS_BADGE } from '@/lib/uiConstants'
 import type { Lang } from '@/components/scoring/types'
-import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry, ProvisionalEntry, DefinitiveEntry, RankingMergeGroup } from '@/components/admin/types'
+import type { Competition, Panel, Section, Session, Judge, SectionPanelJudge, Role, Team, Club, CompetitionEntry, SessionOrder, CompetitionStatus, AdminUser, AgeGroupRule, CompetitionJudgeNomination, Gymnast, Coach, TimelineEntry, ProvisionalEntry, DefinitiveEntry, RankingMergeGroup, TshirtDesignConfig } from '@/components/admin/types'
 import { NEXT_STATUS, PREV_STATUS, ageGroupLabel } from '@/components/admin/types'
 import type { Apparatus, ApparatusRule } from '@/components/admin/types'
 import StructureTab from './StructureTab'
@@ -15,6 +15,7 @@ import CompetitionDayTab from './CompetitionDayTab'
 import LicenciasTab from './LicenciasTab'
 import TVTab from './TVTab'
 import TshirtTab from './TshirtTab'
+import AccreditationsTab from './AccreditationsTab'
 import OpenCombinadosTab from './OpenCombinadosTab'
 import { isOpenCombinadosCompetitionName } from '@/lib/openCombinadosCompetition'
 import RGRegistrationsTab from './RGRegistrationsTab'
@@ -30,7 +31,7 @@ const ACTION_STYLE: Partial<Record<CompetitionStatus, string>> = {
   active:               'border-red-200 text-red-600 hover:bg-red-50',
 }
 
-type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias' | 'tv' | 'bracket' | 'tshirt'
+type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias' | 'tv' | 'bracket' | 'tshirt' | 'acreditaciones'
 
 
 // ─── placeholder tab ──────────────────────────────────────────────────────────
@@ -818,6 +819,9 @@ export type CompetitionDetailProps = {
   onSetDJReviewDeadline: (date: string | null) => void
   // tshirt
   onUpdateTshirtConfig: (sizes: string[], deadline: string | null) => Promise<void>
+  onUpdateTshirtDesign: (config: TshirtDesignConfig) => Promise<void>
+  // accreditations
+  onUpdateAccreditationConfig: (config: import('@/components/admin/types').AccreditationConfig) => Promise<void>
   // competition day
   onStartSession: (sessionId: string) => void
   onFinishSession: (sessionId: string) => void
@@ -840,7 +844,7 @@ export default function CompetitionDetail({
   availableAdmins, ageGroupRules, apparatus, apparatusRules, onUpdateCompetition, onUploadPoster, onUploadLogo, onUpdateFees,
   onSetDJReviewDeadline, onStartSession, onFinishSession, onRevertSession,
   competitionGymnasts, competitionCoaches, globalCoaches,
-  onUpdateTshirtConfig,
+  onUpdateTshirtConfig, onUpdateTshirtDesign, onUpdateAccreditationConfig,
 }: CompetitionDetailProps) {
   const t = useT('CompetitionDetail', lang)
   const [activeTab, setActiveTab] = useState<Tab>('structure')
@@ -862,11 +866,12 @@ export default function CompetitionDetail({
     { key: 'tv',            label: t.tabs.tv            },
     ...(openCombinadosEnabled ? [{ key: 'bracket' as const, label: t.tabs.bracket }] : []),
     { key: 'tshirt' as const, label: t.tabs.tshirt },
+    { key: 'acreditaciones' as const, label: t.tabs.acreditaciones },
     { key: 'overview',      label: t.tabs.overview      },
   ]
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
+    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6">
       {/* back + title */}
       <div className="mb-6">
         <button onClick={onBack}
@@ -1164,10 +1169,32 @@ export default function CompetitionDetail({
       )}
       {activeTab === 'tshirt' && (
         <TshirtTab
+          lang={lang}
+          competition={competition}
+          clubs={clubs}
+          competitionGymnasts={competitionGymnasts}
+          competitionCoaches={competitionCoaches}
+          globalJudges={globalJudges}
+          judgePool={judgePool}
+          nominations={nominations}
           competitionId={competition.id}
           sizes={competition.tshirt_sizes ?? []}
           deadline={competition.tshirt_deadline ?? null}
           onUpdateConfig={onUpdateTshirtConfig}
+          onUpdateDesign={onUpdateTshirtDesign}
+        />
+      )}
+      {activeTab === 'acreditaciones' && (
+        <AccreditationsTab
+          lang={lang}
+          competition={competition}
+          competitionGymnasts={competitionGymnasts}
+          competitionCoaches={competitionCoaches}
+          globalJudges={globalJudges}
+          judgePool={judgePool}
+          nominations={nominations}
+          clubs={clubs}
+          onUpdateConfig={onUpdateAccreditationConfig}
         />
       )}
     </div>

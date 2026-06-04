@@ -373,7 +373,7 @@ export default function CompetitionsView({
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-8">
       {/* page header */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-slate-800">{t.title}</h1>

@@ -102,7 +102,7 @@ export default function ClubPortal({
     <div className="min-h-screen bg-slate-50">
       {/* club header */}
       <div className="bg-white border-b border-slate-200">
-        <div className="max-w-3xl mx-auto px-4 py-5">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-5">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center shrink-0 text-lg font-bold text-slate-500 overflow-hidden">
               {club.avatar_url
@@ -135,7 +135,7 @@ export default function ClubPortal({
         </div>
 
         {/* tabs */}
-        <div className="max-w-3xl mx-auto px-4 flex overflow-x-auto">
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 flex overflow-x-auto">
           {TABS.map(({ key, label, count }) => (
             <button key={key} onClick={() => setActiveTab(key)}
               className={[
@@ -155,7 +155,7 @@ export default function ClubPortal({
       </div>
 
       {/* tab content */}
-      <div className="max-w-3xl mx-auto px-4 py-6">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6">
         {activeTab === 'gymnasts' && (
           <GymnastsTab lang={lang} gymnasts={gymnasts}
             onAdd={onAddGymnast} onAddBulk={onAddGymnastsBulk}

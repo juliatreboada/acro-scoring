@@ -755,7 +755,7 @@ export default function StartingOrderTab({
   function handleSaveStartingOrder() {
     if (!activeSection) return
     const sortedPanels = [...panels].sort((a, b) => a.panel_number - b.panel_number)
-    const sectionSessions = sessions.filter(s => s.section_id === activeSection.id)
+    const sectionSessions = sessions.filter(s => s.section_id === activeSection.id).sort((a, b) => a.order_index - b.order_index)
     const droppedIds = new Set(entries.filter(e => e.dropped_out).map(e => e.team_id))
 
     function buildSlots(panel: Panel): Array<{ sessionId: string; teamId: string }> {
@@ -929,7 +929,7 @@ export default function StartingOrderTab({
 
           {activeSection && (() => {
             const sortedPanels = [...panels].sort((a, b) => a.panel_number - b.panel_number)
-            const sectionSessions = sessions.filter(s => s.section_id === activeSection.id)
+            const sectionSessions = sessions.filter(s => s.section_id === activeSection.id).sort((a, b) => a.order_index - b.order_index)
 
             if (view === 'timeline') {
               return (

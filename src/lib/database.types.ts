@@ -262,6 +262,7 @@ export type Database = {
       }
       competitions: {
         Row: {
+          accreditation_config: Json | null
           admin_id: string | null
           age_groups: string[]
           created_at: string
@@ -283,12 +284,14 @@ export type Database = {
           status: Database["public"]["Enums"]["competition_status"]
           sport_type: string
           tshirt_deadline: string | null
+          tshirt_design_config: Json | null
           tshirt_sizes: string[]
           ts_music_deadline: string | null
           tv_sponsor_videos: Json
           updated_at: string
         }
         Insert: {
+          accreditation_config?: Json | null
           admin_id?: string | null
           age_groups?: string[]
           created_at?: string
@@ -310,12 +313,14 @@ export type Database = {
           start_date?: string | null
           status?: Database["public"]["Enums"]["competition_status"]
           tshirt_deadline?: string | null
+          tshirt_design_config?: Json | null
           tshirt_sizes?: string[]
           ts_music_deadline?: string | null
           tv_sponsor_videos?: Json
           updated_at?: string
         }
         Update: {
+          accreditation_config?: Json | null
           admin_id?: string | null
           age_groups?: string[]
           created_at?: string
@@ -337,6 +342,7 @@ export type Database = {
           start_date?: string | null
           status?: Database["public"]["Enums"]["competition_status"]
           tshirt_deadline?: string | null
+          tshirt_design_config?: Json | null
           tshirt_sizes?: string[]
           ts_music_deadline?: string | null
           tv_sponsor_videos?: Json
