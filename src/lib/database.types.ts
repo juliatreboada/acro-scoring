@@ -275,6 +275,7 @@ export type Database = {
           judge_missing_fine: number | null
           location: string | null
           logo_url: string | null
+          meals_enabled: boolean
           name: string
           open_combinados_enabled: boolean
           poster_url: string | null
@@ -303,6 +304,7 @@ export type Database = {
           judge_missing_fine?: number | null
           location?: string | null
           logo_url?: string | null
+          meals_enabled?: boolean
           name: string
           open_combinados_enabled?: boolean
           poster_url?: string | null
@@ -331,6 +333,7 @@ export type Database = {
           judge_missing_fine?: number | null
           location?: string | null
           logo_url?: string | null
+          meals_enabled?: boolean
           name?: string
           open_combinados_enabled?: boolean
           poster_url?: string | null
@@ -555,6 +558,111 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      meal_options: {
+        Row: {
+          id: string
+          competition_id: string
+          day_label: string
+          meal_type: string
+          course_label: string | null
+          parent_option_id: string | null
+          name: string
+          description: string | null
+          price: number
+          sort_order: number
+          slot_sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          competition_id: string
+          day_label: string
+          meal_type: string
+          course_label?: string | null
+          parent_option_id?: string | null
+          name: string
+          description?: string | null
+          price?: number
+          sort_order?: number
+          slot_sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          competition_id?: string
+          day_label?: string
+          meal_type?: string
+          course_label?: string | null
+          parent_option_id?: string | null
+          name?: string
+          description?: string | null
+          price?: number
+          sort_order?: number
+          slot_sort_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      meal_orders: {
+        Row: {
+          id: string
+          competition_id: string
+          club_id: string
+          meal_option_id: string
+          quantity: number
+        }
+        Insert: {
+          id?: string
+          competition_id: string
+          club_id: string
+          meal_option_id: string
+          quantity?: number
+        }
+        Update: {
+          id?: string
+          competition_id?: string
+          club_id?: string
+          meal_option_id?: string
+          quantity?: number
+        }
+        Relationships: []
+      }
+      meal_submissions: {
+        Row: {
+          id: string
+          competition_id: string
+          club_id: string
+          status: string
+          payment_proof_url: string | null
+          total_amount: number | null
+          submitted_at: string | null
+          reviewed_at: string | null
+          admin_notes: string | null
+        }
+        Insert: {
+          id?: string
+          competition_id: string
+          club_id: string
+          status?: string
+          payment_proof_url?: string | null
+          total_amount?: number | null
+          submitted_at?: string | null
+          reviewed_at?: string | null
+          admin_notes?: string | null
+        }
+        Update: {
+          id?: string
+          competition_id?: string
+          club_id?: string
+          status?: string
+          payment_proof_url?: string | null
+          total_amount?: number | null
+          submitted_at?: string | null
+          reviewed_at?: string | null
+          admin_notes?: string | null
+        }
+        Relationships: []
       }
       judges: {
         Row: {

@@ -15,6 +15,7 @@ import CompetitionDayTab from './CompetitionDayTab'
 import LicenciasTab from './LicenciasTab'
 import TVTab from './TVTab'
 import TshirtTab from './TshirtTab'
+import MealsTab from './MealsTab'
 import AccreditationsTab from './AccreditationsTab'
 import OpenCombinadosTab from './OpenCombinadosTab'
 import { isOpenCombinadosCompetitionName } from '@/lib/openCombinadosCompetition'
@@ -31,7 +32,7 @@ const ACTION_STYLE: Partial<Record<CompetitionStatus, string>> = {
   active:               'border-red-200 text-red-600 hover:bg-red-50',
 }
 
-type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias' | 'tv' | 'bracket' | 'tshirt' | 'acreditaciones'
+type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias' | 'tv' | 'bracket' | 'tshirt' | 'acreditaciones' | 'meals'
 
 
 // ─── placeholder tab ──────────────────────────────────────────────────────────
@@ -819,6 +820,8 @@ export type CompetitionDetailProps = {
   onSetDJReviewDeadline: (date: string | null) => void
   // tshirt
   onUpdateTshirtConfig: (sizes: string[], deadline: string | null) => Promise<void>
+  // meals
+  onToggleMealsEnabled: (enabled: boolean) => Promise<void>
   // accreditations
   onUpdateAccreditationConfig: (config: import('@/components/admin/types').AccreditationConfig) => Promise<void>
   // competition day
@@ -843,7 +846,7 @@ export default function CompetitionDetail({
   availableAdmins, ageGroupRules, apparatus, apparatusRules, onUpdateCompetition, onUploadPoster, onUploadLogo, onUpdateFees,
   onSetDJReviewDeadline, onStartSession, onFinishSession, onRevertSession,
   competitionGymnasts, competitionCoaches, globalCoaches,
-  onUpdateTshirtConfig, onUpdateAccreditationConfig,
+  onUpdateTshirtConfig, onToggleMealsEnabled, onUpdateAccreditationConfig,
 }: CompetitionDetailProps) {
   const t = useT('CompetitionDetail', lang)
   const [activeTab, setActiveTab] = useState<Tab>('structure')
@@ -865,6 +868,7 @@ export default function CompetitionDetail({
     { key: 'tv',            label: t.tabs.tv            },
     ...(openCombinadosEnabled ? [{ key: 'bracket' as const, label: t.tabs.bracket }] : []),
     { key: 'tshirt' as const, label: t.tabs.tshirt },
+    { key: 'meals' as const, label: t.tabs.meals },
     { key: 'acreditaciones' as const, label: t.tabs.acreditaciones },
     { key: 'overview',      label: t.tabs.overview      },
   ]
@@ -1177,6 +1181,14 @@ export default function CompetitionDetail({
           sizes={competition.tshirt_sizes ?? []}
           deadline={competition.tshirt_deadline ?? null}
           onUpdateConfig={onUpdateTshirtConfig}
+        />
+      )}
+      {activeTab === 'meals' && (
+        <MealsTab
+          lang={lang}
+          competitionId={competition.id}
+          mealsEnabled={competition.meals_enabled ?? false}
+          onToggleEnabled={onToggleMealsEnabled}
         />
       )}
       {activeTab === 'acreditaciones' && (

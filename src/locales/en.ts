@@ -230,6 +230,7 @@ export const CompetitionDetail = {
       tv:            'TV',
       bracket:       'Bracket',
       tshirt:        'T-shirts',
+      meals:         'Meals',
       acreditaciones: 'Accreditations',
     },
     soon: 'Coming soon',
@@ -466,6 +467,7 @@ export const CompetitionsTab = {
     tshirtCoach: 'Coach',
     tshirtNoSize: 'No size',
     tshirtSaved: 'Saved',
+    mealsTitle: 'Meals',
   }
 
 // components/admin/CompetitionsView.tsx
