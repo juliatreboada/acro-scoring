@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase'
-import TshirtDesigner from './TshirtDesigner'
 import type { Lang } from '@/components/scoring/types'
-import type { Competition, Club, Gymnast, Coach, Judge, CompetitionJudgeNomination, TshirtDesignConfig } from '@/components/admin/types'
+import type { Gymnast, Coach, Judge } from '@/components/admin/types'
 
 type TshirtOrder = {
   id: string
@@ -23,27 +22,38 @@ type Person = {
 
 type Props = {
   lang: Lang
-  competition: Competition
-  clubs: Club[]
   competitionGymnasts: Gymnast[]
   competitionCoaches: Coach[]
   globalJudges: Judge[]
   judgePool: string[]
-  nominations: CompetitionJudgeNomination[]
   competitionId: string
   sizes: string[]
   deadline: string | null
   onUpdateConfig: (sizes: string[], deadline: string | null) => Promise<void>
-  onUpdateDesign: (config: TshirtDesignConfig) => Promise<void>
 }
 
-export default function TshirtTab({ lang, competition, clubs, competitionGymnasts, competitionCoaches, globalJudges, judgePool, nominations, competitionId, sizes, deadline, onUpdateConfig, onUpdateDesign }: Props) {
+export default function TshirtTab({ lang, competitionGymnasts, competitionCoaches, globalJudges, judgePool, competitionId, sizes, deadline, onUpdateConfig }: Props) {
   const supabase = createClient()
   const [orders, setOrders] = useState<TshirtOrder[]>([])
   const [people, setPeople] = useState<Person[]>([])
   const [adminJudges, setAdminJudges] = useState<{ id: string; name: string }[]>([])
   const [adminJudgeSizes, setAdminJudgeSizes] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
+
+  // ── names list (must be before any early return) ────────────────────────────
+  const gymnastNames = useMemo(() =>
+    [...competitionGymnasts]
+      .map(g => `${g.first_name} ${g.last_name_1}${g.last_name_2 ? ' ' + g.last_name_2 : ''}`)
+      .sort((a, b) => a.localeCompare(b, 'es')),
+    [competitionGymnasts])
+
+  const coachNames = useMemo(() =>
+    [...competitionCoaches].map(c => c.full_name).sort((a, b) => a.localeCompare(b, 'es')),
+    [competitionCoaches])
+
+  const judgeNames = useMemo(() =>
+    globalJudges.filter(j => judgePool.includes(j.id)).map(j => j.full_name).sort((a, b) => a.localeCompare(b, 'es')),
+    [globalJudges, judgePool])
 
   // config editing
   const [editingConfig, setEditingConfig] = useState(false)
@@ -248,21 +258,20 @@ export default function TshirtTab({ lang, competition, clubs, competitionGymnast
 
   if (loading) return <div className="text-sm text-slate-500 py-8 text-center">Cargando...</div>
 
+  function copyToClipboard(names: string[]) {
+    navigator.clipboard.writeText(names.join('\n'))
+  }
+
+  function copyAll() {
+    const parts: string[] = []
+    if (gymnastNames.length) parts.push(`--- Gimnastas (${gymnastNames.length}) ---\n` + gymnastNames.join('\n'))
+    if (coachNames.length)   parts.push(`--- Entrenadores/as (${coachNames.length}) ---\n` + coachNames.join('\n'))
+    if (judgeNames.length)   parts.push(`--- Jueces/as (${judgeNames.length}) ---\n` + judgeNames.join('\n'))
+    navigator.clipboard.writeText(parts.join('\n\n'))
+  }
+
   return (
     <div className="space-y-6">
-
-      {/* T-shirt designer */}
-      <TshirtDesigner
-        lang={lang}
-        competition={competition}
-        clubs={clubs}
-        competitionGymnasts={competitionGymnasts}
-        competitionCoaches={competitionCoaches}
-        globalJudges={globalJudges}
-        judgePool={judgePool}
-        nominations={nominations}
-        onUpdateDesign={onUpdateDesign}
-      />
 
       {/* Config card */}
       <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
@@ -450,6 +459,54 @@ export default function TshirtTab({ lang, competition, clubs, competitionGymnast
           )}
         </>
       )}
+
+      {/* Names list */}
+      <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Lista de participantes</p>
+            <p className="text-xs text-slate-500 mt-0.5">Nombres de todos los participantes en esta competición.</p>
+          </div>
+          <button
+            onClick={copyAll}
+            className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all flex items-center gap-1.5"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+            </svg>
+            Copiar todo
+          </button>
+        </div>
+        <div className="p-4 space-y-4">
+          {[
+            { label: `Gimnastas (${gymnastNames.length})`, names: gymnastNames },
+            { label: `Entrenadores/as (${coachNames.length})`, names: coachNames },
+            { label: `Jueces/as (${judgeNames.length})`, names: judgeNames },
+          ].map(({ label, names }) => (
+            <div key={label}>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
+                <button
+                  onClick={() => copyToClipboard(names)}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all"
+                >
+                  Copiar
+                </button>
+              </div>
+              {names.length === 0 ? (
+                <p className="text-xs text-slate-400 italic">Sin participantes</p>
+              ) : (
+                <textarea
+                  readOnly
+                  value={names.join('\n')}
+                  rows={Math.min(names.length, 8)}
+                  className="w-full text-sm text-slate-700 border border-slate-200 rounded-lg px-3 py-2 resize-none bg-slate-50 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

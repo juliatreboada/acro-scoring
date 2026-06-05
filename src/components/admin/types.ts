@@ -52,30 +52,6 @@ export type AdminUser = {
   email: string
 }
 
-export type TshirtElementConfig = {
-  enabled: boolean
-  x: number        // 0–100, center % from left of canvas
-  y: number        // 0–100, center % from top of canvas
-  scale: number    // 0.3–2.0
-  color: string    // hex, for text elements
-}
-
-export type TshirtSideConfig = {
-  competition_logo: TshirtElementConfig
-  competition_poster: TshirtElementConfig
-  club_logos: TshirtElementConfig
-  gymnast_names: TshirtElementConfig
-  coach_names: TshirtElementConfig
-  judge_names: TshirtElementConfig
-  event_name: TshirtElementConfig
-  event_dates: TshirtElementConfig
-}
-
-export type TshirtDesignConfig = {
-  shirt_color: string
-  front: TshirtSideConfig
-  back: TshirtSideConfig
-}
 
 export type AccreditationConfig = {
   gymnast_color: string          // hex, default '#3b82f6'
@@ -117,7 +93,6 @@ export type Competition = {
   open_combinados_enabled?: boolean
   sport_type: string                   // 'acro' | 'rg'
   tshirt_sizes?: string[]              // sizes available for this competition
-  tshirt_design_config?: TshirtDesignConfig | null
   tshirt_deadline?: string | null      // after this date clubs cannot edit their orders
   accreditation_config?: AccreditationConfig | null
 }
