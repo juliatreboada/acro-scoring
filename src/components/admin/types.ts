@@ -95,6 +95,42 @@ export type Competition = {
   tshirt_sizes?: string[]              // sizes available for this competition
   tshirt_deadline?: string | null      // after this date clubs cannot edit their orders
   accreditation_config?: AccreditationConfig | null
+  meals_enabled?: boolean
+}
+
+export type MealOption = {
+  id: string
+  competition_id: string
+  day_label: string
+  meal_type: 'lunch' | 'dinner'
+  course_label: string | null
+  parent_option_id: string | null
+  name: string
+  description: string | null
+  price: number
+  sort_order: number
+  slot_sort_order: number
+  created_at: string
+}
+
+export type MealOrder = {
+  id: string
+  competition_id: string
+  club_id: string
+  meal_option_id: string
+  quantity: number
+}
+
+export type MealSubmission = {
+  id: string
+  competition_id: string
+  club_id: string
+  status: 'draft' | 'submitted' | 'approved' | 'rejected'
+  payment_proof_url: string | null
+  total_amount: number | null
+  submitted_at: string | null
+  reviewed_at: string | null
+  admin_notes: string | null
 }
 
 export type Panel = {

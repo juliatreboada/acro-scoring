@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, Team, Gymnast, CompetitionEntry, RoutineMusic, Judge, CompetitionJudgeNomination, AgeGroupRule, Coach, CompetitionCoach } from '@/components/admin/types'
@@ -9,6 +9,7 @@ import { formatDate, formatDateRange } from '@/lib/formatDate'
 import { STATUS_BADGE, INPUT_CLS } from '@/lib/uiConstants'
 import ProvisionalEntryForm from './ProvisionalEntryForm'
 import DefinitiveEntryForm from './DefinitiveEntryForm'
+import MealsSection from './MealsSection'
 import { useT } from '@/lib/useT'
 
 const NOMINAL_ENTRY_BADGE = 'bg-green-100 text-green-700'
@@ -453,20 +454,21 @@ function CompetitionDetailView({
   const compNominations = nominations.filter((n) => n.competition_id === competition.id)
   const nominatedIds = new Set(compNominations.map((n) => n.judge_id))
   const hasJudgeWarning = compNominations.length === 0 && registrationFlowOpen
-  const [judgesOpen, setJudgesOpen] = useState(hasJudgeWarning)
-
   const registeredCoachIds = new Set(
     competitionCoaches.filter(cc => cc.competition_id === competition.id).map(cc => cc.coach_id)
   )
   const registeredCoaches = coaches.filter(c => registeredCoachIds.has(c.id))
   const unregisteredCoaches = coaches.filter(c => !registeredCoachIds.has(c.id))
   const hasCoachWarning = registeredCoaches.length === 0 && registrationFlowOpen && enteredTeamIds.size > 0
-  const [coachesOpen, setCoachesOpen] = useState(hasCoachWarning)
 
   // ── tshirt section ────────────────────────────────────────────────────────────
   const hasTshirts = (competition.tshirt_sizes?.length ?? 0) > 0
   const isTshirtLocked = !!competition.tshirt_deadline && today > competition.tshirt_deadline
-  const [tshirtOpen, setTshirtOpen] = useState(false)
+
+  type CompTab = 'coaches' | 'judges' | 'tshirts' | 'meals'
+  const [activeCompTab, setActiveCompTab] = useState<CompTab>(
+    hasCoachWarning ? 'coaches' : hasJudgeWarning ? 'judges' : 'coaches'
+  )
   const [tshirtOrders, setTshirtOrders] = useState<Record<string, string>>({})  // key: `type:id`
 
   useEffect(() => {
@@ -602,246 +604,197 @@ function CompetitionDetailView({
           </span>
         </div>
 
-        {/* judges collapsible */}
-        {/* ── coaches section ── */}
-        <button onClick={() => setCoachesOpen(o => !o)}
-          className={[
-            'w-full flex items-center justify-between px-5 py-2.5 border-t text-left transition-colors',
-            hasCoachWarning ? 'border-amber-200 bg-amber-50 hover:bg-amber-100' : 'border-slate-100 bg-slate-50 hover:bg-slate-100',
-          ].join(' ')}>
-          <div className="flex items-center gap-2">
-            <span className={['text-xs font-semibold uppercase tracking-widest', hasCoachWarning ? 'text-amber-600' : 'text-slate-400'].join(' ')}>
-              {t.coachesTitle}
-            </span>
-            {registeredCoaches.length > 0 ? (
-              <span className="text-xs font-semibold px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded-full">{registeredCoaches.length}</span>
-            ) : hasCoachWarning ? (
-              <span className="text-xs font-semibold text-amber-600">⚠ {t.coachesWarning}</span>
-            ) : null}
+        {/* ── Tab bar ── */}
+        <div className="border-t border-slate-100 overflow-x-auto">
+          <div className="flex min-w-max">
+            {(
+              [
+                { key: 'coaches' as CompTab, label: t.coachesTitle, badge: registeredCoaches.length > 0
+                  ? <span className="text-xs font-bold px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded-full">{registeredCoaches.length}</span>
+                  : hasCoachWarning ? <span className="text-xs font-bold text-amber-500">⚠</span> : null },
+                { key: 'judges' as CompTab, label: t.judgesTitle, badge: compNominations.length > 0
+                  ? <span className="text-xs font-bold px-1.5 py-0.5 bg-green-100 text-green-600 rounded-full">{compNominations.length}</span>
+                  : hasJudgeWarning ? <span className="text-xs font-bold text-amber-500">⚠</span> : null },
+                ...(hasTshirts ? [{ key: 'tshirts' as CompTab, label: t.tshirtTitle, badge: isTshirtLocked
+                  ? <span className="text-xs font-bold px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded-full">🔒</span> : null }] : []),
+                ...(competition.meals_enabled ? [{ key: 'meals' as CompTab, label: t.mealsTitle, badge: null }] : []),
+              ] as { key: CompTab; label: string; badge: React.ReactNode }[]
+            ).map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveCompTab(tab.key)}
+                className={[
+                  'flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold whitespace-nowrap border-b-2 transition-colors',
+                  activeCompTab === tab.key
+                    ? 'border-blue-500 text-blue-600 bg-white'
+                    : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50',
+                ].join(' ')}>
+                {tab.label}
+                {tab.badge}
+              </button>
+            ))}
           </div>
-          <svg className={['w-4 h-4 transition-transform', coachesOpen ? 'rotate-180' : '', hasCoachWarning ? 'text-amber-400' : 'text-slate-300'].join(' ')}
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-          </svg>
-        </button>
+        </div>
 
-        {coachesOpen && (
-          <div className="px-5 py-4 border-t border-slate-100 space-y-2">
-            {coaches.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-2">{t.noCoachesInClub}</p>
-            ) : (
-              <>
-                {registeredCoaches.map(c => (
-                  <div key={c.id} className="flex items-center gap-3 py-1.5">
-                    <div className="w-7 h-7 rounded-full bg-slate-100 shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold text-slate-400">
-                      {c.photo_url ? <img src={c.photo_url} alt={c.full_name} className="w-full h-full object-cover" /> : c.full_name.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-slate-800 font-medium truncate">{c.full_name}</p>
-                      {c.licence && <p className="text-xs text-slate-400">{c.licence}</p>}
-                    </div>
-                    {registrationFlowOpen && (
-                      <button onClick={() => onUnregisterCoach(c.id)}
-                        className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all shrink-0">
-                        {t.unregisterCoach}
-                      </button>
-                    )}
-                  </div>
-                ))}
-                {registrationFlowOpen && unregisteredCoaches.map(c => (
-                  <div key={c.id} className="flex items-center gap-3 py-1.5 opacity-50">
-                    <div className="w-7 h-7 rounded-full bg-slate-100 shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold text-slate-400">
-                      {c.photo_url ? <img src={c.photo_url} alt={c.full_name} className="w-full h-full object-cover" /> : c.full_name.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-slate-800 font-medium truncate">{c.full_name}</p>
-                      {c.licence && <p className="text-xs text-slate-400">{c.licence}</p>}
-                    </div>
-                    <button onClick={() => onRegisterCoach(c.id)}
-                      className="text-xs px-2.5 py-1 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all shrink-0">
-                      {t.registerCoach}
-                    </button>
-                  </div>
-                ))}
-                {registeredCoaches.length === 0 && !registrationFlowOpen && (
-                  <p className="text-sm text-slate-400 text-center py-2">{t.noCoaches}</p>
-                )}
-              </>
-            )}
-          </div>
-        )}
+        {/* ── Tab content ── */}
+        <div className="px-5 py-4 min-h-[6rem]">
 
-        {/* ── judges section ── */}
-        <button
-          onClick={() => setJudgesOpen((o) => !o)}
-          className={[
-            'w-full flex items-center justify-between px-5 py-2.5 border-t text-left transition-colors',
-            hasJudgeWarning ? 'border-amber-200 bg-amber-50 hover:bg-amber-100' : 'border-slate-100 bg-slate-50 hover:bg-slate-100',
-          ].join(' ')}>
-          <div className="flex items-center gap-2">
-            <span className={['text-xs font-semibold uppercase tracking-widest', hasJudgeWarning ? 'text-amber-600' : 'text-slate-400'].join(' ')}>
-              {t.judgesTitle}
-            </span>
-            {compNominations.length > 0 ? (
-              <span className="text-xs font-semibold px-1.5 py-0.5 bg-green-100 text-green-600 rounded-full">
-                {compNominations.length}
-              </span>
-            ) : hasJudgeWarning ? (
-              <span className="text-xs font-semibold text-amber-600">⚠ {t.judgesWarning}</span>
-            ) : null}
-          </div>
-          <svg className={['w-4 h-4 transition-transform', judgesOpen ? 'rotate-180' : '', hasJudgeWarning ? 'text-amber-400' : 'text-slate-300'].join(' ')}
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-          </svg>
-        </button>
-
-        {judgesOpen && (
-          <div className="px-5 py-4 border-t border-slate-100 space-y-3">
-            {/* nominated judges for this competition */}
-            {nominatedJudges.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-2">{t.noJudges}</p>
-            ) : (
-              <div className="space-y-2">
-                {nominatedJudges.map((judge) => {
-                  const nomination = compNominations.find((n) => n.judge_id === judge.id)
-                  return (
-                    <div key={judge.id} className="flex items-center gap-3 rounded-xl px-3 py-2.5 border bg-green-50 border-green-200">
-                      <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-xs font-semibold text-slate-500">
-                        {judge.full_name.charAt(0)}
+          {activeCompTab === 'coaches' && (
+            <div className="space-y-2">
+              {coaches.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-2">{t.noCoachesInClub}</p>
+              ) : (
+                <>
+                  {registeredCoaches.map(c => (
+                    <div key={c.id} className="flex items-center gap-3 py-1.5">
+                      <div className="w-7 h-7 rounded-full bg-slate-100 shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold text-slate-400">
+                        {c.photo_url ? <img src={c.photo_url} alt={c.full_name} className="w-full h-full object-cover" /> : c.full_name.charAt(0)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-semibold text-slate-800">{judge.full_name}</p>
-                          {judge.licence && (
-                            <span className="text-xs font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{judge.licence}</span>
+                        <p className="text-sm text-slate-800 font-medium truncate">{c.full_name}</p>
+                        {c.licence && <p className="text-xs text-slate-400">{c.licence}</p>}
+                      </div>
+                      {registrationFlowOpen && (
+                        <button onClick={() => onUnregisterCoach(c.id)}
+                          className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all shrink-0">
+                          {t.unregisterCoach}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {registrationFlowOpen && unregisteredCoaches.map(c => (
+                    <div key={c.id} className="flex items-center gap-3 py-1.5 opacity-50">
+                      <div className="w-7 h-7 rounded-full bg-slate-100 shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold text-slate-400">
+                        {c.photo_url ? <img src={c.photo_url} alt={c.full_name} className="w-full h-full object-cover" /> : c.full_name.charAt(0)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-slate-800 font-medium truncate">{c.full_name}</p>
+                        {c.licence && <p className="text-xs text-slate-400">{c.licence}</p>}
+                      </div>
+                      <button onClick={() => onRegisterCoach(c.id)}
+                        className="text-xs px-2.5 py-1 rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all shrink-0">
+                        {t.registerCoach}
+                      </button>
+                    </div>
+                  ))}
+                  {registeredCoaches.length === 0 && !registrationFlowOpen && (
+                    <p className="text-sm text-slate-400 text-center py-2">{t.noCoaches}</p>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {activeCompTab === 'judges' && (
+            <div className="space-y-3">
+              {nominatedJudges.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-2">{t.noJudges}</p>
+              ) : (
+                <div className="space-y-2">
+                  {nominatedJudges.map((judge) => {
+                    const nomination = compNominations.find((n) => n.judge_id === judge.id)
+                    return (
+                      <div key={judge.id} className="flex items-center gap-3 rounded-xl px-3 py-2.5 border bg-green-50 border-green-200">
+                        <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-xs font-semibold text-slate-500">
+                          {judge.full_name.charAt(0)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-semibold text-slate-800">{judge.full_name}</p>
+                            {judge.licence && (
+                              <span className="text-xs font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{judge.licence}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="shrink-0 flex items-center gap-2">
+                          <span className="text-xs font-semibold px-2 py-0.5 bg-green-100 text-green-600 rounded-full">{t.nominated}</span>
+                          {registrationFlowOpen && nomination && (
+                            <button onClick={() => onRemoveNomination(nomination.id)}
+                              className="text-xs text-slate-400 hover:text-red-500 transition-colors">
+                              {t.removeNomination}
+                            </button>
                           )}
                         </div>
                       </div>
-                      <div className="shrink-0 flex items-center gap-2">
-                        <span className="text-xs font-semibold px-2 py-0.5 bg-green-100 text-green-600 rounded-full">{t.nominated}</span>
-                        {registrationFlowOpen && nomination && (
-                          <button onClick={() => onRemoveNomination(nomination.id)}
-                            className="text-xs text-slate-400 hover:text-red-500 transition-colors">
-                            {t.removeNomination}
-                          </button>
-                        )}
+                    )
+                  })}
+                </div>
+              )}
+              {registrationFlowOpen && (
+                <div className="space-y-2">
+                  {!showInviteForm && (
+                    <button
+                      onClick={() => { setShowPoolPicker(v => !v); setShowInviteForm(false) }}
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">
+                      {t.addFromPool}
+                    </button>
+                  )}
+                  {showPoolPicker && !showInviteForm && (
+                    <div className="border border-slate-200 rounded-xl overflow-hidden">
+                      <div className="px-3 py-2 border-b border-slate-100">
+                        <input type="text" value={poolSearch} onChange={e => setPoolSearch(e.target.value)}
+                          placeholder={t.searchJudges}
+                          className="w-full text-sm text-slate-700 bg-transparent outline-none placeholder:text-slate-300" />
                       </div>
+                      {filteredPool.length === 0 ? (
+                        <p className="px-3 py-3 text-xs text-slate-400 text-center">{t.noPoolJudges}</p>
+                      ) : (
+                        <div className="max-h-48 overflow-y-auto divide-y divide-slate-50">
+                          {filteredPool.map(judge => (
+                            <button key={judge.id}
+                              onClick={() => { onNominate(judge.id); setShowPoolPicker(false); setPoolSearch('') }}
+                              className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 transition-colors text-left">
+                              <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-xs font-semibold text-slate-500">
+                                {judge.full_name.charAt(0)}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-slate-700 truncate">{judge.full_name}</p>
+                                {judge.licence && <p className="text-xs text-slate-400">{judge.licence}</p>}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  )
-                })}
-              </div>
-            )}
+                  )}
+                  {!showPoolPicker && (
+                    <button onClick={() => { setShowInviteForm(v => !v); setShowPoolPicker(false) }}
+                      className="text-xs font-semibold text-slate-500 hover:text-slate-700 transition-colors">
+                      {t.inviteNew}
+                    </button>
+                  )}
+                  {showInviteForm && (
+                    <InviteJudgeForm lang={lang}
+                      onSend={async (f) => {
+                        await onInviteJudge({ full_name: f.full_name, email: f.email, phone: f.phone || undefined, licence: f.licence || undefined, sport_type: f.sport_type })
+                      }}
+                      onCancel={() => setShowInviteForm(false)} />
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
-            {/* pool picker */}
-            {registrationFlowOpen && (
-              <div className="space-y-2">
-                {!showInviteForm && (
-                  <button
-                    onClick={() => { setShowPoolPicker(v => !v); setShowInviteForm(false) }}
-                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-                    {t.addFromPool}
-                  </button>
-                )}
-
-                {showPoolPicker && !showInviteForm && (
-                  <div className="border border-slate-200 rounded-xl overflow-hidden">
-                    <div className="px-3 py-2 border-b border-slate-100">
-                      <input
-                        type="text"
-                        value={poolSearch}
-                        onChange={e => setPoolSearch(e.target.value)}
-                        placeholder={t.searchJudges}
-                        className="w-full text-sm text-slate-700 bg-transparent outline-none placeholder:text-slate-300"
-                      />
-                    </div>
-                    {filteredPool.length === 0 ? (
-                      <p className="px-3 py-3 text-xs text-slate-400 text-center">{t.noPoolJudges}</p>
-                    ) : (
-                      <div className="max-h-48 overflow-y-auto divide-y divide-slate-50">
-                        {filteredPool.map(judge => (
-                          <button key={judge.id}
-                            onClick={() => { onNominate(judge.id); setShowPoolPicker(false); setPoolSearch('') }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 transition-colors text-left">
-                            <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0 text-xs font-semibold text-slate-500">
-                              {judge.full_name.charAt(0)}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-slate-700 truncate">{judge.full_name}</p>
-                              {judge.licence && <p className="text-xs text-slate-400">{judge.licence}</p>}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* invite new judge */}
-                {!showPoolPicker && (
-                  <button
-                    onClick={() => { setShowInviteForm(v => !v); setShowPoolPicker(false) }}
-                    className="text-xs font-semibold text-slate-500 hover:text-slate-700 transition-colors">
-                    {t.inviteNew}
-                  </button>
-                )}
-
-                {showInviteForm && (
-                  <InviteJudgeForm
-                    lang={lang}
-                    onSend={async (f) => {
-                      await onInviteJudge({ full_name: f.full_name, email: f.email, phone: f.phone || undefined, licence: f.licence || undefined, sport_type: f.sport_type })
-                    }}
-                    onCancel={() => setShowInviteForm(false)}
-                  />
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── tshirt section ── */}
-        {hasTshirts && (
-          <>
-            <button onClick={() => setTshirtOpen(o => !o)}
-              className="w-full flex items-center justify-between px-5 py-2.5 border-t border-slate-100 bg-slate-50 hover:bg-slate-100 text-left transition-colors">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">
-                  {t.tshirtTitle}
-                </span>
-                {isTshirtLocked && (
-                  <span className="text-xs font-semibold px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded-full">{t.filesLocked}</span>
-                )}
-              </div>
-              <svg className={['w-4 h-4 transition-transform text-slate-300', tshirtOpen ? 'rotate-180' : ''].join(' ')}
-                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-              </svg>
-            </button>
-
-            {tshirtOpen && (
-              <div className="px-5 py-4 border-t border-slate-100 space-y-2">
-                {isTshirtLocked && (
-                  <p className="text-xs text-slate-400 mb-3">{t.tshirtDeadlinePast}</p>
-                )}
+          {activeCompTab === 'tshirts' && hasTshirts && (
+            <div>
+              {isTshirtLocked && (
+                <p className="text-xs text-slate-400 mb-3">{t.tshirtDeadlinePast}</p>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
                 {tshirtGymnasts.map(g => {
                   const name = [g.first_name, g.last_name_1, g.last_name_2].filter(Boolean).join(' ')
                   const key = `gymnast:${g.id}`
                   return (
-                    <div key={g.id} className="flex items-center gap-3 py-1">
-                      <div className="flex-1 min-w-0">
+                    <div key={g.id} className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50">
+                      <div className="min-w-0">
                         <p className="text-sm text-slate-800 font-medium truncate">{name}</p>
                         <p className="text-xs text-slate-400">{t.tshirtGymnast}</p>
                       </div>
-                      <select
-                        value={tshirtOrders[key] ?? ''}
-                        onChange={e => handleTshirtSize('gymnast', g.id, e.target.value)}
+                      <select value={tshirtOrders[key] ?? ''} onChange={e => handleTshirtSize('gymnast', g.id, e.target.value)}
                         disabled={isTshirtLocked}
-                        className="text-sm border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        className="text-sm border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed shrink-0">
                         <option value="">{t.tshirtNoSize}</option>
-                        {(competition.tshirt_sizes ?? []).map(s => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
+                        {(competition.tshirt_sizes ?? []).map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
                   )
@@ -849,20 +802,16 @@ function CompetitionDetailView({
                 {tshirtCoaches.map(c => {
                   const key = `coach:${c.id}`
                   return (
-                    <div key={c.id} className="flex items-center gap-3 py-1">
-                      <div className="flex-1 min-w-0">
+                    <div key={c.id} className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50">
+                      <div className="min-w-0">
                         <p className="text-sm text-slate-800 font-medium truncate">{c.full_name}</p>
                         <p className="text-xs text-slate-400">{t.tshirtCoach}</p>
                       </div>
-                      <select
-                        value={tshirtOrders[key] ?? ''}
-                        onChange={e => handleTshirtSize('coach', c.id, e.target.value)}
+                      <select value={tshirtOrders[key] ?? ''} onChange={e => handleTshirtSize('coach', c.id, e.target.value)}
                         disabled={isTshirtLocked}
-                        className="text-sm border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        className="text-sm border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed shrink-0">
                         <option value="">{t.tshirtNoSize}</option>
-                        {(competition.tshirt_sizes ?? []).map(s => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
+                        {(competition.tshirt_sizes ?? []).map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
                   )
@@ -870,31 +819,32 @@ function CompetitionDetailView({
                 {tshirtJudges.map(j => {
                   const key = `judge:${j.id}`
                   return (
-                    <div key={j.id} className="flex items-center gap-3 py-1">
-                      <div className="flex-1 min-w-0">
+                    <div key={j.id} className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50">
+                      <div className="min-w-0">
                         <p className="text-sm text-slate-800 font-medium truncate">{j.full_name}</p>
                         <p className="text-xs text-slate-400">{t.judgesTitle}</p>
                       </div>
-                      <select
-                        value={tshirtOrders[key] ?? ''}
-                        onChange={e => handleTshirtSize('judge', j.id, e.target.value)}
+                      <select value={tshirtOrders[key] ?? ''} onChange={e => handleTshirtSize('judge', j.id, e.target.value)}
                         disabled={isTshirtLocked}
-                        className="text-sm border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                        className="text-sm border border-slate-200 rounded-lg px-2 py-1 bg-white text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed shrink-0">
                         <option value="">{t.tshirtNoSize}</option>
-                        {(competition.tshirt_sizes ?? []).map(s => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
+                        {(competition.tshirt_sizes ?? []).map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
                   )
                 })}
-                {tshirtGymnasts.length === 0 && tshirtCoaches.length === 0 && tshirtJudges.length === 0 && (
-                  <p className="text-sm text-slate-400 text-center py-2">{t.noTeams}</p>
-                )}
               </div>
-            )}
-          </>
-        )}
+              {tshirtGymnasts.length === 0 && tshirtCoaches.length === 0 && tshirtJudges.length === 0 && (
+                <p className="text-sm text-slate-400 text-center py-2">{t.noTeams}</p>
+              )}
+            </div>
+          )}
+
+          {activeCompTab === 'meals' && competition.meals_enabled && (
+            <MealsSection competitionId={competition.id} clubId={clubId} lang={lang} initiallyOpen />
+          )}
+
+        </div>
       </div>
 
       {/* teams */}
