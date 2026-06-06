@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
-import type { MealOption, MealSubmission } from '@/components/admin/types'
+import type { MealCategory, MealOption, MealSubmission } from '@/components/admin/types'
 
 type Props = {
   competitionId: string
@@ -21,10 +21,18 @@ type Slot = {
 
 function slotKey(day: string, type: string) { return `${day}||${type}` }
 
+function formatSlotDay(day: string, lang: Lang) {
+  const d = new Date(day + 'T00:00:00')
+  if (isNaN(d.getTime())) return day
+  const locale = lang === 'es' ? 'es-ES' : 'en-GB'
+  return d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })
+}
+
 export default function MealsSection({ competitionId, clubId, lang, initiallyOpen = false }: Props) {
   const supabase = createClient()
   const [open, setOpen] = useState(initiallyOpen)
   const [options, setOptions] = useState<MealOption[]>([])
+  const [mealCategories, setMealCategories] = useState<MealCategory[]>([])
   const [quantities, setQuantities] = useState<Record<string, number>>({}) // meal_option_id → qty
   const [submission, setSubmission] = useState<MealSubmission | null>(null)
   const [loading, setLoading] = useState(true)
@@ -38,14 +46,16 @@ export default function MealsSection({ competitionId, clubId, lang, initiallyOpe
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const [optRes, ordRes, subRes] = await Promise.all([
-        supabase.from('meal_options').select('*').eq('competition_id', competitionId).order('slot_sort_order').order('day_label').order('meal_type').order('sort_order'),
+      const [optRes, ordRes, subRes, catRes] = await Promise.all([
+        supabase.from('meal_options').select('*').eq('competition_id', competitionId).order('day_label').order('meal_type').order('sort_order'),
         supabase.from('meal_orders').select('*').eq('competition_id', competitionId).eq('club_id', clubId),
         supabase.from('meal_submissions').select('*').eq('competition_id', competitionId).eq('club_id', clubId).maybeSingle(),
+        supabase.from('meal_categories').select('*').order('sort_order'),
       ])
       if (cancelled) return
       const opts = ((optRes.data ?? []) as unknown as MealOption[]).map(o => ({ ...o, price: Number(o.price) }))
       setOptions(opts)
+      setMealCategories((catRes.data ?? []) as unknown as MealCategory[])
       const qmap: Record<string, number> = {}
       for (const row of (ordRes.data ?? []) as any[]) qmap[row.meal_option_id] = row.quantity
       setQuantities(qmap)
@@ -269,10 +279,15 @@ export default function MealsSection({ competitionId, clubId, lang, initiallyOpe
               courseMap.get(k)!.push(opt)
             }
             const courseGroups: { label: string | null; opts: MealOption[] }[] = []
-            if (courseMap.has(null)) courseGroups.push({ label: null, opts: courseMap.get(null)! })
             for (const [label, opts] of courseMap.entries()) {
-              if (label !== null) courseGroups.push({ label, opts })
+              courseGroups.push({ label, opts })
             }
+            const catOrder = new Map(mealCategories.map(c => [c.name, c.sort_order]))
+            courseGroups.sort((a, b) => {
+              const orderA = a.label != null ? (catOrder.get(a.label) ?? 999) : 999
+              const orderB = b.label != null ? (catOrder.get(b.label) ?? 999) : 999
+              return orderA - orderB
+            })
 
             // Slot totals
             const slotParentIds = new Set(slot.options.filter(o => o.parent_option_id).map(o => o.parent_option_id!))
@@ -305,7 +320,7 @@ export default function MealsSection({ competitionId, clubId, lang, initiallyOpe
                   onClick={() => setOpenSlots(prev => ({ ...prev, [slot.key]: !isSlotOpen(slot.key) }))}>
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
-                      {slot.day_label} — {slot.meal_type === 'lunch' ? t.lunch : t.dinner}
+                      {formatSlotDay(slot.day_label, lang)} — {slot.meal_type === 'lunch' ? t.lunch : t.dinner}
                     </p>
                     {slotPeople > 0 && (
                       <span className="text-xs text-slate-400 tabular-nums">{slotPeople} {t.persons}</span>

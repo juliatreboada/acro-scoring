@@ -559,6 +559,24 @@ export type Database = {
           },
         ]
       }
+      meal_categories: {
+        Row: {
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       meal_options: {
         Row: {
           id: string

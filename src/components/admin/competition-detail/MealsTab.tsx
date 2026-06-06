@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
-import type { MealOption, MealSubmission } from '@/components/admin/types'
+import type { MealCategory, MealOption, MealSubmission } from '@/components/admin/types'
 
 type SubmissionRow = MealSubmission & { club_name: string; items: { option: MealOption; quantity: number }[] }
 
@@ -20,12 +20,18 @@ type LabelKey = string // `${SlotKey}::${labelName}`
 function slotKey(day: string, type: string): SlotKey { return `${day}||${type}` }
 function labelKey(sk: SlotKey, label: string): LabelKey { return `${sk}::${label}` }
 function slotLabel(day: string, type: 'lunch' | 'dinner', lang: Lang) {
-  return `${day} — ${type === 'lunch' ? (lang === 'es' ? 'Comida' : 'Lunch') : (lang === 'es' ? 'Cena' : 'Dinner')}`
+  const d = new Date(day + 'T00:00:00')
+  const typeLabel = type === 'lunch' ? (lang === 'es' ? 'Comida' : 'Lunch') : (lang === 'es' ? 'Cena' : 'Dinner')
+  if (isNaN(d.getTime())) return `${day} — ${typeLabel}`
+  const locale = lang === 'es' ? 'es-ES' : 'en-GB'
+  const dateStr = d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })
+  return `${dateStr} — ${typeLabel}`
 }
 
 export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEnabled }: Props) {
   const supabase = createClient()
   const [options, setOptions] = useState<MealOption[]>([])
+  const [mealCategories, setMealCategories] = useState<MealCategory[]>([])
   const [submissions, setSubmissions] = useState<SubmissionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState(false)
@@ -35,15 +41,8 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
   const [slotDay, setSlotDay] = useState('')
   const [slotType, setSlotType] = useState<'lunch' | 'dinner'>('lunch')
 
-  // ── local pending state (not yet in DB) ──────────────────────────────────────
-  // Slots that have been "created" in the UI but have 0 options yet
+  // ── pending slots (created in UI but have 0 options yet) ─────────────────────
   const [pendingSlots, setPendingSlots] = useState<{ key: SlotKey; day_label: string; meal_type: 'lunch' | 'dinner' }[]>([])
-  // Labels within a slot that have been created but have 0 items yet
-  const [pendingLabels, setPendingLabels] = useState<Record<SlotKey, string[]>>({})
-
-  // ── add-label form ───────────────────────────────────────────────────────────
-  const [addingLabelToSlot, setAddingLabelToSlot] = useState<SlotKey | null>(null)
-  const [newLabelName, setNewLabelName] = useState('')
 
   // ── add-item form ────────────────────────────────────────────────────────────
   const [addingItemToLabel, setAddingItemToLabel] = useState<LabelKey | null>(null)
@@ -52,7 +51,7 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
   const [itemPrice, setItemPrice] = useState('')
 
   // ── add-type form (child of an item) ─────────────────────────────────────────
-  const [addingTypeTo, setAddingTypeTo] = useState<string | null>(null) // parent option id
+  const [addingTypeTo, setAddingTypeTo] = useState<string | null>(null)
   const [typeName, setTypeName] = useState('')
   const [typePrice, setTypePrice] = useState('')
 
@@ -68,13 +67,10 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
   const [copyType, setCopyType] = useState<'lunch' | 'dinner'>('lunch')
   const [copying, setCopying] = useState(false)
 
-  // ── slot edit / delete / reorder ──────────────────────────────────────────────
+  // ── slot edit / delete ────────────────────────────────────────────────────────
   const [editingSlot, setEditingSlot] = useState<SlotKey | null>(null)
   const [editSlotDay, setEditSlotDay] = useState('')
   const [editSlotType, setEditSlotType] = useState<'lunch' | 'dinner'>('lunch')
-  const [slotOrder, setSlotOrder] = useState<SlotKey[]>([])
-  const [draggedSlot, setDraggedSlot] = useState<SlotKey | null>(null)
-  const [dragOverSlot, setDragOverSlot] = useState<SlotKey | null>(null)
 
   // ── reject modal ─────────────────────────────────────────────────────────────
   const [rejectTarget, setRejectTarget] = useState<string | null>(null)
@@ -83,15 +79,17 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
   // ── data loading ─────────────────────────────────────────────────────────────
   async function load() {
     setLoading(true)
-    const [optRes, subRes, ordRes, clubRes] = await Promise.all([
+    const [optRes, subRes, ordRes, clubRes, catRes] = await Promise.all([
       supabase.from('meal_options').select('*').eq('competition_id', competitionId).order('day_label').order('meal_type').order('sort_order'),
       supabase.from('meal_submissions').select('*').eq('competition_id', competitionId),
       supabase.from('meal_orders').select('*').eq('competition_id', competitionId),
       supabase.from('clubs').select('id,club_name'),
+      supabase.from('meal_categories').select('*').order('sort_order'),
     ])
 
     const opts = ((optRes.data ?? []) as unknown as MealOption[]).map(o => ({ ...o, price: Number(o.price) }))
     setOptions(opts)
+    setMealCategories((catRes.data ?? []) as unknown as MealCategory[])
 
     const clubMap: Record<string, string> = Object.fromEntries(
       ((clubRes.data ?? []) as any[]).map((c: any) => [c.id, c.club_name])
@@ -121,13 +119,6 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
 
   useEffect(() => { void load() }, [competitionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(`meal_slot_order_${competitionId}`)
-      if (saved) setSlotOrder(JSON.parse(saved))
-    } catch {}
-  }, [competitionId])
-
   // ── derived: DB slots ────────────────────────────────────────────────────────
   const dbSlots = useMemo(() => {
     const map = new Map<SlotKey, MealOption[]>()
@@ -153,29 +144,15 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
     ]
   }, [dbSlots, pendingSlots])
 
-  // Slots sorted by user-defined drag order (new slots appended at end)
+  // Sort by date asc, then lunch before dinner
   const orderedSlots = useMemo(() => {
-    const orderMap = new Map(slotOrder.map((k, i) => [k, i]))
     return [...allSlots].sort((a, b) => {
-      const ai = orderMap.has(a.key) ? orderMap.get(a.key)! : slotOrder.length + allSlots.indexOf(a)
-      const bi = orderMap.has(b.key) ? orderMap.get(b.key)! : slotOrder.length + allSlots.indexOf(b)
-      return ai - bi
+      const dayCompare = a.day_label.localeCompare(b.day_label)
+      if (dayCompare !== 0) return dayCompare
+      const typeOrder = { lunch: 0, dinner: 1 }
+      return (typeOrder[a.meal_type] ?? 0) - (typeOrder[b.meal_type] ?? 0)
     })
-  }, [allSlots, slotOrder])
-
-  // Sync slot_sort_order to DB once after initial load so club view matches admin order
-  const hasSyncedOrder = useRef(false)
-  useEffect(() => {
-    if (loading || orderedSlots.length === 0) return
-    if (hasSyncedOrder.current) return
-    hasSyncedOrder.current = true
-    orderedSlots.forEach((slot, i) => {
-      const [day, type] = slot.key.split('||')
-      void supabase.from('meal_options')
-        .update({ slot_sort_order: i })
-        .eq('competition_id', competitionId).eq('day_label', day).eq('meal_type', type)
-    })
-  }, [loading, orderedSlots]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [allSlots])
 
   // ── handlers ─────────────────────────────────────────────────────────────────
   function handleCreateSlot() {
@@ -188,27 +165,11 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
     setSlotDay(''); setSlotType('lunch')
   }
 
-  function handleCreateLabel(sk: SlotKey) {
-    if (!newLabelName.trim()) return
-    const name = newLabelName.trim()
-    // Skip if label already exists in DB options or pending
-    const slotOpts = options.filter(o => slotKey(o.day_label, o.meal_type) === sk)
-    const existingLabels = new Set(slotOpts.map(o => o.course_label).filter(Boolean))
-    if (!existingLabels.has(name)) {
-      setPendingLabels(prev => ({
-        ...prev,
-        [sk]: [...(prev[sk] ?? []).filter(l => l !== name), name],
-      }))
-    }
-    setAddingLabelToSlot(null)
-    setNewLabelName('')
-  }
-
   async function handleAddItem(sk: SlotKey, labelName: string | null) {
     if (!itemName.trim()) return
     const [day, type] = sk.split('||')
-    const nextSort = options.filter(o => o.day_label === day && o.meal_type === type).length
-    const slotIdx = orderedSlots.findIndex(s => s.key === sk)
+    const slotOpts = options.filter(o => o.day_label === day && o.meal_type === type)
+    const nextSort = slotOpts.length
     const { data, error } = await supabase.from('meal_options').insert({
       competition_id: competitionId,
       day_label: day,
@@ -218,20 +179,10 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
       description: itemDesc.trim() || null,
       price: parseFloat(itemPrice) || 0,
       sort_order: nextSort,
-      slot_sort_order: slotIdx >= 0 ? slotIdx : orderedSlots.length,
     }).select().single()
     if (!error && data) {
       setOptions(prev => [...prev, { ...(data as any), price: Number((data as any).price) }])
-      // Slot now has options — no longer pending
       setPendingSlots(prev => prev.filter(ps => ps.key !== sk))
-      // Label now has items — no longer pending
-      if (labelName) {
-        setPendingLabels(prev => {
-          const labels = (prev[sk] ?? []).filter(l => l !== labelName)
-          if (labels.length === 0) { const next = { ...prev }; delete next[sk]; return next }
-          return { ...prev, [sk]: labels }
-        })
-      }
     }
     setAddingItemToLabel(null)
     setItemName(''); setItemDesc(''); setItemPrice('')
@@ -282,12 +233,11 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
       const idMap: Record<string, string> = {}
       const newOpts: MealOption[] = []
 
-      const newSlotSortOrder = orderedSlots.length
       for (const p of parents) {
         const { data } = await supabase.from('meal_options').insert({
           competition_id: competitionId, day_label: copyDay.trim(), meal_type: copyType,
           course_label: p.course_label, name: p.name, description: p.description,
-          price: p.price, sort_order: p.sort_order, slot_sort_order: newSlotSortOrder,
+          price: p.price, sort_order: p.sort_order,
         }).select().single()
         if (data) {
           const o = { ...(data as any), price: Number((data as any).price) } as MealOption
@@ -301,7 +251,7 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
         const { data } = await supabase.from('meal_options').insert({
           competition_id: competitionId, day_label: copyDay.trim(), meal_type: copyType,
           course_label: c.course_label, parent_option_id: newParentId,
-          name: c.name, description: c.description, price: c.price, sort_order: c.sort_order, slot_sort_order: newSlotSortOrder,
+          name: c.name, description: c.description, price: c.price, sort_order: c.sort_order,
         }).select().single()
         if (data) newOpts.push({ ...(data as any), price: Number((data as any).price) } as MealOption)
       }
@@ -314,25 +264,8 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
   }
 
   async function handleDeleteOption(id: string) {
-    // Cascade in DB handles children, but also clean local state
     await supabase.from('meal_options').delete().eq('id', id)
     setOptions(prev => prev.filter(o => o.id !== id && o.parent_option_id !== id))
-  }
-
-  async function handleDeleteLabel(sk: SlotKey, labelName: string) {
-    const toDelete = options.filter(o =>
-      o.course_label === labelName && slotKey(o.day_label, o.meal_type) === sk
-    )
-    await Promise.all(toDelete.map(o => supabase.from('meal_options').delete().eq('id', o.id)))
-    setOptions(prev => prev.filter(o =>
-      !(o.course_label === labelName && slotKey(o.day_label, o.meal_type) === sk)
-    ))
-    // Also remove from pending
-    setPendingLabels(prev => {
-      const labels = (prev[sk] ?? []).filter(l => l !== labelName)
-      if (labels.length === 0) { const next = { ...prev }; delete next[sk]; return next }
-      return { ...prev, [sk]: labels }
-    })
   }
 
   async function handleEditSlot(sk: SlotKey) {
@@ -355,14 +288,6 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
         ? { key: newSk, day_label: editSlotDay.trim(), meal_type: editSlotType }
         : ps
       ))
-      if (pendingLabels[sk]) {
-        setPendingLabels(prev => { const next = { ...prev, [newSk]: prev[sk] }; delete next[sk]; return next })
-      }
-      setSlotOrder(prev => {
-        const next = prev.includes(sk) ? prev.map(k => k === sk ? newSk : k) : prev
-        try { localStorage.setItem(`meal_slot_order_${competitionId}`, JSON.stringify(next)) } catch {}
-        return next
-      })
     }
     setEditingSlot(null)
   }
@@ -375,12 +300,6 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
       setOptions(prev => prev.filter(o => !(o.day_label === day && o.meal_type === type)))
     }
     setPendingSlots(prev => prev.filter(ps => ps.key !== sk))
-    setPendingLabels(prev => { const next = { ...prev }; delete next[sk]; return next })
-    setSlotOrder(prev => {
-      const next = prev.filter(k => k !== sk)
-      try { localStorage.setItem(`meal_slot_order_${competitionId}`, JSON.stringify(next)) } catch {}
-      return next
-    })
   }
 
   async function handleApprove(subId: string) {
@@ -408,29 +327,23 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
       enable: 'Visible para los clubes',
       enableHint: 'Cuando está activo, los clubes pueden ver las opciones y enviar su selección. Puedes configurar las opciones antes de activarlo.',
       optionsTitle: 'Opciones de comida',
-      optionsHint: 'Crea franjas (día + tipo), añade categorías dentro de cada franja y luego los artículos de cada categoría.',
+      optionsHint: 'Crea franjas (fecha + tipo) y añade artículos a cada categoría.',
       addSlot: '+ Añadir franja',
-      dayLabelPlaceholder: 'Ej: Sábado 14 jun',
       lunch: 'Comida',
       dinner: 'Cena',
       createSlot: 'Crear franja',
-      addLabel: '+ Añadir categoría',
-      labelPlaceholder: 'Ej: Primer plato, Postre, Bebida…',
-      createLabel: 'Crear',
       addItem: '+ Añadir artículo',
       itemNamePlaceholder: 'Ej: Pasta con tomate',
       descPlaceholder: 'Descripción (opcional)',
       price: 'Precio (€)',
       saveItem: 'Guardar',
       cancel: 'Cancelar',
-      deleteLabel: 'Eliminar categoría',
       deleteItem: 'Eliminar',
       editItem: 'Editar',
       addType: '+ Añadir tipo',
       typeNamePlaceholder: 'Ej: Manzana, Naranja…',
       saveType: 'Guardar',
       copySlot: 'Copiar franja',
-      copyDayPlaceholder: 'Nuevo día (ej: Domingo 15 jun)',
       copyConfirm: 'Copiar',
       copyingLabel: 'Copiando…',
       editSlot: 'Editar franja',
@@ -455,29 +368,23 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
       enable: 'Visible to clubs',
       enableHint: 'When active, clubs can see the options and submit their selection. You can configure options before activating.',
       optionsTitle: 'Meal options',
-      optionsHint: 'Create slots (day + type), add categories within each slot, then the items for each category.',
+      optionsHint: 'Create slots (date + type) and add items to each category.',
       addSlot: '+ Add slot',
-      dayLabelPlaceholder: 'E.g. Saturday 14 Jun',
       lunch: 'Lunch',
       dinner: 'Dinner',
       createSlot: 'Create slot',
-      addLabel: '+ Add category',
-      labelPlaceholder: 'E.g. Starter, Dessert, Drinks…',
-      createLabel: 'Create',
       addItem: '+ Add item',
       itemNamePlaceholder: 'E.g. Pasta with tomato sauce',
       descPlaceholder: 'Description (optional)',
       price: 'Price (€)',
       saveItem: 'Save',
       cancel: 'Cancel',
-      deleteLabel: 'Delete category',
       deleteItem: 'Delete',
       editItem: 'Edit',
       addType: '+ Add type',
       typeNamePlaceholder: 'E.g. Apple, Orange…',
       saveType: 'Save',
       copySlot: 'Copy slot',
-      copyDayPlaceholder: 'New day (e.g. Sunday 15 Jun)',
       copyConfirm: 'Copy',
       copyingLabel: 'Copying…',
       editSlot: 'Edit slot',
@@ -537,7 +444,7 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
         </div>
       </div>
 
-      {/* Options management — always visible to admin */}
+      {/* Options management */}
       <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
           <p className="text-sm font-semibold text-slate-800">{t.optionsTitle}</p>
@@ -551,70 +458,18 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
 
           {/* ── Slots ── */}
           {orderedSlots.map(slot => {
-            // Build label groups: DB labels + pending labels
-            const courseMap = new Map<string | null, MealOption[]>()
-            for (const opt of slot.options) {
-              const k = opt.course_label ?? null
-              if (!courseMap.has(k)) courseMap.set(k, [])
-              courseMap.get(k)!.push(opt)
-            }
-            const dbLabelGroups: { label: string | null; opts: MealOption[] }[] = []
-            if (courseMap.has(null)) dbLabelGroups.push({ label: null, opts: courseMap.get(null)! })
-            for (const [lbl, opts] of courseMap.entries()) {
-              if (lbl !== null) dbLabelGroups.push({ label: lbl, opts })
-            }
-            // Merge pending labels (empty, UI-only)
-            const pendingForSlot = (pendingLabels[slot.key] ?? []).filter(
-              l => !dbLabelGroups.some(g => g.label === l)
-            )
-            const allLabelGroups = [
-              ...dbLabelGroups,
-              ...pendingForSlot.map(l => ({ label: l, opts: [] as MealOption[] })),
-            ]
-
             return (
-              <div
-                key={slot.key}
-                draggable
-                onDragStart={() => setDraggedSlot(slot.key)}
-                onDragOver={e => { e.preventDefault(); if (dragOverSlot !== slot.key) setDragOverSlot(slot.key) }}
-                onDrop={() => {
-                  if (!draggedSlot || draggedSlot === slot.key) return
-                  const allKeys = orderedSlots.map(s => s.key)
-                  const complete = [...new Set([...slotOrder, ...allKeys])]
-                  const from = complete.indexOf(draggedSlot)
-                  const to = complete.indexOf(slot.key)
-                  if (from === -1 || to === -1) return
-                  const next = [...complete]
-                  next.splice(from, 1)
-                  next.splice(to, 0, draggedSlot)
-                  setSlotOrder(next)
-                  try { localStorage.setItem(`meal_slot_order_${competitionId}`, JSON.stringify(next)) } catch {}
-                  // Persist order to DB so club view stays in sync
-                  next.forEach((sk, i) => {
-                    const [day, type] = sk.split('||')
-                    void supabase.from('meal_options')
-                      .update({ slot_sort_order: i })
-                      .eq('competition_id', competitionId).eq('day_label', day).eq('meal_type', type)
-                  })
-                  setDraggedSlot(null); setDragOverSlot(null)
-                }}
-                onDragEnd={() => { setDraggedSlot(null); setDragOverSlot(null) }}
-                className={[
-                  'rounded-xl overflow-hidden border transition-all',
-                  draggedSlot === slot.key ? 'opacity-40 border-slate-200' : '',
-                  dragOverSlot === slot.key && draggedSlot !== slot.key ? 'border-blue-400 shadow-sm' : 'border-slate-200',
-                ].join(' ')}
-              >
+              <div key={slot.key} className="rounded-xl overflow-hidden border border-slate-200">
+
                 {/* Slot header */}
                 {editingSlot === slot.key ? (
                   <div className="px-3 py-2.5 bg-slate-50 border-b border-slate-100 flex flex-wrap items-center gap-2">
                     <input
+                      type="date"
                       value={editSlotDay}
                       onChange={e => setEditSlotDay(e.target.value)}
                       className={`flex-1 min-w-40 ${inputCls}`}
                       autoFocus
-                      onKeyDown={e => { if (e.key === 'Enter') handleEditSlot(slot.key) }}
                     />
                     <select value={editSlotType} onChange={e => setEditSlotType(e.target.value as 'lunch' | 'dinner')} className={inputCls}>
                       <option value="lunch">{t.lunch}</option>
@@ -631,12 +486,6 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
                   </div>
                 ) : (
                   <div className="px-3 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
-                    <span className="text-slate-300 cursor-grab active:cursor-grabbing shrink-0" title="Arrastrar">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                        <circle cx="9" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/>
-                        <circle cx="15" cy="5" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
-                      </svg>
-                    </span>
                     <p className="flex-1 text-sm font-semibold text-slate-700">
                       {slotLabel(slot.day_label, slot.meal_type, lang)}
                     </p>
@@ -665,12 +514,11 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
                 {copyingSlot === slot.key && (
                   <div className="px-3 py-2.5 bg-blue-50/50 border-b border-slate-100 flex flex-wrap items-center gap-2">
                     <input
+                      type="date"
                       value={copyDay}
                       onChange={e => setCopyDay(e.target.value)}
-                      placeholder={t.copyDayPlaceholder}
                       className={`flex-1 min-w-40 ${inputCls}`}
                       autoFocus
-                      onKeyDown={e => { if (e.key === 'Enter') handleCopySlot(slot.key) }}
                     />
                     <select value={copyType} onChange={e => setCopyType(e.target.value as 'lunch' | 'dinner')} className={inputCls}>
                       <option value="lunch">{t.lunch}</option>
@@ -690,41 +538,23 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
                   </div>
                 )}
 
-                {/* Labels */}
+                {/* Category columns from meal_categories table */}
                 <div className="flex flex-col md:flex-row md:divide-x divide-y md:divide-y-0 divide-slate-100">
-                  {allLabelGroups.map(({ label, opts }) => {
-                    const lk = label ? labelKey(slot.key, label) : labelKey(slot.key, '__none__')
+                  {mealCategories.map(cat => {
+                    const catOpts = slot.options.filter(o => o.course_label === cat.name)
+                    const lk = labelKey(slot.key, cat.name)
                     return (
-                      <div key={label ?? '__none__'} className="flex-1 min-w-0 px-3 py-2.5">
-                        {/* Label heading */}
-                        <div className="flex items-center justify-between mb-2">
-                          {label ? (
-                            <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">{label}</p>
-                          ) : (
-                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">—</p>
-                          )}
-                          <div className="flex items-center gap-2">
-                            {label && (
-                              <button
-                                onClick={() => handleDeleteLabel(slot.key, label)}
-                                title={t.deleteLabel}
-                                className="text-xs text-slate-300 hover:text-red-500 transition-colors">
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            )}
-                          </div>
+                      <div key={cat.id} className="flex-1 min-w-0 px-3 py-2.5">
+                        <div className="flex items-center mb-2">
+                          <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">{cat.name}</p>
                         </div>
 
-                        {/* Items (top-level only — children rendered under their parent) */}
-                        {opts.filter(o => !o.parent_option_id).length > 0 && (
+                        {catOpts.filter(o => !o.parent_option_id).length > 0 && (
                           <div className="space-y-2 mb-2">
-                            {opts.filter(o => !o.parent_option_id).map(opt => {
+                            {catOpts.filter(o => !o.parent_option_id).map(opt => {
                               const types = options.filter(o => o.parent_option_id === opt.id)
                               return (
                                 <div key={opt.id} className="rounded-lg border border-slate-100 bg-slate-50 overflow-hidden">
-                                  {/* Item row */}
                                   {editingOption === opt.id ? (
                                     <div className="flex items-start gap-2 p-2">
                                       <div className="flex-1 flex flex-col gap-1 min-w-0">
@@ -738,29 +568,29 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
                                       </div>
                                     </div>
                                   ) : (
-                                  <div className="flex items-center gap-2 py-1.5 pl-2 pr-1">
-                                    <div className="flex-1 min-w-0">
-                                      <span className="text-sm text-slate-800 font-medium">{opt.name}</span>
-                                      {opt.description && (
-                                        <span className="text-xs text-slate-400 ml-1.5">{opt.description}</span>
+                                    <div className="flex items-center gap-2 py-1.5 pl-2 pr-1">
+                                      <div className="flex-1 min-w-0">
+                                        <span className="text-sm text-slate-800 font-medium">{opt.name}</span>
+                                        {opt.description && (
+                                          <span className="text-xs text-slate-400 ml-1.5">{opt.description}</span>
+                                        )}
+                                      </div>
+                                      {types.length === 0 && (
+                                        <span className="text-xs font-semibold text-slate-600 tabular-nums shrink-0">{opt.price.toFixed(2)} €</span>
                                       )}
+                                      <button onClick={() => { setEditingOption(opt.id); setEditName(opt.name); setEditDesc(opt.description ?? ''); setEditPrice(opt.price.toFixed(2)) }} title={t.editItem}
+                                        className="text-slate-300 hover:text-blue-500 transition-colors shrink-0">
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                      </button>
+                                      <button onClick={() => handleDeleteOption(opt.id)} title={t.deleteItem}
+                                        className="text-slate-300 hover:text-red-500 transition-colors shrink-0">
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                      </button>
                                     </div>
-                                    {types.length === 0 && (
-                                      <span className="text-xs font-semibold text-slate-600 tabular-nums shrink-0">{opt.price.toFixed(2)} €</span>
-                                    )}
-                                    <button onClick={() => { setEditingOption(opt.id); setEditName(opt.name); setEditDesc(opt.description ?? ''); setEditPrice(opt.price.toFixed(2)) }} title={t.editItem}
-                                      className="text-slate-300 hover:text-blue-500 transition-colors shrink-0">
-                                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                      </svg>
-                                    </button>
-                                    <button onClick={() => handleDeleteOption(opt.id)} title={t.deleteItem}
-                                      className="text-slate-300 hover:text-red-500 transition-colors shrink-0">
-                                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                      </svg>
-                                    </button>
-                                  </div>
                                   )}
 
                                   {/* Type rows */}
@@ -773,23 +603,23 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
                                         <button onClick={() => setEditingOption(null)} className="px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-all">{t.cancel}</button>
                                       </div>
                                     ) : (
-                                    <div key={tp.id} className="flex items-center gap-2 py-1 pl-5 pr-1 border-t border-slate-100 bg-white">
-                                      <span className="text-xs text-slate-400 mr-0.5">↳</span>
-                                      <span className="flex-1 text-sm text-slate-700">{tp.name}</span>
-                                      <span className="text-xs font-semibold text-slate-600 tabular-nums shrink-0">{tp.price.toFixed(2)} €</span>
-                                      <button onClick={() => { setEditingOption(tp.id); setEditName(tp.name); setEditDesc(''); setEditPrice(tp.price.toFixed(2)) }} title={t.editItem}
-                                        className="text-slate-300 hover:text-blue-500 transition-colors shrink-0">
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                        </svg>
-                                      </button>
-                                      <button onClick={() => handleDeleteOption(tp.id)} title={t.deleteItem}
-                                        className="text-slate-300 hover:text-red-500 transition-colors shrink-0">
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                      </button>
-                                    </div>
+                                      <div key={tp.id} className="flex items-center gap-2 py-1 pl-5 pr-1 border-t border-slate-100 bg-white">
+                                        <span className="text-xs text-slate-400 mr-0.5">↳</span>
+                                        <span className="flex-1 text-sm text-slate-700">{tp.name}</span>
+                                        <span className="text-xs font-semibold text-slate-600 tabular-nums shrink-0">{tp.price.toFixed(2)} €</span>
+                                        <button onClick={() => { setEditingOption(tp.id); setEditName(tp.name); setEditDesc(''); setEditPrice(tp.price.toFixed(2)) }} title={t.editItem}
+                                          className="text-slate-300 hover:text-blue-500 transition-colors shrink-0">
+                                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                          </svg>
+                                        </button>
+                                        <button onClick={() => handleDeleteOption(tp.id)} title={t.deleteItem}
+                                          className="text-slate-300 hover:text-red-500 transition-colors shrink-0">
+                                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                          </svg>
+                                        </button>
+                                      </div>
                                     )
                                   ))}
 
@@ -832,7 +662,7 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
                             <div className="flex gap-2">
                               <input value={itemPrice} onChange={e => setItemPrice(e.target.value)} placeholder={t.price} type="number" min="0" step="0.01" className={`w-28 ${inputCls}`} />
                               <button
-                                onClick={() => handleAddItem(slot.key, label)}
+                                onClick={() => handleAddItem(slot.key, cat.name)}
                                 disabled={!itemName.trim()}
                                 className="px-3 py-1.5 text-sm font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-40 transition-all">
                                 {t.saveItem}
@@ -854,35 +684,86 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
                       </div>
                     )
                   })}
-                </div>
 
-                {/* Add label */}
-                <div className="px-3 py-2.5 border-t border-slate-100 bg-slate-50/60">
-                  {addingLabelToSlot === slot.key ? (
-                    <div className="flex gap-2">
-                      <input
-                        value={newLabelName}
-                        onChange={e => setNewLabelName(e.target.value)}
-                        placeholder={t.labelPlaceholder}
-                        className={`flex-1 ${inputCls}`}
-                        autoFocus
-                        onKeyDown={e => { if (e.key === 'Enter') handleCreateLabel(slot.key) }}
-                      />
-                      <button onClick={() => handleCreateLabel(slot.key)} disabled={!newLabelName.trim()}
-                        className="px-3 py-1.5 text-sm font-semibold bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-40 transition-all">
-                        {t.createLabel}
-                      </button>
-                      <button onClick={() => { setAddingLabelToSlot(null); setNewLabelName('') }}
-                        className="px-3 py-1.5 text-sm bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-all">
-                        {t.cancel}
-                      </button>
+                  {/* Fallback column for items with no matching category (backward compat) */}
+                  {slot.options.some(o => o.course_label === null && !o.parent_option_id) && (
+                    <div key="__none__" className="flex-1 min-w-0 px-3 py-2.5">
+                      <div className="flex items-center mb-2">
+                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">—</p>
+                      </div>
+                      <div className="space-y-2">
+                        {slot.options.filter(o => o.course_label === null && !o.parent_option_id).map(opt => {
+                          const types = options.filter(o => o.parent_option_id === opt.id)
+                          return (
+                            <div key={opt.id} className="rounded-lg border border-slate-100 bg-slate-50 overflow-hidden">
+                              {editingOption === opt.id ? (
+                                <div className="flex items-start gap-2 p-2">
+                                  <div className="flex-1 flex flex-col gap-1 min-w-0">
+                                    <input value={editName} onChange={e => setEditName(e.target.value)} className={`${inputCls} text-xs py-1`} autoFocus onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(opt.id) }} />
+                                    <input value={editDesc} onChange={e => setEditDesc(e.target.value)} placeholder={t.descPlaceholder} className={`${inputCls} text-xs py-1`} />
+                                  </div>
+                                  <input value={editPrice} onChange={e => setEditPrice(e.target.value)} type="number" min="0" step="0.01" placeholder={t.price} className={`w-20 ${inputCls} text-xs py-1 shrink-0`} />
+                                  <div className="flex gap-1 shrink-0">
+                                    <button onClick={() => handleSaveEdit(opt.id)} disabled={!editName.trim()} className="px-2 py-1 text-xs font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-40 transition-all">{t.saveItem}</button>
+                                    <button onClick={() => setEditingOption(null)} className="px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-all">{t.cancel}</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 py-1.5 pl-2 pr-1">
+                                  <div className="flex-1 min-w-0">
+                                    <span className="text-sm text-slate-800 font-medium">{opt.name}</span>
+                                    {opt.description && <span className="text-xs text-slate-400 ml-1.5">{opt.description}</span>}
+                                  </div>
+                                  {types.length === 0 && (
+                                    <span className="text-xs font-semibold text-slate-600 tabular-nums shrink-0">{opt.price.toFixed(2)} €</span>
+                                  )}
+                                  <button onClick={() => { setEditingOption(opt.id); setEditName(opt.name); setEditDesc(opt.description ?? ''); setEditPrice(opt.price.toFixed(2)) }} title={t.editItem}
+                                    className="text-slate-300 hover:text-blue-500 transition-colors shrink-0">
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                  </button>
+                                  <button onClick={() => handleDeleteOption(opt.id)} title={t.deleteItem}
+                                    className="text-slate-300 hover:text-red-500 transition-colors shrink-0">
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              )}
+                              {types.map(tp => (
+                                editingOption === tp.id ? (
+                                  <div key={tp.id} className="flex items-center gap-2 p-2 border-t border-slate-100 bg-white">
+                                    <input value={editName} onChange={e => setEditName(e.target.value)} className={`flex-1 ${inputCls} text-xs py-1`} autoFocus onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(tp.id) }} />
+                                    <input value={editPrice} onChange={e => setEditPrice(e.target.value)} type="number" min="0" step="0.01" placeholder={t.price} className={`w-20 ${inputCls} text-xs py-1`} />
+                                    <button onClick={() => handleSaveEdit(tp.id)} disabled={!editName.trim()} className="px-2 py-1 text-xs font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-40 transition-all">{t.saveType}</button>
+                                    <button onClick={() => setEditingOption(null)} className="px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition-all">{t.cancel}</button>
+                                  </div>
+                                ) : (
+                                  <div key={tp.id} className="flex items-center gap-2 py-1 pl-5 pr-1 border-t border-slate-100 bg-white">
+                                    <span className="text-xs text-slate-400 mr-0.5">↳</span>
+                                    <span className="flex-1 text-sm text-slate-700">{tp.name}</span>
+                                    <span className="text-xs font-semibold text-slate-600 tabular-nums shrink-0">{tp.price.toFixed(2)} €</span>
+                                    <button onClick={() => { setEditingOption(tp.id); setEditName(tp.name); setEditDesc(''); setEditPrice(tp.price.toFixed(2)) }} title={t.editItem}
+                                      className="text-slate-300 hover:text-blue-500 transition-colors shrink-0">
+                                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                      </svg>
+                                    </button>
+                                    <button onClick={() => handleDeleteOption(tp.id)} title={t.deleteItem}
+                                      className="text-slate-300 hover:text-red-500 transition-colors shrink-0">
+                                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                )
+                              ))}
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => { setAddingLabelToSlot(slot.key); setNewLabelName('') }}
-                      className="text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors">
-                      {t.addLabel}
-                    </button>
                   )}
                 </div>
               </div>
@@ -894,12 +775,11 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
             <div className="border border-blue-200 rounded-xl p-3 bg-blue-50/30 space-y-2">
               <div className="flex gap-2">
                 <input
+                  type="date"
                   value={slotDay}
                   onChange={e => setSlotDay(e.target.value)}
-                  placeholder={t.dayLabelPlaceholder}
                   className={`flex-1 ${inputCls}`}
                   autoFocus
-                  onKeyDown={e => { if (e.key === 'Enter') handleCreateSlot() }}
                 />
                 <select value={slotType} onChange={e => setSlotType(e.target.value as 'lunch' | 'dinner')} className={inputCls}>
                   <option value="lunch">{t.lunch}</option>

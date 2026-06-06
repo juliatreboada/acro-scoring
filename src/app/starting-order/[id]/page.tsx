@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
@@ -27,11 +27,13 @@ export default function Page() {
   const [completedRoutineKeys, setCompletedRoutineKeys] = useState<string[]>([])
   const [ongoingRoutineKey, setOngoingRoutineKey] = useState<string | null>(null)
   const [loading,       setLoading]       = useState(true)
+  // Kept in sync so the realtime callback can use current session IDs without stale closure
+  const sessionIdsRef = useRef<string[]>([])
 
   useEffect(() => {
     async function load() {
       // ── first wave: competition + panels + sections + sessions + entries ──────
-      const [compRes, panelsRes, sectionsRes, sessionsRes, entriesRes, rulesRes, resultsRes, tvStateRes] = await Promise.all([
+      const [compRes, panelsRes, sectionsRes, sessionsRes, entriesRes, rulesRes, tvStateRes] = await Promise.all([
         supabase.from('competitions')
           .select('id, name, status, sport_type,location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, logo_url, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
           .eq('id', id).single(),
@@ -53,10 +55,6 @@ export default function Page() {
         supabase.from('age_group_rules')
           .select('id, age_group, level, ruleset, min_age, max_age, routine_count, sport_type')
           .order('sort_order'),
-        supabase.from('routine_results')
-          .select('session_id, team_id')
-          .eq('competition_id', id)
-          .in('status', ['approved', 'provisional']),
         supabase.from('tv_state')
           .select('session_id, team_id')
           .eq('competition_id', id)
@@ -72,15 +70,20 @@ export default function Page() {
 
       const locked    = rawSessions.filter((s) => s.order_locked).map((s) => s.id)
       const teamIds   = rawEntries.map((e) => e.team_id)
+      const allSessionIds = rawSessions.map((s) => s.id)
+      sessionIdsRef.current = allSessionIds
 
-      // ── second wave: session_orders + teams ───────────────────────────────────
-      const [ordersRes, teamsRes] = await Promise.all([
+      // ── second wave: session_orders + teams + results ─────────────────────────
+      const [ordersRes, teamsRes, resultsRes] = await Promise.all([
         locked.length > 0
           ? supabase.from('session_orders').select('session_id, team_id, position').in('session_id', locked)
           : Promise.resolve({ data: [] as SessionOrder[] }),
         teamIds.length > 0
           ? supabase.from('teams').select('id, club_id, category, age_group, gymnast_display, photo_url').in('id', teamIds)
           : Promise.resolve({ data: [] as Team[] }),
+        allSessionIds.length > 0
+          ? supabase.from('routine_results').select('session_id, team_id').in('session_id', allSessionIds).in('status', ['approved', 'provisional'])
+          : Promise.resolve({ data: [] as { session_id: string; team_id: string }[] }),
       ])
 
       const rawTeams = (teamsRes.data ?? []).map(t => ({
@@ -104,7 +107,7 @@ export default function Page() {
       setGlobalTeams(rawTeams)
       setClubs(clubsData ?? [])
       setAgeGroupRules((rulesRes.data ?? []) as unknown as AgeGroupRule[])
-      setCompletedRoutineKeys((resultsRes.data ?? []).map((r) => `${r.session_id}:${r.team_id}`))
+      setCompletedRoutineKeys(((resultsRes as any).data ?? []).map((r: any) => `${r.session_id}:${r.team_id}`))
       setOngoingRoutineKey(tvStateRes.data?.session_id && tvStateRes.data?.team_id
         ? `${tvStateRes.data.session_id}:${tvStateRes.data.team_id}`
         : null)
@@ -116,12 +119,14 @@ export default function Page() {
       .channel(`starting-order-results-${id}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'routine_results', filter: `competition_id=eq.${id}` },
+        { event: '*', schema: 'public', table: 'routine_results' },
         async () => {
+          const ids = sessionIdsRef.current
+          if (ids.length === 0) return
           const { data } = await supabase
             .from('routine_results')
             .select('session_id, team_id')
-            .eq('competition_id', id)
+            .in('session_id', ids)
             .in('status', ['approved', 'provisional'])
           setCompletedRoutineKeys((data ?? []).map((r) => `${r.session_id}:${r.team_id}`))
         },

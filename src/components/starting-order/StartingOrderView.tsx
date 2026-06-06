@@ -246,7 +246,7 @@ function SessionOrderCard({
           const club = team ? clubs.find(c => c.id === team.club_id) : undefined
           const routineKey = `${session.id}:${teamId}`
           const isCompleted = completedRoutineKeys.has(routineKey)
-          const isOngoing = ongoingRoutineKey === routineKey
+          const isOngoing = !isCompleted && ongoingRoutineKey === routineKey
           return (
             <li key={teamId} className={[
               'flex items-center gap-3 px-4 py-3',
@@ -403,7 +403,7 @@ function InterleavedTimeline({
   entries: CompetitionEntry[]
   globalTeams: Team[]
   clubs: Club[]
-  section: Section
+  section: Section | undefined
   ageGroupRules: AgeGroupRule[]
   highlightQuery: string
   completedRoutineKeys: Set<string>
@@ -412,6 +412,7 @@ function InterleavedTimeline({
   const t = useT('StartingOrderView', lang)
   const [p1, p2] = panels.slice(0, 2)
   const droppedIds = new Set(entries.filter(e => e.dropped_out).map(e => e.team_id))
+  if (!section) return null
   const slots1 = buildPanelSlots(p1, sessions, sessionOrders, lockedSessions, entries, globalTeams)
   const slots2 = buildPanelSlots(p2, sessions, sessionOrders, lockedSessions, entries, globalTeams)
 
@@ -517,7 +518,7 @@ function InterleavedTimeline({
           const dorsal = entries.find(e => e.team_id === slot.teamId)?.dorsal
           const routineKey = `${slot.sessionId}:${slot.teamId}`
           const isCompleted = completedRoutineKeys.has(routineKey)
-          const isOngoing = ongoingRoutineKey === routineKey
+          const isOngoing = !isCompleted && ongoingRoutineKey === routineKey
 
           return (
             <li key={`${slot.panelNumber}-${slot.teamId}-${i}`}
