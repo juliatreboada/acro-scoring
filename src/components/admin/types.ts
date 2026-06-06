@@ -98,6 +98,12 @@ export type Competition = {
   meals_enabled?: boolean
 }
 
+export type MealCategory = {
+  id: string
+  name: string
+  sort_order: number
+}
+
 export type MealOption = {
   id: string
   competition_id: string

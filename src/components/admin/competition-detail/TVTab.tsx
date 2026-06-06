@@ -136,6 +136,7 @@ export default function TVTab({
   const [busy, setBusy]               = useState(false)
   const [sponsorClips, setSponsorClips] = useState<TvSponsorClip[]>([])
   const sponsorFileRef = useRef<HTMLInputElement>(null)
+  const activeItemRef = useRef<HTMLLIElement>(null)
 
   const previewRef = useRef<HTMLDivElement>(null)
   const [previewScale, setPreviewScale] = useState(0.3)
@@ -224,6 +225,11 @@ export default function TVTab({
     fetchResults()
     fetchSponsorClips()
   }, [fetchTvState, fetchResults, fetchSponsorClips])
+
+  // Scroll to active/next item whenever results change
+  useEffect(() => {
+    activeItemRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [results])
 
   // ── realtime subscriptions ───────────────────────────────────────────────────
 
@@ -389,6 +395,11 @@ export default function TVTab({
 
   // Is anything queued on the TV right now?
   const isAnythingQueued = !!(tvState?.session_id && tvState?.team_id)
+
+  // Key of the item the list should scroll to (queued > first unscored)
+  const scrollTargetKey = tvState?.session_id && tvState?.team_id
+    ? `${tvState.session_id}-${tvState.team_id}`
+    : null
 
   // Does the currently queued team have an approved score? (needed for reveal)
   const queuedHasScore = isAnythingQueued
@@ -638,14 +649,21 @@ export default function TVTab({
         ) : (
           <ul className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
             {participants.map((p) => {
+              const itemKey = `${p.session_id}-${p.team_id}`
               const isQueued = tvState?.session_id === p.session_id && tvState?.team_id === p.team_id
               const hasScore = p.result !== null
+              const isDone = hasScore && !isQueued
+              // First unscored non-dropout item becomes the scroll target when nothing is queued
+              const isScrollTarget = scrollTargetKey
+                ? itemKey === scrollTargetKey
+                : !hasScore && !p.is_dropout && !participants.slice(0, participants.indexOf(p)).some(q => !q.result && !q.is_dropout)
               return (
                 <li
-                  key={`${p.session_id}-${p.team_id}`}
+                  key={itemKey}
+                  ref={isScrollTarget ? activeItemRef : null}
                   className={[
                     'flex items-center gap-3 px-4 py-3',
-                    isQueued ? 'bg-blue-50' : p.is_dropout ? 'opacity-50' : 'hover:bg-slate-50',
+                    isQueued ? 'bg-blue-50' : isDone ? 'opacity-50' : p.is_dropout ? 'opacity-40' : 'hover:bg-slate-50',
                   ].join(' ')}
                 >
                   {/* photo */}
@@ -667,7 +685,7 @@ export default function TVTab({
                           #{p.dorsal}
                         </span>
                       )}
-                      <p className={['text-sm font-medium truncate', p.is_dropout ? 'line-through text-slate-400' : 'text-slate-800'].join(' ')}>
+                      <p className={['text-sm font-medium truncate', (p.is_dropout || isDone) ? 'line-through text-slate-400' : 'text-slate-800'].join(' ')}>
                         {p.gymnast_display}
                       </p>
                     </div>
