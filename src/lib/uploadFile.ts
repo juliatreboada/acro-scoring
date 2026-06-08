@@ -4,5 +4,5 @@ export async function uploadFile(bucket: string, path: string, file: File): Prom
   const supabase = createClient()
   const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
   if (error) throw new Error(error.message)
-  return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl
+  return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl + `?t=${Date.now()}`
 }

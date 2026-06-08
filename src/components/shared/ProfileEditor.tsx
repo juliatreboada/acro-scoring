@@ -125,6 +125,13 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
     }
   }
 
+  async function handleRemoveAvatar() {
+    if (!profile) return
+    const table = profile.role === 'judge' ? 'judges' : 'admins'
+    await supabase.from(table as 'judges').update({ avatar_url: null } as any).eq('id', profile.id)
+    setProfile(prev => prev ? { ...prev, avatar_url: null } : prev)
+  }
+
   async function handleLicenciaUpload(file: File) {
     if (!profile || profile.role !== 'judge') return
     setUploadingLicencia(true)
@@ -161,7 +168,7 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
 
         {/* avatar + name */}
         <div className="bg-slate-50 border-b border-slate-100 px-5 py-6 flex items-center gap-4">
-          <div className="relative shrink-0">
+          <div className="relative shrink-0 group">
             {profile.avatar_url ? (
               <ClickableImg src={profile.avatar_url} alt={profile.full_name}
                 className="w-16 h-16 rounded-2xl object-cover" />
@@ -184,6 +191,15 @@ export default function ProfileEditor({ lang }: { lang: Lang }) {
                 </svg>
               )}
             </button>
+            {profile.avatar_url && (
+              <button
+                onClick={handleRemoveAvatar}
+                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all shadow-sm z-10">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
           </div>
           <div className="min-w-0">

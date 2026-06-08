@@ -9,7 +9,7 @@ import { useT } from '@/lib/useT'
 
 type EditForm = { full_name: string; phone: string; licence: string }
 
-function JudgeAvatar({ judge, onUpload }: { judge: Judge; onUpload: (file: File) => void }) {
+function JudgeAvatar({ judge, onUpload, onRemove }: { judge: Judge; onUpload: (file: File) => void; onRemove?: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null)
   return (
     <div className="relative shrink-0 group cursor-pointer" onClick={() => inputRef.current?.click()}>
@@ -24,19 +24,30 @@ function JudgeAvatar({ judge, onUpload }: { judge: Judge; onUpload: (file: File)
           <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
         </svg>
       </div>
+      {judge.avatar_url && onRemove && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onRemove() }}
+          className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all shadow-sm z-10">
+          <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
       <input ref={inputRef} type="file" accept="image/*" className="hidden"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); if (inputRef.current) inputRef.current.value = '' }} />
     </div>
   )
 }
 
-export default function ClubJudgesTab({ lang, judges, onInvite, onUpdate, onDelete, onUploadPhoto }: {
+export default function ClubJudgesTab({ lang, judges, onInvite, onUpdate, onDelete, onUploadPhoto, onRemovePhoto }: {
   lang: Lang
   judges: Judge[]
   onInvite: (f: { full_name: string; email: string; phone?: string; licence?: string; sport_type: string }) => Promise<void>
   onUpdate: (id: string, f: Omit<Judge, 'id' | 'avatar_url'>) => void
   onDelete: (id: string) => void
   onUploadPhoto: (id: string, file: File) => Promise<void>
+  onRemovePhoto: (id: string) => Promise<void>
 }) {
   const t = useT('ClubJudgesTab', lang)
   const [showInvite, setShowInvite] = useState(false)
@@ -148,7 +159,7 @@ export default function ClubJudgesTab({ lang, judges, onInvite, onUpdate, onDele
               </div>
             ) : (
               <div key={judge.id} className="flex items-center gap-3 bg-white border border-slate-200 rounded-2xl px-4 py-3">
-                <JudgeAvatar judge={judge} onUpload={(file) => onUploadPhoto(judge.id, file)} />
+                <JudgeAvatar judge={judge} onUpload={(file) => onUploadPhoto(judge.id, file)} onRemove={() => onRemovePhoto(judge.id)} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-semibold text-slate-800">{judge.full_name}</p>
