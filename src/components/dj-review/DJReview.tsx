@@ -14,7 +14,7 @@ import { DJReview as DJReviewT } from '@/locales/en'
 function usesIntegerDifficulty(ageGroup: string): boolean {
   const lower = ageGroup.toLowerCase()
   return (
-    lower === 'youth' ||
+    (lower.startsWith('youth') && !lower.startsWith('pre-youth')) ||
     lower.includes('junior') ||
     lower.includes('senior') ||
     lower.includes('absoluto')
