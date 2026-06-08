@@ -32,6 +32,10 @@ type Props = {
   onUpdateConfig: (sizes: string[], deadline: string | null) => Promise<void>
 }
 
+function toTitleCase(s: string): string {
+  return s.toLowerCase().replace(/(?:^|\s)\S/g, c => c.toUpperCase())
+}
+
 export default function TshirtTab({ lang, competitionGymnasts, competitionCoaches, globalJudges, judgePool, competitionId, sizes, deadline, onUpdateConfig }: Props) {
   const supabase = createClient()
   const [orders, setOrders] = useState<TshirtOrder[]>([])
@@ -43,16 +47,16 @@ export default function TshirtTab({ lang, competitionGymnasts, competitionCoache
   // ── names list (must be before any early return) ────────────────────────────
   const gymnastNames = useMemo(() =>
     [...competitionGymnasts]
-      .map(g => `${g.first_name} ${g.last_name_1}${g.last_name_2 ? ' ' + g.last_name_2 : ''}`)
+      .map(g => toTitleCase(`${g.first_name} ${g.last_name_1}${g.last_name_2 ? ' ' + g.last_name_2 : ''}`))
       .sort((a, b) => a.localeCompare(b, 'es')),
     [competitionGymnasts])
 
   const coachNames = useMemo(() =>
-    [...competitionCoaches].map(c => c.full_name).sort((a, b) => a.localeCompare(b, 'es')),
+    [...competitionCoaches].map(c => toTitleCase(c.full_name)).sort((a, b) => a.localeCompare(b, 'es')),
     [competitionCoaches])
 
   const judgeNames = useMemo(() =>
-    globalJudges.filter(j => judgePool.includes(j.id)).map(j => j.full_name).sort((a, b) => a.localeCompare(b, 'es')),
+    globalJudges.filter(j => judgePool.includes(j.id)).map(j => toTitleCase(j.full_name)).sort((a, b) => a.localeCompare(b, 'es')),
     [globalJudges, judgePool])
 
   // config editing
@@ -134,21 +138,21 @@ export default function TshirtTab({ lang, competitionGymnasts, competitionCoache
     const all: Person[] = [
       ...((gymnastsRes.data ?? []) as any[]).map((g: any) => ({
         id: g.id,
-        name: [g.first_name, g.last_name_1].filter(Boolean).join(' '),
+        name: toTitleCase([g.first_name, g.last_name_1].filter(Boolean).join(' ')),
         club_id: g.club_id,
         club_name: clubNameMap[g.club_id] ?? '—',
         type: 'gymnast' as const,
       })),
       ...((coachesRes.data ?? []) as any[]).map((c: any) => ({
         id: c.id,
-        name: c.full_name,
+        name: toTitleCase(c.full_name),
         club_id: c.club_id,
         club_name: clubNameMap[c.club_id] ?? '—',
         type: 'coach' as const,
       })),
-      ...judgeOrderIds.map((jid) => ({
+      ...judgeOrderIds.filter(jid => judgeNameMap[jid] != null).map((jid) => ({
         id: jid,
-        name: judgeNameMap[jid] ?? jid,
+        name: toTitleCase(judgeNameMap[jid]),
         club_id: judgeClubMap[jid] ?? null,
         club_name: judgeClubMap[jid] ? (clubNameMap[judgeClubMap[jid]!] ?? '—') : 'Administración',
         type: 'judge' as const,
@@ -157,7 +161,9 @@ export default function TshirtTab({ lang, competitionGymnasts, competitionCoache
     setPeople(all)
 
     // Admin judges (no club) + their current sizes
-    const adminJudgeList = adminJudgeIds.map(id => ({ id, name: judgeNameMap[id] ?? id }))
+    const adminJudgeList = adminJudgeIds
+      .filter(id => judgeNameMap[id] != null)
+      .map(id => ({ id, name: toTitleCase(judgeNameMap[id]) }))
     setAdminJudges(adminJudgeList)
     const sizeMap: Record<string, string> = {}
     for (const o of rawOrders) {
