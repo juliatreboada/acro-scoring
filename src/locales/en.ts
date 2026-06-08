@@ -1029,6 +1029,9 @@ export const AccreditationsTab = {
   typeJudge: 'Judge',
   acreditaciones: 'Accreditations',
   empty: 'No participants registered for this competition.',
+  filterAll: 'All',
+  filterWithPhoto: 'With photo',
+  filterWithoutPhoto: 'Without photo',
 }
 
 // app/login/page.tsx
@@ -1121,6 +1124,9 @@ export const ProfileEditor = {
     uploading:         'Uploading…',
     changePhoto:       'Change photo',
     loading:           'Loading…',
+    incompleteProfile: 'Your profile is incomplete:',
+    missingPhoto:      'no profile photo uploaded',
+    missingLicencia:   'no licence document uploaded',
   }
 
 // components/club/ProvisionalEntryForm.tsx

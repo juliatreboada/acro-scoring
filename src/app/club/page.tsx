@@ -15,11 +15,11 @@ export default function Page() {
     entries, music, judges, nominations, agLabels, ageGroupRules, tsReviewStatuses, apparatus, apparatusRules,
     actionError,
     handleAddGymnast, handleAddGymnastsBulk, handleUpdateGymnast, handleDeleteGymnast,
-    handleUploadGymnastPhoto, handleUploadLicencia, handleRemoveLicencia,
+    handleUploadGymnastPhoto, handleRemoveGymnastPhoto, handleUploadLicencia, handleRemoveLicencia,
     handleAddCoach, handleUpdateCoach, handleDeleteCoach,
-    handleUploadCoachPhoto, handleUploadCoachLicencia,
+    handleUploadCoachPhoto, handleRemoveCoachPhoto, handleUploadCoachLicencia,
     handleRegisterCoach, handleUnregisterCoach,
-    handleAddTeam, handleUpdateTeam, handleDeleteTeam, handleRestoreTeam, handleUploadTeamPhoto,
+    handleAddTeam, handleUpdateTeam, handleDeleteTeam, handleRestoreTeam, handleUploadTeamPhoto, handleRemoveTeamPhoto,
     handleRegister, handleDropout,
     handleInviteJudge, handleUpdateJudge, handleDeleteJudge, handleUploadJudgePhoto,
     handleNominate, handleRemoveNomination,
@@ -67,12 +67,14 @@ export default function Page() {
         onUpdateGymnast={handleUpdateGymnast}
         onDeleteGymnast={handleDeleteGymnast}
         onUploadGymnastPhoto={handleUploadGymnastPhoto}
+        onRemoveGymnastPhoto={handleRemoveGymnastPhoto}
         onUploadLicencia={handleUploadLicencia}
         onRemoveLicencia={handleRemoveLicencia}
         onAddCoach={handleAddCoach}
         onUpdateCoach={handleUpdateCoach}
         onDeleteCoach={handleDeleteCoach}
         onUploadCoachPhoto={handleUploadCoachPhoto}
+        onRemoveCoachPhoto={handleRemoveCoachPhoto}
         onUploadCoachLicencia={handleUploadCoachLicencia}
         onRegisterCoach={handleRegisterCoach}
         onUnregisterCoach={handleUnregisterCoach}
@@ -81,6 +83,7 @@ export default function Page() {
         onDeleteTeam={handleDeleteTeam}
         onRestoreTeam={handleRestoreTeam}
         onUploadTeamPhoto={handleUploadTeamPhoto}
+        onRemoveTeamPhoto={handleRemoveTeamPhoto}
         onRegister={handleRegister}
         onDropout={handleDropout}
         onSetFile={handleSetFile}

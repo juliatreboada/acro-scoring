@@ -63,7 +63,7 @@ function CoachForm({ lang, initial, onSave, onCancel }: {
 // ─── tab ─────────────────────────────────────────────────────────────────────
 
 export default function CoachesTab({
-  lang, coaches, onAdd, onUpdate, onDelete, onUploadPhoto, onUploadLicencia,
+  lang, coaches, onAdd, onUpdate, onDelete, onUploadPhoto, onRemovePhoto, onUploadLicencia,
 }: {
   lang: Lang
   coaches: Coach[]
@@ -71,6 +71,7 @@ export default function CoachesTab({
   onUpdate: (id: string, c: Omit<Coach, 'id' | 'club_id'>) => void
   onDelete: (id: string) => void
   onUploadPhoto: (id: string, file: File) => Promise<void>
+  onRemovePhoto: (id: string) => Promise<void>
   onUploadLicencia: (id: string, file: File) => Promise<void>
 }) {
   const t = useT('CoachesTab', lang)
@@ -134,6 +135,7 @@ export default function CoachesTab({
                   photoUrl={c.photo_url}
                   initials={c.full_name.charAt(0).toUpperCase()}
                   onUpload={file => onUploadPhoto(c.id, file)}
+                  onRemove={() => onRemovePhoto(c.id)}
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-800 truncate">{c.full_name}</p>

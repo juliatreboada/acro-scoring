@@ -205,17 +205,18 @@ export function gymnastFullName(g: Gymnast): string {
 
 // ─── photo avatar ─────────────────────────────────────────────────────────────
 
-function PhotoAvatar({ photoUrl, initials, size = 'md', onUpload }: {
+function PhotoAvatar({ photoUrl, initials, size = 'md', onUpload, onRemove }: {
   photoUrl: string | null
   initials: string
   size?: 'sm' | 'md'
   onUpload: (file: File) => void
+  onRemove?: () => void
 }) {
   const ref = useRef<HTMLInputElement>(null)
   const dim = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm'
 
   return (
-    <div className={`relative shrink-0 ${dim}`}>
+    <div className={`relative shrink-0 ${dim} group`}>
       <div className={`${dim} rounded-full bg-slate-100 flex items-center justify-center font-semibold text-slate-500 overflow-hidden`}>
         {photoUrl
           ? <img src={photoUrl} alt="" className="w-full h-full object-cover" />
@@ -224,12 +225,22 @@ function PhotoAvatar({ photoUrl, initials, size = 'md', onUpload }: {
       <button
         type="button"
         onClick={() => ref.current?.click()}
-        className="absolute inset-0 rounded-full bg-black/0 hover:bg-black/25 flex items-center justify-center opacity-0 hover:opacity-100 transition-all cursor-pointer">
+        className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
         <svg className="w-3 h-3 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
           <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
         </svg>
       </button>
+      {photoUrl && onRemove && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onRemove() }}
+          className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10">
+          <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
       <input ref={ref} type="file" accept="image/*" className="hidden"
         onChange={e => { const f = e.target.files?.[0]; if (f) { onUpload(f); e.target.value = '' } }} />
     </div>
@@ -297,7 +308,7 @@ function GymnastForm({ lang, initial, onSave, onCancel }: {
 // ─── tab ─────────────────────────────────────────────────────────────────────
 
 export default function GymnastsTab({
-  lang, gymnasts, onAdd, onAddBulk, onUpdate, onDelete, onUploadPhoto, onUploadLicencia, onRemoveLicencia,
+  lang, gymnasts, onAdd, onAddBulk, onUpdate, onDelete, onUploadPhoto, onRemovePhoto, onUploadLicencia, onRemoveLicencia,
 }: {
   lang: Lang
   gymnasts: Gymnast[]
@@ -306,6 +317,7 @@ export default function GymnastsTab({
   onUpdate: (id: string, g: Omit<Gymnast, 'id' | 'club_id'>) => void
   onDelete: (id: string) => void
   onUploadPhoto: (id: string, file: File) => Promise<void>
+  onRemovePhoto: (id: string) => Promise<void>
   onUploadLicencia: (id: string, file: File) => Promise<void>
   onRemoveLicencia: (id: string) => Promise<void>
 }) {
@@ -411,6 +423,7 @@ export default function GymnastsTab({
                   photoUrl={g.photo_url}
                   initials={`${g.first_name[0]}${g.last_name_1[0]}`}
                   onUpload={(file) => onUploadPhoto(g.id, file)}
+                  onRemove={() => onRemovePhoto(g.id)}
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-800">{gymnastFullName(g)}</p>

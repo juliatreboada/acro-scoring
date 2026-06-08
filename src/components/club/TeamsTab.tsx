@@ -322,7 +322,7 @@ function TeamForm({
 }
 
 export default function TeamsTab({
-  lang, gymnasts, teams, ageGroupRules, agLabels, apparatus, apparatusRules, onAdd, onUpdate, onArchive, onRestore, onUploadPhoto,
+  lang, gymnasts, teams, ageGroupRules, agLabels, apparatus, apparatusRules, onAdd, onUpdate, onArchive, onRestore, onUploadPhoto, onRemovePhoto,
 }: {
   lang: Lang
   gymnasts: Gymnast[]
@@ -336,6 +336,7 @@ export default function TeamsTab({
   onArchive: (id: string) => void
   onRestore: (id: string) => void
   onUploadPhoto: (id: string, file: File) => Promise<void>
+  onRemovePhoto: (id: string) => Promise<void>
 }) {
   const t = useT('TeamsTab', lang)
   const [showAdd, setShowAdd] = useState(false)
@@ -417,6 +418,7 @@ export default function TeamsTab({
           initials={team.gymnast_display.charAt(0)}
           size="md"
           onUpload={(file) => onUploadPhoto(team.id, file)}
+          onRemove={() => onRemovePhoto(team.id)}
         />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-slate-800">{team.gymnast_display}</p>

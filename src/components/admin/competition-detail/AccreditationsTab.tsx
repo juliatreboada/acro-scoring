@@ -274,6 +274,7 @@ export default function AccreditationsTab({
   const [showGymnasts, setShowGymnasts] = useState(true)
   const [showCoaches, setShowCoaches]   = useState(true)
   const [showJudges, setShowJudges]     = useState(true)
+  const [photoFilter, setPhotoFilter]   = useState<'all' | 'with' | 'without'>('all')
 
   const clubMap     = useMemo(() => Object.fromEntries(clubs.map(c => [c.id, c.club_name])),    [clubs])
   const clubLogoMap = useMemo(() => Object.fromEntries(clubs.map(c => [c.id, c.avatar_url])), [clubs])
@@ -299,11 +300,14 @@ export default function AccreditationsTab({
     return result
   }, [competitionGymnasts, competitionCoaches, globalJudges, judgePool, clubMap, clubLogoMap, judgeClubMap])
 
-  const printPersons = useMemo(() => allPersons.filter(p =>
-    (p.type === 'gymnast' && showGymnasts) ||
-    (p.type === 'coach'   && showCoaches) ||
-    (p.type === 'judge'   && showJudges)
-  ), [allPersons, showGymnasts, showCoaches, showJudges])
+  const printPersons = useMemo(() => allPersons.filter(p => {
+    if (p.type === 'gymnast' && !showGymnasts) return false
+    if (p.type === 'coach'   && !showCoaches)  return false
+    if (p.type === 'judge'   && !showJudges)   return false
+    if (photoFilter === 'with'    && !p.photo_url) return false
+    if (photoFilter === 'without' &&  p.photo_url) return false
+    return true
+  }), [allPersons, showGymnasts, showCoaches, showJudges, photoFilter])
 
   // pick a preview person: first of the selected type, or sample
   const previewPerson: Person = useMemo(() => {
@@ -585,6 +589,19 @@ ${all.map(p => p.name ? cardHtml(p) : '<div class="card"></div>').join('\n')}
               ] as const).map(({ label, state, set: setter }) => (
                 <button key={label} onClick={() => setter(!state)}
                   className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${state ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="w-px h-4 bg-slate-200 shrink-0" />
+            <div className="flex gap-2">
+              {([
+                { value: 'all'     as const, label: t.filterAll         },
+                { value: 'with'    as const, label: t.filterWithPhoto    },
+                { value: 'without' as const, label: t.filterWithoutPhoto },
+              ]).map(({ value, label }) => (
+                <button key={value} onClick={() => setPhotoFilter(value)}
+                  className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${photoFilter === value ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}>
                   {label}
                 </button>
               ))}
