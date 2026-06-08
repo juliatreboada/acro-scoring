@@ -275,6 +275,15 @@ export default function AccreditationsTab({
   const [showCoaches, setShowCoaches]   = useState(true)
   const [showJudges, setShowJudges]     = useState(true)
   const [photoFilter, setPhotoFilter]   = useState<'all' | 'with' | 'without'>('all')
+  const [excludedIds, setExcludedIds]   = useState<Set<string>>(new Set())
+
+  function toggleExclude(key: string) {
+    setExcludedIds(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
 
   const clubMap     = useMemo(() => Object.fromEntries(clubs.map(c => [c.id, c.club_name])),    [clubs])
   const clubLogoMap = useMemo(() => Object.fromEntries(clubs.map(c => [c.id, c.avatar_url])), [clubs])
@@ -394,7 +403,7 @@ export default function AccreditationsTab({
 </div>`
     }
 
-    const all = [...printPersons]
+    const all = [...printPersons.filter(p => !excludedIds.has(`${p.type}-${p.id}`))]
     while (all.length % 4 !== 0) all.push({ id: `__pad_${all.length}`, name: '', initials: '', club_name: '', club_logo_url: null, photo_url: null, type: 'gymnast' as const })
 
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
@@ -607,12 +616,12 @@ ${all.map(p => p.name ? cardHtml(p) : '<div class="card"></div>').join('\n')}
               ))}
             </div>
           </div>
-          <button onClick={handlePrint} disabled={printPersons.length === 0}
+          <button onClick={handlePrint} disabled={printPersons.filter(p => !excludedIds.has(`${p.type}-${p.id}`)).length === 0}
             className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-xl hover:bg-slate-700 disabled:opacity-40 transition-colors">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.75 19.5m.97-5.671L9 19.5m6.75-5.671L15.75 19.5m-.97-5.671L17.25 19.5M9 6.75h6M9 10.5h6m-6 3.75h6M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
             </svg>
-            {t.printAll}
+            {t.printAll} ({printPersons.filter(p => !excludedIds.has(`${p.type}-${p.id}`)).length})
           </button>
         </div>
 
@@ -620,19 +629,45 @@ ${all.map(p => p.name ? cardHtml(p) : '<div class="card"></div>').join('\n')}
           <p className="text-sm text-slate-400 text-center py-8">{t.empty}</p>
         ) : (
           <div className="flex flex-wrap gap-3">
-            {printPersons.map(person => (
-              <div key={`${person.type}-${person.id}`}
-                style={{ width: THUMB_W, height: THUMB_H, position: 'relative', overflow: 'hidden', borderRadius: 8, flexShrink: 0 }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, transformOrigin: 'top left', transform: `scale(${THUMB_SCALE})` }}>
-                  <CardPreview
-                    person={person}
-                    config={config}
-                    competition={competition}
-                    typeLabel={labelFor(person.type)}
-                  />
+            {printPersons.map(person => {
+              const key = `${person.type}-${person.id}`
+              const excluded = excludedIds.has(key)
+              return (
+                <div key={key} className="group relative cursor-pointer"
+                  style={{ width: THUMB_W, height: THUMB_H, borderRadius: 8, flexShrink: 0 }}
+                  onClick={() => toggleExclude(key)}
+                  title={excluded ? t.clickToInclude : t.clickToExclude}>
+                  <div style={{ position: 'absolute', top: 0, left: 0, width: THUMB_W, height: THUMB_H, overflow: 'hidden', borderRadius: 8, opacity: excluded ? 0.35 : 1, transition: 'opacity 0.15s' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, transformOrigin: 'top left', transform: `scale(${THUMB_SCALE})` }}>
+                      <CardPreview
+                        person={person}
+                        config={config}
+                        competition={competition}
+                        typeLabel={labelFor(person.type)}
+                      />
+                    </div>
+                  </div>
+                  {excluded ? (
+                    <div style={{ position: 'absolute', inset: 0, borderRadius: 8, border: '2px dashed #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239,68,68,0.08)' }}>
+                      <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ position: 'absolute', inset: 0, borderRadius: 8, background: 'rgba(0,0,0,0)', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', padding: 4 }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(239,68,68,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

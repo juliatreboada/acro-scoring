@@ -1032,6 +1032,8 @@ export const AccreditationsTab = {
   filterAll: 'All',
   filterWithPhoto: 'With photo',
   filterWithoutPhoto: 'Without photo',
+  clickToExclude: 'Click to exclude from print',
+  clickToInclude: 'Click to include again',
 }
 
 // app/login/page.tsx
