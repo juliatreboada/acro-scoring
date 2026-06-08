@@ -199,6 +199,11 @@ export function useClubData() {
     setGymnasts(prev => prev.map(g => g.id === id ? { ...g, licencia_url: null } : g))
   }
 
+  async function handleRemoveGymnastPhoto(id: string) {
+    await supabase.from('gymnasts').update({ photo_url: null } as Record<string, null>).eq('id', id)
+    setGymnasts(prev => prev.map(g => g.id === id ? { ...g, photo_url: null } : g))
+  }
+
   // ── coaches ───────────────────────────────────────────────────────────────────
   async function handleAddCoach(c: Omit<Coach, 'id' | 'club_id'>) {
     const { data, error } = await (supabase as any).from('coaches').insert({ ...c, club_id: clubId }).select().single()
@@ -227,6 +232,11 @@ export function useClubData() {
     if (!url) return
     await (supabase as any).from('coaches').update({ photo_url: url }).eq('id', id)
     setCoaches(prev => prev.map(c => c.id === id ? { ...c, photo_url: url } : c))
+  }
+
+  async function handleRemoveCoachPhoto(id: string) {
+    await (supabase as any).from('coaches').update({ photo_url: null }).eq('id', id)
+    setCoaches(prev => prev.map(c => c.id === id ? { ...c, photo_url: null } : c))
   }
 
   async function handleUploadCoachLicencia(id: string, file: File) {
@@ -310,6 +320,11 @@ export function useClubData() {
     if (!url) return
     await supabase.from('teams').update({ photo_url: url }).eq('id', id)
     setTeams(prev => prev.map(t => t.id === id ? { ...t, photo_url: url } : t))
+  }
+
+  async function handleRemoveTeamPhoto(id: string) {
+    await supabase.from('teams').update({ photo_url: null }).eq('id', id)
+    setTeams(prev => prev.map(t => t.id === id ? { ...t, photo_url: null } : t))
   }
 
   // ── RG registrations ─────────────────────────────────────────────────────────
@@ -516,11 +531,11 @@ export function useClubData() {
     actionError,
     // handlers
     handleAddGymnast, handleAddGymnastsBulk, handleUpdateGymnast, handleDeleteGymnast,
-    handleUploadGymnastPhoto, handleUploadLicencia, handleRemoveLicencia,
+    handleUploadGymnastPhoto, handleRemoveGymnastPhoto, handleUploadLicencia, handleRemoveLicencia,
     handleAddCoach, handleUpdateCoach, handleDeleteCoach,
-    handleUploadCoachPhoto, handleUploadCoachLicencia,
+    handleUploadCoachPhoto, handleRemoveCoachPhoto, handleUploadCoachLicencia,
     handleRegisterCoach, handleUnregisterCoach,
-    handleAddTeam, handleUpdateTeam, handleDeleteTeam, handleRestoreTeam, handleUploadTeamPhoto,
+    handleAddTeam, handleUpdateTeam, handleDeleteTeam, handleRestoreTeam, handleUploadTeamPhoto, handleRemoveTeamPhoto,
     handleRGRegister, handleRGUploadPaymentDoc, handleSetRGMusic,
     handleRegister, handleDropout,
     handleInviteJudge, handleUpdateJudge, handleDeleteJudge, handleUploadJudgePhoto,

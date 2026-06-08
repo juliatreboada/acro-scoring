@@ -38,6 +38,7 @@ export type ClubPortalProps = {
   onUpdateGymnast: (id: string, g: Omit<Gymnast, 'id' | 'club_id'>) => void
   onDeleteGymnast: (id: string) => void
   onUploadGymnastPhoto: (id: string, file: File) => Promise<void>
+  onRemoveGymnastPhoto: (id: string) => Promise<void>
   onUploadLicencia: (id: string, file: File) => Promise<void>
   onRemoveLicencia: (id: string) => Promise<void>
   // coaches
@@ -45,6 +46,7 @@ export type ClubPortalProps = {
   onUpdateCoach: (id: string, c: Omit<Coach, 'id' | 'club_id'>) => void
   onDeleteCoach: (id: string) => void
   onUploadCoachPhoto: (id: string, file: File) => Promise<void>
+  onRemoveCoachPhoto: (id: string) => Promise<void>
   onUploadCoachLicencia: (id: string, file: File) => Promise<void>
   onRegisterCoach: (competitionId: string, coachId: string) => void
   onUnregisterCoach: (competitionId: string, coachId: string) => void
@@ -54,6 +56,7 @@ export type ClubPortalProps = {
   onDeleteTeam: (id: string) => void
   onRestoreTeam: (id: string) => void
   onUploadTeamPhoto: (id: string, file: File) => Promise<void>
+  onRemoveTeamPhoto: (id: string) => Promise<void>
   // judges
   onInviteJudge: (j: { full_name: string; email: string; phone?: string; licence?: string; sport_type: string }) => Promise<void>
   onUpdateJudge: (id: string, j: Omit<Judge, 'id' | 'avatar_url'>) => void
@@ -76,9 +79,9 @@ export type ClubPortalProps = {
 
 export default function ClubPortal({
   lang, club, gymnasts, coaches, competitionCoaches, teams, judges, nominations, competitions, entries, music, agLabels, ageGroupRules, apparatus, apparatusRules, tsReviewStatuses,
-  onAddGymnast, onAddGymnastsBulk, onUpdateGymnast, onDeleteGymnast, onUploadGymnastPhoto, onUploadLicencia, onRemoveLicencia,
-  onAddCoach, onUpdateCoach, onDeleteCoach, onUploadCoachPhoto, onUploadCoachLicencia, onRegisterCoach, onUnregisterCoach,
-  onAddTeam, onUpdateTeam, onDeleteTeam, onRestoreTeam, onUploadTeamPhoto,
+  onAddGymnast, onAddGymnastsBulk, onUpdateGymnast, onDeleteGymnast, onUploadGymnastPhoto, onRemoveGymnastPhoto, onUploadLicencia, onRemoveLicencia,
+  onAddCoach, onUpdateCoach, onDeleteCoach, onUploadCoachPhoto, onRemoveCoachPhoto, onUploadCoachLicencia, onRegisterCoach, onUnregisterCoach,
+  onAddTeam, onUpdateTeam, onDeleteTeam, onRestoreTeam, onUploadTeamPhoto, onRemoveTeamPhoto,
   onInviteJudge, onUpdateJudge, onDeleteJudge, onUploadJudgePhoto,
   onRegister, onDropout, onSetFile,
   onNominate, onRemoveNomination,
@@ -160,19 +163,21 @@ export default function ClubPortal({
           <GymnastsTab lang={lang} gymnasts={gymnasts}
             onAdd={onAddGymnast} onAddBulk={onAddGymnastsBulk}
             onUpdate={onUpdateGymnast} onDelete={onDeleteGymnast}
-            onUploadPhoto={onUploadGymnastPhoto} onUploadLicencia={onUploadLicencia} onRemoveLicencia={onRemoveLicencia} />
+            onUploadPhoto={onUploadGymnastPhoto} onRemovePhoto={onRemoveGymnastPhoto}
+            onUploadLicencia={onUploadLicencia} onRemoveLicencia={onRemoveLicencia} />
         )}
         {activeTab === 'coaches' && (
           <CoachesTab lang={lang} coaches={coaches}
             onAdd={onAddCoach} onUpdate={onUpdateCoach} onDelete={onDeleteCoach}
-            onUploadPhoto={onUploadCoachPhoto} onUploadLicencia={onUploadCoachLicencia} />
+            onUploadPhoto={onUploadCoachPhoto} onRemovePhoto={onRemoveCoachPhoto}
+            onUploadLicencia={onUploadCoachLicencia} />
         )}
         {activeTab === 'teams' && (
           <TeamsTab lang={lang} gymnasts={gymnasts} teams={teams}
             ageGroupRules={ageGroupRules} agLabels={agLabels}
             onAdd={onAddTeam} onUpdate={onUpdateTeam} onArchive={onDeleteTeam} onRestore={onRestoreTeam}
             apparatus={apparatus} apparatusRules={apparatusRules}
-            onUploadPhoto={onUploadTeamPhoto} />
+            onUploadPhoto={onUploadTeamPhoto} onRemovePhoto={onRemoveTeamPhoto} />
         )}
         {activeTab === 'competitions' && (
           <CompetitionsTab lang={lang} clubId={club.id} clubName={club.club_name}
