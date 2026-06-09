@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '../scoring/types'
 import type { Sheet, ReviewElement, ElementType, TsReviewStatus } from './types'
-import { categoryLabel } from '@/components/admin/types'
+import { categoryLabel, CATEGORY_SIZE } from '@/components/admin/types'
+import { srPenaltyForAgeGroup } from '@/components/scoring/DJElementsShared'
 import { useT } from '@/lib/useT'
 import { DJReview as DJReviewT } from '@/locales/en'
 
@@ -432,7 +433,7 @@ function ReviewActions({ sheet, myJudgeId, lang, onMarkChecked, onMarkIncorrect,
 // ─── sheet panel ──────────────────────────────────────────────────────────────
 
 function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onEditElement,
-  onMarkChecked, onMarkIncorrect, onDJ2Confirm, onReopen }: {
+  onMarkChecked, onMarkIncorrect, onDJ2Confirm, onReopen, onToggleMissingIndividualSR }: {
   sheet: Sheet
   myJudgeId: string
   lang: Lang
@@ -443,11 +444,16 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
   onMarkIncorrect: (sheetId: string, comment: string) => Promise<void>
   onDJ2Confirm: (sheetId: string, decision: 'checked' | 'incorrect', comment: string) => Promise<void>
   onReopen: (sheetId: string) => Promise<void>
+  onToggleMissingIndividualSR: (sheetId: string) => Promise<void>
 }) {
   const t = useT('DJReview', lang)
   const isLocked = sheet.reviewStatus === 'checked' || sheet.reviewStatus === 'incorrect' || sheet.reviewStatus === 'awaiting_dj2'
   const integerMode = usesIntegerDifficulty(sheet.ageGroup)
-  const totalD = sheet.elements.reduce((s, el) => s + el.difficultyValue, 0)
+  const gymnastsCount = CATEGORY_SIZE[sheet.category] ?? 1
+  const srPenalty = srPenaltyForAgeGroup(sheet.ageGroup)
+  const totalD = sheet.elements.reduce((s, el) =>
+    s + (el.elementType === 'individual' ? el.difficultyValue / gymnastsCount : el.difficultyValue), 0)
+  const totalPenalty = sheet.missingIndividualSR ? srPenalty : 0
   const [editingId, setEditingId] = useState<string | null>(null)
 
   return (
@@ -535,9 +541,30 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
         {sheet.elements.length > 0 && (
           <div className="flex justify-between items-center px-3 py-2 bg-slate-50 rounded-xl border border-slate-100 shrink-0">
             <span className="text-xs text-slate-500">{t.totalDifficulty}</span>
-            <span className="text-sm font-bold text-slate-700 tabular-nums">{totalD.toFixed(2)}</span>
+            <div className="flex items-center gap-2">
+              {totalPenalty > 0 && (
+                <span className="text-xs font-mono text-red-500 tabular-nums">−{totalPenalty.toFixed(2)} SR</span>
+              )}
+              <span className="text-sm font-bold text-slate-700 tabular-nums">{totalD.toFixed(2)}</span>
+            </div>
           </div>
         )}
+
+        {/* Missing individual elements SR penalty toggle */}
+        <button
+          onClick={() => onToggleMissingIndividualSR(sheet.id)}
+          className={[
+            'flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-all shrink-0',
+            sheet.missingIndividualSR
+              ? 'bg-red-50 border-red-200 text-red-700'
+              : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300',
+          ].join(' ')}
+        >
+          <div className={['w-3.5 h-3.5 rounded border shrink-0 flex items-center justify-center', sheet.missingIndividualSR ? 'bg-red-500 border-red-500' : 'border-slate-300'].join(' ')}>
+            {sheet.missingIndividualSR && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+          </div>
+          <span>{t.missingIndividualSR} <span className="font-normal opacity-70">−{srPenalty.toFixed(2)}</span></span>
+        </button>
 
         {!isLocked && (
           <ElementForm lang={lang} integerMode={integerMode} onAdd={(el) => onAddElement(sheet.id, el)} />
@@ -779,6 +806,23 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
     })
   }
 
+  async function handleToggleMissingIndividualSR(sheetId: string) {
+    const sheet = sheets.find((s) => s.id === sheetId)
+    if (!sheet) return
+    const next = !sheet.missingIndividualSR
+
+    if (!practiceMode) {
+      const routineType = sheet.routineType as 'Balance' | 'Dynamic' | 'Combined'
+      await supabase.from('ts_review_status').upsert({
+        team_id: sheet.teamId, competition_id: sheet.competitionId,
+        routine_type: routineType,
+        missing_individual_sr: next,
+      }, { onConflict: 'team_id,competition_id,routine_type' })
+    }
+
+    updateSheetReview(sheetId, { missingIndividualSR: next })
+  }
+
   function routineLabel(rt: string) {
     return { Balance: t.routineBalance, Dynamic: t.routineDynamic, Combined: t.routineCombined }[rt] ?? rt
   }
@@ -840,7 +884,7 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
                     {sheet.ageGroup} · {categoryLabel(sheet.category, lang)} · {routineLabel(sheet.routineType)}
                     {sheet.elements.length > 0 && (
                       <span className="ml-2 text-slate-300">
-                        {sheet.elements.length} el · D {sheet.elements.reduce((s, e) => s + e.difficultyValue, 0).toFixed(2)}
+                        {sheet.elements.length} el · D {sheet.elements.reduce((s, e) => s + (e.elementType === 'individual' ? e.difficultyValue / (CATEGORY_SIZE[sheet.category] ?? 1) : e.difficultyValue), 0).toFixed(2)}
                       </span>
                     )}
                   </p>
@@ -888,6 +932,7 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
               onMarkIncorrect={handleMarkIncorrect}
               onDJ2Confirm={handleDJ2Confirm}
               onReopen={handleReopen}
+              onToggleMissingIndividualSR={handleToggleMissingIndividualSR}
             />
           </div>
         </div>

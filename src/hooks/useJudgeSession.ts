@@ -267,7 +267,7 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
         })
       }
 
-      const [teamsRes, musicRes, elementsRes, entryDisplayRes] = await Promise.all([
+      const [teamsRes, musicRes, elementsRes, entryDisplayRes, reviewStatusRes] = await Promise.all([
         teamIds.length > 0
           ? supabase.from('teams').select('id, gymnast_display, age_group, category').in('id', teamIds)
           : Promise.resolve({ data: [] as { id: string; gymnast_display: string; age_group: string; category: string }[] }),
@@ -287,11 +287,22 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
         teamIds.length > 0
           ? supabase.from('competition_entries').select('team_id, gymnast_display').eq('competition_id', (session as any).competition_id).in('team_id', teamIds)
           : Promise.resolve({ data: [] as { team_id: string; gymnast_display: string | null }[] }),
+        teamIds.length > 0
+          ? supabase.from('ts_review_status')
+              .select('team_id, routine_type, missing_individual_sr')
+              .eq('competition_id', (session as any).competition_id)
+              .in('team_id', teamIds)
+          : Promise.resolve({ data: [] as { team_id: string; routine_type: string; missing_individual_sr: boolean }[] }),
       ])
 
       const entryDisplay = Object.fromEntries((entryDisplayRes.data ?? []).map(e => [e.team_id, e.gymnast_display]))
       const teamMap: Record<string, { gymnast_display: string; age_group: string; category: string }> =
         Object.fromEntries((teamsRes.data ?? []).map(t => [t.id, { ...t, gymnast_display: entryDisplay[t.id] ?? t.gymnast_display }]))
+
+      const missingIndividualSRMap: Record<string, boolean> = {}
+      for (const r of ((reviewStatusRes.data ?? []) as { team_id: string; routine_type: string; missing_individual_sr: boolean }[])) {
+        if (r.missing_individual_sr) missingIndividualSRMap[`${r.team_id}:${r.routine_type}`] = true
+      }
 
       const tsUrlMap: Record<string, string | null> = {}
       for (const m of ((musicRes.data ?? []) as { team_id: string; routine_type: 'Balance' | 'Dynamic' | 'Combined'; ts_path: string | null }[])) {
@@ -321,9 +332,10 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
         ageGroup:    agLabels[teamMap[o.team_id]?.age_group ?? session.age_group] ?? teamMap[o.team_id]?.age_group ?? session.age_group,
         category:    teamMap[o.team_id]?.category  ?? session.category,
         routineType: teamRoutineTypeMap[o.team_id] ?? session.routine_type,
-        skipped:     false,
-        tsUrl:       tsUrlMap[o.team_id] ?? null,
-        elements:    elementsMap[o.team_id] ?? [],
+        skipped:              false,
+        tsUrl:                tsUrlMap[o.team_id] ?? null,
+        elements:             elementsMap[o.team_id] ?? [],
+        missingIndividualSR:  missingIndividualSRMap[`${o.team_id}:${teamRoutineTypeMap[o.team_id] ?? session.routine_type}`] ?? false,
       }))
 
       const builtJudgeScores: Record<string, JudgeScore[]> = {}

@@ -32,6 +32,7 @@ type TeamData = {
 type SessionData = {
   age_group: string       // raw ID — used for DB filtering (ranking queries)
   age_group_label: string // resolved display name
+  age_group_level: string // e.g. 'Escolar', 'Base', 'Nacional', 'FIG'
   category: string
   routine_type: string
   section_id: string
@@ -294,12 +295,13 @@ export default function TVPage() {
       if (sess) {
         const { data: agRule } = await supabase
           .from('age_group_rules')
-          .select('age_group')
+          .select('age_group, level')
           .eq('id', sess.age_group)
           .maybeSingle()
         setSession({
           age_group:       sess.age_group,
           age_group_label: agRule?.age_group ?? sess.age_group,
+          age_group_level: (agRule as any)?.level ?? '',
           category:        sess.category,
           routine_type:    sess.routine_type,
           section_id:      sess.section_id,
@@ -363,13 +365,14 @@ export default function TVPage() {
     ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
 
   const isRG = competition?.sport_type === 'rg'
+  const srPenalty = (session?.age_group_level === 'Escolar' && session?.age_group_label !== 'Absoluto') ? 0.5 : 1.0
 
   const allPenalties = isRG
     ? (result?.rj_penalty_detail
         ? activeRJPenalties(result.rj_penalty_detail, result.rj_penalty ?? 0, lang)
         : [])
     : [
-        ...(result?.dj_penalty_detail ? activeDJPenalties(result.dj_penalty_detail, lang) : []),
+        ...(result?.dj_penalty_detail ? activeDJPenalties(result.dj_penalty_detail, lang, srPenalty) : []),
         ...(result?.cjp_penalty_detail ? activePenalties(result.cjp_penalty_detail, lang) : []),
       ]
 

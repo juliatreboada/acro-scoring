@@ -30,10 +30,17 @@ export function getElementConfig(element: TsElement): ElementConfig {
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-export function calcElementPenalty(flag: ElementFlag): number {
+// Escolar level (FGX ruleset) uses SR penalty 0.5; all other levels use 1.0.
+// Absoluto age group is excluded from this rule even if it appears at Escolar level.
+export function srPenaltyForAgeGroup(ageGroup: string): number {
+  const lower = ageGroup.toLowerCase()
+  return lower.includes('escolar') && !lower.includes('absoluto') ? 0.5 : 1.0
+}
+
+export function calcElementPenalty(flag: ElementFlag, srPenalty = 1.0): number {
   let p = 0
   p += flag.tfCount * 0.3
-  if (flag.srNotDone) p += 1.0
+  if (flag.srNotDone) p += srPenalty
   if (flag.forbiddenElement) p += 1.0
   if (flag.landingWithoutSupport) p += 0.5
   return p
@@ -43,17 +50,20 @@ export function calcDJTotals(
   elements: TsElement[],
   extraElements: TsElement[],
   flags: ElementFlags,
-  incorrectTs: boolean
+  incorrectTs: boolean,
+  srPenalty = 1.0,
+  missingIndividualSR = false,
 ): { difficulty: number; penalty: number } {
   const all = [...elements, ...extraElements]
   let difficulty = 0
   let penalty = incorrectTs ? 0.3 : 0
+  if (missingIndividualSR) penalty += srPenalty
   for (const el of all) {
     const mainFlag = flags[`${el.id}:1`]
     if (mainFlag?.isDone === true) difficulty += el.difficultyValue
     for (let r = 1; r <= MAX_RETRIES + 1; r++) {
       const f = flags[`${el.id}:${r}`]
-      if (f) penalty += calcElementPenalty(f)
+      if (f) penalty += calcElementPenalty(f, srPenalty)
     }
   }
   return {
@@ -322,12 +332,14 @@ export function DualKeypad({ lang, onSubmit }: {
 // ─── phone DJ elements list ───────────────────────────────────────────────────
 
 export function PhoneDJElementsList({ lang, elements, extraElements, flags, incorrectTs,
-  onFlagChange, onOpenRetry, onAddElement, onLabelChange, onTypeChange, onToggleIncorrectTs, onSubmit }: {
+  onFlagChange, onOpenRetry, onAddElement, onLabelChange, onTypeChange, onToggleIncorrectTs, onSubmit, ageGroup = '', missingIndividualSR = false }: {
   lang: Lang
   elements: TsElement[]
   extraElements: TsElement[]
   flags: ElementFlags
   incorrectTs: boolean
+  ageGroup?: string
+  missingIndividualSR?: boolean
   onFlagChange: (elementId: string, attemptNumber: number, patch: Partial<ElementFlag>) => void
   onOpenRetry: (elementId: string, nextAttemptNumber: number) => void
   onAddElement: () => void
@@ -338,7 +350,7 @@ export function PhoneDJElementsList({ lang, elements, extraElements, flags, inco
 }) {
   const t = useT('DJElementsShared', lang)
   const allElements = [...elements, ...extraElements]
-  const { difficulty, penalty } = calcDJTotals(elements, extraElements, flags, incorrectTs)
+  const { difficulty, penalty } = calcDJTotals(elements, extraElements, flags, incorrectTs, srPenaltyForAgeGroup(ageGroup), missingIndividualSR ?? false)
 
   return (
     <div className="px-4 space-y-2 pb-4">

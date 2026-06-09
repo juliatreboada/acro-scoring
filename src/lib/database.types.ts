@@ -1526,6 +1526,7 @@ export type Database = {
           dj2_at: string | null
           final_comment: string | null
           notified_at: string | null
+          missing_individual_sr: boolean
         }
         Insert: {
           team_id: string
@@ -1542,6 +1543,7 @@ export type Database = {
           dj2_at?: string | null
           final_comment?: string | null
           notified_at?: string | null
+          missing_individual_sr?: boolean
         }
         Update: {
           team_id?: string
@@ -1558,6 +1560,7 @@ export type Database = {
           dj2_at?: string | null
           final_comment?: string | null
           notified_at?: string | null
+          missing_individual_sr?: boolean
         }
         Relationships: [
           {

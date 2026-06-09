@@ -184,9 +184,8 @@ function SessionOrderCard({
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100">
           <p className="text-sm font-semibold text-slate-700">
-            {highlightText(`${(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · ${categoryLabel(session.category, lang)}`, highlightQuery)}
+            {highlightText(`${(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · ${categoryLabel(session.category, lang)} · ${session.routine_type}`, highlightQuery)}
           </p>
-          <p className="text-xs text-slate-400 mt-0.5">{highlightText(session.routine_type, highlightQuery)}</p>
         </div>
         <div className="px-4 py-8 flex flex-col items-center text-center gap-1.5">
           <svg className="w-8 h-8 text-slate-200 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -209,9 +208,8 @@ function SessionOrderCard({
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100">
           <p className="text-sm font-semibold text-slate-700">
-            {highlightText(`${(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · ${categoryLabel(session.category, lang)}`, highlightQuery)}
+            {highlightText(`${(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · ${categoryLabel(session.category, lang)} · ${session.routine_type}`, highlightQuery)}
           </p>
-          <p className="text-xs text-slate-400 mt-0.5">{highlightText(session.routine_type, highlightQuery)}</p>
         </div>
         <p className="px-4 py-6 text-sm text-slate-300 text-center">{t.noSessions}</p>
       </div>
@@ -220,19 +218,10 @@ function SessionOrderCard({
 
   return (
     <div className="bg-white rounded-2xl border-2 border-blue-200 overflow-hidden">
-      <div className="px-4 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
-        <div>
-          <p className="text-sm font-semibold text-slate-700">
-            {highlightText(`${(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · ${categoryLabel(session.category, lang)}`, highlightQuery)}
-          </p>
-          <p className="text-xs text-slate-400 mt-0.5">{highlightText(session.routine_type, highlightQuery)}</p>
-        </div>
-        <span className="flex items-center gap-1.5 text-xs font-semibold text-blue-600">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-          </svg>
-          Published
-        </span>
+      <div className="px-4 py-3 bg-blue-50 border-b border-blue-100">
+        <p className="text-sm font-semibold text-slate-700">
+          {highlightText(`${(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · ${categoryLabel(session.category, lang)} · ${session.routine_type}`, highlightQuery)}
+        </p>
       </div>
       <ol className="divide-y divide-slate-50">
         {fullOrder.map((teamId, idx) => {
@@ -684,7 +673,7 @@ export default function StartingOrderView({
   }
 
   return (
-    <div ref={rootRef} className="so-print-area h-screen bg-slate-50 flex flex-col overflow-hidden print:h-auto print:block">
+    <div ref={rootRef} className="so-print-area h-screen bg-slate-50 flex flex-col overflow-hidden print:h-auto print:overflow-visible print:block">
       {/* header */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-3.5">
@@ -790,7 +779,7 @@ export default function StartingOrderView({
       </div>
 
       {/* content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto print:overflow-visible print:h-auto">
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6">
           {panels.length === 1 ? (
           (() => {

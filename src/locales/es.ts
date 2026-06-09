@@ -593,6 +593,7 @@ export const DJReview = {
     routineDynamic: 'Dinámico',
     routineCombined: 'Combinado',
     totalDifficulty: 'D total',
+    missingIndividualSR: 'Sin elementos individuales declarados (penalización SR)',
     refresh: 'Actualizar',
     back: 'Volver',
   }
