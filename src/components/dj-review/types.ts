@@ -31,4 +31,5 @@ export type Sheet = {
   dj2Id: string | null            // judge who confirmed/overrode
   finalComment: string | null     // comment sent to club (when incorrect)
   hasTwoDJs: boolean              // whether 2 DJs share this panel
+  missingIndividualSR: boolean    // reviewer flagged: no individual elements declared, apply SR penalty
 }

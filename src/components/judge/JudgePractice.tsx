@@ -54,6 +54,7 @@ const MOCK_SHEET: Sheet = {
   dj2Id: null,
   finalComment: null,
   hasTwoDJs: true,
+  missingIndividualSR: false,
 }
 
 function makeScoringPerformance(resetKey: number): ScoringPerformance {

@@ -18,6 +18,7 @@ export type Performance = {
   routineType: string
   position: number
   tsUrl?: string | null
+  missingIndividualSR?: boolean
 }
 
 // ─── EJ types ─────────────────────────────────────────────────────────────────
@@ -98,6 +99,8 @@ export type ScoringPerformance = {
   rankingMergeGroupId?: string | null
   mergeLabelEs?: string | null
   mergeLabelEn?: string | null
+  /** Flagged by TS reviewer: team declared no individual elements, SR penalty applies. */
+  missingIndividualSR?: boolean
 }
 
 export type JudgeScore = {

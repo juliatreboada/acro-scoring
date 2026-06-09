@@ -181,7 +181,7 @@ function DJReviewPage() {
           .in('team_id', teamIds).in('competition_id', [...validCompIds])
           .order('position'),
         supabase.from('ts_review_status')
-          .select('team_id, competition_id, routine_type, status, dj1_id, dj1_decision, dj1_comment, dj2_id, final_comment')
+          .select('team_id, competition_id, routine_type, status, dj1_id, dj1_decision, dj1_comment, dj2_id, final_comment, missing_individual_sr')
           .in('team_id', teamIds).in('competition_id', [...validCompIds]),
         supabase.from('competition_entries')
           .select('team_id, competition_id, gymnast_display')
@@ -205,7 +205,7 @@ function DJReviewPage() {
       type RawElement = { id: string; team_id: string; competition_id: string; routine_type: string; position: number; label: string; element_type: string; is_static: boolean; difficulty_value: number }
       const rawElements = (elementsRes.data ?? []) as RawElement[]
 
-      type RawReview = { team_id: string; competition_id: string; routine_type: string; status: string; dj1_id: string | null; dj1_decision: string | null; dj1_comment: string | null; dj2_id: string | null; final_comment: string | null }
+      type RawReview = { team_id: string; competition_id: string; routine_type: string; status: string; dj1_id: string | null; dj1_decision: string | null; dj1_comment: string | null; dj2_id: string | null; final_comment: string | null; missing_individual_sr: boolean }
       const rawReviews = (reviewRes.data ?? []) as RawReview[]
 
       const parseTimelineOrder = (value: unknown): number | null => {
@@ -278,9 +278,10 @@ function DJReviewPage() {
           dj1Id:         reviewRow?.dj1_id ?? null,
           dj1Decision:   (reviewRow?.dj1_decision ?? null) as 'checked' | 'incorrect' | null,
           dj1Comment:    reviewRow?.dj1_comment ?? null,
-          dj2Id:         reviewRow?.dj2_id ?? null,
-          finalComment:  reviewRow?.final_comment ?? null,
+          dj2Id:              reviewRow?.dj2_id ?? null,
+          finalComment:       reviewRow?.final_comment ?? null,
           hasTwoDJs,
+          missingIndividualSR: reviewRow?.missing_individual_sr ?? false,
           __sectionOrder: sectionOrder,
           __sessionOrder: sessionOrder,
           __teamOrder: teamOrder,

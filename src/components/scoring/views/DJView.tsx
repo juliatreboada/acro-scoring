@@ -6,7 +6,7 @@ import { DEFAULT_FLAG } from '../types'
 import type { PanelJudge, JudgeScore, RoutineResult, ScoreDetail } from '../types'
 import { ScoreGrid } from '../CJPTabletShell'
 import { ScoringPerformanceHeader } from '../../shared/ScoringPerformanceHeader'
-import { MAX_RETRIES, getElementConfig, calcDJTotals, maxAttemptInFlags } from '../DJElementsShared'
+import { MAX_RETRIES, getElementConfig, calcDJTotals, srPenaltyForAgeGroup, maxAttemptInFlags } from '../DJElementsShared'
 import type { ElementConfig } from '../DJElementsShared'
 import { useT } from '@/lib/useT'
 
@@ -379,7 +379,7 @@ export default function DJView({ currentPerf, lang, elements, mode = 'elements',
   }
 
   function handleSubmitElements() {
-    const { difficulty, penalty } = calcDJTotals(orderedAll, [], flags, incorrectTs)
+    const { difficulty, penalty } = calcDJTotals(orderedAll, [], flags, incorrectTs, srPenaltyForAgeGroup(currentPerf?.ageGroup ?? ''), currentPerf?.missingIndividualSR ?? false)
     const extraElements = orderedAll.filter(el => !elements.some(e => e.id === el.id))
     setSubmittedDifficulty(difficulty)
     setSubmittedPenalty(penalty)
@@ -450,7 +450,7 @@ export default function DJView({ currentPerf, lang, elements, mode = 'elements',
     )
   }
 
-  const { difficulty, penalty } = calcDJTotals(orderedAll, [], flags, incorrectTs)
+  const { difficulty, penalty } = calcDJTotals(orderedAll, [], flags, incorrectTs, srPenaltyForAgeGroup(currentPerf.ageGroup), currentPerf.missingIndividualSR ?? false)
 
   // ── keyboard mode: keypad view, PDF shows alongside on wide screens ──
   if (mode === 'keyboard') {

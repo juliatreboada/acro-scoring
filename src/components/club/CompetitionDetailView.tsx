@@ -529,10 +529,6 @@ export function CompetitionDetailView({
           <div className="space-y-3">
             {eligibleTeams.map((team) => {
               const entry = entryFor(team.id)
-              const missingLicencia = (team.gymnast_ids ?? []).some(gid => {
-                const g = gymnasts.find(x => x.id === gid)
-                return !g?.licencia_url
-              })
               return (
                 <div key={team.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
                   <div className="flex items-center justify-between gap-3 px-4 py-3">
@@ -544,11 +540,6 @@ export function CompetitionDetailView({
                         <p className="text-sm font-semibold text-slate-800">{team.gymnast_display}</p>
                         {entry?.dropped_out && (
                           <span className="text-xs font-semibold px-2 py-0.5 bg-red-50 text-red-400 rounded-full">{t.dropout}</span>
-                        )}
-                        {missingLicencia && (
-                          <span title={t.licenciaWarningFull} className="text-xs font-semibold px-2 py-0.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-full">
-                            ⚠ {t.licenciaWarning}
-                          </span>
                         )}
                       </div>
                       {(() => {

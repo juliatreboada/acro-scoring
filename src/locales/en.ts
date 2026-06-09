@@ -595,6 +595,7 @@ export const DJReview = {
     routineDynamic: 'Dynamic',
     routineCombined: 'Combined',
     totalDifficulty: 'Total D',
+    missingIndividualSR: 'No individual elements declared (SR penalty)',
     refresh: 'Refresh',
     back: 'Back',
   }

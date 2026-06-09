@@ -7,7 +7,7 @@ import type { PanelJudge, ScoringPerformance, JudgeScore, RoutineResult, Penalty
 import { calcCjpPenalty, DEFAULT_PENALTY } from './types'
 import CJPTabletShell, { ScoreGrid } from './CJPTabletShell'
 import { PenaltyPanel } from '../shared/CJPPenaltyPanel'
-import { calcDJTotals, DualKeypad as DJDualKeypad, PhoneDJElementsList } from './DJElementsShared'
+import { calcDJTotals, srPenaltyForAgeGroup, DualKeypad as DJDualKeypad, PhoneDJElementsList } from './DJElementsShared'
 import { calcEJScore, DJEJTabContent, DJTabContent, EJKeypad, EJElementRow, CombinedElementRow } from './DJEJElementsShared'
 import AJScoringPanel from './AJScoringPanel'
 import { ScoringPerformanceHeader } from '../shared/ScoringPerformanceHeader'
@@ -151,7 +151,7 @@ function CJPPhonePanel({
   const t = useT('ScoringView', lang)
   const bothElements = hasDJ && hasEJ && djMode === 'elements' && ejMode === 'elements'
   const cjpPenalty = calcCjpPenalty(penaltyState)
-  const { difficulty: djDifficulty, penalty: djPenaltyVal } = calcDJTotals(elements, extraElements, flags, incorrectTs)
+  const { difficulty: djDifficulty, penalty: djPenaltyVal } = calcDJTotals(elements, extraElements, flags, incorrectTs, srPenaltyForAgeGroup(perf.ageGroup), perf.missingIndividualSR ?? false)
   const ejScoreVal = calcEJScore(deductions)
 
   const [cjpSubmitted, setCjpSubmitted] = useState(false)
@@ -249,7 +249,7 @@ function CJPPhonePanel({
           <DJDualKeypad lang={lang} onSubmit={(d, p) => setDjSubmitted({ difficulty: d, penalty: p })} />
         ) : (
           <PhoneDJElementsList lang={lang} elements={elements} extraElements={extraElements} flags={flags}
-            incorrectTs={incorrectTs} onFlagChange={onFlagChange} onOpenRetry={onOpenRetry}
+            incorrectTs={incorrectTs} ageGroup={perf.ageGroup} missingIndividualSR={perf.missingIndividualSR ?? false} onFlagChange={onFlagChange} onOpenRetry={onOpenRetry}
             onAddElement={onAddElement} onLabelChange={onLabelChange} onTypeChange={onTypeChange as never}
             onToggleIncorrectTs={onToggleIncorrectTs}
             onSubmit={(d, p) => setDjSubmitted({ difficulty: d, penalty: p })} />
@@ -298,12 +298,16 @@ function CJPTabletRightPanel({
   elements, extraElements, flags, deductions, incorrectTs,
   onFlagChange, onLock, onOpenRetry, onAddElement, onLabelChange, onTypeChange, onToggleIncorrectTs,
   onDJSubmit, onEJSubmit, onAJSubmit,
+  ageGroup = '',
+  missingIndividualSR = false,
 }: {
   lang: Lang; activePerfId: string | null
   hasDJ: boolean; hasEJ: boolean; hasAJ: boolean
   penaltyState: PenaltyState; onPenaltyChange: (p: PenaltyState) => void
   elements: TsElement[]; extraElements: TsElement[]
   flags: ElementFlags; deductions: Deductions; incorrectTs: boolean
+  ageGroup?: string
+  missingIndividualSR?: boolean
   onFlagChange: (elementId: string, attemptNumber: number, patch: Partial<ElementFlag>) => void
   onLock: (elementId: string, attemptNumber: number, value: number) => void
   onOpenRetry: (elementId: string, nextAttemptNumber: number) => void
@@ -330,7 +334,7 @@ function CJPTabletRightPanel({
 
   const noPerf = <div className="flex items-center justify-center h-32 text-slate-300 text-sm">{t.waiting}</div>
 
-  const { difficulty: djDiff, penalty: djPen } = calcDJTotals(elements, extraElements, flags, incorrectTs)
+  const { difficulty: djDiff, penalty: djPen } = calcDJTotals(elements, extraElements, flags, incorrectTs, srPenaltyForAgeGroup(ageGroup), missingIndividualSR)
   const ejScore = calcEJScore(deductions)
 
   const isDJSubmitted = activePerfId ? !!djSubmitted[activePerfId] : false
@@ -540,11 +544,14 @@ function CJPLayout({
           onUnpublishResult={onUnpublishResult} onEditScore={onEditScore}
           renderRightPanel={(activePerfId) => {
             const penaltyState = activePerfId ? (penaltyStates[activePerfId] ?? DEFAULT_PENALTY) : DEFAULT_PENALTY
+            const activePerf = performances.find(p => p.id === activePerfId)
             return (
               <CJPTabletRightPanel
                 lang={lang} activePerfId={activePerfId}
                 hasDJ={hasDJ} hasEJ={hasEJ} hasAJ={hasAJ}
                 penaltyState={penaltyState}
+                ageGroup={activePerf?.ageGroup ?? ''}
+                missingIndividualSR={activePerf?.missingIndividualSR ?? false}
                 onPenaltyChange={(p) => activePerfId && setPenaltyState(activePerfId, p)}
                 elements={elements} extraElements={extraElements}
                 flags={flags} deductions={deductions} incorrectTs={incorrectTs}
@@ -622,7 +629,7 @@ function NonCJPMultiView({
     if (myAJSubmittedScore != null) setAjSubmitted(myAJSubmittedScore)
   }, [myAJSubmittedScore]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { difficulty: djDiff, penalty: djPen } = calcDJTotals(elements, extraElements, flags, incorrectTs)
+  const { difficulty: djDiff, penalty: djPen } = calcDJTotals(elements, extraElements, flags, incorrectTs, srPenaltyForAgeGroup(currentPerf?.ageGroup ?? ''), currentPerf?.missingIndividualSR ?? false)
   const ejScoreVal = calcEJScore(deductions)
   const allSubmitted = (!hasDJ || djSubmitted !== null) && (!hasEJ || ejSubmitted !== null) && (!hasAJ || ajSubmitted !== null)
 
@@ -794,7 +801,7 @@ function NonCJPMultiView({
           {!forTablet && (
             <PhoneDJElementsList
               lang={lang} elements={elements} extraElements={extraElements}
-              flags={flags} incorrectTs={incorrectTs}
+              flags={flags} incorrectTs={incorrectTs} ageGroup={currentPerf?.ageGroup ?? ''} missingIndividualSR={currentPerf?.missingIndividualSR ?? false}
               onFlagChange={handleFlagChange} onOpenRetry={handleOpenRetry}
               onAddElement={handleAddElement} onLabelChange={handleLabelChange}
               onTypeChange={handleTypeChange as never}

@@ -103,6 +103,7 @@ const DJ_FLAG_LABELS: Record<'en' | 'es', {
 export function activeDJPenalties(
   flags: ElementFlags,
   lang: 'en' | 'es' = 'es',
+  srPenalty = 1.0,
 ): { label: string; value: number }[] {
   const L = DJ_FLAG_LABELS[lang]
   let tfTotal = 0
@@ -119,7 +120,7 @@ export function activeDJPenalties(
 
   const out: { label: string; value: number }[] = []
   if (tfTotal > 0)        out.push({ label: L.tf(tfTotal),           value: +(tfTotal * 0.3).toFixed(1) })
-  if (srCount > 0)        out.push({ label: L.srNotDone(srCount),    value: srCount * 1.0 })
+  if (srCount > 0)        out.push({ label: L.srNotDone(srCount),    value: +(srCount * srPenalty).toFixed(1) })
   if (forbiddenCount > 0) out.push({ label: L.forbidden(forbiddenCount), value: forbiddenCount * 1.0 })
   if (landingCount > 0)   out.push({ label: L.landing(landingCount), value: +(landingCount * 0.5).toFixed(1) })
   return out
