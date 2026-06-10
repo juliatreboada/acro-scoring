@@ -232,6 +232,7 @@ export const CompetitionDetail = {
       tshirt:        'Camisetas',
       meals:         'Comidas',
       acreditaciones: 'Acreditaciones',
+      trainings:     'Entrenamientos',
     },
     soon: 'Próximamente',
     soonSub: 'Esta jornada aún no está construida.',
@@ -466,6 +467,20 @@ export const CompetitionsTab = {
     tshirtNoSize: 'Sin talla',
     tshirtSaved: 'Guardado',
     mealsTitle: 'Comidas',
+    trainingsTitle: 'Entrenamientos Oficiales',
+    trainingsLocked: 'Lista bloqueada por el administrador',
+    trainingsNoSlot: 'El administrador aún no ha asignado tu horario de entrenamiento.',
+    trainingsSchedule: 'Horario',
+    trainingsWarmup: 'Pista de calentamiento',
+    trainingsCompetition: 'Pista de competición',
+    trainingsRoutineList: 'Lista de rutinas',
+    trainingsAddRoutine: 'Añadir rutina',
+    trainingsTimeUsed: (used: string, total: string) => `${used} / ${total} min usados`,
+    trainingsTimeWarning: 'Te queda poco tiempo disponible.',
+    trainingsTimeFull: 'No hay tiempo para más rutinas.',
+    trainingsNoEntries: 'Aún no hay rutinas en la lista.',
+    trainingsPickTeam: 'Selecciona un equipo',
+    trainingsClose: 'Cerrar',
   }
 
 // components/admin/CompetitionsView.tsx
@@ -1454,6 +1469,39 @@ export const TVPage = {
     dorsal: (n: number) => `#${n}`,
     provisional: 'PROVISIONAL',
   }
+
+// components/admin/competition-detail/OfficialTrainingsTab.tsx
+export const OfficialTrainingsTab = {
+  visibleToggle:        'Visible para clubs',
+  visibleOn:            'Clubs pueden ver su horario',
+  visibleOff:           'Oculto para clubs',
+  noRegisteredClubs:    'No hay clubs inscritos en esta competición.',
+  unassigned:           'Sin asignar',
+  editSlot:             'Editar horario',
+  newSlot:              'Asignar horario',
+  date:                 'Fecha',
+  warmupStart:          'Inicio calentamiento',
+  warmupDuration:       'Duración calentamiento (min)',
+  competitionDuration:  'Duración pista competición (min)',
+  competitionStart:     'Inicio pista competición',
+  computedFrom:         'Calculado automáticamente',
+  save:                 'Guardar',
+  delete:               'Eliminar slot',
+  lock:                 'Bloquear lista',
+  unlock:               'Desbloquear lista',
+  lockedBadge:          'Lista bloqueada',
+  playback:             'Reproducción',
+  selectClub:           'Seleccionar club',
+  playAll:              'Reproducir todo',
+  stop:                 'Parar',
+  markPlayed:           'Marcar como reproducida',
+  unmarkPlayed:         'Desmarcar',
+  noEntries:            'Sin rutinas en la lista.',
+  noSlotPlayback:       'Este club no tiene slot asignado.',
+  noMusic:              'Sin música',
+  warmupLabel:          (start: string, dur: number) => `${start} · ${dur} min`,
+  competitionLabel:     (start: string, dur: number) => `${start} · ${dur} min`,
+}
 
 // components/admin/competition-detail/TVTab.tsx
 export const TVTab = {

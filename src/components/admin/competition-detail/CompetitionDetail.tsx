@@ -18,6 +18,7 @@ import TshirtTab from './TshirtTab'
 import MealsTab from './MealsTab'
 import AccreditationsTab from './AccreditationsTab'
 import OpenCombinadosTab from './OpenCombinadosTab'
+import OfficialTrainingsTab from './OfficialTrainingsTab'
 import { isOpenCombinadosCompetitionName } from '@/lib/openCombinadosCompetition'
 import RGRegistrationsTab from './RGRegistrationsTab'
 import { useT } from '@/lib/useT'
@@ -32,7 +33,7 @@ const ACTION_STYLE: Partial<Record<CompetitionStatus, string>> = {
   active:               'border-red-200 text-red-600 hover:bg-red-50',
 }
 
-type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias' | 'tv' | 'bracket' | 'tshirt' | 'acreditaciones' | 'meals'
+type Tab = 'structure' | 'judges' | 'startingOrder' | 'registrations' | 'overview' | 'day' | 'licencias' | 'tv' | 'bracket' | 'tshirt' | 'acreditaciones' | 'meals' | 'trainings'
 
 
 // ─── placeholder tab ──────────────────────────────────────────────────────────
@@ -822,6 +823,8 @@ export type CompetitionDetailProps = {
   onUpdateTshirtConfig: (sizes: string[], deadline: string | null) => Promise<void>
   // meals
   onToggleMealsEnabled: (enabled: boolean) => Promise<void>
+  // official trainings visibility
+  onToggleShowOfficialTrainings: (visible: boolean) => Promise<void>
   // accreditations
   onUpdateAccreditationConfig: (config: import('@/components/admin/types').AccreditationConfig) => Promise<void>
   // competition day
@@ -846,7 +849,7 @@ export default function CompetitionDetail({
   availableAdmins, ageGroupRules, apparatus, apparatusRules, onUpdateCompetition, onUploadPoster, onUploadLogo, onUpdateFees,
   onSetDJReviewDeadline, onStartSession, onFinishSession, onRevertSession,
   competitionGymnasts, competitionCoaches, globalCoaches,
-  onUpdateTshirtConfig, onToggleMealsEnabled, onUpdateAccreditationConfig,
+  onUpdateTshirtConfig, onToggleMealsEnabled, onToggleShowOfficialTrainings, onUpdateAccreditationConfig,
 }: CompetitionDetailProps) {
   const t = useT('CompetitionDetail', lang)
   const [activeTab, setActiveTab] = useState<Tab>('structure')
@@ -870,6 +873,7 @@ export default function CompetitionDetail({
     { key: 'tshirt' as const, label: t.tabs.tshirt },
     { key: 'meals' as const, label: t.tabs.meals },
     { key: 'acreditaciones' as const, label: t.tabs.acreditaciones },
+    { key: 'trainings' as const, label: t.tabs.trainings },
     { key: 'overview',      label: t.tabs.overview      },
   ]
 
@@ -1189,6 +1193,16 @@ export default function CompetitionDetail({
           competitionId={competition.id}
           mealsEnabled={competition.meals_enabled ?? false}
           onToggleEnabled={onToggleMealsEnabled}
+        />
+      )}
+      {activeTab === 'trainings' && (
+        <OfficialTrainingsTab
+          lang={lang}
+          competition={competition}
+          clubs={clubs}
+          entries={entries}
+          globalTeams={globalTeams}
+          onToggleVisible={onToggleShowOfficialTrainings}
         />
       )}
       {activeTab === 'acreditaciones' && (

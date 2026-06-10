@@ -232,6 +232,7 @@ export const CompetitionDetail = {
       tshirt:        'T-shirts',
       meals:         'Meals',
       acreditaciones: 'Accreditations',
+      trainings:     'Trainings',
     },
     soon: 'Coming soon',
     soonSub: 'This section is not built yet.',
@@ -468,6 +469,20 @@ export const CompetitionsTab = {
     tshirtNoSize: 'No size',
     tshirtSaved: 'Saved',
     mealsTitle: 'Meals',
+    trainingsTitle: 'Official Trainings',
+    trainingsLocked: 'List locked by the administrator',
+    trainingsNoSlot: 'The administrator has not assigned your training schedule yet.',
+    trainingsSchedule: 'Schedule',
+    trainingsWarmup: 'Warm-up track',
+    trainingsCompetition: 'Competition track',
+    trainingsRoutineList: 'Routine list',
+    trainingsAddRoutine: 'Add routine',
+    trainingsTimeUsed: (used: string, total: string) => `${used} / ${total} min used`,
+    trainingsTimeWarning: 'You are running out of available time.',
+    trainingsTimeFull: 'No time left for more routines.',
+    trainingsNoEntries: 'No routines in the list yet.',
+    trainingsPickTeam: 'Select a team',
+    trainingsClose: 'Close',
   }
 
 // components/admin/CompetitionsView.tsx
@@ -1456,6 +1471,39 @@ export const TVPage = {
     dorsal: (n: number) => `#${n}`,
     provisional: 'PROVISIONAL',
   }
+
+// components/admin/competition-detail/OfficialTrainingsTab.tsx
+export const OfficialTrainingsTab = {
+  visibleToggle:        'Visible to clubs',
+  visibleOn:            'Clubs can see their schedule',
+  visibleOff:           'Hidden from clubs',
+  noRegisteredClubs:    'No clubs are registered in this competition.',
+  unassigned:           'Not assigned',
+  editSlot:             'Edit schedule',
+  newSlot:              'Assign schedule',
+  date:                 'Date',
+  warmupStart:          'Warm-up start',
+  warmupDuration:       'Warm-up duration (min)',
+  competitionDuration:  'Competition track duration (min)',
+  competitionStart:     'Competition track start',
+  computedFrom:         'Auto-calculated',
+  save:                 'Save',
+  delete:               'Delete slot',
+  lock:                 'Lock list',
+  unlock:               'Unlock list',
+  lockedBadge:          'List locked',
+  playback:             'Playback',
+  selectClub:           'Select club',
+  playAll:              'Play all',
+  stop:                 'Stop',
+  markPlayed:           'Mark as played',
+  unmarkPlayed:         'Unmark',
+  noEntries:            'No routines in the list.',
+  noSlotPlayback:       'This club has no assigned slot.',
+  noMusic:              'No music',
+  warmupLabel:          (start: string, dur: number) => `${start} · ${dur} min`,
+  competitionLabel:     (start: string, dur: number) => `${start} · ${dur} min`,
+}
 
 // components/admin/competition-detail/TVTab.tsx
 export const TVTab = {

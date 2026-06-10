@@ -30,7 +30,7 @@ export default function Page() {
     handleUpdateCompetition, handleUpdateFees, handleUploadPoster, handleUploadLogo, handleSetDJReviewDeadline,
     handleStartSession, handleFinishSession, handleRevertSession,
     handleAssignSessionMergeGroup, handleCreateRankingMergeGroup,
-    handleUpdateTshirtConfig, handleToggleMealsEnabled, handleUpdateAccreditationConfig,
+    handleUpdateTshirtConfig, handleToggleMealsEnabled, handleToggleShowOfficialTrainings, handleUpdateAccreditationConfig,
     clearActionError,
   } = useCompetitionPage(id)
 
@@ -157,6 +157,7 @@ export default function Page() {
         competitionCoaches={competitionCoaches}
         onUpdateTshirtConfig={handleUpdateTshirtConfig}
         onToggleMealsEnabled={handleToggleMealsEnabled}
+        onToggleShowOfficialTrainings={handleToggleShowOfficialTrainings}
         onUpdateAccreditationConfig={handleUpdateAccreditationConfig}
       />
     </div>
