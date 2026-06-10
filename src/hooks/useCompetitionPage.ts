@@ -49,7 +49,7 @@ export function useCompetitionPage(id: string) {
                nominationsRes, entriesRes, rulesRes, adminsRes, provRes, defRes,
                apparatusRes, apparatusRulesRes, mergeGroupsRes] = await Promise.all([
           supabase.from('competitions')
-            .select('id,name,status,sport_type,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,tshirt_sizes,tshirt_deadline,meals_enabled,accreditation_config,age_groups,poster_url,logo_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine,open_combinados_enabled')
+            .select('id,name,status,sport_type,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,tshirt_sizes,tshirt_deadline,meals_enabled,accreditation_config,age_groups,poster_url,logo_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine,open_combinados_enabled,show_official_trainings')
             .eq('id', id).single(),
           supabase.from('panels').select('id,competition_id,panel_number').eq('competition_id', id).order('panel_number'),
           supabase.from('sections').select('id,competition_id,section_number,label,starting_time,waiting_time_seconds,warmup_duration_minutes,timeline_order').eq('competition_id', id).order('section_number'),
@@ -535,6 +535,11 @@ export function useCompetitionPage(id: string) {
     setCompetition(prev => prev ? { ...prev, meals_enabled: enabled } : prev)
   }
 
+  async function handleToggleShowOfficialTrainings(visible: boolean) {
+    await supabase.from('competitions').update({ show_official_trainings: visible }).eq('id', id)
+    setCompetition(prev => prev ? { ...prev, show_official_trainings: visible } : prev)
+  }
+
   async function handleUpdateAccreditationConfig(config: import('@/components/admin/types').AccreditationConfig) {
     await supabase.from('competitions').update({ accreditation_config: config as never }).eq('id', id)
     setCompetition(prev => prev ? { ...prev, accreditation_config: config } : prev)
@@ -616,7 +621,7 @@ export function useCompetitionPage(id: string) {
     handleAddSlot, handleRemoveSlot, handleTogglePanelLock, handleCopyPanel,
     handleToggleDropout, handleRemoveClubEntries,
     handleToggleLock, handleReorder, handleReorderTimeline,
-    handleUpdateCompetition, handleUpdateFees, handleUploadPoster, handleUploadLogo, handleSetDJReviewDeadline, handleUpdateTshirtConfig, handleToggleMealsEnabled, handleUpdateAccreditationConfig,
+    handleUpdateCompetition, handleUpdateFees, handleUploadPoster, handleUploadLogo, handleSetDJReviewDeadline, handleUpdateTshirtConfig, handleToggleMealsEnabled, handleToggleShowOfficialTrainings, handleUpdateAccreditationConfig,
     handleStartSession, handleFinishSession, handleRevertSession,
     handleAssignSessionMergeGroup, handleCreateRankingMergeGroup,
     clearActionError: () => setActionError(null),

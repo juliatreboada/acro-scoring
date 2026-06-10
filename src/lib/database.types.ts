@@ -278,6 +278,7 @@ export type Database = {
           meals_enabled: boolean
           name: string
           open_combinados_enabled: boolean
+          show_official_trainings: boolean
           poster_url: string | null
           provisional_entry_deadline: string | null
           registration_deadline: string | null
@@ -307,6 +308,7 @@ export type Database = {
           meals_enabled?: boolean
           name: string
           open_combinados_enabled?: boolean
+          show_official_trainings?: boolean
           poster_url?: string | null
           provisional_entry_deadline?: string | null
           registration_deadline?: string | null
@@ -336,6 +338,7 @@ export type Database = {
           meals_enabled?: boolean
           name?: string
           open_combinados_enabled?: boolean
+          show_official_trainings?: boolean
           poster_url?: string | null
           provisional_entry_deadline?: string | null
           registration_deadline?: string | null
@@ -1664,6 +1667,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      official_trainings: {
+        Row: {
+          id: string
+          competition_id: string
+          club_id: string
+          training_date: string
+          warmup_start: string
+          warmup_duration_minutes: number
+          competition_duration_minutes: number
+          locked: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          competition_id: string
+          club_id: string
+          training_date: string
+          warmup_start: string
+          warmup_duration_minutes?: number
+          competition_duration_minutes?: number
+          locked?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          competition_id?: string
+          club_id?: string
+          training_date?: string
+          warmup_start?: string
+          warmup_duration_minutes?: number
+          competition_duration_minutes?: number
+          locked?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      official_training_entries: {
+        Row: {
+          id: string
+          training_id: string
+          team_id: string
+          routine_type: string
+          position: number
+          played_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          training_id: string
+          team_id: string
+          routine_type: string
+          position: number
+          played_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          training_id?: string
+          team_id?: string
+          routine_type?: string
+          position?: number
+          played_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
       }
       open_combinados_bracket_config: {
         Row: {

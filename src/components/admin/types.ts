@@ -96,6 +96,27 @@ export type Competition = {
   tshirt_deadline?: string | null      // after this date clubs cannot edit their orders
   accreditation_config?: AccreditationConfig | null
   meals_enabled?: boolean
+  show_official_trainings?: boolean
+}
+
+export type OfficialTraining = {
+  id: string
+  competition_id: string
+  club_id: string
+  training_date: string         // YYYY-MM-DD
+  warmup_start: string          // HH:MM or HH:MM:SS
+  warmup_duration_minutes: number
+  competition_duration_minutes: number
+  locked: boolean
+}
+
+export type OfficialTrainingEntry = {
+  id: string
+  training_id: string
+  team_id: string
+  routine_type: string
+  position: number
+  played_at: string | null
 }
 
 export type MealCategory = {

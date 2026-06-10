@@ -10,6 +10,7 @@ import { STATUS_BADGE, INPUT_CLS } from '@/lib/uiConstants'
 import ProvisionalEntryForm from './ProvisionalEntryForm'
 import DefinitiveEntryForm from './DefinitiveEntryForm'
 import MealsSection from './MealsSection'
+import { OfficialTrainingsSection } from './OfficialTrainingsSection'
 import { useT } from '@/lib/useT'
 
 const NOMINAL_ENTRY_BADGE = 'bg-green-100 text-green-700'
@@ -465,7 +466,7 @@ function CompetitionDetailView({
   const hasTshirts = (competition.tshirt_sizes?.length ?? 0) > 0
   const isTshirtLocked = !!competition.tshirt_deadline && today > competition.tshirt_deadline
 
-  type CompTab = 'coaches' | 'judges' | 'tshirts' | 'meals'
+  type CompTab = 'coaches' | 'judges' | 'tshirts' | 'meals' | 'trainings'
   const [activeCompTab, setActiveCompTab] = useState<CompTab>(
     hasCoachWarning ? 'coaches' : hasJudgeWarning ? 'judges' : 'coaches'
   )
@@ -618,6 +619,7 @@ function CompetitionDetailView({
                 ...(hasTshirts ? [{ key: 'tshirts' as CompTab, label: t.tshirtTitle, badge: isTshirtLocked
                   ? <span className="text-xs font-bold px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded-full">🔒</span> : null }] : []),
                 ...(competition.meals_enabled ? [{ key: 'meals' as CompTab, label: t.mealsTitle, badge: null }] : []),
+                ...(competition.show_official_trainings ? [{ key: 'trainings' as CompTab, label: t.trainingsTitle, badge: null }] : []),
               ] as { key: CompTab; label: string; badge: React.ReactNode }[]
             ).map(tab => (
               <button
@@ -842,6 +844,18 @@ function CompetitionDetailView({
 
           {activeCompTab === 'meals' && competition.meals_enabled && (
             <MealsSection competitionId={competition.id} clubId={clubId} lang={lang} initiallyOpen />
+          )}
+
+          {activeCompTab === 'trainings' && competition.show_official_trainings && (
+            <OfficialTrainingsSection
+              lang={lang}
+              competition={competition}
+              clubId={clubId}
+              registeredTeams={entries
+                .filter(e => e.competition_id === competition.id && !e.dropped_out)
+                .map(e => teams.find(t => t.id === e.team_id))
+                .filter((t): t is Team => !!t)}
+            />
           )}
 
         </div>
