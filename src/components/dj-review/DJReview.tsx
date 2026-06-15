@@ -85,7 +85,7 @@ function ElementForm({ lang, integerMode, onAdd }: {
         {(['balance', 'mount', 'dynamic', 'individual', 'motion', 'link'] as ElementType[]).map((type) => (
           <button
             key={type}
-            onClick={() => setForm((f) => ({ ...f, elementType: type, isStatic: false, legsTogether: type === 'balance' }))}
+            onClick={() => setForm((f) => ({ ...f, elementType: type, isStatic: false, legsTogether: false }))}
             className={[
               'px-3 py-1.5 rounded-lg text-xs font-medium border transition-all capitalize',
               form.elementType === type
@@ -481,7 +481,7 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
   const srPenalty = srPenaltyForAgeGroup(sheet.ageGroup)
   const totalD = sheet.elements.reduce((s, el) => {
     const base = el.elementType === 'individual' ? el.difficultyValue / gymnastsCount : el.difficultyValue
-    const ltBonus = el.elementType === 'balance' && el.legsTogether ? 1 : 0
+    const ltBonus = el.elementType === 'balance' && el.legsTogether ? 0.01 : 0
     return s + base + ltBonus
   }, 0)
   const totalPenalty = sheet.missingIndividualSR ? srPenalty : 0
@@ -544,7 +544,7 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
                   <span className="text-xs font-mono text-slate-500 shrink-0 tabular-nums">
                     {el.difficultyValue.toFixed(2)}
                     {el.elementType === 'balance' && el.legsTogether && (
-                      <span className="text-green-600 ml-0.5">+1</span>
+                      <span className="text-green-600 ml-0.5">+0.01</span>
                     )}
                   </span>
                   {!isLocked && (
