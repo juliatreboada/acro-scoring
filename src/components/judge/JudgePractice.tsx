@@ -45,6 +45,7 @@ const MOCK_SHEET: Sheet = {
     label: e.label,
     elementType: (e.elementType ?? 'balance') as import('@/components/dj-review/types').ElementType,
     isStatic: e.isStatic ?? false,
+    legsTogether: false,
     difficultyValue: e.difficultyValue,
   })),
   reviewStatus: 'pending',

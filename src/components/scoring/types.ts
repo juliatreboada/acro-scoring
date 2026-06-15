@@ -31,7 +31,7 @@ export type ElementDeduction = {
 // key = `${elementId}:${retryNumber}` (retryNumber is 1 or 2)
 export type Deductions = Record<string, ElementDeduction>
 
-export type ElementType = 'balance' | 'mount' | 'dynamic' | 'individual' | 'motion'
+export type ElementType = 'balance' | 'mount' | 'dynamic' | 'individual' | 'motion' | 'link'
 
 export type TsElement = {
   id: string

@@ -10,6 +10,7 @@ export type ReviewElement = {
   label: string           // optional — can be empty
   elementType: ElementType
   isStatic: boolean       // only relevant when elementType === 'individual'
+  legsTogether: boolean   // only relevant when elementType === 'balance'; adds +1 bonus
   difficultyValue: number
 }
 

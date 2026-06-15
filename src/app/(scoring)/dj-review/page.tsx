@@ -177,7 +177,7 @@ function DJReviewPage() {
           .in('team_id', teamIds).in('competition_id', [...validCompIds]),
         supabase.from('age_group_rules').select('id, age_group, level, ruleset, sport_type'),
         supabase.from('ts_elements')
-          .select('id, team_id, competition_id, routine_type, position, label, element_type, is_static, difficulty_value')
+          .select('id, team_id, competition_id, routine_type, position, label, element_type, is_static, legs_together, difficulty_value')
           .in('team_id', teamIds).in('competition_id', [...validCompIds])
           .order('position'),
         supabase.from('ts_review_status')
@@ -202,7 +202,7 @@ function DJReviewPage() {
       const teamMap: Record<string, { gymnast_display: string; age_group: string; category: string }> =
         Object.fromEntries((teamsRes.data ?? []).map(t => [t.id, t]))
 
-      type RawElement = { id: string; team_id: string; competition_id: string; routine_type: string; position: number; label: string; element_type: string; is_static: boolean; difficulty_value: number }
+      type RawElement = { id: string; team_id: string; competition_id: string; routine_type: string; position: number; label: string; element_type: string; is_static: boolean; legs_together: boolean; difficulty_value: number }
       const rawElements = (elementsRes.data ?? []) as RawElement[]
 
       type RawReview = { team_id: string; competition_id: string; routine_type: string; status: string; dj1_id: string | null; dj1_decision: string | null; dj1_comment: string | null; dj2_id: string | null; final_comment: string | null; missing_individual_sr: boolean }
@@ -253,6 +253,7 @@ function DJReviewPage() {
             label:           e.label,
             elementType:     e.element_type as import('@/components/dj-review/types').ElementType,
             isStatic:        e.is_static,
+            legsTogether:    e.legs_together,
             difficultyValue: e.difficulty_value,
           }))
         const spjKey = `${session.section_id}|${session.panel_id}`

@@ -1468,6 +1468,7 @@ export type Database = {
           id: string
           is_static: boolean
           label: string
+          legs_together: boolean
           position: number
           routine_type: Database["public"]["Enums"]["routine_type"]
           team_id: string
@@ -1480,6 +1481,7 @@ export type Database = {
           id?: string
           is_static?: boolean
           label?: string
+          legs_together?: boolean
           position: number
           routine_type: Database["public"]["Enums"]["routine_type"]
           team_id: string
@@ -1492,6 +1494,7 @@ export type Database = {
           id?: string
           is_static?: boolean
           label?: string
+          legs_together?: boolean
           position?: number
           routine_type?: Database["public"]["Enums"]["routine_type"]
           team_id?: string
