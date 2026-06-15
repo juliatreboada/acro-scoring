@@ -67,6 +67,16 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
   const [copyType, setCopyType] = useState<'lunch' | 'dinner'>('lunch')
   const [copying, setCopying] = useState(false)
 
+  // ── collapsed slots ───────────────────────────────────────────────────────────
+  const [collapsedSlots, setCollapsedSlots] = useState<Set<SlotKey>>(new Set())
+  function toggleCollapse(key: SlotKey) {
+    setCollapsedSlots(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
+
   // ── slot edit / delete ────────────────────────────────────────────────────────
   const [editingSlot, setEditingSlot] = useState<SlotKey | null>(null)
   const [editSlotDay, setEditSlotDay] = useState('')
@@ -486,9 +496,14 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
                   </div>
                 ) : (
                   <div className="px-3 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
-                    <p className="flex-1 text-sm font-semibold text-slate-700">
-                      {slotLabel(slot.day_label, slot.meal_type, lang)}
-                    </p>
+                    <button onClick={() => toggleCollapse(slot.key)} className="flex-1 flex items-center gap-1.5 text-left min-w-0">
+                      <svg className={['w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform', collapsedSlots.has(slot.key) ? '-rotate-90' : ''].join(' ')} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                      </svg>
+                      <p className="text-sm font-semibold text-slate-700 truncate">
+                        {slotLabel(slot.day_label, slot.meal_type, lang)}
+                      </p>
+                    </button>
                     <button onClick={() => { setEditingSlot(slot.key); setEditSlotDay(slot.day_label); setEditSlotType(slot.meal_type) }} title={t.editSlot}
                       className="text-slate-300 hover:text-blue-500 transition-colors shrink-0">
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -509,6 +524,8 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
                     </button>
                   </div>
                 )}
+
+                {!collapsedSlots.has(slot.key) && (<>
 
                 {/* Copy slot form */}
                 {copyingSlot === slot.key && (
@@ -766,6 +783,7 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
                     </div>
                   )}
                 </div>
+                </>)}
               </div>
             )
           })}
@@ -849,17 +867,51 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
                       )}
                     </div>
                   </div>
-                  {sub.items.length > 0 && (
-                    <div className="pl-1 space-y-0.5">
-                      {sub.items.map(item => (
-                        <p key={item.option.id} className="text-xs text-slate-500">
-                          {item.quantity}× {item.option.name}
-                          {item.option.course_label && <span className="text-slate-400 ml-1">({item.option.course_label})</span>}
-                          <span className="text-slate-400 ml-1">{t.eachLabel(item.option.price)}</span>
-                        </p>
-                      ))}
-                    </div>
-                  )}
+                  {sub.items.length > 0 && (() => {
+                    const grouped = new Map<string, { day: string; type: 'lunch' | 'dinner'; items: typeof sub.items }>()
+                    for (const item of sub.items) {
+                      const k = slotKey(item.option.day_label, item.option.meal_type)
+                      if (!grouped.has(k)) grouped.set(k, { day: item.option.day_label, type: item.option.meal_type as 'lunch' | 'dinner', items: [] })
+                      grouped.get(k)!.items.push(item)
+                    }
+                    const slots = Array.from(grouped.values()).sort((a, b) => {
+                      const dc = a.day.localeCompare(b.day)
+                      return dc !== 0 ? dc : (a.type === 'lunch' ? -1 : 1)
+                    })
+                    return (
+                      <div className="pl-1 space-y-2">
+                        {slots.map(slot => (
+                          <div key={slotKey(slot.day, slot.type)}>
+                            <p className="text-xs font-semibold text-slate-500 mb-0.5">
+                              {slotLabel(slot.day, slot.type, lang)}
+                            </p>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 pl-2">
+                              {mealCategories.map(cat => {
+                                const catItems = slot.items.filter(i => i.option.course_label === cat.name)
+                                if (catItems.length === 0) return null
+                                return (
+                                  <div key={cat.id}>
+                                    <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wide mb-0.5">{cat.name}</p>
+                                    {catItems.map(item => (
+                                      <p key={item.option.id} className="text-xs text-slate-500">
+                                        {item.quantity}× {item.option.name}
+                                        {item.option.description && <span className="text-slate-400"> ({item.option.description})</span>}
+                                      </p>
+                                    ))}
+                                  </div>
+                                )
+                              })}
+                              {slot.items.filter(i => i.option.course_label === null).map(item => (
+                                <p key={item.option.id} className="text-xs text-slate-500 self-end">
+                                  {item.quantity}× {item.option.name}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
                   {sub.admin_notes && (
                     <p className="text-xs text-red-500 italic">{sub.admin_notes}</p>
                   )}
@@ -869,6 +921,8 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
           )}
         </div>
       )}
+
+
 
       {/* Reject modal */}
       {rejectTarget && (

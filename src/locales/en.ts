@@ -606,6 +606,8 @@ export const DJReview = {
     dynamic: 'Dynamic',
     individual: 'Individual',
     motion: 'Motion',
+    link: 'Link',
+    legsTogetherHandstand: 'Legs together (+1)',
     routineBalance: 'Balance',
     routineDynamic: 'Dynamic',
     routineCombined: 'Combined',

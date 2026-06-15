@@ -27,6 +27,7 @@ function typeBadge(type: ElementType, isStatic: boolean, t: typeof DJReviewT) {
   if (type === 'mount')   return { label: t.mount,    color: 'bg-blue-100 text-blue-700' }
   if (type === 'dynamic') return { label: t.dynamic,  color: 'bg-purple-100 text-purple-700' }
   if (type === 'motion')  return { label: t.motion,   color: 'bg-slate-100 text-slate-500' }
+  if (type === 'link')    return { label: t.link,     color: 'bg-violet-100 text-violet-700' }
   if (isStatic) return { label: `${t.individual} · ${t.isStatic}`, color: 'bg-amber-100 text-amber-700' }
   return { label: t.individual, color: 'bg-amber-100 text-amber-700' }
 }
@@ -36,6 +37,7 @@ function typeBadge(type: ElementType, isStatic: boolean, t: typeof DJReviewT) {
 type ElementFormState = {
   elementType: ElementType | ''
   isStatic: boolean
+  legsTogether: boolean
   label: string
   difficultyValue: string
 }
@@ -43,6 +45,7 @@ type ElementFormState = {
 const EMPTY_FORM: ElementFormState = {
   elementType: '',
   isStatic: false,
+  legsTogether: false,
   label: '',
   difficultyValue: '',
 }
@@ -70,6 +73,7 @@ function ElementForm({ lang, integerMode, onAdd }: {
     await onAdd({
       elementType: form.elementType,
       isStatic: form.isStatic,
+      legsTogether: form.legsTogether,
       label: form.label.trim(),
       difficultyValue: parseFloat(diffNum.toFixed(2)),
     })
@@ -78,10 +82,10 @@ function ElementForm({ lang, integerMode, onAdd }: {
   return (
     <div className="border border-dashed border-slate-200 rounded-xl p-3 bg-slate-50 space-y-3">
       <div className="flex gap-1.5 flex-wrap">
-        {(['balance', 'mount', 'dynamic', 'individual', 'motion'] as ElementType[]).map((type) => (
+        {(['balance', 'mount', 'dynamic', 'individual', 'motion', 'link'] as ElementType[]).map((type) => (
           <button
             key={type}
-            onClick={() => setForm((f) => ({ ...f, elementType: type, isStatic: false }))}
+            onClick={() => setForm((f) => ({ ...f, elementType: type, isStatic: false, legsTogether: type === 'balance' }))}
             className={[
               'px-3 py-1.5 rounded-lg text-xs font-medium border transition-all capitalize',
               form.elementType === type
@@ -89,7 +93,7 @@ function ElementForm({ lang, integerMode, onAdd }: {
                 : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400',
             ].join(' ')}
           >
-            {t[type as 'balance' | 'dynamic' | 'individual']}
+            {t[type as keyof typeof t] as string}
           </button>
         ))}
         {form.elementType === 'individual' && (
@@ -103,6 +107,19 @@ function ElementForm({ lang, integerMode, onAdd }: {
             ].join(' ')}
           >
             {t.isStatic}
+          </button>
+        )}
+        {form.elementType === 'balance' && (
+          <button
+            onClick={() => setForm((f) => ({ ...f, legsTogether: !f.legsTogether }))}
+            className={[
+              'px-3 py-1.5 rounded-lg text-xs font-medium border transition-all',
+              form.legsTogether
+                ? 'bg-green-500 text-white border-green-500'
+                : 'bg-white text-slate-400 border-slate-200 hover:border-green-300',
+            ].join(' ')}
+          >
+            {t.legsTogetherHandstand}
           </button>
         )}
       </div>
@@ -163,6 +180,7 @@ function ElementEditRow({ el, lang, integerMode, onSave, onCancel }: {
   const [form, setForm] = useState<ElementFormState>({
     elementType: el.elementType,
     isStatic: el.isStatic,
+    legsTogether: el.legsTogether,
     label: el.label,
     difficultyValue: integerMode
       ? String(Math.round(el.difficultyValue * 100))
@@ -183,6 +201,7 @@ function ElementEditRow({ el, lang, integerMode, onSave, onCancel }: {
     onSave({
       elementType: form.elementType,
       isStatic: form.isStatic,
+      legsTogether: form.legsTogether,
       label: form.label.trim(),
       difficultyValue: parseFloat(diffNum.toFixed(2)),
     })
@@ -191,15 +210,15 @@ function ElementEditRow({ el, lang, integerMode, onSave, onCancel }: {
   return (
     <div className="border border-blue-200 rounded-xl p-3 bg-blue-50 space-y-2">
       <div className="flex gap-1 flex-wrap">
-        {(['balance', 'mount', 'dynamic', 'individual', 'motion'] as ElementType[]).map((type) => (
-          <button key={type} onClick={() => setForm((f) => ({ ...f, elementType: type, isStatic: false }))}
+        {(['balance', 'mount', 'dynamic', 'individual', 'motion', 'link'] as ElementType[]).map((type) => (
+          <button key={type} onClick={() => setForm((f) => ({ ...f, elementType: type, isStatic: false, legsTogether: type === 'balance' ? f.legsTogether : false }))}
             className={['px-2.5 py-1 rounded-lg text-xs font-medium border transition-all capitalize',
               form.elementType === type
                 ? 'bg-slate-800 text-white border-slate-800'
                 : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400',
             ].join(' ')}
           >
-            {t[type as 'balance' | 'dynamic' | 'individual']}
+            {t[type as keyof typeof t] as string}
           </button>
         ))}
         {form.elementType === 'individual' && (
@@ -209,6 +228,15 @@ function ElementEditRow({ el, lang, integerMode, onSave, onCancel }: {
             ].join(' ')}
           >
             {t.isStatic}
+          </button>
+        )}
+        {form.elementType === 'balance' && (
+          <button onClick={() => setForm((f) => ({ ...f, legsTogether: !f.legsTogether }))}
+            className={['px-2.5 py-1 rounded-lg text-xs font-medium border transition-all',
+              form.legsTogether ? 'bg-green-500 text-white border-green-500' : 'bg-white text-slate-400 border-slate-200 hover:border-green-300',
+            ].join(' ')}
+          >
+            {t.legsTogetherHandstand}
           </button>
         )}
       </div>
@@ -451,8 +479,11 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
   const integerMode = usesIntegerDifficulty(sheet.ageGroup)
   const gymnastsCount = CATEGORY_SIZE[sheet.category] ?? 1
   const srPenalty = srPenaltyForAgeGroup(sheet.ageGroup)
-  const totalD = sheet.elements.reduce((s, el) =>
-    s + (el.elementType === 'individual' ? el.difficultyValue / gymnastsCount : el.difficultyValue), 0)
+  const totalD = sheet.elements.reduce((s, el) => {
+    const base = el.elementType === 'individual' ? el.difficultyValue / gymnastsCount : el.difficultyValue
+    const ltBonus = el.elementType === 'balance' && el.legsTogether ? 1 : 0
+    return s + base + ltBonus
+  }, 0)
   const totalPenalty = sheet.missingIndividualSR ? srPenalty : 0
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -504,11 +535,17 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
                   <span className={`text-xs font-medium px-1.5 py-0.5 rounded shrink-0 ${badge.color}`}>
                     {badge.label}
                   </span>
+                  {el.elementType === 'balance' && el.legsTogether && (
+                    <span className="text-xs font-medium px-1.5 py-0.5 rounded shrink-0 bg-green-100 text-green-700">+1</span>
+                  )}
                   <span className="text-sm text-slate-700 flex-1 leading-snug min-w-0 truncate">
                     {el.label || <span className="text-slate-300 italic">—</span>}
                   </span>
                   <span className="text-xs font-mono text-slate-500 shrink-0 tabular-nums">
                     {el.difficultyValue.toFixed(2)}
+                    {el.elementType === 'balance' && el.legsTogether && (
+                      <span className="text-green-600 ml-0.5">+1</span>
+                    )}
                   </span>
                   {!isLocked && (
                     <>
@@ -626,6 +663,7 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
           label: el.label,
           element_type: el.elementType,
           is_static: el.isStatic,
+          legs_together: el.legsTogether,
           difficulty_value: el.difficultyValue,
         })
         .select('id')
@@ -671,6 +709,7 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
           label: el.label,
           element_type: el.elementType,
           is_static: el.isStatic,
+          legs_together: el.legsTogether,
           difficulty_value: el.difficultyValue,
         })
         .eq('id', elementId)
