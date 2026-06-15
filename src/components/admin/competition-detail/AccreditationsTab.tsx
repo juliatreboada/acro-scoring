@@ -275,6 +275,7 @@ export default function AccreditationsTab({
   const [showCoaches, setShowCoaches]   = useState(true)
   const [showJudges, setShowJudges]     = useState(true)
   const [photoFilter, setPhotoFilter]   = useState<'all' | 'with' | 'without'>('all')
+  const [searchQuery, setSearchQuery]   = useState('')
   const [excludedIds, setExcludedIds]   = useState<Set<string>>(new Set())
 
   function toggleExclude(key: string) {
@@ -309,14 +310,22 @@ export default function AccreditationsTab({
     return result
   }, [competitionGymnasts, competitionCoaches, globalJudges, judgePool, clubMap, clubLogoMap, judgeClubMap])
 
-  const printPersons = useMemo(() => allPersons.filter(p => {
-    if (p.type === 'gymnast' && !showGymnasts) return false
-    if (p.type === 'coach'   && !showCoaches)  return false
-    if (p.type === 'judge'   && !showJudges)   return false
-    if (photoFilter === 'with'    && !p.photo_url) return false
-    if (photoFilter === 'without' &&  p.photo_url) return false
-    return true
-  }), [allPersons, showGymnasts, showCoaches, showJudges, photoFilter])
+  const printPersons = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    return allPersons.filter(p => {
+      if (p.type === 'gymnast' && !showGymnasts) return false
+      if (p.type === 'coach'   && !showCoaches)  return false
+      if (p.type === 'judge'   && !showJudges)   return false
+      if (photoFilter === 'with'    && !p.photo_url) return false
+      if (photoFilter === 'without' &&  p.photo_url) return false
+      if (q) {
+        const name = p.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+        const club = p.club_name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+        if (!name.includes(q) && !club.includes(q)) return false
+      }
+      return true
+    })
+  }, [allPersons, showGymnasts, showCoaches, showJudges, photoFilter, searchQuery])
 
   // pick a preview person: first of the selected type, or sample
   const previewPerson: Person = useMemo(() => {
@@ -623,6 +632,29 @@ ${all.map(p => p.name ? cardHtml(p) : '<div class="card"></div>').join('\n')}
             </svg>
             {t.printAll} ({printPersons.filter(p => !excludedIds.has(`${p.type}-${p.id}`)).length})
           </button>
+        </div>
+
+        {/* search */}
+        <div className="mb-4">
+          <div className="relative w-full sm:w-72">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+            </svg>
+            <input
+              type="text"
+              placeholder={t.searchPlaceholder}
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 text-sm text-slate-800 placeholder:text-slate-400 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
 
         {printPersons.length === 0 ? (

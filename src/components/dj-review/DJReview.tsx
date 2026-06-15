@@ -638,6 +638,7 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
   const t = useT('DJReview', lang)
   const [sheets, setSheets] = useState<Sheet[]>(initialSheets)
   const [modalSheetId, setModalSheetId] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const reviewedCount = sheets.filter((s) => s.reviewStatus === 'checked').length
 
@@ -730,11 +731,12 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
     if (!practiceMode) {
       if (isSecondDJ) {
         const routineType = sheet.routineType as 'Balance' | 'Dynamic' | 'Combined'
-        await supabase.from('ts_review_status')
+        const { error } = await supabase.from('ts_review_status')
           .update({ routine_type: routineType, status: newStatus, dj2_id: myJudgeId, dj2_decision: 'checked', dj2_comment: null, dj2_at: now })
           .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', routineType)
+        if (error) { console.error('ts_review_status update error:', error); setSaveError(t.saveError); return }
       } else {
-        await supabase.from('ts_review_status').upsert({
+        const { error } = await supabase.from('ts_review_status').upsert({
           team_id: sheet.teamId, competition_id: sheet.competitionId,
           routine_type: sheet.routineType as 'Balance' | 'Dynamic' | 'Combined',
           status: newStatus,
@@ -742,6 +744,7 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
           dj2_id: null, dj2_decision: null, dj2_comment: null, dj2_at: null,
           final_comment: null, notified_at: null,
         }, { onConflict: 'team_id,competition_id,routine_type' })
+        if (error) { console.error('ts_review_status upsert error:', error); setSaveError(t.saveError); return }
       }
     }
 
@@ -764,7 +767,7 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
     if (!practiceMode) {
       if (isSecondDJ) {
         const routineType = sheet.routineType as 'Balance' | 'Dynamic' | 'Combined'
-        await supabase.from('ts_review_status')
+        const { error } = await supabase.from('ts_review_status')
           .update({
             routine_type: routineType,
             status: newStatus, dj2_id: myJudgeId, dj2_decision: 'incorrect',
@@ -772,8 +775,9 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
             ...(isFinal ? { final_comment: comment, notified_at: now } : {}),
           })
           .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', routineType)
+        if (error) { console.error('ts_review_status update error:', error); setSaveError(t.saveError); return }
       } else {
-        await supabase.from('ts_review_status').upsert({
+        const { error } = await supabase.from('ts_review_status').upsert({
           team_id: sheet.teamId, competition_id: sheet.competitionId,
           routine_type: sheet.routineType as 'Balance' | 'Dynamic' | 'Combined',
           status: newStatus,
@@ -781,6 +785,7 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
           dj2_id: null, dj2_decision: null, dj2_comment: null, dj2_at: null,
           ...(isFinal ? { final_comment: comment, notified_at: now } : { final_comment: null, notified_at: null }),
         }, { onConflict: 'team_id,competition_id,routine_type' })
+        if (error) { console.error('ts_review_status upsert error:', error); setSaveError(t.saveError); return }
       }
     }
 
@@ -803,7 +808,7 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
 
     if (!practiceMode) {
       const routineType = sheet.routineType as 'Balance' | 'Dynamic' | 'Combined'
-      await supabase.from('ts_review_status')
+      const { error } = await supabase.from('ts_review_status')
         .update({
           routine_type: routineType,
           status: newStatus,
@@ -812,6 +817,7 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
           ...(decision === 'incorrect' ? { final_comment: isFinalComment, notified_at: now } : { final_comment: null }),
         })
         .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', routineType)
+      if (error) { console.error('ts_review_status update error:', error); setSaveError(t.saveError); return }
     }
 
     updateSheetReview(sheetId, {
@@ -827,7 +833,7 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
 
     if (!practiceMode) {
       const routineType = sheet.routineType as 'Balance' | 'Dynamic' | 'Combined'
-      await supabase.from('ts_review_status')
+      const { error } = await supabase.from('ts_review_status')
         .update({
           routine_type: routineType,
           status: 'pending',
@@ -836,6 +842,7 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
           final_comment: null, notified_at: null,
         })
         .eq('team_id', sheet.teamId).eq('competition_id', sheet.competitionId).eq('routine_type', routineType)
+      if (error) { console.error('ts_review_status update error:', error); setSaveError(t.saveError); return }
     }
 
     updateSheetReview(sheetId, {
@@ -852,11 +859,12 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
 
     if (!practiceMode) {
       const routineType = sheet.routineType as 'Balance' | 'Dynamic' | 'Combined'
-      await supabase.from('ts_review_status').upsert({
+      const { error } = await supabase.from('ts_review_status').upsert({
         team_id: sheet.teamId, competition_id: sheet.competitionId,
         routine_type: routineType,
         missing_individual_sr: next,
       }, { onConflict: 'team_id,competition_id,routine_type' })
+      if (error) { console.error('ts_review_status upsert error:', error); setSaveError(t.saveError); return }
     }
 
     updateSheetReview(sheetId, { missingIndividualSR: next })
@@ -880,6 +888,12 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
 
   return (
     <>
+      {saveError && (
+        <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <span className="flex-1">{saveError}</span>
+          <button onClick={() => setSaveError(null)} className="text-red-400 hover:text-red-600 font-semibold">✕</button>
+        </div>
+      )}
       <div className="px-4 pb-8">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-lg font-bold text-slate-800">{t.title}</h1>

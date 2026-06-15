@@ -152,7 +152,7 @@ function RoutineRow({
           <span className="w-16 shrink-0 text-xs font-semibold text-slate-600">{routineType}</span>
           <FileChip label={t.ts} filename={record?.ts_filename}
             accept=".pdf,application/pdf"
-            locked={locked && reviewStatus !== 'incorrect'}
+            locked={reviewStatus === 'new_ts' || (locked && reviewStatus !== 'incorrect')}
             onPreview={record?.ts_filename ? () => setTsPreviewUrl(record.ts_filename!) : undefined}
             onUpload={(file) => onSet('ts', file)}
             onRemove={() => onSet('ts', null)} />
