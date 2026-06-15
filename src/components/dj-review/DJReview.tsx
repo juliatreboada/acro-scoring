@@ -109,7 +109,7 @@ function ElementForm({ lang, integerMode, onAdd }: {
             {t.isStatic}
           </button>
         )}
-        {form.elementType === 'balance' && (
+        {(['balance', 'mount', 'motion'] as ElementType[]).includes(form.elementType as ElementType) && (
           <button
             onClick={() => setForm((f) => ({ ...f, legsTogether: !f.legsTogether }))}
             className={[
@@ -230,7 +230,7 @@ function ElementEditRow({ el, lang, integerMode, onSave, onCancel }: {
             {t.isStatic}
           </button>
         )}
-        {form.elementType === 'balance' && (
+        {(['balance', 'mount', 'motion'] as ElementType[]).includes(form.elementType as ElementType) && (
           <button onClick={() => setForm((f) => ({ ...f, legsTogether: !f.legsTogether }))}
             className={['px-2.5 py-1 rounded-lg text-xs font-medium border transition-all',
               form.legsTogether ? 'bg-green-500 text-white border-green-500' : 'bg-white text-slate-400 border-slate-200 hover:border-green-300',
@@ -481,7 +481,7 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
   const srPenalty = srPenaltyForAgeGroup(sheet.ageGroup)
   const totalD = sheet.elements.reduce((s, el) => {
     const base = el.elementType === 'individual' ? el.difficultyValue / gymnastsCount : el.difficultyValue
-    const ltBonus = el.elementType === 'balance' && el.legsTogether ? 0.01 : 0
+    const ltBonus = (['balance', 'mount', 'motion'] as ElementType[]).includes(el.elementType) && el.legsTogether ? 0.01 : 0
     return s + base + ltBonus
   }, 0)
   const totalPenalty = sheet.missingIndividualSR ? srPenalty : 0
@@ -535,7 +535,7 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
                   <span className={`text-xs font-medium px-1.5 py-0.5 rounded shrink-0 ${badge.color}`}>
                     {badge.label}
                   </span>
-                  {el.elementType === 'balance' && el.legsTogether && (
+                  {(['balance', 'mount', 'motion'] as ElementType[]).includes(el.elementType) && el.legsTogether && (
                     <span className="text-xs font-medium px-1.5 py-0.5 rounded shrink-0 bg-green-100 text-green-700">+1</span>
                   )}
                   <span className="text-sm text-slate-700 flex-1 leading-snug min-w-0 truncate">
@@ -543,7 +543,7 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
                   </span>
                   <span className="text-xs font-mono text-slate-500 shrink-0 tabular-nums">
                     {el.difficultyValue.toFixed(2)}
-                    {el.elementType === 'balance' && el.legsTogether && (
+                    {(['balance', 'mount', 'motion'] as ElementType[]).includes(el.elementType) && el.legsTogether && (
                       <span className="text-green-600 ml-0.5">+0.01</span>
                     )}
                   </span>
