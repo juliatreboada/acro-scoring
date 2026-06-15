@@ -615,6 +615,7 @@ export const DJReview = {
     missingIndividualSR: 'No individual elements declared (SR penalty)',
     refresh: 'Refresh',
     back: 'Back',
+    saveError: 'Failed to save. Please try again.',
   }
 
 // components/scoring/views/DJView.tsx
@@ -1052,6 +1053,7 @@ export const AccreditationsTab = {
   filterWithoutPhoto: 'Without photo',
   clickToExclude: 'Click to exclude from print',
   clickToInclude: 'Click to include again',
+  searchPlaceholder: 'Filter by name or club…',
 }
 
 // app/login/page.tsx
