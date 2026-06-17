@@ -614,6 +614,10 @@ export const DJReview = {
     refresh: 'Actualizar',
     back: 'Volver',
     saveError: 'Error al guardar. Inténtalo de nuevo.',
+    diffLimits: 'Límites D',
+    diffLimitMax: 'máx',
+    diffLimitExceeded: 'supera el límite',
+    diffRatioExceeded: 'ratio B:D supera 2:1',
   }
 
 // components/scoring/views/DJView.tsx

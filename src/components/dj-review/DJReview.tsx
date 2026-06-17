@@ -10,6 +10,64 @@ import { srPenaltyForAgeGroup } from '@/components/scoring/DJElementsShared'
 import { useT } from '@/lib/useT'
 import { DJReview as DJReviewT } from '@/locales/en'
 
+// ─── diff limits ──────────────────────────────────────────────────────────────
+
+type DiffWarning =
+  | { kind: 'total'; limit: number; actual: number }
+  | { kind: 'ratio'; balanceD: number; dynamicD: number }
+
+const BALANCE_TYPES: ElementType[] = ['balance', 'mount', 'motion']
+const DYNAMIC_TYPES: ElementType[] = ['dynamic', 'link']
+
+const DIFF_LIMITS: Partial<Record<string, Partial<Record<string, number>>>> = {
+  youth:  { Balance: 0.90, Dynamic: 0.80, Combined: 1.10 },
+  junior: { Balance: 1.20, Dynamic: 1.10, Combined: 1.80 },
+  // senior: no total limit
+}
+
+function ageGroupTier(ageGroup: string): 'youth' | 'junior' | 'senior' | null {
+  const lower = ageGroup.toLowerCase()
+  if (lower.startsWith('youth') && !lower.startsWith('pre-youth')) return 'youth'
+  if (lower.includes('junior')) return 'junior'
+  if (lower.includes('senior') || lower.includes('absoluto')) return 'senior'
+  return null
+}
+
+function getDiffLimit(sheet: Sheet): number | null {
+  const tier = ageGroupTier(sheet.ageGroup)
+  if (!tier) return null
+  return DIFF_LIMITS[tier]?.[sheet.routineType] ?? null
+}
+
+function diffWarnings(sheet: Sheet, gymnastsCount: number): DiffWarning[] {
+  const tier = ageGroupTier(sheet.ageGroup)
+  if (!tier) return []
+  const warnings: DiffWarning[] = []
+
+  const totalD = sheet.elements.reduce((s, el) => {
+    const base = el.elementType === 'individual' ? el.difficultyValue / gymnastsCount : el.difficultyValue
+    const ltBonus = BALANCE_TYPES.includes(el.elementType as ElementType) && el.legsTogether ? 0.01 : 0
+    return s + base + ltBonus
+  }, 0)
+
+  const limit = DIFF_LIMITS[tier]?.[sheet.routineType] ?? null
+  if (limit !== null && totalD > limit + 0.001) warnings.push({ kind: 'total', limit, actual: totalD })
+
+  if (sheet.routineType === 'Combined') {
+    const balanceD = sheet.elements
+      .filter(el => BALANCE_TYPES.includes(el.elementType as ElementType))
+      .reduce((s, el) => s + el.difficultyValue + (el.legsTogether ? 0.01 : 0), 0)
+    const dynamicD = sheet.elements
+      .filter(el => DYNAMIC_TYPES.includes(el.elementType as ElementType))
+      .reduce((s, el) => s + el.difficultyValue, 0)
+    const EPS = 0.001
+    if ((balanceD > EPS || dynamicD > EPS) && (dynamicD > 2 * balanceD + EPS || balanceD > 2 * dynamicD + EPS)) {
+      warnings.push({ kind: 'ratio', balanceD, dynamicD })
+    }
+  }
+  return warnings
+}
+
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function usesIntegerDifficulty(ageGroup: string): boolean {
@@ -460,11 +518,12 @@ function ReviewActions({ sheet, myJudgeId, lang, onMarkChecked, onMarkIncorrect,
 
 // ─── sheet panel ──────────────────────────────────────────────────────────────
 
-function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onEditElement,
+function SheetPanel({ sheet, myJudgeId, lang, diffLimitEnabled, onAddElement, onDeleteElement, onEditElement,
   onMarkChecked, onMarkIncorrect, onDJ2Confirm, onReopen, onToggleMissingIndividualSR }: {
   sheet: Sheet
   myJudgeId: string
   lang: Lang
+  diffLimitEnabled: boolean
   onAddElement: (sheetId: string, el: Omit<ReviewElement, 'id' | 'position'>) => Promise<void>
   onDeleteElement: (sheetId: string, elementId: string) => Promise<void>
   onEditElement: (sheetId: string, elementId: string, el: Omit<ReviewElement, 'id' | 'position'>) => Promise<void>
@@ -485,6 +544,15 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
     return s + base + ltBonus
   }, 0)
   const totalPenalty = sheet.missingIndividualSR ? srPenalty : 0
+  const totalLimit = diffLimitEnabled ? getDiffLimit(sheet) : null
+  const effectiveD = totalLimit !== null ? Math.min(totalD, totalLimit) : totalD
+  const warnings = diffLimitEnabled && sheet.elements.length > 0 ? diffWarnings(sheet, gymnastsCount) : []
+  const balanceD = sheet.routineType === 'Combined' ? sheet.elements
+    .filter(el => BALANCE_TYPES.includes(el.elementType as ElementType))
+    .reduce((s, el) => s + el.difficultyValue + (el.legsTogether ? 0.01 : 0), 0) : 0
+  const dynamicD = sheet.routineType === 'Combined' ? sheet.elements
+    .filter(el => DYNAMIC_TYPES.includes(el.elementType as ElementType))
+    .reduce((s, el) => s + el.difficultyValue, 0) : 0
   const [editingId, setEditingId] = useState<string | null>(null)
 
   return (
@@ -582,10 +650,33 @@ function SheetPanel({ sheet, myJudgeId, lang, onAddElement, onDeleteElement, onE
               {totalPenalty > 0 && (
                 <span className="text-xs font-mono text-red-500 tabular-nums">−{totalPenalty.toFixed(2)} SR</span>
               )}
-              <span className="text-sm font-bold text-slate-700 tabular-nums">{totalD.toFixed(2)}</span>
+              <span className={['text-sm font-bold tabular-nums', warnings.some(w => w.kind === 'total') ? 'text-amber-600' : 'text-slate-700'].join(' ')}>
+                {effectiveD.toFixed(2)}
+              </span>
             </div>
           </div>
         )}
+
+        {/* Combined subtotals (always shown when diffLimitEnabled and relevant tier) */}
+        {diffLimitEnabled && sheet.elements.length > 0 && sheet.routineType === 'Combined' && ageGroupTier(sheet.ageGroup) !== null && (
+          <div className="flex justify-between items-center px-3 py-1.5 text-xs text-slate-400 shrink-0">
+            <span>{t.balance} {balanceD.toFixed(2)}</span>
+            <span>{t.dynamic} {dynamicD.toFixed(2)}</span>
+          </div>
+        )}
+
+        {/* Diff limit warnings */}
+        {warnings.map((w, i) => (
+          <div key={i} className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 shrink-0">
+            <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            {w.kind === 'total'
+              ? `D ${w.actual.toFixed(2)} ${t.diffLimitExceeded} (${t.diffLimitMax} ${w.limit.toFixed(2)})`
+              : `B ${w.balanceD.toFixed(2)} / D ${w.dynamicD.toFixed(2)} — ${t.diffRatioExceeded}`
+            }
+          </div>
+        ))}
 
         {/* Missing individual elements SR penalty toggle */}
         <button
@@ -639,6 +730,7 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
   const [sheets, setSheets] = useState<Sheet[]>(initialSheets)
   const [modalSheetId, setModalSheetId] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [diffLimitEnabled, setDiffLimitEnabled] = useState(true)
 
   const reviewedCount = sheets.filter((s) => s.reviewStatus === 'checked').length
 
@@ -897,20 +989,43 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
       <div className="px-4 pb-8">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-lg font-bold text-slate-800">{t.title}</h1>
-          <span className={[
-            'text-sm font-medium px-3 py-1 rounded-full',
-            reviewedCount === sheets.length && sheets.length > 0
-              ? 'bg-emerald-100 text-emerald-700'
-              : 'bg-slate-100 text-slate-500',
-          ].join(' ')}>
-            {reviewedCount} {t.of} {sheets.length} {t.sheets}
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setDiffLimitEnabled(d => !d)}
+              className={[
+                'px-2.5 py-1 text-xs font-semibold rounded-full border transition-colors',
+                diffLimitEnabled
+                  ? 'bg-amber-100 text-amber-700 border-amber-200'
+                  : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300',
+              ].join(' ')}
+            >
+              {t.diffLimits}
+            </button>
+            <span className={[
+              'text-sm font-medium px-3 py-1 rounded-full',
+              reviewedCount === sheets.length && sheets.length > 0
+                ? 'bg-emerald-100 text-emerald-700'
+                : 'bg-slate-100 text-slate-500',
+            ].join(' ')}>
+              {reviewedCount} {t.of} {sheets.length} {t.sheets}
+            </span>
+          </div>
         </div>
 
         <div className="space-y-2">
           {sheets.map((sheet) => {
             const iAmDJ1 = !sheet.dj1Id || sheet.dj1Id === myJudgeId
             const needsMyAction = sheet.reviewStatus === 'awaiting_dj2' && !iAmDJ1
+            const gymnastsCount = CATEGORY_SIZE[sheet.category] ?? 1
+            const rawD = sheet.elements.reduce((s, e) => {
+              const base = e.elementType === 'individual' ? e.difficultyValue / gymnastsCount : e.difficultyValue
+              const ltBonus = BALANCE_TYPES.includes(e.elementType as ElementType) && e.legsTogether ? 0.01 : 0
+              return s + base + ltBonus
+            }, 0)
+            const listLimit = diffLimitEnabled ? getDiffLimit(sheet) : null
+            const listDisplayD = listLimit !== null ? Math.min(rawD, listLimit) : rawD
+            const hasLimitWarning = diffLimitEnabled && sheet.elements.length > 0 &&
+              diffWarnings(sheet, gymnastsCount).length > 0
             return (
               <button
                 key={sheet.id}
@@ -932,12 +1047,20 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
                         {lang === 'es' ? 'Nueva TS' : 'New TS'}
                       </span>
                     )}
+                    {hasLimitWarning && (
+                      <span className="text-xs font-semibold px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                        </svg>
+                        {t.diffLimits}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-slate-400">
                     {sheet.ageGroup} · {categoryLabel(sheet.category, lang)} · {routineLabel(sheet.routineType)}
                     {sheet.elements.length > 0 && (
                       <span className="ml-2 text-slate-300">
-                        {sheet.elements.length} el · D {sheet.elements.reduce((s, e) => s + (e.elementType === 'individual' ? e.difficultyValue / (CATEGORY_SIZE[sheet.category] ?? 1) : e.difficultyValue), 0).toFixed(2)}
+                        {sheet.elements.length} el · D {listDisplayD.toFixed(2)}
                       </span>
                     )}
                   </p>
@@ -978,6 +1101,7 @@ export default function DJReview({ initialSheets, myJudgeId, lang, practiceMode 
               sheet={modalSheet}
               myJudgeId={myJudgeId}
               lang={lang}
+              diffLimitEnabled={diffLimitEnabled}
               onAddElement={handleAddElement}
               onDeleteElement={handleDeleteElement}
               onEditElement={handleEditElement}
