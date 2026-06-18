@@ -1182,6 +1182,8 @@ export default function CompetitionDetail({
           globalJudges={globalJudges}
           judgePool={judgePool}
           competitionId={competition.id}
+          competitionName={competition.name}
+          competitionLogoUrl={competition.logo_url ?? null}
           sizes={competition.tshirt_sizes ?? []}
           deadline={competition.tshirt_deadline ?? null}
           onUpdateConfig={onUpdateTshirtConfig}

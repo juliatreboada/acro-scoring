@@ -27,6 +27,8 @@ type Props = {
   globalJudges: Judge[]
   judgePool: string[]
   competitionId: string
+  competitionName: string
+  competitionLogoUrl: string | null
   sizes: string[]
   deadline: string | null
   onUpdateConfig: (sizes: string[], deadline: string | null) => Promise<void>
@@ -36,13 +38,24 @@ function toTitleCase(s: string): string {
   return s.toLowerCase().replace(/(?:^|\s)\S/g, c => c.toUpperCase())
 }
 
-export default function TshirtTab({ lang, competitionGymnasts, competitionCoaches, globalJudges, judgePool, competitionId, sizes, deadline, onUpdateConfig }: Props) {
+export default function TshirtTab({ lang, competitionGymnasts, competitionCoaches, globalJudges, judgePool, competitionId, competitionName, competitionLogoUrl, sizes, deadline, onUpdateConfig }: Props) {
   const supabase = createClient()
   const [orders, setOrders] = useState<TshirtOrder[]>([])
   const [people, setPeople] = useState<Person[]>([])
   const [adminJudges, setAdminJudges] = useState<{ id: string; name: string }[]>([])
   const [adminJudgeSizes, setAdminJudgeSizes] = useState<Record<string, string>>({})
+  const [clubLogoMap, setClubLogoMap] = useState<Record<string, string | null>>({})
   const [loading, setLoading] = useState(true)
+  const [collapsedClubs, setCollapsedClubs] = useState<Set<string>>(new Set())
+
+  function toggleClub(clubName: string) {
+    setCollapsedClubs(prev => {
+      const next = new Set(prev)
+      if (next.has(clubName)) next.delete(clubName)
+      else next.add(clubName)
+      return next
+    })
+  }
 
   // ── names list (must be before any early return) ────────────────────────────
   const gymnastNames = useMemo(() =>
@@ -125,11 +138,15 @@ export default function TshirtTab({ lang, competitionGymnasts, competitionCoache
       ].filter(Boolean))
     ]
     const clubsRes = clubIds.length > 0
-      ? await supabase.from('clubs').select('id,club_name').in('id', clubIds)
+      ? await supabase.from('clubs').select('id,club_name,avatar_url').in('id', clubIds)
       : { data: [] }
     const clubNameMap: Record<string, string> = Object.fromEntries(
       ((clubsRes.data ?? []) as any[]).map((c: any) => [c.id, c.club_name])
     )
+    const logoMap: Record<string, string | null> = Object.fromEntries(
+      ((clubsRes.data ?? []) as any[]).map((c: any) => [c.id, c.avatar_url ?? null])
+    )
+    setClubLogoMap(logoMap)
 
     const judgeNameMap: Record<string, string> = Object.fromEntries(
       ((judgesRes.data ?? []) as any[]).map((j: any) => [j.id, j.full_name])
@@ -209,12 +226,12 @@ export default function TshirtTab({ lang, competitionGymnasts, competitionCoache
 
   // orders grouped by club (including 'Administración' for admin-set judges)
   const byClub = useMemo(() => {
-    const map: Record<string, { club_name: string; rows: { person: Person; size: string }[] }> = {}
+    const map: Record<string, { club_name: string; logo_url: string | null; rows: { person: Person; size: string }[] }> = {}
     for (const order of orders) {
       const person = people.find(p => p.id === order.person_id && p.type === order.person_type)
       if (!person) continue
       const key = person.club_id ?? '__admin__'
-      if (!map[key]) map[key] = { club_name: person.club_name, rows: [] }
+      if (!map[key]) map[key] = { club_name: person.club_name, logo_url: clubLogoMap[key] ?? null, rows: [] }
       map[key].rows.push({ person, size: order.size })
     }
     return Object.values(map).sort((a, b) => {
@@ -222,44 +239,74 @@ export default function TshirtTab({ lang, competitionGymnasts, competitionCoache
       if (b.club_name === 'Administración') return -1
       return a.club_name.localeCompare(b.club_name)
     })
-  }, [orders, people])
+  }, [orders, people, clubLogoMap])
 
   const totalOrders = orders.length
 
-  function handlePrint() {
-    const html = `
-      <!DOCTYPE html><html><head><meta charset="utf-8">
-      <title>Tallas camisetas</title>
-      <style>
-        body { font-family: Arial, sans-serif; font-size: 12px; margin: 24px; }
-        h1 { font-size: 16px; margin-bottom: 4px; }
-        h2 { font-size: 13px; margin: 16px 0 4px; border-bottom: 1px solid #ccc; padding-bottom: 3px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-        th, td { border: 1px solid #ddd; padding: 4px 8px; text-align: left; }
-        th { background: #f5f5f5; font-weight: 600; }
-        .totals td { font-weight: bold; }
-        @media print { body { margin: 10px; } }
-      </style>
-      </head><body>
-      <h1>Tallas camisetas</h1>
-      <p style="color:#666;margin-bottom:12px">Total pedidos: ${totalOrders}</p>
-      <h2>Resumen por talla</h2>
-      <table class="totals"><thead><tr><th>Talla</th><th>Cantidad</th></tr></thead><tbody>
-      ${sizes.map(s => `<tr><td>${s}</td><td>${totals[s] ?? 0}</td></tr>`).join('')}
-      </tbody></table>
-      ${byClub.map(club => `
-        <h2>${club.club_name} (${club.rows.length})</h2>
-        <table><thead><tr><th>Nombre</th><th>Tipo</th><th>Talla</th></tr></thead><tbody>
-        ${club.rows.map(r => `<tr><td>${r.person.name}</td><td>${r.person.type === 'gymnast' ? 'Gimnasta' : r.person.type === 'coach' ? 'Entrenador/a' : 'Juez/a'}</td><td>${r.size}</td></tr>`).join('')}
-        </tbody></table>
-      `).join('')}
-      </body></html>`
+  function fixedHeaderHtml(subtitle: string) {
+    return `
+      <div class="page-header">
+        ${competitionLogoUrl ? `<img src="${competitionLogoUrl}" style="max-height:48px;max-width:100px;object-fit:contain;" />` : ''}
+        <div>
+          <div style="font-size:16px;font-weight:700;">${competitionName}</div>
+          <div style="font-size:11px;color:#666;">${subtitle}</div>
+        </div>
+      </div>`
+  }
+
+  function openPrint(headerHtml: string, bodyHtml: string, title: string) {
     const w = window.open('', '_blank')
     if (!w) return
-    w.document.write(html)
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; margin: 24px; margin-top: 90px; }
+        .page-header { position: fixed; top: 0; left: 0; right: 0; background: white; padding: 8px 24px; display: flex; align-items: center; gap: 14px; border-bottom: 2px solid #333; }
+        table { border-collapse: collapse; margin-bottom: 8px; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 4px 8px; text-align: left; vertical-align: top; }
+        th { background: #f5f5f5; font-weight: 600; }
+        .club-block { break-inside: avoid; page-break-inside: avoid; padding-top: 90px; margin-top: -60px; }
+        .club-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #ccc; }
+        .club-header img { max-height: 36px; max-width: 80px; object-fit: contain; }
+        .club-header span { font-size: 13px; font-weight: 700; }
+        .club-header small { font-size: 11px; color: #666; }
+        @media print { body { margin-top: 90px; } }
+      </style></head><body>${headerHtml}${bodyHtml}</body></html>`)
     w.document.close()
     w.focus()
     w.print()
+  }
+
+  function handlePrintTotals() {
+    const rows = sizes.map(s => `<tr><td style="font-weight:600;">${s}</td><td style="text-align:center;font-weight:700;">${totals[s] ?? 0}</td></tr>`).join('')
+    const body = `
+      <p style="color:#666;margin-bottom:12px">Total pedidos: ${totalOrders}</p>
+      <table style="min-width:200px;">
+        <thead><tr><th>Talla</th><th style="text-align:center;">Cantidad</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`
+    openPrint(fixedHeaderHtml('Totales por talla'), body, 'Totales camisetas')
+  }
+
+  function handlePrintByClub() {
+    const clubSections = byClub.map(club => {
+      const bySizeMap: Record<string, string[]> = {}
+      for (const { person, size } of club.rows) bySizeMap[size] = [...(bySizeMap[size] ?? []), person.name]
+      const relevantSizes = sizes.filter(s => bySizeMap[s]?.length)
+      const maxRows = Math.max(0, ...relevantSizes.map(s => bySizeMap[s].length))
+      const headerCells = relevantSizes.map(s => `<th class="size-col">${s} (${bySizeMap[s].length})</th>`).join('')
+      const bodyRows = Array.from({ length: maxRows }, (_, i) =>
+        `<tr>${relevantSizes.map(s => `<td>${bySizeMap[s][i] ?? ''}</td>`).join('')}</tr>`
+      ).join('')
+      return `<div class="club-block">
+        <div class="club-header">
+          ${club.logo_url ? `<img src="${club.logo_url}" />` : ''}
+          <span>${club.club_name}</span>
+          <small>${club.rows.length} persona${club.rows.length !== 1 ? 's' : ''}</small>
+        </div>
+        <table><thead><tr>${headerCells}</tr></thead><tbody>${bodyRows}</tbody></table>
+      </div>`
+    }).join('')
+    openPrint(fixedHeaderHtml('Por club'), clubSections, 'Camisetas por club')
   }
 
   if (loading) return <div className="text-sm text-slate-500 py-8 text-center">Cargando...</div>
@@ -403,18 +450,27 @@ export default function TshirtTab({ lang, competitionGymnasts, competitionCoache
       {/* Summary + breakdown */}
       {sizes.length > 0 && (
         <>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <p className="text-sm font-semibold text-slate-700">
               {totalOrders} pedido{totalOrders !== 1 ? 's' : ''} recibido{totalOrders !== 1 ? 's' : ''}
             </p>
             {totalOrders > 0 && (
-              <button onClick={handlePrint}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all">
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.056 48.056 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
-                </svg>
-                Imprimir
-              </button>
+              <div className="flex gap-2">
+                <button onClick={handlePrintTotals}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.056 48.056 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
+                  </svg>
+                  Imprimir totales
+                </button>
+                <button onClick={handlePrintByClub}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-all">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.056 48.056 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
+                  </svg>
+                  Imprimir por club
+                </button>
+              </div>
             )}
           </div>
 
@@ -433,34 +489,59 @@ export default function TshirtTab({ lang, competitionGymnasts, competitionCoache
             <p className="text-sm text-slate-400 text-center py-8">Ningún club ha enviado tallas todavía.</p>
           ) : (
             <div className="space-y-3">
-              {byClub.map(club => (
-                <div key={club.club_name} className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-                  <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                    <p className="text-sm font-semibold text-slate-700">{club.club_name}</p>
-                    <span className="text-xs text-slate-500">{club.rows.length} persona{club.rows.length !== 1 ? 's' : ''}</span>
+              {byClub.map(club => {
+                const isCollapsed = collapsedClubs.has(club.club_name)
+                const bySizeMap: Record<string, string[]> = {}
+                for (const { person, size } of club.rows) {
+                  bySizeMap[size] = [...(bySizeMap[size] ?? []), person.name]
+                }
+                const relevantSizes = sizes.filter(s => bySizeMap[s]?.length)
+                const maxRows = Math.max(0, ...relevantSizes.map(s => bySizeMap[s].length))
+                return (
+                  <div key={club.club_name} className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                    <button
+                      onClick={() => toggleClub(club.club_name)}
+                      className="w-full px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between hover:bg-slate-100 transition-colors"
+                    >
+                      <p className="text-sm font-semibold text-slate-700">{club.club_name}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-500">{club.rows.length} persona{club.rows.length !== 1 ? 's' : ''}</span>
+                        <svg className={`w-4 h-4 text-slate-400 transition-transform ${isCollapsed ? '' : 'rotate-180'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </button>
+                    {!isCollapsed && (
+                      relevantSizes.length === 0 ? (
+                        <p className="px-4 py-3 text-xs text-slate-400">Sin tallas registradas.</p>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead className="bg-slate-50/60 border-b border-slate-100">
+                              <tr>
+                                {relevantSizes.map(s => (
+                                  <th key={s} className="px-4 py-2 text-left font-semibold text-slate-500 whitespace-nowrap">
+                                    {s} <span className="font-normal text-slate-400">({bySizeMap[s].length})</span>
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {Array.from({ length: maxRows }, (_, i) => (
+                                <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
+                                  {relevantSizes.map(s => (
+                                    <td key={s} className="px-4 py-2 text-slate-700">{bySizeMap[s][i] ?? ''}</td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )
+                    )}
                   </div>
-                  <table className="w-full text-xs">
-                    <thead className="bg-slate-50/60 border-b border-slate-100">
-                      <tr>
-                        <th className="px-4 py-2 text-left font-semibold text-slate-500">Nombre</th>
-                        <th className="px-4 py-2 text-left font-semibold text-slate-500">Rol</th>
-                        <th className="px-4 py-2 text-right font-semibold text-slate-500">Talla</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {club.rows.map(({ person, size }, i) => (
-                        <tr key={person.id} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}>
-                          <td className="px-4 py-2 font-medium text-slate-800">{person.name}</td>
-                          <td className="px-4 py-2 text-slate-500">
-                            {person.type === 'gymnast' ? 'Gimnasta' : person.type === 'coach' ? 'Entrenador/a' : 'Juez/a'}
-                          </td>
-                          <td className="px-4 py-2 text-right font-semibold text-slate-700">{size}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </>
