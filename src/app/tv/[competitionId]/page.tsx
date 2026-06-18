@@ -454,7 +454,7 @@ export default function TVPage() {
         <div className="relative z-10 flex min-h-0 flex-1 flex-col lg:flex-row">
           {/* Left: title + status */}
           <div className="flex shrink-0 flex-col justify-center gap-7 border-b border-white/5 px-8 py-10 text-left sm:px-12 lg:w-[42%] lg:max-w-2xl lg:border-b-0 lg:border-r lg:py-12 xl:px-16">
-            <h1 className="text-balance bg-gradient-to-b from-white to-slate-400 bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl md:text-6xl xl:text-7xl">
+            <h1 className="text-balance break-words bg-gradient-to-b from-white to-slate-400 bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-4xl md:text-5xl xl:text-5xl">
               {competition?.name ?? ''}
             </h1>
 
@@ -522,7 +522,7 @@ export default function TVPage() {
 
       {/* top bar */}
       <div className="shrink-0 flex items-center justify-between px-8 py-3 bg-slate-900 border-b border-slate-800">
-        <span className="text-slate-300 text-lg font-semibold truncate">{competition?.name}</span>
+        <span className="text-slate-300 text-base font-semibold min-w-0 break-words">{competition?.name}</span>
         {session && (
           <span className="text-slate-400 text-base shrink-0 ml-4">
             {categoryLabel(session.category, lang)}
