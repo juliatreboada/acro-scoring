@@ -115,6 +115,20 @@ function DJReviewPage() {
 
       let sessionTeams: { session_id: string; team_id: string; position?: number }[] = orders ?? []
 
+      // Filter out dropped-out teams from session_orders
+      if (sessionTeams.length > 0) {
+        const sessionCompMap = Object.fromEntries(mySessions.map(s => [s.id, s.competition_id]))
+        const orderTeamIds = [...new Set(sessionTeams.map(o => o.team_id))]
+        const { data: activeEntries } = await supabase
+          .from('competition_entries')
+          .select('team_id, competition_id')
+          .in('team_id', orderTeamIds)
+          .in('competition_id', [...validCompIds])
+          .eq('dropped_out', false)
+        const activeSet = new Set((activeEntries ?? []).map(e => `${e.team_id}|${e.competition_id}`))
+        sessionTeams = sessionTeams.filter(o => activeSet.has(`${o.team_id}|${sessionCompMap[o.session_id]}`))
+      }
+
       if (sessionTeams.length === 0) {
         // Fallback: registered teams filtered by session age_group + category
         const { data: entries } = await supabase
