@@ -1938,6 +1938,8 @@ export type Database = {
           sponsor_playlist_index: number
           sponsor_reel_enabled: boolean
           updated_at: string
+          mode: string
+          ranking_config: Json | null
         }
         Insert: {
           id?: string
@@ -1948,6 +1950,8 @@ export type Database = {
           sponsor_playlist_index?: number
           sponsor_reel_enabled?: boolean
           updated_at?: string
+          mode?: string
+          ranking_config?: Json | null
         }
         Update: {
           id?: string
@@ -1958,6 +1962,8 @@ export type Database = {
           sponsor_playlist_index?: number
           sponsor_reel_enabled?: boolean
           updated_at?: string
+          mode?: string
+          ranking_config?: Json | null
         }
         Relationships: [
           {

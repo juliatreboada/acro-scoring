@@ -10,6 +10,7 @@ import { categoryLabel } from '@/components/admin/types'
 import { fetchPeerSessionIdsForRanking } from '@/lib/rankingPeers'
 import { TV_SPONSOR_BUCKET, parseTvSponsorVideos, type TvSponsorClip } from '@/lib/tvSponsorVideos'
 import { useT } from '@/lib/useT'
+import type { TvRankingConfig } from '@/lib/tvRankingConfig'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -21,6 +22,8 @@ type TVState = {
   revealed: boolean
   sponsor_reel_enabled: boolean
   sponsor_playlist_index: number
+  mode: 'score' | 'ranking'
+  ranking_config: TvRankingConfig | null
 }
 
 type TeamData = {
@@ -59,6 +62,21 @@ type CompetitionData = {
   name: string
   poster_url: string | null
   sport_type: string
+  logo_url: string | null
+}
+
+type RankingEntry = {
+  team_id: string
+  gymnast_display: string
+  club_name: string
+  club_logo: string | null
+  final_score: number              // single score, or sum across routines
+  routine_scores: { routine_type: string; score: number | null }[]  // empty for single-routine
+}
+
+type SlotData = {
+  entries: RankingEntry[]
+  routine_types: string[]  // ordered; length > 1 means multi-routine display
 }
 
 // ─── component ────────────────────────────────────────────────────────────────
@@ -68,6 +86,8 @@ export default function TVPage() {
   const searchParams = useSearchParams()
   const lang: Lang = (searchParams.get('lang') as Lang) === 'en' ? 'en' : 'es'
   const t = useT('TVPage', lang)
+
+  const previewMode = searchParams.get('previewMode') as 'score' | 'ranking' | null
 
   const supabase = createClient()
 
@@ -87,6 +107,11 @@ export default function TVPage() {
   const prevSessionIdRef = useRef<string | null>(null)
   const prevTeamIdRef = useRef<string | null>(null)
 
+  // ── ranking state ────────────────────────────────────────────────────────────
+
+  const [rankingData, setRankingData] = useState<Record<string, SlotData>>({})
+  const [rankingSlotIdx, setRankingSlotIdx] = useState(0)
+
   // ── fetch competition info once ──────────────────────────────────────────────
 
   const [sponsorClips, setSponsorClips] = useState<TvSponsorClip[]>([])
@@ -96,11 +121,16 @@ export default function TVPage() {
     async function load() {
       const { data } = await supabase
         .from('competitions')
-        .select('name, poster_url, sport_type, tv_sponsor_videos')
+        .select('name, poster_url, sport_type, tv_sponsor_videos, logo_url')
         .eq('id', competitionId)
         .single()
       if (data) {
-        setCompetition({ name: data.name, poster_url: data.poster_url ?? null, sport_type: (data as unknown as { sport_type: string }).sport_type ?? 'acro' })
+        setCompetition({
+          name: data.name,
+          poster_url: data.poster_url ?? null,
+          sport_type: (data as unknown as { sport_type: string }).sport_type ?? 'acro',
+          logo_url: (data as unknown as { logo_url: string | null }).logo_url ?? null,
+        })
         setSponsorClips(parseTvSponsorVideos(data.tv_sponsor_videos))
       }
     }
@@ -113,7 +143,7 @@ export default function TVPage() {
     async function load() {
       const { data } = await supabase
         .from('tv_state')
-        .select('session_id, team_id, revealed, sponsor_reel_enabled, sponsor_playlist_index')
+        .select('session_id, team_id, revealed, sponsor_reel_enabled, sponsor_playlist_index, mode, ranking_config')
         .eq('competition_id', competitionId)
         .maybeSingle()
       const state: TVState = {
@@ -122,6 +152,8 @@ export default function TVPage() {
         revealed:   data?.revealed   ?? false,
         sponsor_reel_enabled: data?.sponsor_reel_enabled ?? false,
         sponsor_playlist_index: typeof data?.sponsor_playlist_index === 'number' ? data.sponsor_playlist_index : 0,
+        mode: (data?.mode as 'score' | 'ranking') ?? 'score',
+        ranking_config: (data?.ranking_config as TvRankingConfig | null) ?? null,
       }
       setTvState(state)
       prevRevealedRef.current = state.revealed
@@ -141,6 +173,8 @@ export default function TVPage() {
           revealed: boolean
           sponsor_reel_enabled?: boolean
           sponsor_playlist_index?: number
+          mode?: string
+          ranking_config?: unknown
         }
         const next: TVState = {
           session_id: row.session_id ?? null,
@@ -148,6 +182,8 @@ export default function TVPage() {
           revealed:   row.revealed   ?? false,
           sponsor_reel_enabled: row.sponsor_reel_enabled ?? false,
           sponsor_playlist_index: typeof row.sponsor_playlist_index === 'number' ? row.sponsor_playlist_index : 0,
+          mode: (row.mode as 'score' | 'ranking') ?? 'score',
+          ranking_config: (row.ranking_config as TvRankingConfig | null) ?? null,
         }
         setTvState(next)
       })
@@ -359,6 +395,146 @@ export default function TVPage() {
     fetchDisplay()
   }, [tvState?.session_id, tvState?.team_id, tvState?.revealed]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── fetch ranking data when in ranking mode ──────────────────────────────────
+
+  const effectiveMode = previewMode ?? tvState?.mode ?? 'score'
+
+  async function fetchRankingData(config: TvRankingConfig) {
+    const allSessionIds = Array.from(
+      new Set(config.slots.filter(s => s.enabled).flatMap(s => s.session_ids))
+    )
+    if (allSessionIds.length === 0) { setRankingData({}); return }
+
+    // Fetch session routine_types so we can detect multi-routine slots
+    const [resultsRes, sessionsRes] = await Promise.all([
+      supabase.from('routine_results').select('session_id, team_id, final_score')
+        .in('session_id', allSessionIds).in('status', ['approved', 'provisional']),
+      supabase.from('sessions').select('id, routine_type').in('id', allSessionIds),
+    ])
+
+    const results = resultsRes.data ?? []
+    const sessionRoutineMap = new Map(
+      (sessionsRes.data ?? []).map((s: { id: string; routine_type: string }) => [s.id, s.routine_type])
+    )
+
+    const teamIds = Array.from(new Set(results.map(r => r.team_id)))
+    if (teamIds.length === 0) { setRankingData({}); return }
+
+    const [teamsRes, clubsRes] = await Promise.all([
+      supabase.from('teams').select('id, gymnast_display, club_id').in('id', teamIds),
+      supabase.from('clubs').select('id, club_name, avatar_url'),
+    ])
+
+    const teamMap = new Map((teamsRes.data ?? []).map(t => [t.id, t]))
+    const clubMap = new Map((clubsRes.data ?? []).map((c: any) => [c.id, c]))
+
+    // Consistent routine ordering for display
+    const ROUTINE_ORDER = ['Balance', 'Dynamic', 'Combined']
+    const sortRoutines = (types: string[]) =>
+      [...types].sort((a, b) => ROUTINE_ORDER.indexOf(a) - ROUTINE_ORDER.indexOf(b))
+
+    const newData: Record<string, SlotData> = {}
+    for (const slot of config.slots) {
+      if (!slot.enabled) continue
+
+      const slotResults = results.filter(r => slot.session_ids.includes(r.session_id))
+      const routineTypes = sortRoutines(
+        Array.from(new Set(slot.session_ids.map(id => sessionRoutineMap.get(id)).filter(Boolean) as string[]))
+      )
+      const isMulti = routineTypes.length > 1
+
+      if (!isMulti) {
+        // Single-routine: one entry per result, sorted by score
+        const entries: RankingEntry[] = slotResults
+          .map(r => {
+            const team = teamMap.get(r.team_id)
+            const club = clubMap.get((team as any)?.club_id ?? '')
+            return {
+              team_id: r.team_id,
+              gymnast_display: team?.gymnast_display ?? '',
+              club_name: (club as any)?.club_name ?? '',
+              club_logo: (club as any)?.avatar_url ?? null,
+              final_score: r.final_score ?? 0,
+              routine_scores: [],
+            }
+          })
+          .sort((a, b) => b.final_score - a.final_score)
+        newData[slot.id] = { entries, routine_types: routineTypes }
+      } else {
+        // Multi-routine: group by team, sum scores, show per-routine breakdown
+        const byTeam = new Map<string, { scores: Map<string, number | null>; team_id: string }>()
+        for (const r of slotResults) {
+          const rt = sessionRoutineMap.get(r.session_id) ?? 'Unknown'
+          if (!byTeam.has(r.team_id)) byTeam.set(r.team_id, { scores: new Map(), team_id: r.team_id })
+          byTeam.get(r.team_id)!.scores.set(rt, r.final_score ?? null)
+        }
+
+        const entries: RankingEntry[] = Array.from(byTeam.values()).map(({ team_id, scores }) => {
+          const team = teamMap.get(team_id)
+          const club = clubMap.get((team as any)?.club_id ?? '')
+          const routine_scores = routineTypes.map(rt => ({ routine_type: rt, score: scores.get(rt) ?? null }))
+          const total = routine_scores.reduce((sum, rs) => sum + (rs.score ?? 0), 0)
+          return {
+            team_id,
+            gymnast_display: team?.gymnast_display ?? '',
+            club_name: (club as any)?.club_name ?? '',
+            club_logo: (club as any)?.avatar_url ?? null,
+            final_score: total,
+            routine_scores,
+          }
+        }).sort((a, b) => b.final_score - a.final_score)
+
+        newData[slot.id] = { entries, routine_types: routineTypes }
+      }
+    }
+    setRankingData(newData)
+  }
+
+  useEffect(() => {
+    if (effectiveMode !== 'ranking') return
+    const config = tvState?.ranking_config
+    if (!config) return
+    void fetchRankingData(config)
+  }, [effectiveMode, tvState?.ranking_config]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── subscribe to routine_results for ranking re-fetch ───────────────────────
+
+  useEffect(() => {
+    if (effectiveMode !== 'ranking') return
+    const config = tvState?.ranking_config
+    if (!config) return
+
+    const ch = supabase
+      .channel(`tv-ranking-results-${competitionId}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'routine_results',
+      }, () => {
+        void fetchRankingData(config)
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(ch) }
+  }, [effectiveMode, tvState?.ranking_config]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── cycle ranking slots ──────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (effectiveMode !== 'ranking') {
+      setRankingSlotIdx(0)
+      return
+    }
+    const config = tvState?.ranking_config
+    if (!config) return
+    const enabledSlots = config.slots.filter(s => s.enabled && (rankingData[s.id]?.entries.length ?? 0) > 0)
+    if (enabledSlots.length <= 1) return
+
+    const interval = setInterval(() => {
+      setRankingSlotIdx(prev => (prev + 1) % enabledSlots.length)
+    }, (config.duration_seconds ?? 10) * 1000)
+
+    return () => clearInterval(interval)
+  }, [effectiveMode, tvState?.ranking_config]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── helpers ──────────────────────────────────────────────────────────────────
 
   const routineLabel = (rt: string) =>
@@ -381,6 +557,91 @@ export default function TVPage() {
     : (result?.dif_penalty ?? 0) + (result?.cjp_penalty ?? 0)
 
   const isTeamQueued = !!(tvState?.session_id && tvState?.team_id)
+
+  // ── ranking view ─────────────────────────────────────────────────────────────
+
+  const showRanking = effectiveMode === 'ranking' && !(isTeamQueued && tvState?.revealed === true)
+
+  if (showRanking) {
+    const config = tvState?.ranking_config
+    const enabledSlots = config ? config.slots.filter(s => s.enabled && (rankingData[s.id]?.entries.length ?? 0) > 0) : []
+    const currentSlotDisplayIdx = enabledSlots.length > 0 ? rankingSlotIdx % enabledSlots.length : 0
+    const currentSlot = enabledSlots[currentSlotDisplayIdx]
+    const currentSlotData = currentSlot ? rankingData[currentSlot.id] : undefined
+    const currentSlotEntries = currentSlotData?.entries ?? []
+    const routineTypes = currentSlotData?.routine_types ?? []
+    const isMultiRoutine = routineTypes.length > 1
+    const bgColor = config?.background_color ?? '#0f172a'
+
+    return (
+      <div style={{ backgroundColor: bgColor }} className="w-screen h-screen flex flex-col overflow-hidden text-white">
+
+        {/* Header */}
+        <div className="shrink-0 flex items-center gap-4 px-8 py-4 border-b border-white/10">
+          {competition?.logo_url && (
+            <img src={competition.logo_url} className="h-10 w-auto object-contain" alt="" />
+          )}
+          <span className="text-sm font-medium text-white/60 flex-1">{competition?.name}</span>
+          <span className="text-lg font-bold text-white">{currentSlot?.label ?? ''}</span>
+        </div>
+
+        {/* Multi-routine column headers */}
+        {isMultiRoutine && (
+          <div className="shrink-0 flex items-center gap-4 px-8 py-2 border-b border-white/10 text-xs font-semibold text-white/50 uppercase tracking-wider">
+            <span className="w-8" />
+            <span className="w-10 shrink-0" />
+            <span className="flex-1" />
+            {routineTypes.map(rt => (
+              <span key={rt} className="w-20 text-right tabular-nums">{routineLabel(rt)}</span>
+            ))}
+            <span className="w-24 text-right tabular-nums text-white/80">Total</span>
+          </div>
+        )}
+
+        {/* Rankings list */}
+        <div className="flex-1 overflow-hidden px-8 py-4 space-y-1">
+          {currentSlotEntries.map((entry, i) => (
+            <div key={entry.team_id} className="flex items-center gap-4 py-2 border-b border-white/5">
+              <span className="w-8 text-right text-2xl font-black text-white/40">#{i + 1}</span>
+              {entry.club_logo
+                ? <img src={entry.club_logo} className="h-10 w-10 rounded-full object-contain bg-white/10 shrink-0" alt="" />
+                : <div className="h-10 w-10 rounded-full bg-white/10 shrink-0 flex items-center justify-center text-xs text-white/40">{entry.club_name[0] ?? '?'}</div>
+              }
+              <span className="flex-1 text-lg font-semibold text-white truncate">{entry.gymnast_display}</span>
+              {isMultiRoutine ? (
+                <>
+                  {routineTypes.map(rt => {
+                    const rs = entry.routine_scores.find(x => x.routine_type === rt)
+                    return (
+                      <span key={rt} className="w-20 text-right tabular-nums text-xl font-bold text-white/70">
+                        {rs?.score != null ? rs.score.toFixed(3) : '—'}
+                      </span>
+                    )
+                  })}
+                  <span className="w-24 text-right text-2xl font-black tabular-nums text-white">{entry.final_score.toFixed(3)}</span>
+                </>
+              ) : (
+                <span className="text-2xl font-black tabular-nums text-white">{entry.final_score?.toFixed(3)}</span>
+              )}
+            </div>
+          ))}
+          {currentSlotEntries.length === 0 && (
+            <div className="flex items-center justify-center h-full text-white/30 text-lg">Sin resultados todavía</div>
+          )}
+        </div>
+
+        {/* Footer: slot progress */}
+        <div className="shrink-0 flex items-center justify-center gap-2 py-3 border-t border-white/10">
+          {enabledSlots.map((slot, i) => (
+            <div
+              key={slot.id}
+              className={`h-1.5 rounded-full transition-all duration-300 ${i === currentSlotDisplayIdx ? 'w-8 bg-white' : 'w-1.5 bg-white/20'}`}
+            />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   // ── team scores loading ──────────────────────────────────────────────────────
 

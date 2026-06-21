@@ -1546,6 +1546,19 @@ export const TVTab = {
     removeClip:   'Quitar',
     moveUp:       'Arriba',
     moveDown:     'Abajo',
+    // ranking mode
+    previewScore:       'PUNTUACIÓN',
+    previewRanking:     'RANKING',
+    live:               'EN DIRECTO',
+    switchToRanking:    'Cambiar a Ranking →',
+    switchToScore:      '← Cambiar a Puntuación',
+    rankingConfig:      'Configuración del Ranking',
+    saveRankingConfig:  'Guardar',
+    durationSeconds:    'Segundos por ranking',
+    bgColor:            'Color de fondo',
+    rankingSlots:       'Rankings a mostrar',
+    generateFromSessions: 'Generar desde sesiones',
+    noSlots:            'Sin rankings. Pulsa "Generar desde sesiones".',
   }
 
 // components/club/TeamsTab.tsx
