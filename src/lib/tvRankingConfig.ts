@@ -7,13 +7,15 @@ export type TvRankingSlot = {
 }
 
 export type TvRankingConfig = {
-  duration_seconds: number   // seconds per slot
+  duration_seconds: number   // seconds per page
   background_color: string   // CSS hex color e.g. '#0f172a'
+  teams_per_page: number     // rows visible per screen; overflow auto-paginates
   slots: TvRankingSlot[]
 }
 
 export const DEFAULT_RANKING_CONFIG: TvRankingConfig = {
   duration_seconds: 10,
   background_color: '#0f172a',
+  teams_per_page: 8,
   slots: [],
 }

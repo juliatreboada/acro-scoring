@@ -754,12 +754,18 @@ export default function TVTab({
             </div>
             <div className="p-4 space-y-4">
 
-              {/* Duration + color */}
+              {/* Duration + teams per page + color */}
               <div className="flex gap-4">
                 <label className="flex-1">
                   <span className="text-xs font-medium text-slate-600 block mb-1">{t.durationSeconds}</span>
                   <input type="number" min={3} max={60} value={rankingConfig.duration_seconds}
                     onChange={e => { setRankingConfig(c => ({ ...c, duration_seconds: +e.target.value })); setRankingDirty(true) }}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-800" />
+                </label>
+                <label className="flex-1">
+                  <span className="text-xs font-medium text-slate-600 block mb-1">Equipos por pantalla</span>
+                  <input type="number" min={1} max={20} value={rankingConfig.teams_per_page ?? 8}
+                    onChange={e => { setRankingConfig(c => ({ ...c, teams_per_page: +e.target.value })); setRankingDirty(true) }}
                     className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-800" />
                 </label>
                 <label>
