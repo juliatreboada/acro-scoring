@@ -1469,7 +1469,7 @@ export const TVPage = {
     waiting: 'Esperando resultados',
     waitingHint: 'Las puntuaciones aparecerán cuando el equipo de competición las muestre en pantalla.',
     balance: 'Equilibrio', dynamic: 'Dinámico', combined: 'Combinado',
-    e: 'E×2', a: 'A', d: 'D', pen: 'Pen.',
+    e: 'E', a: 'A', d: 'D', pen: 'Pen.',
     eRg: 'E', da: 'DA', db: 'DB', penRj: 'Pen.RJ',
     total: 'TOTAL',
     rank: (n: number, total: number) => `#${n} de ${total}`,

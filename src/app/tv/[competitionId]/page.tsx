@@ -70,8 +70,15 @@ type RankingEntry = {
   gymnast_display: string
   club_name: string
   club_logo: string | null
-  final_score: number              // single score, or sum across routines
-  routine_scores: { routine_type: string; score: number | null }[]  // empty for single-routine
+  final_score: number
+  routine_scores: { routine_type: string; score: number | null }[]  // populated for multi-routine
+  // individual score breakdown (single-routine only; null for multi-routine combined)
+  e_score: number | null    // raw e_score (×2 for Acro at render time)
+  a_score: number | null
+  d_score: number | null    // dif_score (Acro) or null
+  da_score: number | null   // RG only
+  db_score: number | null   // RG only
+  pen: number | null        // total penalty (positive); null if zero
 }
 
 type SlotData = {
@@ -110,7 +117,9 @@ export default function TVPage() {
   // ── ranking state ────────────────────────────────────────────────────────────
 
   const [rankingData, setRankingData] = useState<Record<string, SlotData>>({})
-  const [rankingSlotIdx, setRankingSlotIdx] = useState(0)
+  const [rankingFrameIdx, setRankingFrameIdx] = useState(0)
+  // Ref so the interval callback always has the latest frame count without restarting the timer
+  const rankingTotalFramesRef = useRef(0)
 
   // ── fetch competition info once ──────────────────────────────────────────────
 
@@ -405,14 +414,20 @@ export default function TVPage() {
     )
     if (allSessionIds.length === 0) { setRankingData({}); return }
 
-    // Fetch session routine_types so we can detect multi-routine slots
     const [resultsRes, sessionsRes] = await Promise.all([
-      supabase.from('routine_results').select('session_id, team_id, final_score')
+      supabase.from('routine_results')
+        .select('session_id, team_id, final_score, e_score, a_score, dif_score, dif_penalty, cjp_penalty, da_score, db_score, rj_penalty')
         .in('session_id', allSessionIds).in('status', ['approved', 'provisional']),
       supabase.from('sessions').select('id, routine_type').in('id', allSessionIds),
     ])
 
-    const results = resultsRes.data ?? []
+    type RawResult = {
+      session_id: string; team_id: string; final_score: number | null
+      e_score: number | null; a_score: number | null; dif_score: number | null
+      dif_penalty: number | null; cjp_penalty: number | null
+      da_score: number | null; db_score: number | null; rj_penalty: number | null
+    }
+    const results = (resultsRes.data ?? []) as RawResult[]
     const sessionRoutineMap = new Map(
       (sessionsRes.data ?? []).map((s: { id: string; routine_type: string }) => [s.id, s.routine_type])
     )
@@ -428,7 +443,6 @@ export default function TVPage() {
     const teamMap = new Map((teamsRes.data ?? []).map(t => [t.id, t]))
     const clubMap = new Map((clubsRes.data ?? []).map((c: any) => [c.id, c]))
 
-    // Consistent routine ordering for display
     const ROUTINE_ORDER = ['Balance', 'Dynamic', 'Combined']
     const sortRoutines = (types: string[]) =>
       [...types].sort((a, b) => ROUTINE_ORDER.indexOf(a) - ROUTINE_ORDER.indexOf(b))
@@ -444,11 +458,11 @@ export default function TVPage() {
       const isMulti = routineTypes.length > 1
 
       if (!isMulti) {
-        // Single-routine: one entry per result, sorted by score
         const entries: RankingEntry[] = slotResults
           .map(r => {
             const team = teamMap.get(r.team_id)
             const club = clubMap.get((team as any)?.club_id ?? '')
+            const totalPen = (r.dif_penalty ?? 0) + (r.cjp_penalty ?? 0) + (r.rj_penalty ?? 0)
             return {
               team_id: r.team_id,
               gymnast_display: team?.gymnast_display ?? '',
@@ -456,12 +470,17 @@ export default function TVPage() {
               club_logo: (club as any)?.avatar_url ?? null,
               final_score: r.final_score ?? 0,
               routine_scores: [],
+              e_score: r.e_score ?? null,
+              a_score: r.a_score ?? null,
+              d_score: r.dif_score ?? null,
+              da_score: r.da_score ?? null,
+              db_score: r.db_score ?? null,
+              pen: totalPen > 0 ? totalPen : null,
             }
           })
           .sort((a, b) => b.final_score - a.final_score)
         newData[slot.id] = { entries, routine_types: routineTypes }
       } else {
-        // Multi-routine: group by team, sum scores, show per-routine breakdown
         const byTeam = new Map<string, { scores: Map<string, number | null>; team_id: string }>()
         for (const r of slotResults) {
           const rt = sessionRoutineMap.get(r.session_id) ?? 'Unknown'
@@ -481,6 +500,8 @@ export default function TVPage() {
             club_logo: (club as any)?.avatar_url ?? null,
             final_score: total,
             routine_scores,
+            e_score: null, a_score: null, d_score: null,
+            da_score: null, db_score: null, pen: null,
           }
         }).sort((a, b) => b.final_score - a.final_score)
 
@@ -516,20 +537,19 @@ export default function TVPage() {
     return () => { supabase.removeChannel(ch) }
   }, [effectiveMode, tvState?.ranking_config]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── cycle ranking slots ──────────────────────────────────────────────────────
+  // ── cycle ranking frames (slot × page) ──────────────────────────────────────
 
   useEffect(() => {
     if (effectiveMode !== 'ranking') {
-      setRankingSlotIdx(0)
+      setRankingFrameIdx(0)
       return
     }
     const config = tvState?.ranking_config
     if (!config) return
-    const enabledSlots = config.slots.filter(s => s.enabled && (rankingData[s.id]?.entries.length ?? 0) > 0)
-    if (enabledSlots.length <= 1) return
 
     const interval = setInterval(() => {
-      setRankingSlotIdx(prev => (prev + 1) % enabledSlots.length)
+      const total = rankingTotalFramesRef.current
+      if (total > 1) setRankingFrameIdx(prev => (prev + 1) % total)
     }, (config.duration_seconds ?? 10) * 1000)
 
     return () => clearInterval(interval)
@@ -564,11 +584,26 @@ export default function TVPage() {
 
   if (showRanking) {
     const config = tvState?.ranking_config
+    const teamsPerPage = config?.teams_per_page ?? 8
     const enabledSlots = config ? config.slots.filter(s => s.enabled && (rankingData[s.id]?.entries.length ?? 0) > 0) : []
-    const currentSlotDisplayIdx = enabledSlots.length > 0 ? rankingSlotIdx % enabledSlots.length : 0
+
+    // Build frame list: each frame is { slotIdx, pageIdx }
+    const frames = enabledSlots.flatMap((slot, slotIdx) => {
+      const totalEntries = rankingData[slot.id]?.entries.length ?? 0
+      const totalPages = Math.max(1, Math.ceil(totalEntries / teamsPerPage))
+      return Array.from({ length: totalPages }, (_, pageIdx) => ({ slotIdx, pageIdx, totalPages }))
+    })
+    // Keep ref in sync so the interval always has the latest count
+    rankingTotalFramesRef.current = frames.length
+
+    const currentFrame = frames.length > 0 ? frames[rankingFrameIdx % frames.length] : null
+    const currentSlotDisplayIdx = currentFrame?.slotIdx ?? 0
     const currentSlot = enabledSlots[currentSlotDisplayIdx]
     const currentSlotData = currentSlot ? rankingData[currentSlot.id] : undefined
-    const currentSlotEntries = currentSlotData?.entries ?? []
+    const allSlotEntries = currentSlotData?.entries ?? []
+    const currentPage = currentFrame?.pageIdx ?? 0
+    const totalPagesForSlot = currentFrame?.totalPages ?? 1
+    const currentSlotEntries = allSlotEntries.slice(currentPage * teamsPerPage, (currentPage + 1) * teamsPerPage)
     const routineTypes = currentSlotData?.routine_types ?? []
     const isMultiRoutine = routineTypes.length > 1
     const bgColor = config?.background_color ?? '#0f172a'
@@ -577,56 +612,108 @@ export default function TVPage() {
       <div style={{ backgroundColor: bgColor }} className="w-screen h-screen flex flex-col overflow-hidden text-white">
 
         {/* Header */}
-        <div className="shrink-0 flex items-center gap-4 px-8 py-4 border-b border-white/10">
+        <div className="shrink-0 flex items-center gap-6 px-10 py-5 border-b border-white/10">
           {competition?.logo_url && (
-            <img src={competition.logo_url} className="h-10 w-auto object-contain" alt="" />
+            <img src={competition.logo_url} className="h-12 w-auto object-contain" alt="" />
           )}
-          <span className="text-sm font-medium text-white/60 flex-1">{competition?.name}</span>
-          <span className="text-lg font-bold text-white">{currentSlot?.label ?? ''}</span>
+          <span className="text-base font-medium text-white/60 flex-1">{competition?.name}</span>
+          <span className="text-2xl font-bold text-white">{currentSlot?.label ?? ''}</span>
+          {totalPagesForSlot > 1 && (
+            <span className="text-base font-semibold text-white/40 shrink-0 ml-2">
+              {currentPage + 1} / {totalPagesForSlot}
+            </span>
+          )}
         </div>
 
-        {/* Multi-routine column headers */}
-        {isMultiRoutine && (
-          <div className="shrink-0 flex items-center gap-4 px-8 py-2 border-b border-white/10 text-xs font-semibold text-white/50 uppercase tracking-wider">
-            <span className="w-8" />
-            <span className="w-10 shrink-0" />
-            <span className="flex-1" />
-            {routineTypes.map(rt => (
-              <span key={rt} className="w-20 text-right tabular-nums">{routineLabel(rt)}</span>
-            ))}
-            <span className="w-24 text-right tabular-nums text-white/80">Total</span>
-          </div>
-        )}
+        {/* Column headers */}
+        <div className="shrink-0 flex items-center gap-4 px-10 py-2 border-b border-white/10 text-base font-semibold text-white/40 uppercase tracking-wider">
+          <span className="w-14" />
+          <span className="w-16 shrink-0" />
+          <span className="flex-1" />
+          {isMultiRoutine ? (
+            <>
+              {routineTypes.map(rt => (
+                <span key={rt} className="w-28 text-right">{routineLabel(rt)}</span>
+              ))}
+              <span className="w-32 text-right text-white/60">Total</span>
+            </>
+          ) : (
+            <>
+              <span className="w-24 text-right">{isRG ? t.eRg : t.e}</span>
+              <span className="w-24 text-right">{t.a}</span>
+              {isRG ? (
+                <>
+                  <span className="w-24 text-right">{t.da}</span>
+                  <span className="w-24 text-right">{t.db}</span>
+                </>
+              ) : (
+                <span className="w-24 text-right">{t.d}</span>
+              )}
+              <span className="w-20 text-right text-red-400/50">{isRG ? t.penRj : t.pen}</span>
+              <span className="w-32 text-right text-white/60">Total</span>
+            </>
+          )}
+        </div>
 
         {/* Rankings list */}
-        <div className="flex-1 overflow-hidden px-8 py-4 space-y-1">
+        <div className="flex-1 overflow-hidden px-10 py-2 space-y-0">
           {currentSlotEntries.map((entry, i) => (
-            <div key={entry.team_id} className="flex items-center gap-4 py-2 border-b border-white/5">
-              <span className="w-8 text-right text-2xl font-black text-white/40">#{i + 1}</span>
-              {entry.club_logo
-                ? <img src={entry.club_logo} className="h-10 w-10 rounded-full object-contain bg-white/10 shrink-0" alt="" />
-                : <div className="h-10 w-10 rounded-full bg-white/10 shrink-0 flex items-center justify-center text-xs text-white/40">{entry.club_name[0] ?? '?'}</div>
-              }
-              <span className="flex-1 text-lg font-semibold text-white truncate">{entry.gymnast_display}</span>
+            <div key={entry.team_id} className="flex items-center gap-4 py-3.5 border-b border-white/5">
+              <span className="w-12 text-right text-2xl font-black text-white/30 shrink-0">#{i + 1}</span>
+              {(() => {
+                const borderCls = i === 0 ? 'ring-4 ring-yellow-400'
+                  : i === 1 ? 'ring-4 ring-slate-300'
+                  : i === 2 ? 'ring-4 ring-amber-600'
+                  : ''
+                return entry.club_logo
+                  ? <img src={entry.club_logo} className={`h-16 w-16 rounded-full object-contain bg-white/10 shrink-0 ${borderCls}`} alt="" />
+                  : <div className={`h-16 w-16 rounded-full bg-white/10 shrink-0 flex items-center justify-center text-base font-bold text-white/40 ${borderCls}`}>{entry.club_name[0] ?? '?'}</div>
+              })()}
+              <span className="flex-1 text-3xl font-semibold text-white truncate">{entry.gymnast_display}</span>
               {isMultiRoutine ? (
                 <>
                   {routineTypes.map(rt => {
                     const rs = entry.routine_scores.find(x => x.routine_type === rt)
                     return (
-                      <span key={rt} className="w-20 text-right tabular-nums text-xl font-bold text-white/70">
+                      <span key={rt} className="w-28 text-right tabular-nums text-2xl font-bold text-white/70">
                         {rs?.score != null ? rs.score.toFixed(3) : '—'}
                       </span>
                     )
                   })}
-                  <span className="w-24 text-right text-2xl font-black tabular-nums text-white">{entry.final_score.toFixed(3)}</span>
+                  <span className="w-32 text-right text-4xl font-black tabular-nums text-white">{entry.final_score.toFixed(3)}</span>
                 </>
               ) : (
-                <span className="text-2xl font-black tabular-nums text-white">{entry.final_score?.toFixed(3)}</span>
+                <>
+                  <span className="w-24 text-right tabular-nums text-2xl font-bold text-white/70">
+                    {entry.e_score != null ? (isRG ? entry.e_score : entry.e_score * 2).toFixed(3) : '—'}
+                  </span>
+                  <span className="w-24 text-right tabular-nums text-2xl font-bold text-white/70">
+                    {entry.a_score != null ? entry.a_score.toFixed(3) : '—'}
+                  </span>
+                  {isRG ? (
+                    <>
+                      <span className="w-24 text-right tabular-nums text-2xl font-bold text-white/70">
+                        {entry.da_score != null ? entry.da_score.toFixed(3) : '—'}
+                      </span>
+                      <span className="w-24 text-right tabular-nums text-2xl font-bold text-white/70">
+                        {entry.db_score != null ? entry.db_score.toFixed(3) : '—'}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="w-24 text-right tabular-nums text-2xl font-bold text-white/70">
+                      {entry.d_score != null ? entry.d_score.toFixed(3) : '—'}
+                    </span>
+                  )}
+                  <span className="w-20 text-right tabular-nums text-2xl font-bold text-red-400/70">
+                    {entry.pen != null ? `−${entry.pen.toFixed(1)}` : '—'}
+                  </span>
+                  <span className="w-32 text-right text-4xl font-black tabular-nums text-white">{entry.final_score.toFixed(3)}</span>
+                </>
               )}
             </div>
           ))}
           {currentSlotEntries.length === 0 && (
-            <div className="flex items-center justify-center h-full text-white/30 text-lg">Sin resultados todavía</div>
+            <div className="flex items-center justify-center h-full text-white/30 text-xl">Sin resultados todavía</div>
           )}
         </div>
 
@@ -880,7 +967,15 @@ export default function TVPage() {
               {/* partial scores row */}
               {result && (
                 <div className="flex items-center gap-6 flex-wrap">
-                  {([
+                  {(isRG ? [
+                    { label: t.eRg, value: eScore,     delay: 0   },
+                    { label: t.a,   value: aScore,     delay: 100 },
+                    { label: t.da,  value: daScore,    delay: 200 },
+                    { label: t.db,  value: dbScore,    delay: 300 },
+                    ...(penDisplay !== null
+                      ? [{ label: t.penRj, value: penDisplay, delay: 400 }]
+                      : []),
+                  ] : [
                     { label: t.e,   value: eScore,     delay: 0   },
                     { label: t.a,   value: aScore,     delay: 100 },
                     { label: t.d,   value: dScore,     delay: 200 },
@@ -896,11 +991,11 @@ export default function TVPage() {
                       <span className="text-slate-400 text-sm uppercase tracking-widest">{label}</span>
                       <span className={[
                         'tabular-nums font-bold',
-                        label === t.pen ? 'text-red-400' : 'text-white',
+                        (label === t.pen || label === t.penRj) ? 'text-red-400' : 'text-white',
                       ].join(' ')}
                         style={{ fontSize: 'clamp(1.5rem, 2.5vw, 2.5rem)' }}>
                         {value != null
-                          ? label === t.pen
+                          ? (label === t.pen || label === t.penRj)
                             ? value.toFixed(1)
                             : value.toFixed(3)
                           : '—'}
@@ -942,47 +1037,6 @@ export default function TVPage() {
                   </span>
                 </div>
               )}
-            {/* partial scores row */}
-            {result && (
-              <div className="flex items-center gap-6 flex-wrap">
-                {(isRG ? [
-                  { label: t.eRg, value: eScore,     delay: 0   },
-                  { label: t.a,   value: aScore,     delay: 100 },
-                  { label: t.da,  value: daScore,    delay: 200 },
-                  { label: t.db,  value: dbScore,    delay: 300 },
-                  ...(penDisplay !== null
-                    ? [{ label: t.penRj, value: penDisplay, delay: 400 }]
-                    : []),
-                ] : [
-                  { label: t.e,   value: eScore,     delay: 0   },
-                  { label: t.a,   value: aScore,     delay: 100 },
-                  { label: t.d,   value: dScore,     delay: 200 },
-                  ...(penDisplay !== null
-                    ? [{ label: t.pen, value: penDisplay, delay: 300 }]
-                    : []),
-                ] as { label: string; value: number | null; delay: number }[]).map(({ label, value, delay }) => (
-                  <div
-                    key={label}
-                    className="flex flex-col items-center transition-all duration-300"
-                    style={{ transitionDelay: scoreVisible ? `${delay}ms` : '0ms' }}
-                  >
-                    <span className="text-slate-400 text-sm uppercase tracking-widest">{label}</span>
-                    <span className={[
-                      'tabular-nums font-bold',
-                      (label === t.pen || label === t.penRj) ? 'text-red-400' : 'text-white',
-                    ].join(' ')}
-                      style={{ fontSize: 'clamp(1.5rem, 2.5vw, 2.5rem)' }}>
-                      {value != null
-                        ? label === t.pen
-                          ? value.toFixed(1)
-                          : value.toFixed(3)
-                        : '—'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-
             </div>
 
             {/* right: penalty reasons */}
