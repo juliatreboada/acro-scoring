@@ -843,7 +843,7 @@ function CompetitionDetailView({
           )}
 
           {activeCompTab === 'meals' && competition.meals_enabled && (
-            <MealsSection competitionId={competition.id} clubId={clubId} lang={lang} initiallyOpen />
+            <MealsSection competitionId={competition.id} clubId={clubId} lang={lang} mealsLocked={competition.meals_locked ?? false} initiallyOpen />
           )}
 
           {activeCompTab === 'trainings' && competition.show_official_trainings && (

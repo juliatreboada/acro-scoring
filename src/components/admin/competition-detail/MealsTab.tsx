@@ -10,8 +10,12 @@ type SubmissionRow = MealSubmission & { club_name: string; items: { option: Meal
 type Props = {
   lang: Lang
   competitionId: string
+  competitionName: string
+  competitionLogoUrl: string | null
   mealsEnabled: boolean
+  mealsLocked: boolean
   onToggleEnabled: (enabled: boolean) => Promise<void>
+  onToggleLocked: (locked: boolean) => Promise<void>
 }
 
 type SlotKey = string // `${day_label}||${meal_type}`
@@ -28,13 +32,14 @@ function slotLabel(day: string, type: 'lunch' | 'dinner', lang: Lang) {
   return `${dateStr} — ${typeLabel}`
 }
 
-export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEnabled }: Props) {
+export default function MealsTab({ lang, competitionId, competitionName, competitionLogoUrl, mealsEnabled, mealsLocked, onToggleEnabled, onToggleLocked }: Props) {
   const supabase = createClient()
   const [options, setOptions] = useState<MealOption[]>([])
   const [mealCategories, setMealCategories] = useState<MealCategory[]>([])
   const [submissions, setSubmissions] = useState<SubmissionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState(false)
+  const [togglingLocked, setTogglingLocked] = useState(false)
 
   // ── add-slot form ────────────────────────────────────────────────────────────
   const [addingSlot, setAddingSlot] = useState(false)
@@ -331,11 +336,203 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
     setRejectTarget(null); setRejectNotes('')
   }
 
+  // ── print ─────────────────────────────────────────────────────────────────────
+  async function handlePrintByClub() {
+    const printable = submissions.filter(s => s.items.length > 0 && (s.status === 'submitted' || s.status === 'approved'))
+    if (printable.length === 0) return
+
+    // Fetch images as base64 so they work in the isolated print window
+    async function toDataUrl(url: string): Promise<string> {
+      try {
+        const res = await fetch(url)
+        if (!res.ok) return ''
+        const blob = await res.blob()
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result as string)
+          reader.onerror = reject
+          reader.readAsDataURL(blob)
+        })
+      } catch { return '' }
+    }
+
+    const compLogoData = competitionLogoUrl ? await toDataUrl(competitionLogoUrl) : ''
+
+    const locale = lang === 'es' ? 'es-ES' : 'en-GB'
+    const totalLabel = lang === 'es' ? 'Total' : 'Total'
+    const compLogoTag = compLogoData
+      ? `<img class="comp-logo" src="${compLogoData}">`
+      : ''
+
+    function fmtSlot(day: string, type: 'lunch' | 'dinner') {
+      const d = new Date(day + 'T00:00:00')
+      const typeLabel = type === 'lunch' ? (lang === 'es' ? 'Comida' : 'Lunch') : (lang === 'es' ? 'Cena' : 'Dinner')
+      if (isNaN(d.getTime())) return `${day} — ${typeLabel}`
+      const dateStr = d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })
+      return `${dateStr} — ${typeLabel}`
+    }
+
+    const pages = printable.map(sub => {
+      const grouped = new Map<string, { day: string; type: 'lunch' | 'dinner'; items: typeof sub.items }>()
+      for (const item of sub.items) {
+        const k = slotKey(item.option.day_label, item.option.meal_type)
+        if (!grouped.has(k)) grouped.set(k, { day: item.option.day_label, type: item.option.meal_type as 'lunch' | 'dinner', items: [] })
+        grouped.get(k)!.items.push(item)
+      }
+      const slots = Array.from(grouped.values()).sort((a, b) => {
+        const dc = a.day.localeCompare(b.day)
+        return dc !== 0 ? dc : (a.type === 'lunch' ? -1 : 1)
+      })
+
+      const slotsHtml = slots.map(slot => {
+        const activeCats = mealCategories.filter(cat =>
+          slot.items.some(i => i.option.course_label === cat.name)
+        )
+        const uncategorized = slot.items.filter(i => i.option.course_label === null)
+
+        function catColHtml(cat: typeof mealCategories[0], extraClass = '') {
+          const catItems = slot.items.filter(i => i.option.course_label === cat.name)
+          const itemsHtml = catItems.map(item =>
+            `<p class="item"><span class="qty">${item.quantity}×</span> ${item.option.name}${item.option.description ? `<br><span class="desc">${item.option.description}</span>` : ''}</p>`
+          ).join('')
+          return `<div class="cat-col${extraClass ? ' ' + extraClass : ''}"><p class="cat-name">${cat.name}</p>${itemsHtml}</div>`
+        }
+
+        const secondaryCats = activeCats.slice(1)
+        if (uncategorized.length > 0) {
+          secondaryCats.push({ id: '__none__', name: '—', sort_order: 999 } as typeof mealCategories[0])
+        }
+
+        let catRowHtml: string
+        if (activeCats.length === 0 && uncategorized.length > 0) {
+          // only uncategorized items — full width
+          const itemsHtml = uncategorized.map(item => `<p class="item"><span class="qty">${item.quantity}×</span> ${item.option.name}</p>`).join('')
+          catRowHtml = `<div class="cat-col cat-full">${itemsHtml}</div>`
+        } else if (activeCats.length === 1 && uncategorized.length === 0) {
+          // single category — full width
+          catRowHtml = catColHtml(activeCats[0], 'cat-full')
+        } else {
+          // first category takes left half; rest stack on right half
+          const mainHtml = catColHtml(activeCats[0], 'cat-main')
+          const secondaryItemsHtml = secondaryCats.map(cat => {
+            if (cat.id === '__none__') {
+              const itemsHtml = uncategorized.map(item => `<p class="item"><span class="qty">${item.quantity}×</span> ${item.option.name}</p>`).join('')
+              return `<div class="cat-col cat-side"><p class="cat-name">—</p>${itemsHtml}</div>`
+            }
+            return catColHtml(cat, 'cat-side')
+          }).join('')
+          catRowHtml = `${mainHtml}<div class="cat-secondary">${secondaryItemsHtml}</div>`
+        }
+
+        return `<div class="slot">
+          <p class="slot-label">${fmtSlot(slot.day, slot.type)}</p>
+          <div class="cat-row">${catRowHtml}</div>
+        </div>`
+      }).join('')
+
+      const totalHtml = sub.total_amount != null
+        ? `<span class="club-total">${totalLabel}: ${sub.total_amount.toFixed(2)} €</span>`
+        : ''
+
+      return `<div class="page">
+        <header class="comp-header">
+          ${compLogoTag}
+          <span class="comp-name">${competitionName}</span>
+        </header>
+        <div class="club-header">
+          <div class="club-title">
+            <h1 class="club-name">${sub.club_name}</h1>
+            ${totalHtml}
+          </div>
+        </div>
+        <div class="slots-grid">${slotsHtml}</div>
+      </div>`
+    }).join('')
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+      <title>${lang === 'es' ? 'Comidas' : 'Meals'} — ${competitionName}</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, Helvetica, sans-serif; font-size: 14px; color: #111; background: #fff; }
+
+        .page { padding: 0; page-break-after: always; page-break-inside: avoid; }
+        .page:last-child { page-break-after: auto; }
+
+        /* competition header */
+        .comp-header {
+          display: flex; align-items: center; gap: 12px;
+          padding: 10px 16px; border-bottom: 2px solid #e2e8f0;
+          margin-bottom: 12px; background: #f8fafc;
+        }
+        .comp-logo { height: 42px; width: auto; object-fit: contain; flex-shrink: 0; }
+        .comp-name { font-size: 15px; font-weight: 600; color: #475569; }
+
+        /* club header */
+        .club-header {
+          display: flex; align-items: center; gap: 14px;
+          padding: 8px 16px 12px; border-bottom: 2px solid #cbd5e1; margin-bottom: 14px;
+        }
+        .club-title { flex: 1; min-width: 0; }
+        .club-name { font-size: 26px; font-weight: 700; color: #0f172a; line-height: 1.2; }
+        .club-total { font-size: 14px; font-weight: 600; color: #475569; display: block; margin-top: 3px; }
+
+        /* slots stacked vertically, full width */
+        .slots-grid { padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
+
+        .slot {
+          break-inside: avoid;
+          border: 1px solid #e2e8f0; border-radius: 8px;
+          overflow: hidden; background: #fff;
+        }
+        .slot-label {
+          font-size: 15px; font-weight: 700; color: #fff;
+          background: #1e40af;
+          padding: 7px 12px; letter-spacing: 0.03em;
+        }
+
+        /* slot layout: first dish = left 50%, rest stacked on right 50% */
+        .cat-row { display: flex; flex-direction: row; min-height: 0; }
+        .cat-col { padding: 10px 12px; min-width: 0; }
+        .cat-full { flex: 1; }
+        .cat-main { width: 50%; flex-shrink: 0; border-right: 2px solid #e2e8f0; }
+        .cat-secondary {
+          width: 50%; flex-shrink: 0;
+          display: flex; flex-direction: column;
+        }
+        .cat-side { flex: 1; border-bottom: 1px solid #e2e8f0; }
+        .cat-side:last-child { border-bottom: none; }
+        .cat-name {
+          font-size: 12px; font-weight: 700; text-transform: uppercase;
+          letter-spacing: 0.06em; color: #6d28d9;
+          margin-bottom: 6px; padding-bottom: 4px;
+          border-bottom: 1px solid #ede9fe;
+        }
+        .item { font-size: 15px; color: #1e293b; line-height: 1.7; margin-bottom: 1px; }
+        .qty { font-weight: 700; }
+        .desc { color: #94a3b8; font-size: 12px; }
+
+        @media print {
+          @page { size: A4 portrait; margin: 8mm 10mm; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+      </style>
+    </head><body>${pages}</body></html>`
+
+    const w = window.open('', '_blank')
+    if (!w) return
+    w.document.write(html)
+    w.document.close()
+    w.focus()
+    setTimeout(() => w.print(), 400)
+  }
+
   // ── locale ────────────────────────────────────────────────────────────────────
   const T = {
     es: {
       enable: 'Visible para los clubes',
       enableHint: 'Cuando está activo, los clubes pueden ver las opciones y enviar su selección. Puedes configurar las opciones antes de activarlo.',
+      lock: 'Periodo de solicitud cerrado',
+      lockHint: 'Cuando está cerrado, los clubes pueden consultar su pedido pero no pueden realizar cambios ni enviar nuevas solicitudes.',
       optionsTitle: 'Opciones de comida',
       optionsHint: 'Crea franjas (fecha + tipo) y añade artículos a cada categoría.',
       addSlot: '+ Añadir franja',
@@ -373,10 +570,13 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
       noProof: 'Sin comprobante',
       noSubmissions: 'Ningún club ha enviado solicitudes todavía.',
       eachLabel: (n: number) => `${n.toFixed(2)} €/ud`,
+      printByClub: 'Imprimir por club',
     },
     en: {
       enable: 'Visible to clubs',
       enableHint: 'When active, clubs can see the options and submit their selection. You can configure options before activating.',
+      lock: 'Submission period closed',
+      lockHint: 'When closed, clubs can view their order but cannot make changes or submit new requests.',
       optionsTitle: 'Meal options',
       optionsHint: 'Create slots (date + type) and add items to each category.',
       addSlot: '+ Add slot',
@@ -414,6 +614,7 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
       noProof: 'No proof',
       noSubmissions: 'No clubs have submitted requests yet.',
       eachLabel: (n: number) => `€${n.toFixed(2)}/ea`,
+      printByClub: 'Print per club',
     },
   }
   const t = T[lang]
@@ -437,7 +638,7 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
     <div className="space-y-6">
 
       {/* Enable / disable toggle */}
-      <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+      <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden divide-y divide-slate-100">
         <div className="p-4 flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-slate-800">{t.enable}</p>
@@ -452,6 +653,22 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
               mealsEnabled ? 'translate-x-5' : 'translate-x-0'].join(' ')} />
           </button>
         </div>
+        {mealsEnabled && (
+          <div className="p-4 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-slate-800">{t.lock}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{t.lockHint}</p>
+            </div>
+            <button
+              disabled={togglingLocked}
+              onClick={async () => { setTogglingLocked(true); await onToggleLocked(!mealsLocked); setTogglingLocked(false) }}
+              className={['relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none',
+                mealsLocked ? 'bg-amber-500' : 'bg-slate-200'].join(' ')}>
+              <span className={['pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform',
+                mealsLocked ? 'translate-x-5' : 'translate-x-0'].join(' ')} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Options management */}
@@ -827,8 +1044,18 @@ export default function MealsTab({ lang, competitionId, mealsEnabled, onToggleEn
       {/* Submissions — only shown when meals are active */}
       {mealsEnabled && (
         <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-slate-800">{t.submissionsTitle}</p>
+            {submissions.some(s => s.items.length > 0 && (s.status === 'submitted' || s.status === 'approved')) && (
+              <button
+                onClick={() => { void handlePrintByClub() }}
+                className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 border border-slate-200 rounded-lg px-2.5 py-1.5 hover:bg-slate-100 transition-all">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                {t.printByClub}
+              </button>
+            )}
           </div>
           {submissions.length === 0 ? (
             <p className="text-sm text-slate-400 px-4 py-6">{t.noSubmissions}</p>

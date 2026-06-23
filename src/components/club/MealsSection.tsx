@@ -9,6 +9,7 @@ type Props = {
   competitionId: string
   clubId: string
   lang: Lang
+  mealsLocked?: boolean
   initiallyOpen?: boolean
 }
 
@@ -28,7 +29,7 @@ function formatSlotDay(day: string, lang: Lang) {
   return d.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
-export default function MealsSection({ competitionId, clubId, lang, initiallyOpen = false }: Props) {
+export default function MealsSection({ competitionId, clubId, lang, mealsLocked = false, initiallyOpen = false }: Props) {
   const supabase = createClient()
   const [open, setOpen] = useState(initiallyOpen)
   const [options, setOptions] = useState<MealOption[]>([])
@@ -90,8 +91,8 @@ export default function MealsSection({ competitionId, clubId, lang, initiallyOpe
     }, 0)
   }, [options, quantities])
 
-  const isLocked = submission?.status === 'submitted' || submission?.status === 'approved'
-  const isEditable = !submission || submission.status === 'draft' || submission.status === 'rejected'
+  const isLocked = mealsLocked || submission?.status === 'submitted' || submission?.status === 'approved'
+  const isEditable = !mealsLocked && (!submission || submission.status === 'draft' || submission.status === 'rejected')
 
   async function handleQuantityChange(optionId: string, qty: number) {
     if (!isEditable) return
@@ -179,6 +180,8 @@ export default function MealsSection({ competitionId, clubId, lang, initiallyOpe
       noOptions: 'El administrador todavía no ha configurado las opciones de comida.',
       sendDisabled: 'Añade al menos una comida antes de enviar.',
       proofRequired: 'Sube el comprobante de transferencia antes de enviar.',
+      periodClosed: 'Periodo de solicitud cerrado',
+      periodClosedHint: 'El plazo para realizar pedidos ha finalizado. Aquí puedes consultar tu pedido.',
     },
     en: {
       title: 'Meals',
@@ -203,6 +206,8 @@ export default function MealsSection({ competitionId, clubId, lang, initiallyOpe
       noOptions: 'The admin has not configured meal options yet.',
       sendDisabled: 'Add at least one meal before submitting.',
       proofRequired: 'Upload the transfer proof before submitting.',
+      periodClosed: 'Submission period closed',
+      periodClosedHint: 'The order deadline has passed. You can view your order here.',
     },
   }
   const t = T[lang]
@@ -244,8 +249,16 @@ export default function MealsSection({ competitionId, clubId, lang, initiallyOpe
       {open && (
         <div className="px-4 pb-4 space-y-4 border-t border-slate-100 pt-3">
 
+          {/* Period closed banner */}
+          {mealsLocked && (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+              <p className="text-sm font-semibold text-slate-700">{t.periodClosed}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{t.periodClosedHint}</p>
+            </div>
+          )}
+
           {/* Status banners */}
-          {submission?.status === 'submitted' && (
+          {!mealsLocked && submission?.status === 'submitted' && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
               <p className="text-sm font-semibold text-amber-800">{t.sent}</p>
               <p className="text-xs text-amber-600 mt-0.5">{t.sentHint}</p>
