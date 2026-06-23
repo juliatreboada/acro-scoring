@@ -96,6 +96,7 @@ export type Competition = {
   tshirt_deadline?: string | null      // after this date clubs cannot edit their orders
   accreditation_config?: AccreditationConfig | null
   meals_enabled?: boolean
+  meals_locked?: boolean
   show_official_trainings?: boolean
 }
 

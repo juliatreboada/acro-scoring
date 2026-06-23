@@ -276,6 +276,7 @@ export type Database = {
           location: string | null
           logo_url: string | null
           meals_enabled: boolean
+          meals_locked: boolean
           name: string
           open_combinados_enabled: boolean
           show_official_trainings: boolean
@@ -306,6 +307,7 @@ export type Database = {
           location?: string | null
           logo_url?: string | null
           meals_enabled?: boolean
+          meals_locked?: boolean
           name: string
           open_combinados_enabled?: boolean
           show_official_trainings?: boolean
@@ -336,6 +338,7 @@ export type Database = {
           location?: string | null
           logo_url?: string | null
           meals_enabled?: boolean
+          meals_locked?: boolean
           name?: string
           open_combinados_enabled?: boolean
           show_official_trainings?: boolean

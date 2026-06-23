@@ -823,6 +823,7 @@ export type CompetitionDetailProps = {
   onUpdateTshirtConfig: (sizes: string[], deadline: string | null) => Promise<void>
   // meals
   onToggleMealsEnabled: (enabled: boolean) => Promise<void>
+  onToggleMealsLocked: (locked: boolean) => Promise<void>
   // official trainings visibility
   onToggleShowOfficialTrainings: (visible: boolean) => Promise<void>
   // accreditations
@@ -849,7 +850,7 @@ export default function CompetitionDetail({
   availableAdmins, ageGroupRules, apparatus, apparatusRules, onUpdateCompetition, onUploadPoster, onUploadLogo, onUpdateFees,
   onSetDJReviewDeadline, onStartSession, onFinishSession, onRevertSession,
   competitionGymnasts, competitionCoaches, globalCoaches,
-  onUpdateTshirtConfig, onToggleMealsEnabled, onToggleShowOfficialTrainings, onUpdateAccreditationConfig,
+  onUpdateTshirtConfig, onToggleMealsEnabled, onToggleMealsLocked, onToggleShowOfficialTrainings, onUpdateAccreditationConfig,
 }: CompetitionDetailProps) {
   const t = useT('CompetitionDetail', lang)
   const [activeTab, setActiveTab] = useState<Tab>('structure')
@@ -1193,8 +1194,12 @@ export default function CompetitionDetail({
         <MealsTab
           lang={lang}
           competitionId={competition.id}
+          competitionName={competition.name}
+          competitionLogoUrl={competition.logo_url ?? null}
           mealsEnabled={competition.meals_enabled ?? false}
+          mealsLocked={competition.meals_locked ?? false}
           onToggleEnabled={onToggleMealsEnabled}
+          onToggleLocked={onToggleMealsLocked}
         />
       )}
       {activeTab === 'trainings' && (
