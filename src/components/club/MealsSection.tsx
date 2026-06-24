@@ -182,6 +182,7 @@ export default function MealsSection({ competitionId, clubId, lang, mealsLocked 
       proofRequired: 'Sube el comprobante de transferencia antes de enviar.',
       periodClosed: 'Periodo de solicitud cerrado',
       periodClosedHint: 'El plazo para realizar pedidos ha finalizado. Aquí puedes consultar tu pedido.',
+      noOrders: 'No realizaste ningún pedido de comida.',
     },
     en: {
       title: 'Meals',
@@ -208,6 +209,7 @@ export default function MealsSection({ competitionId, clubId, lang, mealsLocked 
       proofRequired: 'Upload the transfer proof before submitting.',
       periodClosed: 'Submission period closed',
       periodClosedHint: 'The order deadline has passed. You can view your order here.',
+      noOrders: 'You did not place any meal order.',
     },
   }
   const t = T[lang]
@@ -221,6 +223,33 @@ export default function MealsSection({ competitionId, clubId, lang, mealsLocked 
   }
 
   const canSend = isEditable && total > 0 && !!submission?.payment_proof_url
+
+  // ── Status banners (shared between both views) ───────────────────────────────
+  const statusBanners = (
+    <>
+      {submission?.status === 'submitted' && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          <p className="text-sm font-semibold text-amber-800">{t.sent}</p>
+          <p className="text-xs text-amber-600 mt-0.5">{t.sentHint}</p>
+        </div>
+      )}
+      {submission?.status === 'approved' && (
+        <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+          <p className="text-sm font-semibold text-green-800">{t.approved}</p>
+          <p className="text-xs text-green-600 mt-0.5">{t.approvedHint}</p>
+        </div>
+      )}
+      {submission?.status === 'rejected' && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          <p className="text-sm font-semibold text-red-700">{t.rejected}</p>
+          <p className="text-xs text-red-500 mt-0.5">{t.rejectedHint}</p>
+          {submission.admin_notes && (
+            <p className="text-xs text-red-600 mt-1 italic">"{submission.admin_notes}"</p>
+          )}
+        </div>
+      )}
+    </>
+  )
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
@@ -249,250 +278,315 @@ export default function MealsSection({ competitionId, clubId, lang, mealsLocked 
       {open && (
         <div className="px-4 pb-4 space-y-4 border-t border-slate-100 pt-3">
 
-          {/* Period closed banner */}
-          {mealsLocked && (
-            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-              <p className="text-sm font-semibold text-slate-700">{t.periodClosed}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{t.periodClosedHint}</p>
-            </div>
-          )}
+          {mealsLocked ? (
+            // ── Read-only summary: period closed ────────────────────────────────
+            <>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                <p className="text-sm font-semibold text-slate-700">{t.periodClosed}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{t.periodClosedHint}</p>
+              </div>
 
-          {/* Status banners */}
-          {!mealsLocked && submission?.status === 'submitted' && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-              <p className="text-sm font-semibold text-amber-800">{t.sent}</p>
-              <p className="text-xs text-amber-600 mt-0.5">{t.sentHint}</p>
-            </div>
-          )}
-          {submission?.status === 'approved' && (
-            <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-              <p className="text-sm font-semibold text-green-800">{t.approved}</p>
-              <p className="text-xs text-green-600 mt-0.5">{t.approvedHint}</p>
-            </div>
-          )}
-          {submission?.status === 'rejected' && (
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-              <p className="text-sm font-semibold text-red-700">{t.rejected}</p>
-              <p className="text-xs text-red-500 mt-0.5">{t.rejectedHint}</p>
-              {submission.admin_notes && (
-                <p className="text-xs text-red-600 mt-1 italic">"{submission.admin_notes}"</p>
-              )}
-            </div>
-          )}
+              {statusBanners}
 
-          {/* Meal slots */}
-          {slots.map(slot => {
-            const isCourseBased = slot.options.some(o => o.course_label)
-
-            // Group options by course_label within the slot
-            const courseMap = new Map<string | null, MealOption[]>()
-            for (const opt of slot.options) {
-              const k = opt.course_label ?? null
-              if (!courseMap.has(k)) courseMap.set(k, [])
-              courseMap.get(k)!.push(opt)
-            }
-            const courseGroups: { label: string | null; opts: MealOption[] }[] = []
-            for (const [label, opts] of courseMap.entries()) {
-              courseGroups.push({ label, opts })
-            }
-            const catOrder = new Map(mealCategories.map(c => [c.name, c.sort_order]))
-            courseGroups.sort((a, b) => {
-              const orderA = a.label != null ? (catOrder.get(a.label) ?? 999) : 999
-              const orderB = b.label != null ? (catOrder.get(b.label) ?? 999) : 999
-              return orderA - orderB
-            })
-
-            // Slot totals
-            const slotParentIds = new Set(slot.options.filter(o => o.parent_option_id).map(o => o.parent_option_id!))
-            const slotTotal = slot.options.reduce((sum, o) => {
-              if (slotParentIds.has(o.id)) return sum
-              return sum + (quantities[o.id] ?? 0) * o.price
-            }, 0)
-            const slotPeople = (() => {
-              if (isCourseBased) {
-                // 1 person = 1 item per category → count = max qty across categories
-                const labelTotals = new Map<string | null, number>()
-                for (const o of slot.options) {
-                  if (slotParentIds.has(o.id)) continue
-                  const lbl = o.course_label ?? null
-                  labelTotals.set(lbl, (labelTotals.get(lbl) ?? 0) + (quantities[o.id] ?? 0))
+              {/* Ordered items per slot — category columns layout */}
+              {(() => {
+                const parentIds = new Set(options.filter(o => o.parent_option_id).map(o => o.parent_option_id!))
+                const orderedOptions = options.filter(o => !parentIds.has(o.id) && (quantities[o.id] ?? 0) > 0)
+                if (orderedOptions.length === 0) {
+                  return <p className="text-sm text-slate-400 text-center py-4">{t.noOrders}</p>
                 }
-                return labelTotals.size > 0 ? Math.max(...Array.from(labelTotals.values())) : 0
-              }
-              return slot.options.reduce((sum, o) => {
-                if (slotParentIds.has(o.id)) return sum
-                return sum + (quantities[o.id] ?? 0)
-              }, 0)
-            })()
-
-            return (
-              <div key={slot.key} className="rounded-xl border border-slate-200 overflow-hidden">
-                {/* Slot header */}
-                <button
-                  className="w-full flex items-center justify-between px-3 py-2.5 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
-                  onClick={() => setOpenSlots(prev => ({ ...prev, [slot.key]: !isSlotOpen(slot.key) }))}>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
-                      {formatSlotDay(slot.day_label, lang)} — {slot.meal_type === 'lunch' ? t.lunch : t.dinner}
-                    </p>
-                    {slotPeople > 0 && (
-                      <span className="text-xs text-slate-400 tabular-nums">{slotPeople} {t.persons}</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {slotTotal > 0 && (
-                      <span className="text-sm font-bold tabular-nums text-slate-700">{slotTotal.toFixed(2)} €</span>
-                    )}
-                    <svg className={['w-4 h-4 transition-transform text-slate-300', isSlotOpen(slot.key) ? 'rotate-180' : ''].join(' ')}
-                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                </button>
-
-                {isSlotOpen(slot.key) && (
-                <div className="px-3 py-3 border-t border-slate-100">
-                <div className="flex flex-col md:flex-row md:divide-x divide-y md:divide-y-0 divide-slate-100">
-                {courseGroups.map(({ label, opts }) => {
-                  const courseParentIds = new Set(opts.filter(o => o.parent_option_id).map(o => o.parent_option_id!))
-                  const courseCount = opts.reduce((s, o) => courseParentIds.has(o.id) ? s : s + (quantities[o.id] ?? 0), 0)
-                  const topLevel = opts.filter(o => !o.parent_option_id)
+                return slots.map(slot => {
+                  const slotOrdered = orderedOptions.filter(o => o.day_label === slot.day_label && o.meal_type === slot.meal_type)
+                  if (slotOrdered.length === 0) return null
+                  const slotTotal = slotOrdered.reduce((sum, o) => sum + (quantities[o.id] ?? 0) * o.price, 0)
+                  const activeCats = mealCategories.filter(cat => slotOrdered.some(o => o.course_label === cat.name))
+                  const uncategorized = slotOrdered.filter(o => o.course_label === null)
                   return (
-                    <div key={label ?? '__none__'} className="flex-1 min-w-0 py-2 md:py-0 md:px-3 first:md:pl-0 last:md:pr-0">
-                      {label && (
-                        <div className="flex items-center justify-between mb-1.5">
-                          <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">{label}</p>
-                          {isCourseBased && courseCount > 0 && (
-                            <span className="text-xs text-slate-400 tabular-nums">{courseCount} {t.persons}</span>
-                          )}
-                        </div>
-                      )}
-                      <div className="space-y-2">
-                        {topLevel.map(opt => {
-                          const types = opts.filter(o => o.parent_option_id === opt.id)
-                          if (types.length > 0) {
-                            return (
-                              <div key={opt.id} className="rounded-xl border border-slate-100 bg-slate-50 overflow-hidden">
-                                <p className="px-3 pt-2 pb-1 text-sm font-medium text-slate-700">
-                                  {opt.name}
-                                  {opt.description && <span className="text-xs text-slate-400 ml-1.5">{opt.description}</span>}
-                                </p>
-                                {types.map(tp => (
-                                  <div key={tp.id} className="flex items-center gap-3 px-3 py-1.5 border-t border-slate-100 bg-white">
-                                    <div className="flex-1 min-w-0">
-                                      <span className="text-sm text-slate-700">{tp.name}</span>
-                                      {!isCourseBased && <span className="text-xs text-slate-400 ml-2">{t.each(tp.price)}</span>}
-                                    </div>
-                                    <div className="flex items-center gap-1 shrink-0">
-                                      <button
-                                        disabled={isLocked || (quantities[tp.id] ?? 0) === 0}
-                                        onClick={() => handleQuantityChange(tp.id, (quantities[tp.id] ?? 0) - 1)}
-                                        className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-white disabled:opacity-30 transition-all text-base leading-none">
-                                        −
-                                      </button>
-                                      <span className="w-8 text-center text-sm font-semibold tabular-nums text-slate-800">
-                                        {quantities[tp.id] ?? 0}
-                                      </span>
-                                      <button
-                                        disabled={isLocked}
-                                        onClick={() => handleQuantityChange(tp.id, (quantities[tp.id] ?? 0) + 1)}
-                                        className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-white disabled:opacity-30 transition-all text-base leading-none">
-                                        +
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )
-                          }
+                    <div key={slot.key} className="rounded-xl border border-slate-200 overflow-hidden">
+                      <div className="px-3 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                        <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                          {formatSlotDay(slot.day_label, lang)} — {slot.meal_type === 'lunch' ? t.lunch : t.dinner}
+                        </p>
+                        {slotTotal > 0 && (
+                          <span className="text-sm font-bold tabular-nums text-slate-700">{slotTotal.toFixed(2)} €</span>
+                        )}
+                      </div>
+                      <div className="flex flex-col sm:flex-row sm:divide-x divide-y sm:divide-y-0 divide-slate-100">
+                        {activeCats.map(cat => {
+                          const catItems = slotOrdered.filter(o => o.course_label === cat.name)
                           return (
-                            <div key={opt.id} className="flex items-center gap-3 py-1.5 px-3 rounded-xl border border-slate-100 bg-slate-50">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm text-slate-800 font-medium">{opt.name}</p>
-                                {opt.description && (
-                                  <p className="text-xs text-slate-400 truncate mt-0.5">{opt.description}</p>
-                                )}
-                                {!isCourseBased && (
-                                  <p className="text-xs text-slate-500 mt-0.5">{t.each(opt.price)}</p>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <button
-                                  disabled={isLocked || (quantities[opt.id] ?? 0) === 0}
-                                  onClick={() => handleQuantityChange(opt.id, (quantities[opt.id] ?? 0) - 1)}
-                                  className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-white disabled:opacity-30 transition-all text-base leading-none">
-                                  −
-                                </button>
-                                <span className="w-8 text-center text-sm font-semibold tabular-nums text-slate-800">
-                                  {quantities[opt.id] ?? 0}
-                                </span>
-                                <button
-                                  disabled={isLocked}
-                                  onClick={() => handleQuantityChange(opt.id, (quantities[opt.id] ?? 0) + 1)}
-                                  className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-white disabled:opacity-30 transition-all text-base leading-none">
-                                  +
-                                </button>
+                            <div key={cat.id} className="flex-1 min-w-0 px-3 py-2.5">
+                              <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-2">{cat.name}</p>
+                              <div className="space-y-1">
+                                {catItems.map(opt => {
+                                  const parent = opt.parent_option_id ? options.find(o => o.id === opt.parent_option_id) : null
+                                  return (
+                                    <p key={opt.id} className="text-sm text-slate-700">
+                                      <span className="font-semibold">{quantities[opt.id]}×</span>{' '}
+                                      {parent ? `${parent.name} — ${opt.name}` : opt.name}
+                                      {opt.description && <span className="text-xs text-slate-400 ml-1">({opt.description})</span>}
+                                    </p>
+                                  )
+                                })}
                               </div>
                             </div>
                           )
                         })}
+                        {uncategorized.length > 0 && (
+                          <div className="flex-1 min-w-0 px-3 py-2.5">
+                            {activeCats.length > 0 && (
+                              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">—</p>
+                            )}
+                            <div className="space-y-1">
+                              {uncategorized.map(opt => (
+                                <p key={opt.id} className="text-sm text-slate-700">
+                                  <span className="font-semibold">{quantities[opt.id]}×</span>{' '}
+                                  {opt.name}
+                                  {opt.description && <span className="text-xs text-slate-400 ml-1">({opt.description})</span>}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )
-                })}
-                </div>
-                </div>
-                )}
-              </div>
-            )
-          })}
+                })
+              })()}
 
-          {/* Total */}
-          {total > 0 && (
-            <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-              <p className="text-sm font-semibold text-slate-700">{t.total}</p>
-              <p className="text-lg font-bold tabular-nums text-slate-800">{total.toFixed(2)} €</p>
-            </div>
-          )}
+              {/* Total */}
+              {total > 0 && (
+                <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                  <p className="text-sm font-semibold text-slate-700">{t.total}</p>
+                  <p className="text-lg font-bold tabular-nums text-slate-800">{total.toFixed(2)} €</p>
+                </div>
+              )}
 
-          {/* Payment proof */}
-          {isEditable && total > 0 && (
-            <div>
-              <p className="text-xs font-semibold text-slate-500 mb-1.5">{t.paymentProof}</p>
-              {submission?.payment_proof_url ? (
-                <div className="flex items-center gap-2">
+              {/* Payment proof (view only) */}
+              {submission?.payment_proof_url && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 mb-1.5">{t.paymentProof}</p>
                   <a href={submission.payment_proof_url} target="_blank" rel="noopener noreferrer"
                     className="text-xs text-blue-600 hover:underline font-medium">{t.viewProof}</a>
-                  <button onClick={() => proofInputRef.current?.click()}
-                    className="text-xs text-slate-400 hover:text-slate-600 transition-colors">{t.replaceProof}</button>
                 </div>
-              ) : (
-                <button onClick={() => proofInputRef.current?.click()}
-                  disabled={uploadingProof}
-                  className="text-xs text-slate-400 hover:text-blue-600 border border-dashed border-slate-300 hover:border-blue-400 rounded-full px-3 py-1 transition-all disabled:opacity-50">
-                  {uploadingProof ? '…' : t.uploadProof}
+              )}
+            </>
+          ) : (
+            // ── Editable view ────────────────────────────────────────────────────
+            <>
+              {statusBanners}
+
+              {/* Meal slots */}
+              {slots.map(slot => {
+                const isCourseBased = slot.options.some(o => o.course_label)
+
+                const courseMap = new Map<string | null, MealOption[]>()
+                for (const opt of slot.options) {
+                  const k = opt.course_label ?? null
+                  if (!courseMap.has(k)) courseMap.set(k, [])
+                  courseMap.get(k)!.push(opt)
+                }
+                const courseGroups: { label: string | null; opts: MealOption[] }[] = []
+                for (const [label, opts] of courseMap.entries()) {
+                  courseGroups.push({ label, opts })
+                }
+                const catOrder = new Map(mealCategories.map(c => [c.name, c.sort_order]))
+                courseGroups.sort((a, b) => {
+                  const orderA = a.label != null ? (catOrder.get(a.label) ?? 999) : 999
+                  const orderB = b.label != null ? (catOrder.get(b.label) ?? 999) : 999
+                  return orderA - orderB
+                })
+
+                const slotParentIds = new Set(slot.options.filter(o => o.parent_option_id).map(o => o.parent_option_id!))
+                const slotTotal = slot.options.reduce((sum, o) => {
+                  if (slotParentIds.has(o.id)) return sum
+                  return sum + (quantities[o.id] ?? 0) * o.price
+                }, 0)
+                const slotPeople = (() => {
+                  if (isCourseBased) {
+                    const labelTotals = new Map<string | null, number>()
+                    for (const o of slot.options) {
+                      if (slotParentIds.has(o.id)) continue
+                      const lbl = o.course_label ?? null
+                      labelTotals.set(lbl, (labelTotals.get(lbl) ?? 0) + (quantities[o.id] ?? 0))
+                    }
+                    return labelTotals.size > 0 ? Math.max(...Array.from(labelTotals.values())) : 0
+                  }
+                  return slot.options.reduce((sum, o) => {
+                    if (slotParentIds.has(o.id)) return sum
+                    return sum + (quantities[o.id] ?? 0)
+                  }, 0)
+                })()
+
+                return (
+                  <div key={slot.key} className="rounded-xl border border-slate-200 overflow-hidden">
+                    <button
+                      className="w-full flex items-center justify-between px-3 py-2.5 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+                      onClick={() => setOpenSlots(prev => ({ ...prev, [slot.key]: !isSlotOpen(slot.key) }))}>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                          {formatSlotDay(slot.day_label, lang)} — {slot.meal_type === 'lunch' ? t.lunch : t.dinner}
+                        </p>
+                        {slotPeople > 0 && (
+                          <span className="text-xs text-slate-400 tabular-nums">{slotPeople} {t.persons}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {slotTotal > 0 && (
+                          <span className="text-sm font-bold tabular-nums text-slate-700">{slotTotal.toFixed(2)} €</span>
+                        )}
+                        <svg className={['w-4 h-4 transition-transform text-slate-300', isSlotOpen(slot.key) ? 'rotate-180' : ''].join(' ')}
+                          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </button>
+
+                    {isSlotOpen(slot.key) && (
+                      <div className="px-3 py-3 border-t border-slate-100">
+                        <div className="flex flex-col md:flex-row md:divide-x divide-y md:divide-y-0 divide-slate-100">
+                          {courseGroups.map(({ label, opts }) => {
+                            const courseParentIds = new Set(opts.filter(o => o.parent_option_id).map(o => o.parent_option_id!))
+                            const courseCount = opts.reduce((s, o) => courseParentIds.has(o.id) ? s : s + (quantities[o.id] ?? 0), 0)
+                            const topLevel = opts.filter(o => !o.parent_option_id)
+                            return (
+                              <div key={label ?? '__none__'} className="flex-1 min-w-0 py-2 md:py-0 md:px-3 first:md:pl-0 last:md:pr-0">
+                                {label && (
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">{label}</p>
+                                    {isCourseBased && courseCount > 0 && (
+                                      <span className="text-xs text-slate-400 tabular-nums">{courseCount} {t.persons}</span>
+                                    )}
+                                  </div>
+                                )}
+                                <div className="space-y-2">
+                                  {topLevel.map(opt => {
+                                    const types = opts.filter(o => o.parent_option_id === opt.id)
+                                    if (types.length > 0) {
+                                      return (
+                                        <div key={opt.id} className="rounded-xl border border-slate-100 bg-slate-50 overflow-hidden">
+                                          <p className="px-3 pt-2 pb-1 text-sm font-medium text-slate-700">
+                                            {opt.name}
+                                            {opt.description && <span className="text-xs text-slate-400 ml-1.5">{opt.description}</span>}
+                                          </p>
+                                          {types.map(tp => (
+                                            <div key={tp.id} className="flex items-center gap-3 px-3 py-1.5 border-t border-slate-100 bg-white">
+                                              <div className="flex-1 min-w-0">
+                                                <span className="text-sm text-slate-700">{tp.name}</span>
+                                                {!isCourseBased && <span className="text-xs text-slate-400 ml-2">{t.each(tp.price)}</span>}
+                                              </div>
+                                              <div className="flex items-center gap-1 shrink-0">
+                                                <button
+                                                  disabled={isLocked || (quantities[tp.id] ?? 0) === 0}
+                                                  onClick={() => handleQuantityChange(tp.id, (quantities[tp.id] ?? 0) - 1)}
+                                                  className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-white disabled:opacity-30 transition-all text-base leading-none">
+                                                  −
+                                                </button>
+                                                <span className="w-8 text-center text-sm font-semibold tabular-nums text-slate-800">
+                                                  {quantities[tp.id] ?? 0}
+                                                </span>
+                                                <button
+                                                  disabled={isLocked}
+                                                  onClick={() => handleQuantityChange(tp.id, (quantities[tp.id] ?? 0) + 1)}
+                                                  className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-white disabled:opacity-30 transition-all text-base leading-none">
+                                                  +
+                                                </button>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )
+                                    }
+                                    return (
+                                      <div key={opt.id} className="flex items-center gap-3 py-1.5 px-3 rounded-xl border border-slate-100 bg-slate-50">
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm text-slate-800 font-medium">{opt.name}</p>
+                                          {opt.description && (
+                                            <p className="text-xs text-slate-400 truncate mt-0.5">{opt.description}</p>
+                                          )}
+                                          {!isCourseBased && (
+                                            <p className="text-xs text-slate-500 mt-0.5">{t.each(opt.price)}</p>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          <button
+                                            disabled={isLocked || (quantities[opt.id] ?? 0) === 0}
+                                            onClick={() => handleQuantityChange(opt.id, (quantities[opt.id] ?? 0) - 1)}
+                                            className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-white disabled:opacity-30 transition-all text-base leading-none">
+                                            −
+                                          </button>
+                                          <span className="w-8 text-center text-sm font-semibold tabular-nums text-slate-800">
+                                            {quantities[opt.id] ?? 0}
+                                          </span>
+                                          <button
+                                            disabled={isLocked}
+                                            onClick={() => handleQuantityChange(opt.id, (quantities[opt.id] ?? 0) + 1)}
+                                            className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-white disabled:opacity-30 transition-all text-base leading-none">
+                                            +
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+
+              {/* Total */}
+              {total > 0 && (
+                <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                  <p className="text-sm font-semibold text-slate-700">{t.total}</p>
+                  <p className="text-lg font-bold tabular-nums text-slate-800">{total.toFixed(2)} €</p>
+                </div>
+              )}
+
+              {/* Payment proof */}
+              {isEditable && total > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 mb-1.5">{t.paymentProof}</p>
+                  {submission?.payment_proof_url ? (
+                    <div className="flex items-center gap-2">
+                      <a href={submission.payment_proof_url} target="_blank" rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline font-medium">{t.viewProof}</a>
+                      <button onClick={() => proofInputRef.current?.click()}
+                        className="text-xs text-slate-400 hover:text-slate-600 transition-colors">{t.replaceProof}</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => proofInputRef.current?.click()}
+                      disabled={uploadingProof}
+                      className="text-xs text-slate-400 hover:text-blue-600 border border-dashed border-slate-300 hover:border-blue-400 rounded-full px-3 py-1 transition-all disabled:opacity-50">
+                      {uploadingProof ? '…' : t.uploadProof}
+                    </button>
+                  )}
+                  <input
+                    ref={proofInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadProof(f); if (proofInputRef.current) proofInputRef.current.value = '' }}
+                  />
+                </div>
+              )}
+
+              {/* Send button */}
+              {isEditable && (
+                <button
+                  disabled={!canSend || sending}
+                  onClick={handleSend}
+                  title={total === 0 ? t.sendDisabled : !submission?.payment_proof_url ? t.proofRequired : undefined}
+                  className="w-full py-2.5 text-sm font-semibold rounded-xl transition-all disabled:opacity-40
+                    bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed">
+                  {sending ? t.sending : t.send}
                 </button>
               )}
-              <input
-                ref={proofInputRef}
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                className="hidden"
-                onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadProof(f); if (proofInputRef.current) proofInputRef.current.value = '' }}
-              />
-            </div>
-          )}
-
-          {/* Send button */}
-          {isEditable && (
-            <button
-              disabled={!canSend || sending}
-              onClick={handleSend}
-              title={total === 0 ? t.sendDisabled : !submission?.payment_proof_url ? t.proofRequired : undefined}
-              className="w-full py-2.5 text-sm font-semibold rounded-xl transition-all disabled:opacity-40
-                bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed">
-              {sending ? t.sending : t.send}
-            </button>
+            </>
           )}
         </div>
       )}
