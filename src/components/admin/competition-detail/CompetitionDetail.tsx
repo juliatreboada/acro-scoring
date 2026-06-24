@@ -894,7 +894,7 @@ export default function CompetitionDetail({
           <div className="flex flex-wrap items-center gap-2">
             {/* public page links */}
             {(['registration_closed', 'active', 'finished'] as const).includes(competition.status as 'registration_closed' | 'active' | 'finished') && (
-              <a href={`/starting-order/${competition.id}`} target="_blank" rel="noopener noreferrer"
+              <a href={`/starting-order/${competition.slug}`} target="_blank" rel="noopener noreferrer"
                 title="Starting order (public)"
                 className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -904,14 +904,14 @@ export default function CompetitionDetail({
             )}
             {(competition.status === 'active' || competition.status === 'finished') && (
               <>
-                <a href={`/results/${competition.id}`} target="_blank" rel="noopener noreferrer"
+                <a href={`/results/${competition.slug}`} target="_blank" rel="noopener noreferrer"
                   title="Results (public)"
                   className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-4.5m-9 4.5v-4.5m0 0A2.25 2.25 0 019.75 12h4.5A2.25 2.25 0 0116.5 14.25m-9 0V12a4.5 4.5 0 119 0v2.25" />
                   </svg>
                 </a>
-                <a href={`/results/${competition.id}?official=1`} target="_blank" rel="noopener noreferrer"
+                <a href={`/results/${competition.slug}?official=1`} target="_blank" rel="noopener noreferrer"
                   title={t.officialResultsPrint}
                   className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

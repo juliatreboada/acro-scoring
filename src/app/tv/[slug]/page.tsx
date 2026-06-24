@@ -89,7 +89,8 @@ type SlotData = {
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function TVPage() {
-  const { competitionId } = useParams<{ competitionId: string }>()
+  const { slug } = useParams<{ slug: string }>()
+  const [compUuid, setCompUuid] = useState('')
   const searchParams = useSearchParams()
   const lang: Lang = (searchParams.get('lang') as Lang) === 'en' ? 'en' : 'es'
   const t = useT('TVPage', lang)
@@ -130,10 +131,11 @@ export default function TVPage() {
     async function load() {
       const { data } = await supabase
         .from('competitions')
-        .select('name, poster_url, sport_type, tv_sponsor_videos, logo_url')
-        .eq('id', competitionId)
+        .select('id, name, poster_url, sport_type, tv_sponsor_videos, logo_url')
+        .eq('slug', slug)
         .single()
       if (data) {
+        setCompUuid((data as unknown as { id: string }).id)
         setCompetition({
           name: data.name,
           poster_url: data.poster_url ?? null,
@@ -144,16 +146,17 @@ export default function TVPage() {
       }
     }
     load()
-  }, [competitionId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [slug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── fetch initial tv_state then subscribe ────────────────────────────────────
 
   useEffect(() => {
+    if (!compUuid) return
     async function load() {
       const { data } = await supabase
         .from('tv_state')
         .select('session_id, team_id, revealed, sponsor_reel_enabled, sponsor_playlist_index, mode, ranking_config')
-        .eq('competition_id', competitionId)
+        .eq('competition_id', compUuid)
         .maybeSingle()
       const state: TVState = {
         session_id: data?.session_id ?? null,
@@ -171,10 +174,10 @@ export default function TVPage() {
     load()
 
     const ch = supabase
-      .channel(`tv-display-${competitionId}`)
+      .channel(`tv-display-${compUuid}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'tv_state',
-        filter: `competition_id=eq.${competitionId}`,
+        filter: `competition_id=eq.${compUuid}`,
       }, (payload) => {
         const row = payload.new as {
           session_id: string | null
@@ -199,20 +202,21 @@ export default function TVPage() {
       .subscribe()
 
     return () => { supabase.removeChannel(ch) }
-  }, [competitionId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [compUuid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── sponsor playlist updates (admin uploads) ─────────────────────────────────
 
   useEffect(() => {
+    if (!compUuid) return
     const ch = supabase
-      .channel(`tv-comp-sponsors-${competitionId}`)
+      .channel(`tv-comp-sponsors-${compUuid}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
           table: 'competitions',
-          filter: `id=eq.${competitionId}`,
+          filter: `id=eq.${compUuid}`,
         },
         (payload) => {
           const row = payload.new as { tv_sponsor_videos?: unknown }
@@ -223,7 +227,7 @@ export default function TVPage() {
       )
       .subscribe()
     return () => { supabase.removeChannel(ch) }
-  }, [competitionId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [compUuid]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── subscribe to routine_results for live score updates ─────────────────────
 
@@ -311,7 +315,7 @@ export default function TVPage() {
         supabase
           .from('competition_entries')
           .select('dorsal, gymnast_display')
-          .eq('competition_id', competitionId)
+          .eq('competition_id', compUuid)
           .eq('team_id', team_id)
           .maybeSingle(),
         supabase
@@ -526,7 +530,7 @@ export default function TVPage() {
     if (!config) return
 
     const ch = supabase
-      .channel(`tv-ranking-results-${competitionId}`)
+      .channel(`tv-ranking-results-${compUuid}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'routine_results',
       }, () => {
@@ -777,7 +781,7 @@ export default function TVPage() {
                 sponsor_playlist_index: next,
                 updated_at: new Date().toISOString(),
               })
-              .eq('competition_id', competitionId)
+              .eq('competition_id', compUuid)
           }}
         />
       </div>

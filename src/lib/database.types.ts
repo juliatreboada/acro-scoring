@@ -280,6 +280,7 @@ export type Database = {
           name: string
           open_combinados_enabled: boolean
           show_official_trainings: boolean
+          slug: string
           poster_url: string | null
           provisional_entry_deadline: string | null
           registration_deadline: string | null
@@ -311,6 +312,7 @@ export type Database = {
           name: string
           open_combinados_enabled?: boolean
           show_official_trainings?: boolean
+          slug?: string
           poster_url?: string | null
           provisional_entry_deadline?: string | null
           registration_deadline?: string | null
@@ -342,6 +344,7 @@ export type Database = {
           name?: string
           open_combinados_enabled?: boolean
           show_official_trainings?: boolean
+          slug?: string
           poster_url?: string | null
           provisional_entry_deadline?: string | null
           registration_deadline?: string | null

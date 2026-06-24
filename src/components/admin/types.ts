@@ -74,6 +74,7 @@ export type AccreditationConfig = {
 
 export type Competition = {
   id: string
+  slug: string
   name: string
   status: CompetitionStatus
   location: string | null

@@ -65,12 +65,12 @@ function DJReviewPage() {
       // 4. Competitions where ts_music_deadline has passed (or fallback: registration_closed/active/finished)
       const { data: competitions } = await supabase
         .from('competitions')
-        .select('id, status, ts_music_deadline')
+        .select('id, slug, status, ts_music_deadline')
         .in('id', competitionIds)
       if (!competitions?.length) { setLoading(false); return }
 
       const today = new Date().toISOString().slice(0, 10)
-      const validComps = (competitions as { id: string; status: string; ts_music_deadline: string | null }[])
+      const validComps = (competitions as { id: string; slug: string; status: string; ts_music_deadline: string | null }[])
         .filter(c =>
           // if admin set an explicit deadline, use it strictly (covers both open and close actions)
           c.ts_music_deadline !== null
@@ -80,9 +80,13 @@ function DJReviewPage() {
       if (!validComps.length) { setLoading(false); return }
 
       const allValidCompIds = new Set(validComps.map(c => c.id))
-      // If a specific competition was requested, scope to it only
-      const validCompIds = filterCompId && allValidCompIds.has(filterCompId)
-        ? new Set([filterCompId])
+      const allValidCompSlugs = new Set(validComps.map(c => c.slug))
+      // If a specific competition was requested (by slug), scope to it only
+      const matchedSlug = filterCompId && allValidCompSlugs.has(filterCompId)
+        ? validComps.find(c => c.slug === filterCompId)?.id
+        : null
+      const validCompIds = matchedSlug
+        ? new Set([matchedSlug])
         : allValidCompIds
       const validSpjs = lockedSpjs.filter(s => validCompIds.has(sectionToComp[s.section_id]))
       if (!validSpjs.length) { setLoading(false); return }

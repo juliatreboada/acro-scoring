@@ -10,7 +10,7 @@ import StartingOrderView from '@/components/starting-order/StartingOrderView'
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function Page() {
-  const { id } = useParams<{ id: string }>()
+  const { slug } = useParams<{ slug: string }>()
   const supabase = createClient()
   const [lang, setLang] = useState<Lang>('es')
 
@@ -29,41 +29,29 @@ export default function Page() {
   const [loading,       setLoading]       = useState(true)
   // Kept in sync so the realtime callback can use current session IDs without stale closure
   const sessionIdsRef = useRef<string[]>([])
+  const compUuidRef   = useRef<string>('')
 
   useEffect(() => {
     async function load() {
-      // ── first wave: competition + panels + sections + sessions + entries ──────
-      const [compRes, panelsRes, sectionsRes, sessionsRes, entriesRes, rulesRes, tvStateRes] = await Promise.all([
-        supabase.from('competitions')
-          .select('id, name, status, sport_type,location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, logo_url, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
-          .eq('id', id).single(),
-        supabase.from('panels')
-          .select('id, competition_id, panel_number')
-          .eq('competition_id', id)
-          .order('panel_number'),
-        supabase.from('sections')
-          .select('id, competition_id, section_number, label, starting_time, waiting_time_seconds, warmup_duration_minutes, timeline_order')
-          .eq('competition_id', id)
-          .order('section_number'),
-        supabase.from('sessions')
-          .select('id, competition_id, panel_id, section_id, name, age_group, category, routine_type, status, order_index, order_locked')
-          .eq('competition_id', id)
-          .order('order_index'),
-        supabase.from('competition_entries')
-          .select('id, competition_id, team_id, dorsal, dropped_out, gymnast_display, gymnast_ids')
-          .eq('competition_id', id),
-        supabase.from('age_group_rules')
-          .select('id, age_group, level, ruleset, min_age, max_age, routine_count, sport_type')
-          .order('sort_order'),
-        supabase.from('tv_state')
-          .select('session_id, team_id')
-          .eq('competition_id', id)
-          .maybeSingle(),
+      // ── step 1: resolve slug → UUID ───────────────────────────────────────────
+      const { data: compData } = await supabase.from('competitions')
+        .select('id, slug, name, status, sport_type, location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, logo_url, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
+        .eq('slug', slug).single()
+      if (!compData) { setLoading(false); return }
+      const id = compData.id
+      compUuidRef.current = id
+
+      // ── first wave: panels + sections + sessions + entries ────────────────────
+      const [panelsRes, sectionsRes, sessionsRes, entriesRes, rulesRes, tvStateRes] = await Promise.all([
+        supabase.from('panels').select('id, competition_id, panel_number').eq('competition_id', id).order('panel_number'),
+        supabase.from('sections').select('id, competition_id, section_number, label, starting_time, waiting_time_seconds, warmup_duration_minutes, timeline_order').eq('competition_id', id).order('section_number'),
+        supabase.from('sessions').select('id, competition_id, panel_id, section_id, name, age_group, category, routine_type, status, order_index, order_locked').eq('competition_id', id).order('order_index'),
+        supabase.from('competition_entries').select('id, competition_id, team_id, dorsal, dropped_out, gymnast_display, gymnast_ids').eq('competition_id', id),
+        supabase.from('age_group_rules').select('id, age_group, level, ruleset, min_age, max_age, routine_count, sport_type').order('sort_order'),
+        supabase.from('tv_state').select('session_id, team_id').eq('competition_id', id).maybeSingle(),
       ])
 
-      if (!compRes.data) { setLoading(false); return }
-
-      const comp: Competition = { ...compRes.data, admin: null }
+      const comp: Competition = { ...compData, admin: null }
       const rawSessions = sessionsRes.data ?? []
       const rawEntries  = entriesRes.data  ?? []
       const entryDisplayMap = Object.fromEntries(rawEntries.map(e => [e.team_id, (e as any).gymnast_display as string | null]))
@@ -116,7 +104,7 @@ export default function Page() {
     load()
 
     const resultsChannel = supabase
-      .channel(`starting-order-results-${id}`)
+      .channel(`starting-order-results-${slug}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'routine_results' },
@@ -134,10 +122,10 @@ export default function Page() {
       .subscribe()
 
     const tvStateChannel = supabase
-      .channel(`starting-order-tv-state-${id}`)
+      .channel(`starting-order-tv-state-${slug}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'tv_state', filter: `competition_id=eq.${id}` },
+        { event: '*', schema: 'public', table: 'tv_state', filter: `competition_id=eq.${compUuidRef.current}` },
         (payload) => {
           const row = payload.new as { session_id: string | null; team_id: string | null }
           setOngoingRoutineKey(row?.session_id && row?.team_id ? `${row.session_id}:${row.team_id}` : null)
@@ -149,7 +137,7 @@ export default function Page() {
       supabase.removeChannel(resultsChannel)
       supabase.removeChannel(tvStateChannel)
     }
-  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [slug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center">

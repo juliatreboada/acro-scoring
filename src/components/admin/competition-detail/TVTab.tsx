@@ -196,8 +196,8 @@ export default function TVTab({
 
   // Build the TV URL once on client
   useEffect(() => {
-    setTvUrl(`${window.location.origin}/tv/${competition.id}`)
-  }, [competition.id])
+    setTvUrl(`${window.location.origin}/tv/${competition.slug}`)
+  }, [competition.slug])
 
   // Scale the score preview iframe to fill its container
   useEffect(() => {

@@ -11,7 +11,7 @@ import type {
 import { ROLE_CONFIG, defaultSlots, NEXT_STATUS, PREV_STATUS } from '@/components/admin/types'
 import type { PanelLock } from '@/components/admin/competition-detail/JudgesTab'
 
-export function useCompetitionPage(id: string) {
+export function useCompetitionPage(slug: string) {
   const supabase = createClient()
 
   const [loading, setLoading]             = useState(true)
@@ -45,12 +45,17 @@ export function useCompetitionPage(id: string) {
   useEffect(() => {
     async function load() {
       try {
-        const [compRes, panelsRes, sectionsRes, sessionsRes, judgesRes,
+        // Step 1: resolve slug → UUID
+        const { data: compRow } = await supabase.from('competitions')
+          .select('id,slug,name,status,sport_type,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,tshirt_sizes,tshirt_deadline,meals_enabled,meals_locked,accreditation_config,age_groups,poster_url,logo_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine,open_combinados_enabled,show_official_trainings')
+          .eq('slug', slug).single()
+        if (!compRow) { setLoading(false); return }
+        const id = compRow.id
+
+        // Step 2: parallel queries using UUID
+        const [panelsRes, sectionsRes, sessionsRes, judgesRes,
                nominationsRes, entriesRes, rulesRes, adminsRes, provRes, defRes,
                apparatusRes, apparatusRulesRes, mergeGroupsRes] = await Promise.all([
-          supabase.from('competitions')
-            .select('id,name,status,sport_type,location,start_date,end_date,provisional_entry_deadline,definitive_entry_deadline,registration_deadline,ts_music_deadline,tshirt_sizes,tshirt_deadline,meals_enabled,meals_locked,accreditation_config,age_groups,poster_url,logo_url,admin_id,created_at,fee_per_team,fee_per_gymnast,judge_missing_fine,open_combinados_enabled,show_official_trainings')
-            .eq('id', id).single(),
           supabase.from('panels').select('id,competition_id,panel_number').eq('competition_id', id).order('panel_number'),
           supabase.from('sections').select('id,competition_id,section_number,label,starting_time,waiting_time_seconds,warmup_duration_minutes,timeline_order').eq('competition_id', id).order('section_number'),
           supabase.from('sessions').select('id,competition_id,panel_id,section_id,name,age_group,category,routine_type,status,order_index,order_locked,dj_method,ej_method,ranking_merge_group_id,bracket_phase').eq('competition_id', id).order('order_index'),
@@ -66,7 +71,7 @@ export function useCompetitionPage(id: string) {
           supabase.from('ranking_merge_groups').select('id,label_es,label_en').eq('competition_id', id),
         ])
 
-        if (!compRes.data) { setLoading(false); return }
+        // (competition already validated above)
 
         // ── wave 2: queries that depend on wave-1 IDs ─────────────────────────
         type TeamRow = { id: string; club_id: string; category: string; age_group: string; gymnast_display: string; photo_url: string | null; gymnast_ids: string[] | null }
@@ -157,14 +162,14 @@ export function useCompetitionPage(id: string) {
         const coachesData = (coachesResult as any).data as Coach[] ?? []
 
         const adminMap = Object.fromEntries(adminsWithEmail.map(a => [a.id, a]))
-        const { admin_id, ...compRest } = compRes.data
+        const { admin_id, ...compRest } = compRow
         const rawNoms = nominationsRes.data ?? []
 
         setCompetition({ ...compRest, admin: admin_id ? (adminMap[admin_id] ?? null) : null } as unknown as Competition)
         setPanels((panelsRes.data ?? []) as unknown as Panel[])
         setSections((sectionsRes.data ?? []) as unknown as Section[])
         setSessions(rawSessions.map(({ order_locked: _, ...s }) => s) as Session[])
-        const compSportType = compRes.data.sport_type ?? 'acro'
+        const compSportType = compRow.sport_type ?? 'acro'
         setGlobalJudges(
           rawJudges
             .filter(j => (j as any).sport_type === compSportType)
@@ -194,7 +199,7 @@ export function useCompetitionPage(id: string) {
       }
     }
     load()
-  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [slug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── session eligible counts (for merge group UI) ─────────────────────────────
   const sessionEligibleTeamCounts = useMemo(() => {
@@ -215,7 +220,7 @@ export function useCompetitionPage(id: string) {
     if (!competition) return
     const next = NEXT_STATUS[competition.status]
     if (!next) return
-    await supabase.from('competitions').update({ status: next }).eq('id', id)
+    await supabase.from('competitions').update({ status: next }).eq('id', competition.id)
     setCompetition(prev => prev ? { ...prev, status: next } : prev)
   }
 
@@ -223,7 +228,7 @@ export function useCompetitionPage(id: string) {
     if (!competition) return
     const prev = PREV_STATUS[competition.status]
     if (!prev) return
-    await supabase.from('competitions').update({ status: prev }).eq('id', id)
+    await supabase.from('competitions').update({ status: prev }).eq('id', competition.id)
     setCompetition(curr => curr ? { ...curr, status: prev } : curr)
   }
 
@@ -232,7 +237,7 @@ export function useCompetitionPage(id: string) {
     let p1 = panels.find(p => p.panel_number === 1)
     if (!p1) {
       const { data } = await supabase.from('panels')
-        .insert({ competition_id: id, panel_number: 1 }).select().single()
+        .insert({ competition_id: competition!.id, panel_number: 1 }).select().single()
       if (!data) return
       p1 = data as unknown as Panel
     }
@@ -241,7 +246,7 @@ export function useCompetitionPage(id: string) {
       const p2 = panels.find(p => p.panel_number === 2)
       if (p2) {
         await supabase.from('panels').delete().eq('id', p2.id)
-        await supabase.from('sessions').update({ panel_id: p1.id }).eq('competition_id', id).eq('panel_id', p2.id)
+        await supabase.from('sessions').update({ panel_id: p1.id }).eq('competition_id', competition!.id).eq('panel_id', p2.id)
         setSessions(prev => prev.map(s => s.panel_id === p2.id ? { ...s, panel_id: p1!.id } : s))
       }
       setPanels([p1])
@@ -249,7 +254,7 @@ export function useCompetitionPage(id: string) {
       let p2 = panels.find(p => p.panel_number === 2)
       if (!p2) {
         const { data } = await supabase.from('panels')
-          .insert({ competition_id: id, panel_number: 2 }).select().single()
+          .insert({ competition_id: competition!.id, panel_number: 2 }).select().single()
         if (!data) return
         p2 = data as unknown as Panel
         const slots = sections.flatMap(sec =>
@@ -272,7 +277,7 @@ export function useCompetitionPage(id: string) {
     let activePanels = panels
     if (activePanels.length === 0) {
       const { data } = await supabase.from('panels')
-        .insert({ competition_id: id, panel_number: 1 }).select().single()
+        .insert({ competition_id: competition!.id, panel_number: 1 }).select().single()
       if (!data) return
       const p1 = data as unknown as Panel
       setPanels([p1])
@@ -281,7 +286,7 @@ export function useCompetitionPage(id: string) {
 
     const nextNum = sections.length > 0 ? Math.max(...sections.map(s => s.section_number)) + 1 : 1
     const { data: newSection } = await supabase.from('sections')
-      .insert({ competition_id: id, section_number: nextNum, label: null }).select().single()
+      .insert({ competition_id: competition!.id, section_number: nextNum, label: null }).select().single()
     if (!newSection) return
     setSections(prev => [...prev, newSection as unknown as Section])
     const slots = activePanels.flatMap(pan =>
@@ -345,7 +350,7 @@ export function useCompetitionPage(id: string) {
   // ── judges ────────────────────────────────────────────────────────────────────
   async function handleAddToPool(judgeId: string) {
     const { data: nom, error } = await supabase.from('competition_judge_nominations')
-      .insert({ competition_id: id, judge_id: judgeId, club_id: null })
+      .insert({ competition_id: competition!.id, judge_id: judgeId, club_id: null })
       .select().single()
     if (error) { setActionError(error.message); return }
     if (nom) setNominations(prev => [...prev, nom as CompetitionJudgeNomination])
@@ -354,7 +359,7 @@ export function useCompetitionPage(id: string) {
 
   async function handleRemoveFromPool(judgeId: string) {
     await supabase.from('competition_judge_nominations')
-      .delete().eq('competition_id', id).eq('judge_id', judgeId)
+      .delete().eq('competition_id', competition!.id).eq('judge_id', judgeId)
     setNominations(prev => prev.filter(n => n.judge_id !== judgeId))
     setJudgePool(prev => prev.filter(jid => jid !== judgeId))
     setAssignments(prev => prev.map(a => a.judge_id === judgeId ? { ...a, judge_id: null } : a))
@@ -440,7 +445,7 @@ export function useCompetitionPage(id: string) {
   async function handleRemoveClubEntries(clubId: string) {
     const clubTeamIds = globalTeams.filter(t => t.club_id === clubId).map(t => t.id)
     if (clubTeamIds.length === 0) return
-    await supabase.from('competition_entries').delete().eq('competition_id', id).in('team_id', clubTeamIds)
+    await supabase.from('competition_entries').delete().eq('competition_id', competition!.id).in('team_id', clubTeamIds)
     setEntries(prev => prev.filter(e => !clubTeamIds.includes(e.team_id)))
   }
 
@@ -501,52 +506,52 @@ export function useCompetitionPage(id: string) {
       fee_per_team: updates.fee_per_team,
       fee_per_gymnast: updates.fee_per_gymnast,
       judge_missing_fine: updates.judge_missing_fine,
-    }).eq('id', id)
+    }).eq('id', competition!.id)
     setCompetition(prev => prev ? { ...prev, ...updates } : prev)
   }
 
   async function handleUpdateFees(fees: { fee_per_team: number | null; fee_per_gymnast: number | null; judge_missing_fine: number | null }) {
-    await supabase.from('competitions').update(fees).eq('id', id)
+    await supabase.from('competitions').update(fees).eq('id', competition!.id)
     setCompetition(prev => prev ? { ...prev, ...fees } : prev)
   }
 
   async function handleUploadPoster(file: File) {
     const ext = file.name.split('.').pop() ?? 'jpg'
-    const path = `${id}/poster.${ext}`
+    const path = `${competition!.id}/poster.${ext}`
     await supabase.storage.from('competition-posters').upload(path, file, { upsert: true })
     const { data } = supabase.storage.from('competition-posters').getPublicUrl(path)
     const url = data.publicUrl + `?t=${Date.now()}`
-    await supabase.from('competitions').update({ poster_url: url }).eq('id', id)
+    await supabase.from('competitions').update({ poster_url: url }).eq('id', competition!.id)
     setCompetition(prev => prev ? { ...prev, poster_url: url } : prev)
   }
 
   async function handleSetDJReviewDeadline(date: string | null) {
-    await supabase.from('competitions').update({ ts_music_deadline: date }).eq('id', id)
+    await supabase.from('competitions').update({ ts_music_deadline: date }).eq('id', competition!.id)
     setCompetition(prev => prev ? { ...prev, ts_music_deadline: date } : prev)
   }
 
   async function handleUpdateTshirtConfig(sizes: string[], deadline: string | null) {
-    await supabase.from('competitions').update({ tshirt_sizes: sizes, tshirt_deadline: deadline }).eq('id', id)
+    await supabase.from('competitions').update({ tshirt_sizes: sizes, tshirt_deadline: deadline }).eq('id', competition!.id)
     setCompetition(prev => prev ? { ...prev, tshirt_sizes: sizes, tshirt_deadline: deadline } : prev)
   }
 
   async function handleToggleMealsEnabled(enabled: boolean) {
-    await supabase.from('competitions').update({ meals_enabled: enabled }).eq('id', id)
+    await supabase.from('competitions').update({ meals_enabled: enabled }).eq('id', competition!.id)
     setCompetition(prev => prev ? { ...prev, meals_enabled: enabled } : prev)
   }
 
   async function handleToggleMealsLocked(locked: boolean) {
-    await supabase.from('competitions').update({ meals_locked: locked }).eq('id', id)
+    await supabase.from('competitions').update({ meals_locked: locked }).eq('id', competition!.id)
     setCompetition(prev => prev ? { ...prev, meals_locked: locked } : prev)
   }
 
   async function handleToggleShowOfficialTrainings(visible: boolean) {
-    await supabase.from('competitions').update({ show_official_trainings: visible }).eq('id', id)
+    await supabase.from('competitions').update({ show_official_trainings: visible }).eq('id', competition!.id)
     setCompetition(prev => prev ? { ...prev, show_official_trainings: visible } : prev)
   }
 
   async function handleUpdateAccreditationConfig(config: import('@/components/admin/types').AccreditationConfig) {
-    await supabase.from('competitions').update({ accreditation_config: config as never }).eq('id', id)
+    await supabase.from('competitions').update({ accreditation_config: config as never }).eq('id', competition!.id)
     setCompetition(prev => prev ? { ...prev, accreditation_config: config } : prev)
   }
 
@@ -571,11 +576,11 @@ export function useCompetitionPage(id: string) {
 
   async function handleUploadLogo(file: File) {
     const ext = file.name.split('.').pop() ?? 'jpg'
-    const path = `${id}/logo.${ext}`
+    const path = `${competition!.id}/logo.${ext}`
     await supabase.storage.from('competition-posters').upload(path, file, { upsert: true })
     const { data } = supabase.storage.from('competition-posters').getPublicUrl(path)
     const url = data.publicUrl + `?t=${Date.now()}`
-    await supabase.from('competitions').update({ logo_url: url }).eq('id', id)
+    await supabase.from('competitions').update({ logo_url: url }).eq('id', competition!.id)
     setCompetition(prev => prev ? { ...prev, logo_url: url } : prev)
   }
 
@@ -599,7 +604,7 @@ export function useCompetitionPage(id: string) {
 
   async function handleCreateRankingMergeGroup(labelEs: string, labelEn: string): Promise<string | null> {
     const { data, error } = await supabase.from('ranking_merge_groups')
-      .insert({ competition_id: id, label_es: labelEs || null, label_en: labelEn || null })
+      .insert({ competition_id: competition?.id ?? '', label_es: labelEs || null, label_en: labelEn || null })
       .select('id,label_es,label_en')
       .single()
     if (error || !data) { setActionError(error?.message ?? 'Error'); return null }
