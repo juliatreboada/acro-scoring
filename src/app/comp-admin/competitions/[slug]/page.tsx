@@ -2,17 +2,15 @@
 
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
 import CompetitionDetail from '@/components/admin/competition-detail/CompetitionDetail'
 import AuthBar from '@/components/shared/AuthBar'
 import { useCompetitionPage } from '@/hooks/useCompetitionPage'
 import type { Lang } from '@/components/scoring/types'
-import type { Judge, SessionOrder } from '@/components/admin/types'
 
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function Page() {
-  const { id } = useParams<{ id: string }>()
+  const { slug } = useParams<{ slug: string }>()
   const router  = useRouter()
   const [lang, setLang] = useState<Lang>('es')
 
@@ -22,84 +20,24 @@ export default function Page() {
     globalTeams, clubs, entries, sessionOrders, lockedSessions,
     availableAdmins, ageGroupRules, apparatus, apparatusRules, competitionGymnasts, globalCoaches, competitionCoaches,
     provisionalEntries, definitiveEntries, rankingMergeGroups, sessionEligibleTeamCounts, actionError,
-    setLockedSessions, setSessionOrders,
     handleAdvanceStatus, handleRevertStatus, handleSetPanelCount,
     handleAddSection, handleUpdateSectionLabel, handleUpdateSectionTimes, handleDeleteSection,
     handleAddSession, handleDeleteSession, handleReorderStructureSessions,
     handleAddToPool, handleRemoveFromPool, handleAssignJudge,
     handleAddSlot, handleRemoveSlot, handleTogglePanelLock, handleCopyPanel,
     handleToggleDropout, handleRemoveClubEntries,
-    handleReorder, handleReorderTimeline,
+    handleToggleLock, handleReorder, handleReorderTimeline,
     handleUpdateCompetition, handleUpdateFees, handleUploadPoster, handleUploadLogo, handleSetDJReviewDeadline,
     handleStartSession, handleFinishSession, handleRevertSession,
     handleAssignSessionMergeGroup, handleCreateRankingMergeGroup,
     handleUpdateTshirtConfig, handleToggleMealsEnabled, handleToggleMealsLocked, handleToggleShowOfficialTrainings, handleUpdateAccreditationConfig,
     clearActionError,
-  } = useCompetitionPage(id)
-
-  async function handleCreateJudge(data: Omit<Judge, 'id' | 'avatar_url'>) {
-    const { full_name, email, phone, licence, sport_type } = data
-    if (!email) return
-    const supabase = createClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    const token = session?.access_token
-    const body: Record<string, string> = { role: 'judge', email, full_name, sport_type: sport_type ?? 'acro' }
-    if (phone)   body.phone   = phone
-    if (licence) body.licence = licence
-    const res = await fetch('/api/admin/invite', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify(body),
-    })
-    if (!res.ok) {
-      const { error } = await res.json()
-      throw new Error(error ?? 'Failed to send invite')
-    }
-  }
-
-  // admin-only: auto-creates session_orders when locking for the first time
-  async function handleToggleLock(sessionId: string) {
-    const supabase = createClient()
-    const isLocked = lockedSessions.includes(sessionId)
-
-    if (!isLocked) {
-      const existingOrders = sessionOrders.filter(o => o.session_id === sessionId)
-      if (existingOrders.length === 0) {
-        const session = sessions.find(s => s.id === sessionId)
-        if (session) {
-          const sessionTeamIds = entries
-            .filter(e => !e.dropped_out)
-            .map(e => e.team_id)
-            .filter(tid => {
-              const team = globalTeams.find(t => t.id === tid)
-              return team?.age_group === session.age_group && team?.category === session.category
-            })
-
-          if (sessionTeamIds.length > 0) {
-            const newOrders: SessionOrder[] = sessionTeamIds.map((teamId, idx) => ({
-              session_id: sessionId, team_id: teamId, position: idx + 1,
-            }))
-            await supabase.from('session_orders')
-              .upsert(newOrders, { onConflict: 'session_id,team_id' })
-            setSessionOrders(prev => [
-              ...prev.filter(o => o.session_id !== sessionId),
-              ...newOrders,
-            ])
-          }
-        }
-      }
-    }
-
-    await supabase.from('sessions').update({ order_locked: !isLocked } as never).eq('id', sessionId)
-    setLockedSessions(prev =>
-      isLocked ? prev.filter(sid => sid !== sessionId) : [...prev, sessionId]
-    )
-  }
+  } = useCompetitionPage(slug)
 
   // ── render ────────────────────────────────────────────────────────────────────
   if (loading) return (
     <div className="min-h-screen bg-slate-50">
-      <AuthBar lang={lang} onLangChange={(l) => setLang(l as Lang)} />
+      <AuthBar lang={lang} onLangChange={setLang} />
       <div className="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-4 sticky top-0 z-10">
         <div className="h-4 w-16 bg-slate-100 rounded animate-pulse" />
         <div className="h-4 w-px bg-slate-200" />
@@ -150,13 +88,20 @@ export default function Page() {
     <div className="min-h-screen bg-slate-50">
       <AuthBar lang={lang} onLangChange={setLang} />
 
+      {actionError && (
+        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-red-600 text-white text-sm px-4 py-3 rounded-xl shadow-lg">
+          <span>{actionError}</span>
+          <button onClick={clearActionError} className="text-white/70 hover:text-white">✕</button>
+        </div>
+      )}
+
       <CompetitionDetail
         lang={lang}
         competition={competition}
         panels={panels}
         sections={sections}
         sessions={sessions}
-        onBack={() => router.push('/admin')}
+        onBack={() => router.push('/comp-admin')}
         onAdvanceStatus={handleAdvanceStatus}
         onRevertStatus={handleRevertStatus}
         onSetPanelCount={handleSetPanelCount}
@@ -183,7 +128,6 @@ export default function Page() {
         onRemoveSlot={handleRemoveSlot}
         onTogglePanelLock={handleTogglePanelLock}
         onCopyPanel={handleCopyPanel}
-        onCreateJudge={handleCreateJudge}
         globalTeams={globalTeams}
         clubs={clubs}
         entries={entries}

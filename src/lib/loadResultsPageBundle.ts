@@ -33,7 +33,7 @@ export type ResultsPageBundle = {
  */
 export async function loadResultsPageBundle(
   supabase: SupabaseClient<Database>,
-  competitionId: string,
+  slug: string,
 ): Promise<ResultsPageBundle> {
   const empty: ResultsPageBundle = {
     competition: null,
@@ -47,12 +47,13 @@ export async function loadResultsPageBundle(
 
   const { data: comp } = await supabase
     .from('competitions')
-    .select('name, status, location, start_date, end_date, open_combinados_enabled, logo_url')
-    .eq('id', competitionId)
+    .select('id, name, status, location, start_date, end_date, open_combinados_enabled, logo_url')
+    .eq('slug', slug)
     .single()
 
   if (!comp) return empty
 
+  const competitionId = comp.id
   const openCombinadosEnabled =
     isOpenCombinadosCompetitionName(comp.name) || Boolean(comp.open_combinados_enabled)
 

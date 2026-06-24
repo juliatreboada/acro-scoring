@@ -26,7 +26,7 @@ type CreateFormProps = {
   lang: Lang
   ageGroupRules: AgeGroupRule[]
   availableAdmins: AdminUser[]
-  onSubmit: (data: Omit<Competition, 'id' | 'created_at'>) => void
+  onSubmit: (data: Omit<Competition, 'id' | 'slug' | 'created_at'>) => void
   onCancel: () => void
 }
 
@@ -339,7 +339,7 @@ function CompetitionCard({ competition: c, lang, onManage }: CompetitionCardProp
 
         {/* manage button */}
         <button
-          onClick={() => onManage(c.id)}
+          onClick={() => onManage(c.slug)}
           className="w-full mt-auto py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all"
         >
           {t.manage}
@@ -357,7 +357,7 @@ export type CompetitionsViewProps = {
   availableAdmins: AdminUser[]
   competitions: Competition[]
   canCreate?: boolean
-  onCreate: (data: Omit<Competition, 'id' | 'created_at'>) => void
+  onCreate: (data: Omit<Competition, 'id' | 'slug' | 'created_at'>) => void
   onManage: (id: string) => void
 }
 
@@ -367,7 +367,7 @@ export default function CompetitionsView({
   const t = useT('CompetitionsView', lang)
   const [showForm, setShowForm] = useState(false)
 
-  function handleCreate(data: Omit<Competition, 'id' | 'created_at'>) {
+  function handleCreate(data: Omit<Competition, 'id' | 'slug' | 'created_at'>) {
     onCreate(data)
     setShowForm(false)
   }

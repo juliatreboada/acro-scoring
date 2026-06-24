@@ -12,7 +12,7 @@ import { showTrofeoGondomarClubRanking } from '@/lib/trofeoGondomarCompetition'
 import type { OpenCombinadosActaData } from '@/lib/openCombinadosBracket'
 
 function ResultsPageInner() {
-  const { id } = useParams<{ id: string }>()
+  const { slug } = useParams<{ slug: string }>()
   const searchParams = useSearchParams()
   const isOfficial = searchParams.get('official') === '1'
   const supabase = createClient()
@@ -29,7 +29,7 @@ function ResultsPageInner() {
 
   useEffect(() => {
     async function load() {
-      const bundle = await loadResultsPageBundle(supabase, id)
+      const bundle = await loadResultsPageBundle(supabase, slug)
       if (!bundle.competition) {
         setLoading(false)
         return
@@ -44,7 +44,7 @@ function ResultsPageInner() {
       setLoading(false)
     }
     load()
-  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [slug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (
@@ -55,7 +55,7 @@ function ResultsPageInner() {
   }
 
   const competitionName = competitionMeta?.name ?? ''
-  const trofeoGondomar = showTrofeoGondomarClubRanking(id)
+  const trofeoGondomar = showTrofeoGondomarClubRanking(slug)
 
   return (
     <div className="so-print-area min-h-screen bg-slate-50 print:w-full print:max-w-none">

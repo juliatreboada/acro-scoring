@@ -11,7 +11,7 @@ import { useT } from '@/lib/useT'
 
 type Competition = Pick<
   Database['public']['Tables']['competitions']['Row'],
-  'id' | 'name' | 'status' | 'location' | 'start_date' | 'end_date'
+  'id' | 'slug' | 'name' | 'status' | 'location' | 'start_date' | 'end_date'
 >
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ export default function Page() {
     async function load() {
       const { data } = await supabase
         .from('competitions')
-        .select('id, name, status, location, start_date, end_date')
+        .select('id, slug, name, status, location, start_date, end_date')
         .in('status', ['published', 'active', 'finished'])
         .order('start_date', { ascending: false })
       setComps(data ?? [])
@@ -83,7 +83,7 @@ export default function Page() {
               return (
                 <button
                   key={comp.id}
-                  onClick={() => router.push(`/starting-order/${comp.id}`)}
+                  onClick={() => router.push(`/starting-order/${comp.slug}`)}
                   className="w-full text-left bg-white border border-slate-200 rounded-2xl px-5 py-4 hover:border-blue-300 hover:shadow-sm transition-all group"
                 >
                   <div className="flex items-start justify-between gap-3">

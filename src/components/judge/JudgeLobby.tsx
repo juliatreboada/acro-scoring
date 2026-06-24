@@ -26,6 +26,7 @@ type SessionStatus = 'waiting' | 'active' | 'finished'
 
 type LobbyCompetition = {
   id: string
+  slug: string
   name: string
   location: string | null
   start_date: string | null
@@ -376,7 +377,7 @@ function CompetitionDetail({ comp, lang, onBack }: {
                     new Date().toISOString().slice(0, 10) > comp.ts_music_deadline &&
                     panel.roles.some(r => r.role === 'DJ') && (
                     <button
-                      onClick={() => router.push(`/dj-review?comp=${comp.id}`)}
+                      onClick={() => router.push(`/dj-review?comp=${comp.slug}`)}
                       className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600 transition-all"
                     >
                       {t.djReviewButton}
@@ -472,7 +473,7 @@ export default function JudgeLobby({ lang }: { lang: Lang }) {
       const compIds = [...new Set(sections.map(s => s.competition_id))]
       const { data: comps } = await supabase
         .from('competitions')
-        .select('id, name, location, start_date, end_date, status, ts_music_deadline')
+        .select('id, slug, name, location, start_date, end_date, status, ts_music_deadline')
         .in('id', compIds)
         .order('start_date', { ascending: false })
 

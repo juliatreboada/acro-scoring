@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { slugify } from '@/lib/slugify'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useProfile } from '@/contexts/ProfileContext'
@@ -31,7 +32,7 @@ export default function Page() {
 
       const compsQuery = supabase
         .from('competitions')
-        .select('id, name, status, sport_type, location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, logo_url, admin_id, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
+        .select('id, slug, name, status, sport_type, location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, logo_url, admin_id, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
         .order('created_at', { ascending: false })
 
       // admin sees only their assigned competitions
@@ -75,11 +76,12 @@ export default function Page() {
     load()
   }, [activeProfile?.id, profileLoading]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleCreate(data: Omit<Competition, 'id' | 'created_at'>) {
+  async function handleCreate(data: Omit<Competition, 'id' | 'slug' | 'created_at'>) {
     const { data: created, error } = await supabase
       .from('competitions')
       .insert({
         name:                  data.name,
+        slug:                  slugify(data.name, data.start_date ? new Date(data.start_date).getFullYear() : new Date().getFullYear()),
         status:                data.status,
         sport_type:            data.sport_type,
         location:              data.location,
@@ -91,7 +93,7 @@ export default function Page() {
         logo_url:              data.logo_url ?? null,
         admin_id:              data.admin?.id ?? null,
       })
-      .select('id, name, status, sport_type, location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, logo_url, admin_id, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
+      .select('id, slug, name, status, sport_type, location, start_date, end_date, provisional_entry_deadline, definitive_entry_deadline, registration_deadline, ts_music_deadline, age_groups, poster_url, logo_url, admin_id, created_at, fee_per_team, fee_per_gymnast, judge_missing_fine')
       .single()
 
     if (error || !created) return
