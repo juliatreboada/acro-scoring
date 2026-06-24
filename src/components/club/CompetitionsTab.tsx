@@ -618,7 +618,8 @@ function CompetitionDetailView({
                   : hasJudgeWarning ? <span className="text-xs font-bold text-amber-500">⚠</span> : null },
                 ...(hasTshirts ? [{ key: 'tshirts' as CompTab, label: t.tshirtTitle, badge: isTshirtLocked
                   ? <span className="text-xs font-bold px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded-full">🔒</span> : null }] : []),
-                ...(competition.meals_enabled ? [{ key: 'meals' as CompTab, label: t.mealsTitle, badge: null }] : []),
+                ...(competition.meals_enabled ? [{ key: 'meals' as CompTab, label: t.mealsTitle, badge: competition.meals_locked
+                  ? <span className="text-xs font-bold px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded-full">🔒</span> : null }] : []),
                 ...(competition.show_official_trainings ? [{ key: 'trainings' as CompTab, label: t.trainingsTitle, badge: null }] : []),
               ] as { key: CompTab; label: string; badge: React.ReactNode }[]
             ).map(tab => (
