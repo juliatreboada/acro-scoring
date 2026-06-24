@@ -57,6 +57,7 @@ export type AccreditationConfig = {
   gymnast_color: string          // hex, default '#3b82f6'
   coach_color: string            // hex, default '#10b981'
   judge_color: string            // hex, default '#f59e0b'
+  staff_color: string            // hex, default '#8b5cf6'
   show_logo: boolean
   show_competition_name: boolean
   header_height: number          // % of card height, 10–50, default 22

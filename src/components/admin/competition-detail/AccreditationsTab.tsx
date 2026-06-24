@@ -1,10 +1,12 @@
 'use client'
 
-import { useRef, useState, useMemo, useCallback } from 'react'
+import { useRef, useState, useMemo, useCallback, useEffect } from 'react'
 import { useT } from '@/lib/useT'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, AccreditationConfig, Gymnast, Coach, Judge, Club, CompetitionJudgeNomination } from '@/components/admin/types'
+
+type StaffMember = { id: string; name: string; photo_url: string | null }
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -12,6 +14,7 @@ const DEFAULT_CONFIG: AccreditationConfig = {
   gymnast_color: '#3b82f6',
   coach_color: '#10b981',
   judge_color: '#f59e0b',
+  staff_color: '#8b5cf6',
   show_logo: true,
   show_competition_name: true,
   header_height: 22,
@@ -39,13 +42,17 @@ const SAMPLE_PERSON = {
   id: '__sample__', name: 'Ana García Rodríguez', initials: 'AG',
   club_name: 'Club Acrobático', club_logo_url: null, photo_url: null, type: 'gymnast' as const,
 }
+const SAMPLE_STAFF: Person = {
+  id: '__sample_staff__', name: 'Carlos Martínez', initials: 'CM',
+  club_name: '', club_logo_url: null, photo_url: null, type: 'staff',
+}
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
 type Person = {
   id: string; name: string; initials: string
   club_name: string; club_logo_url: string | null; photo_url: string | null
-  type: 'gymnast' | 'coach' | 'judge'
+  type: 'gymnast' | 'coach' | 'judge' | 'staff'
 }
 
 type Props = {
@@ -73,6 +80,7 @@ function parseConfig(raw: unknown): AccreditationConfig {
     gymnast_color:        typeof r.gymnast_color        === 'string'  ? r.gymnast_color        : DEFAULT_CONFIG.gymnast_color,
     coach_color:          typeof r.coach_color          === 'string'  ? r.coach_color          : DEFAULT_CONFIG.coach_color,
     judge_color:          typeof r.judge_color          === 'string'  ? r.judge_color          : DEFAULT_CONFIG.judge_color,
+    staff_color:          typeof r.staff_color          === 'string'  ? r.staff_color          : DEFAULT_CONFIG.staff_color,
     show_logo:            typeof r.show_logo            === 'boolean' ? r.show_logo            : DEFAULT_CONFIG.show_logo,
     show_competition_name:typeof r.show_competition_name=== 'boolean' ? r.show_competition_name: DEFAULT_CONFIG.show_competition_name,
     header_height:        typeof r.header_height        === 'number'  ? r.header_height        : DEFAULT_CONFIG.header_height,
@@ -91,6 +99,7 @@ function parseConfig(raw: unknown): AccreditationConfig {
 function colorForType(type: Person['type'], config: AccreditationConfig): string {
   if (type === 'gymnast') return config.gymnast_color
   if (type === 'coach')   return config.coach_color
+  if (type === 'staff')   return config.staff_color
   return config.judge_color
 }
 
@@ -194,12 +203,12 @@ function CardPreview({ person, config, competition, typeLabel }: {
           }}>
             {person.name}
           </p>
-          {(person.club_name || (person.club_logo_url && person.type !== 'judge')) && (
+          {person.type !== 'judge' && person.type !== 'staff' && (person.club_name || person.club_logo_url) && (
             <div style={{
               marginTop: 3, display: 'flex', alignItems: 'center', justifyContent: textJustify,
               gap: Math.round(clubFont * 0.4), flexWrap: 'wrap',
             }}>
-              {person.club_logo_url && person.type !== 'judge' && (
+              {person.club_logo_url && (
                 <img src={person.club_logo_url} style={{
                   height: Math.round(clubFont * 1.5), width: Math.round(clubFont * 1.5),
                   objectFit: 'contain', flexShrink: 0,
@@ -274,9 +283,56 @@ export default function AccreditationsTab({
   const [showGymnasts, setShowGymnasts] = useState(true)
   const [showCoaches, setShowCoaches]   = useState(true)
   const [showJudges, setShowJudges]     = useState(true)
+  const [showStaff, setShowStaff]       = useState(true)
   const [photoFilter, setPhotoFilter]   = useState<'all' | 'with' | 'without'>('all')
   const [searchQuery, setSearchQuery]   = useState('')
   const [excludedIds, setExcludedIds]   = useState<Set<string>>(new Set())
+
+  // staff management
+  const [staffList, setStaffList]           = useState<StaffMember[]>([])
+  const [staffName, setStaffName]           = useState('')
+  const [addingStaff, setAddingStaff]       = useState(false)
+  const [uploadingStaffId, setUploadingStaffId] = useState<string | null>(null)
+  const staffPhotoRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
+  useEffect(() => {
+    supabase.from('competition_staff')
+      .select('id,name,photo_url')
+      .eq('competition_id', competition.id)
+      .order('created_at')
+      .then(({ data }) => { if (data) setStaffList(data as StaffMember[]) })
+  }, [competition.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleAddStaff() {
+    const name = staffName.trim()
+    if (!name) return
+    setAddingStaff(true)
+    try {
+      const { data } = await supabase.from('competition_staff')
+        .insert({ competition_id: competition.id, name })
+        .select('id,name,photo_url').single()
+      if (data) setStaffList(prev => [...prev, data as StaffMember])
+      setStaffName('')
+    } finally { setAddingStaff(false) }
+  }
+
+  async function handleDeleteStaff(id: string) {
+    await supabase.from('competition_staff').delete().eq('id', id)
+    setStaffList(prev => prev.filter(s => s.id !== id))
+  }
+
+  async function handleStaffPhotoUpload(staffId: string, file: File) {
+    setUploadingStaffId(staffId)
+    try {
+      const ext  = file.name.split('.').pop() ?? 'jpg'
+      const path = `${competition.id}/staff/${staffId}.${ext}`
+      await supabase.storage.from('competition-posters').upload(path, file, { upsert: true })
+      const { data } = supabase.storage.from('competition-posters').getPublicUrl(path)
+      const url = data.publicUrl + `?t=${Date.now()}`
+      await supabase.from('competition_staff').update({ photo_url: url }).eq('id', staffId)
+      setStaffList(prev => prev.map(s => s.id === staffId ? { ...s, photo_url: url } : s))
+    } finally { setUploadingStaffId(null) }
+  }
 
   function toggleExclude(key: string) {
     setExcludedIds(prev => {
@@ -307,8 +363,11 @@ export default function AccreditationsTab({
       const clubId = judgeClubMap[j.id]
       result.push({ id: j.id, name: j.full_name, initials: initials(j.full_name), club_name: clubId ? (clubMap[clubId] ?? '') : '', club_logo_url: null, photo_url: j.avatar_url, type: 'judge' })
     }
+    for (const s of staffList) {
+      result.push({ id: s.id, name: s.name, initials: initials(s.name), club_name: '', club_logo_url: null, photo_url: s.photo_url, type: 'staff' })
+    }
     return result
-  }, [competitionGymnasts, competitionCoaches, globalJudges, judgePool, clubMap, clubLogoMap, judgeClubMap])
+  }, [competitionGymnasts, competitionCoaches, globalJudges, judgePool, clubMap, clubLogoMap, judgeClubMap, staffList])
 
   const printPersons = useMemo(() => {
     const q = searchQuery.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -316,6 +375,7 @@ export default function AccreditationsTab({
       if (p.type === 'gymnast' && !showGymnasts) return false
       if (p.type === 'coach'   && !showCoaches)  return false
       if (p.type === 'judge'   && !showJudges)   return false
+      if (p.type === 'staff'   && !showStaff)    return false
       if (photoFilter === 'with'    && !p.photo_url) return false
       if (photoFilter === 'without' &&  p.photo_url) return false
       if (q) {
@@ -325,15 +385,21 @@ export default function AccreditationsTab({
       }
       return true
     })
-  }, [allPersons, showGymnasts, showCoaches, showJudges, photoFilter, searchQuery])
+  }, [allPersons, showGymnasts, showCoaches, showJudges, showStaff, photoFilter, searchQuery])
 
   // pick a preview person: first of the selected type, or sample
   const previewPerson: Person = useMemo(() => {
+    if (previewType === 'staff') return staffList.length > 0
+      ? allPersons.find(p => p.type === 'staff') ?? SAMPLE_STAFF
+      : SAMPLE_STAFF
     return allPersons.find(p => p.type === previewType) ?? SAMPLE_PERSON
-  }, [allPersons, previewType])
+  }, [allPersons, previewType, staffList])
 
   function labelFor(type: Person['type']): string {
-    return type === 'gymnast' ? t.typeGymnast : type === 'coach' ? t.typeCoach : t.typeJudge
+    if (type === 'gymnast') return t.typeGymnast
+    if (type === 'coach')   return t.typeCoach
+    if (type === 'staff')   return t.typeStaff
+    return t.typeJudge
   }
 
   function set<K extends keyof AccreditationConfig>(key: K, value: AccreditationConfig[K]) {
@@ -387,17 +453,16 @@ export default function AccreditationsTab({
 
     function cardHtml(p: Person): string {
       const color = colorForType(p.type, config)
-      const typeLabel = { gymnast: t.typeGymnast, coach: t.typeCoach, judge: t.typeJudge }[p.type].toUpperCase()
+      const typeLabel = ({ gymnast: t.typeGymnast, coach: t.typeCoach, judge: t.typeJudge, staff: t.typeStaff }[p.type] ?? p.type).toUpperCase()
       const photoHtml = p.photo_url
         ? `<img src="${p.photo_url}" alt="" onerror="this.style.display='none';this.nextSibling.style.display='flex'" /><div class="ini" style="display:none">${p.initials}</div>`
         : `<div class="ini">${p.initials}</div>`
       const hdrParts: string[] = []
       if (config.show_logo && competition.logo_url) hdrParts.push(`<img class="logo" src="${competition.logo_url}" alt="" />`)
       if (config.show_competition_name) hdrParts.push(`<span class="cname">${competition.name}</span>`)
-      const clubLogoHtml = p.club_logo_url && p.type !== 'judge'
-        ? `<img class="club-logo" src="${p.club_logo_url}" alt="" />`
-        : ''
-      const clubHtml = (p.club_name || clubLogoHtml)
+      const showClub = p.type !== 'judge' && p.type !== 'staff'
+      const clubLogoHtml = showClub && p.club_logo_url ? `<img class="club-logo" src="${p.club_logo_url}" alt="" />` : ''
+      const clubHtml = showClub && (p.club_name || clubLogoHtml)
         ? `<div class="club">${clubLogoHtml}${p.club_name ? `<span>${p.club_name}</span>` : ''}</div>`
         : ''
       return `<div class="card">
@@ -453,6 +518,7 @@ ${all.map(p => p.name ? cardHtml(p) : '<div class="card"></div>').join('\n')}
     { type: 'gymnast', label: t.typeGymnast },
     { type: 'coach',   label: t.typeCoach   },
     { type: 'judge',   label: t.typeJudge   },
+    { type: 'staff',   label: t.typeStaff   },
   ]
 
   return (
@@ -470,11 +536,12 @@ ${all.map(p => p.name ? cardHtml(p) : '<div class="card"></div>').join('\n')}
             {/* colors */}
             <div>
               <SectionLabel label={t.colors} />
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 {([
                   { key: 'gymnast_color' as const, label: t.colorGymnast },
                   { key: 'coach_color'   as const, label: t.colorCoach   },
                   { key: 'judge_color'   as const, label: t.colorJudge   },
+                  { key: 'staff_color'   as const, label: t.colorStaff   },
                 ] as const).map(({ key, label }) => (
                   <div key={key} className="flex items-center gap-2">
                     <input type="color" value={config[key]}
@@ -594,6 +661,68 @@ ${all.map(p => p.name ? cardHtml(p) : '<div class="card"></div>').join('\n')}
         </div>
       </div>
 
+      {/* ── staff management ── */}
+      <div className="bg-white rounded-2xl border border-slate-100 p-6">
+        <h3 className="text-sm font-semibold text-slate-700 mb-4">{t.staffSection}</h3>
+
+        {/* add staff */}
+        <div className="flex gap-2 mb-4">
+          <input
+            type="text"
+            placeholder={t.staffNamePlaceholder}
+            value={staffName}
+            onChange={e => setStaffName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') void handleAddStaff() }}
+            className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400"
+          />
+          <button
+            onClick={() => void handleAddStaff()}
+            disabled={!staffName.trim() || addingStaff}
+            className="px-4 py-1.5 text-sm font-medium bg-slate-800 text-white rounded-lg hover:bg-slate-700 disabled:opacity-40 transition-colors">
+            {t.addStaff}
+          </button>
+        </div>
+
+        {staffList.length === 0 ? (
+          <p className="text-sm text-slate-400">{t.noStaff}</p>
+        ) : (
+          <div className="space-y-2">
+            {staffList.map(s => (
+              <div key={s.id} className="flex items-center gap-3 py-2 px-3 rounded-xl border border-slate-100 bg-slate-50">
+                {/* photo circle */}
+                <div className="w-9 h-9 rounded-full overflow-hidden border border-slate-200 bg-slate-100 flex items-center justify-center flex-shrink-0">
+                  {s.photo_url ? (
+                    <img src={s.photo_url} className="w-full h-full object-cover" alt="" />
+                  ) : (
+                    <span className="text-xs font-bold text-slate-400">{initials(s.name)}</span>
+                  )}
+                </div>
+                <span className="flex-1 text-sm font-medium text-slate-800 truncate">{s.name}</span>
+                {/* photo upload */}
+                <input
+                  ref={el => { staffPhotoRefs.current[s.id] = el }}
+                  type="file" accept="image/*" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) void handleStaffPhotoUpload(s.id, f) }}
+                />
+                <button
+                  onClick={() => staffPhotoRefs.current[s.id]?.click()}
+                  disabled={uploadingStaffId === s.id}
+                  className="text-xs text-slate-400 hover:text-blue-600 transition-colors shrink-0">
+                  {uploadingStaffId === s.id ? '…' : t.uploadPhoto}
+                </button>
+                <button
+                  onClick={() => void handleDeleteStaff(s.id)}
+                  className="text-slate-300 hover:text-red-500 transition-colors shrink-0">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* ── print section ── */}
       <div className="bg-white rounded-2xl border border-slate-100 p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
@@ -604,6 +733,7 @@ ${all.map(p => p.name ? cardHtml(p) : '<div class="card"></div>').join('\n')}
                 { label: t.showGymnasts, state: showGymnasts, set: setShowGymnasts },
                 { label: t.showCoaches,  state: showCoaches,  set: setShowCoaches  },
                 { label: t.showJudges,   state: showJudges,   set: setShowJudges   },
+                { label: t.showStaff,    state: showStaff,    set: setShowStaff    },
               ] as const).map(({ label, state, set: setter }) => (
                 <button key={label} onClick={() => setter(!state)}
                   className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${state ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}>
