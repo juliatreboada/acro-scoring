@@ -463,10 +463,20 @@ export default function TVTab({
   }
 
   async function saveRankingConfig(cfg: TvRankingConfig) {
-    await supabase.from('tv_state').update({ ranking_config: cfg as any }).eq('competition_id', competition.id)
+    await supabase.from('tv_state').upsert(
+      { competition_id: competition.id, ranking_config: cfg as any },
+      { onConflict: 'competition_id' },
+    )
     setRankingConfig(cfg)
     setRankingDirty(false)
   }
+
+  // Auto-save ranking config 1.5 s after last change
+  useEffect(() => {
+    if (!rankingDirty) return
+    const timer = setTimeout(() => { void saveRankingConfig(rankingConfig) }, 1500)
+    return () => clearTimeout(timer)
+  }, [rankingConfig, rankingDirty]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── auto-generate slots from sessions ────────────────────────────────────────
 
