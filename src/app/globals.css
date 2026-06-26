@@ -26,6 +26,10 @@ body {
   overflow-x: hidden;
 }
 
+/* Ensure fullscreen element fills the display completely */
+:fullscreen { width: 100% !important; height: 100% !important; }
+:-webkit-full-screen { width: 100% !important; height: 100% !important; }
+
 @media print {
   body * { visibility: hidden; }
   .so-print-area, .so-print-area * { visibility: visible; }

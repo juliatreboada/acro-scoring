@@ -86,6 +86,28 @@ type SlotData = {
   routine_types: string[]  // ordered; length > 1 means multi-routine display
 }
 
+// ─── fullscreen button ────────────────────────────────────────────────────────
+
+function FullscreenButton({ isFullscreen, onToggle }: { isFullscreen: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+      className="absolute bottom-4 right-4 z-50 p-2.5 rounded-xl bg-black/30 text-white/50 hover:bg-black/60 hover:text-white transition-all duration-200 backdrop-blur-sm"
+    >
+      {isFullscreen ? (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25" />
+        </svg>
+      ) : (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+        </svg>
+      )}
+    </button>
+  )
+}
+
 // ─── component ────────────────────────────────────────────────────────────────
 
 export default function TVPage() {
@@ -114,6 +136,23 @@ export default function TVPage() {
   const prevRevealedRef = useRef<boolean | null>(null)
   const prevSessionIdRef = useRef<string | null>(null)
   const prevTeamIdRef = useRef<string | null>(null)
+
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', handler)
+    return () => document.removeEventListener('fullscreenchange', handler)
+  }, [])
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen()
+    } else {
+      document.exitFullscreen()
+    }
+  }
 
   // ── ranking state ────────────────────────────────────────────────────────────
 
@@ -613,48 +652,51 @@ export default function TVPage() {
     const bgColor = config?.background_color ?? '#0f172a'
 
     return (
-      <div style={{ backgroundColor: bgColor }} className="w-screen h-screen flex flex-col overflow-hidden text-white">
+      <div ref={containerRef} style={{ backgroundColor: bgColor }} className="w-screen h-screen flex flex-col overflow-hidden text-white relative">
+
+        {/* Fullscreen button */}
+        {!previewMode && <FullscreenButton isFullscreen={isFullscreen} onToggle={toggleFullscreen} />}
 
         {/* Header */}
         <div className="shrink-0 flex items-center gap-6 px-10 py-5 border-b border-white/10">
           {competition?.logo_url && (
-            <img src={competition.logo_url} className="h-12 w-auto object-contain" alt="" />
+            <img src={competition.logo_url} className="h-20 w-auto object-contain" alt="" />
           )}
-          <span className="text-base font-medium text-white/60 flex-1">{competition?.name}</span>
-          <span className="text-2xl font-bold text-white">{currentSlot?.label ?? ''}</span>
+          <span className="text-3xl font-semibold text-white/70 flex-1">{competition?.name}</span>
+          <span className="text-3xl font-bold text-white">{currentSlot?.label ?? ''}</span>
           {totalPagesForSlot > 1 && (
-            <span className="text-base font-semibold text-white/40 shrink-0 ml-2">
+            <span className="text-xl font-semibold text-white/40 shrink-0 ml-2">
               {currentPage + 1} / {totalPagesForSlot}
             </span>
           )}
         </div>
 
         {/* Column headers */}
-        <div className="shrink-0 flex items-center gap-4 px-10 py-2 border-b border-white/10 text-base font-semibold text-white/40 uppercase tracking-wider">
+        <div className="shrink-0 flex items-center gap-4 px-10 py-2 border-b border-white/10 text-xl font-semibold text-white/40 uppercase tracking-wider">
           <span className="w-14" />
           <span className="w-16 shrink-0" />
           <span className="flex-1" />
           {isMultiRoutine ? (
             <>
               {routineTypes.map(rt => (
-                <span key={rt} className="w-28 text-right">{routineLabel(rt)}</span>
+                <span key={rt} className="w-32 text-right">{routineLabel(rt)}</span>
               ))}
-              <span className="w-32 text-right text-white/60">Total</span>
+              <span className="w-36 text-right text-white/60">Total</span>
             </>
           ) : (
             <>
-              <span className="w-24 text-right">{isRG ? t.eRg : t.e}</span>
-              <span className="w-24 text-right">{t.a}</span>
+              <span className="w-28 text-right">{isRG ? t.eRg : t.e}</span>
+              <span className="w-28 text-right">{t.a}</span>
               {isRG ? (
                 <>
-                  <span className="w-24 text-right">{t.da}</span>
-                  <span className="w-24 text-right">{t.db}</span>
+                  <span className="w-28 text-right">{t.da}</span>
+                  <span className="w-28 text-right">{t.db}</span>
                 </>
               ) : (
-                <span className="w-24 text-right">{t.d}</span>
+                <span className="w-28 text-right">{t.d}</span>
               )}
-              <span className="w-20 text-right text-red-400/50">{isRG ? t.penRj : t.pen}</span>
-              <span className="w-32 text-right text-white/60">Total</span>
+              <span className="w-24 text-right text-red-400/50">{isRG ? t.penRj : t.pen}</span>
+              <span className="w-36 text-right text-white/60">Total</span>
             </>
           )}
         </div>
@@ -662,56 +704,56 @@ export default function TVPage() {
         {/* Rankings list */}
         <div className="flex-1 overflow-hidden px-10 py-2 space-y-0">
           {currentSlotEntries.map((entry, i) => (
-            <div key={entry.team_id} className="flex items-center gap-4 py-3.5 border-b border-white/5">
-              <span className="w-12 text-right text-2xl font-black text-white/30 shrink-0">#{i + 1}</span>
+            <div key={entry.team_id} className="flex items-center gap-4 py-5 border-b border-white/5">
+              <span className="w-14 text-right text-3xl font-black text-white/30 shrink-0">#{i + 1}</span>
               {(() => {
                 const borderCls = i === 0 ? 'ring-4 ring-yellow-400'
                   : i === 1 ? 'ring-4 ring-slate-300'
                   : i === 2 ? 'ring-4 ring-amber-600'
                   : ''
                 return entry.club_logo
-                  ? <img src={entry.club_logo} className={`h-16 w-16 rounded-full object-contain bg-white/10 shrink-0 ${borderCls}`} alt="" />
-                  : <div className={`h-16 w-16 rounded-full bg-white/10 shrink-0 flex items-center justify-center text-base font-bold text-white/40 ${borderCls}`}>{entry.club_name[0] ?? '?'}</div>
+                  ? <img src={entry.club_logo} className={`h-20 w-20 rounded-full object-contain bg-white/10 shrink-0 ${borderCls}`} alt="" />
+                  : <div className={`h-20 w-20 rounded-full bg-white/10 shrink-0 flex items-center justify-center text-xl font-bold text-white/40 ${borderCls}`}>{entry.club_name[0] ?? '?'}</div>
               })()}
-              <span className="flex-1 text-3xl font-semibold text-white truncate">{entry.gymnast_display}</span>
+              <span className="flex-1 text-4xl font-semibold text-white truncate">{entry.gymnast_display}</span>
               {isMultiRoutine ? (
                 <>
                   {routineTypes.map(rt => {
                     const rs = entry.routine_scores.find(x => x.routine_type === rt)
                     return (
-                      <span key={rt} className="w-28 text-right tabular-nums text-2xl font-bold text-white/70">
+                      <span key={rt} className="w-32 text-right tabular-nums text-3xl font-bold text-white/70">
                         {rs?.score != null ? rs.score.toFixed(3) : '—'}
                       </span>
                     )
                   })}
-                  <span className="w-32 text-right text-4xl font-black tabular-nums text-white">{entry.final_score.toFixed(3)}</span>
+                  <span className="w-36 text-right text-5xl font-black tabular-nums text-white">{entry.final_score.toFixed(3)}</span>
                 </>
               ) : (
                 <>
-                  <span className="w-24 text-right tabular-nums text-2xl font-bold text-white/70">
+                  <span className="w-28 text-right tabular-nums text-3xl font-bold text-white/70">
                     {entry.e_score != null ? (isRG ? entry.e_score : entry.e_score * 2).toFixed(3) : '—'}
                   </span>
-                  <span className="w-24 text-right tabular-nums text-2xl font-bold text-white/70">
+                  <span className="w-28 text-right tabular-nums text-3xl font-bold text-white/70">
                     {entry.a_score != null ? entry.a_score.toFixed(3) : '—'}
                   </span>
                   {isRG ? (
                     <>
-                      <span className="w-24 text-right tabular-nums text-2xl font-bold text-white/70">
+                      <span className="w-28 text-right tabular-nums text-3xl font-bold text-white/70">
                         {entry.da_score != null ? entry.da_score.toFixed(3) : '—'}
                       </span>
-                      <span className="w-24 text-right tabular-nums text-2xl font-bold text-white/70">
+                      <span className="w-28 text-right tabular-nums text-3xl font-bold text-white/70">
                         {entry.db_score != null ? entry.db_score.toFixed(3) : '—'}
                       </span>
                     </>
                   ) : (
-                    <span className="w-24 text-right tabular-nums text-2xl font-bold text-white/70">
+                    <span className="w-28 text-right tabular-nums text-3xl font-bold text-white/70">
                       {entry.d_score != null ? entry.d_score.toFixed(3) : '—'}
                     </span>
                   )}
-                  <span className="w-20 text-right tabular-nums text-2xl font-bold text-red-400/70">
+                  <span className="w-24 text-right tabular-nums text-3xl font-bold text-red-400/70">
                     {entry.pen != null ? `−${entry.pen.toFixed(1)}` : '—'}
                   </span>
-                  <span className="w-32 text-right text-4xl font-black tabular-nums text-white">{entry.final_score.toFixed(3)}</span>
+                  <span className="w-36 text-right text-5xl font-black tabular-nums text-white">{entry.final_score.toFixed(3)}</span>
                 </>
               )}
             </div>
@@ -792,7 +834,10 @@ export default function TVPage() {
 
   if (!isTeamQueued) {
     return (
-      <div className="relative flex h-screen w-screen flex-col overflow-hidden bg-slate-950">
+      <div ref={containerRef} className="relative flex h-screen w-screen flex-col overflow-hidden bg-slate-950">
+        {/* Fullscreen button */}
+        {!previewMode && <FullscreenButton isFullscreen={isFullscreen} onToggle={toggleFullscreen} />}
+
         {/* backdrop */}
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_80%_at_0%_50%,rgba(99,102,241,0.16),transparent_60%),radial-gradient(ellipse_55%_70%_at_100%_30%,rgba(14,165,233,0.12),transparent_55%),linear-gradient(105deg,#020617_0%,#0f172a_50%,#020617_100%)]"
@@ -806,7 +851,10 @@ export default function TVPage() {
         <div className="relative z-10 flex min-h-0 flex-1 flex-col lg:flex-row">
           {/* Left: title + status */}
           <div className="flex shrink-0 flex-col justify-center gap-7 border-b border-white/5 px-8 py-10 text-left sm:px-12 lg:w-[42%] lg:max-w-2xl lg:border-b-0 lg:border-r lg:py-12 xl:px-16">
-            <h1 className="text-balance break-words bg-gradient-to-b from-white to-slate-400 bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-4xl md:text-5xl xl:text-5xl">
+            {competition?.logo_url && (
+              <img src={competition.logo_url} className="h-24 w-auto object-contain self-start" alt="" />
+            )}
+            <h1 className="text-balance break-words bg-gradient-to-b from-white to-slate-400 bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl md:text-6xl xl:text-6xl">
               {competition?.name ?? ''}
             </h1>
 
@@ -870,13 +918,21 @@ export default function TVPage() {
   const final      = result?.final_score ?? null
 
   return (
-    <div className="w-screen h-screen bg-slate-950 flex flex-col overflow-hidden text-white">
+    <div ref={containerRef} className="w-screen h-screen bg-slate-950 flex flex-col overflow-hidden text-white relative">
+
+      {/* Fullscreen button */}
+      {!previewMode && <FullscreenButton isFullscreen={isFullscreen} onToggle={toggleFullscreen} />}
 
       {/* top bar */}
-      <div className="shrink-0 flex items-center justify-between px-8 py-3 bg-slate-900 border-b border-slate-800">
-        <span className="text-slate-300 text-base font-semibold min-w-0 break-words">{competition?.name}</span>
+      <div className="shrink-0 flex items-center justify-between px-8 py-5 bg-slate-900 border-b border-slate-800">
+        <div className="flex items-center gap-4 min-w-0">
+          {competition?.logo_url && (
+            <img src={competition.logo_url} className="h-16 w-auto object-contain shrink-0" alt="" />
+          )}
+          <span className="text-slate-300 text-3xl font-semibold min-w-0 break-words">{competition?.name}</span>
+        </div>
         {session && (
-          <span className="text-slate-400 text-base shrink-0 ml-4">
+          <span className="text-slate-400 text-2xl shrink-0 ml-4">
             {categoryLabel(session.category, lang)}
             {' · '}
             {routineLabel(session.routine_type)}
@@ -905,7 +961,7 @@ export default function TVPage() {
               ].join(' ')}>
                 {rank}
               </div>
-              <span className="text-slate-200 text-xl font-medium">{t.rank(rank, rankTotal)}</span>
+              <span className="text-slate-200 text-2xl font-medium">{t.rank(rank, rankTotal)}</span>
             </div>
           )}
           {team.photo_url ? (
@@ -952,7 +1008,7 @@ export default function TVPage() {
                 className="w-12 h-12 object-contain rounded"
               />
             )}
-            <p className="text-slate-300 text-2xl font-medium">{team.club.club_name}</p>
+            <p className="text-slate-300 text-3xl font-medium">{team.club.club_name}</p>
           </div>
 
           {/* separator */}
@@ -992,12 +1048,12 @@ export default function TVPage() {
                       className="flex flex-col items-center transition-all duration-300"
                       style={{ transitionDelay: scoreVisible ? `${delay}ms` : '0ms' }}
                     >
-                      <span className="text-slate-400 text-sm uppercase tracking-widest">{label}</span>
+                      <span className="text-slate-400 text-base uppercase tracking-widest">{label}</span>
                       <span className={[
                         'tabular-nums font-bold',
                         (label === t.pen || label === t.penRj) ? 'text-red-400' : 'text-white',
                       ].join(' ')}
-                        style={{ fontSize: 'clamp(1.5rem, 2.5vw, 2.5rem)' }}>
+                        style={{ fontSize: 'clamp(2rem, 3vw, 3.2rem)' }}>
                         {value != null
                           ? (label === t.pen || label === t.penRj)
                             ? value.toFixed(1)
@@ -1032,10 +1088,10 @@ export default function TVPage() {
                     transformOrigin: 'left center',
                   }}
                 >
-                  <span className="text-slate-400 text-2xl uppercase tracking-widest">{t.total}</span>
+                  <span className="text-slate-400 text-3xl uppercase tracking-widest">{t.total}</span>
                   <span
                     className="text-white font-black tabular-nums"
-                    style={{ fontSize: 'clamp(3rem, 7vw, 7rem)' }}
+                    style={{ fontSize: 'clamp(4rem, 9vw, 9rem)' }}
                   >
                     {final.toFixed(3)}
                   </span>
@@ -1050,10 +1106,10 @@ export default function TVPage() {
                   className="rounded-xl border border-red-500/30 bg-red-950/20 px-4 py-3 transition-opacity duration-300"
                   style={{ transitionDelay: scoreVisible ? '900ms' : '0ms' }}
                 >
-                  <p className="text-slate-400 text-sm uppercase tracking-[0.2em] mb-2">{t.penLabel}</p>
+                  <p className="text-slate-400 text-base uppercase tracking-[0.2em] mb-2">{t.penLabel}</p>
                   <ul className="space-y-1.5">
                     {allPenalties.map((p, i) => (
-                      <li key={i} className="text-red-300 text-base leading-snug break-words">
+                      <li key={i} className="text-red-300 text-lg leading-snug break-words">
                         {'−'}{p.value.toFixed(1)} · {p.label}
                       </li>
                     ))}
