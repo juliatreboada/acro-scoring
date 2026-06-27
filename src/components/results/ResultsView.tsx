@@ -1030,6 +1030,16 @@ export default function ResultsView({
     })
   }
 
+  const [collapsedBracketSections, setCollapsedBracketSections] = useState<Set<string>>(new Set())
+
+  function toggleBracketSection(title: string) {
+    setCollapsedBracketSections(prev => {
+      const next = new Set(prev)
+      next.has(title) ? next.delete(title) : next.add(title)
+      return next
+    })
+  }
+
   const renderSections = (keys: string[]) =>
     keys.map((ck, idx) => {
       const catPerfs = performances.filter((p) => resultsSectionKey(p) === ck)
@@ -1084,12 +1094,28 @@ export default function ResultsView({
   const renderOpenCombinadosTable = (
     title: string,
     rows?: Array<{ rank: number; teamId: string; score: number; balanceScore?: number; dynamicScore?: number }>,
+    qualifyCutoff?: number,
   ) => {
     if (!rows?.length) return null
+    const isCollapsed = collapsedBracketSections.has(title)
     const hasBreakdown = rows.some((r) => r.balanceScore !== undefined || r.dynamicScore !== undefined)
     return (
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-        <div className="px-4 py-2 border-b border-slate-200 font-semibold text-slate-800">{title}</div>
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden print:break-inside-avoid">
+        <button
+          type="button"
+          onClick={() => toggleBracketSection(title)}
+          className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 transition-colors print:hidden"
+        >
+          <span className="font-semibold text-slate-800">{title}</span>
+          <svg
+            className={['w-4 h-4 text-slate-400 transition-transform duration-200', isCollapsed ? '-rotate-90' : ''].join(' ')}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <div className="hidden print:block px-4 py-2 border-b border-slate-200 font-semibold text-slate-800">{title}</div>
+        {!isCollapsed && (
         <table className="w-full max-w-full text-sm">
           <thead className="bg-slate-50 text-slate-500">
             <tr>
@@ -1115,7 +1141,12 @@ export default function ResultsView({
               return (
                 <tr key={r.teamId} className={['border-t border-slate-100', medal ? medal.row : ''].filter(Boolean).join(' ')}>
                   <td className="px-3 py-2.5">
-                    <RankCircle rank={r.rank} />
+                    <div className="flex items-center gap-1.5">
+                      <RankCircle rank={r.rank} />
+                      {qualifyCutoff != null && qualifyCutoff > 0 && r.rank <= qualifyCutoff && (
+                        <span className="text-[10px] font-bold leading-none px-1 py-0.5 rounded bg-emerald-600 text-white print:border print:border-emerald-700">Q</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-2 min-w-0">
@@ -1155,6 +1186,7 @@ export default function ResultsView({
             })}
           </tbody>
         </table>
+        )}
       </div>
     )
   }
@@ -1255,32 +1287,79 @@ export default function ResultsView({
           {openCombinadosActa && (
             <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 space-y-3">
               <h2 className="text-lg font-bold text-slate-800">OPEN / COMBINADOS</h2>
-              {renderOpenCombinadosTable('OPEN Qualification', openCombinadosActa.openQualification)}
-              {renderOpenCombinadosTable('COMBINADOS Qualification', openCombinadosActa.combinadosQualification)}
-              {renderOpenCombinadosTable('OPEN Quarter', openCombinadosActa.openQuarter)}
-              {renderOpenCombinadosTable('OPEN Semi', openCombinadosActa.openSemi)}
+              {(() => {
+                const cfg = openCombinadosActa.bracketConfig
+                const qualCutoff = cfg ? (cfg.openQuarterCount > 0 ? cfg.openQuarterCount : cfg.openSemiCount) : undefined
+                return renderOpenCombinadosTable('OPEN Qualification', openCombinadosActa.openQualification, qualCutoff)
+              })()}
+              {renderOpenCombinadosTable('COMBINADOS Qualification', openCombinadosActa.combinadosQualification, openCombinadosActa.bracketConfig?.combinadosSemiCount)}
+              {renderOpenCombinadosTable('OPEN Quarter', openCombinadosActa.openQuarter, openCombinadosActa.bracketConfig?.openSemiCount)}
+              {renderOpenCombinadosTable('OPEN Semi', openCombinadosActa.openSemi, openCombinadosActa.bracketConfig?.openFinalCount)}
               {renderOpenCombinadosTable('OPEN Final', openCombinadosActa.openFinal)}
-              {renderOpenCombinadosTable('COMBINADOS Semi', openCombinadosActa.combinadosSemi)}
+              {renderOpenCombinadosTable('COMBINADOS Semi', openCombinadosActa.combinadosSemi, openCombinadosActa.bracketConfig?.combinadosFinalCount)}
               {renderOpenCombinadosTable('COMBINADOS Final', openCombinadosActa.combinadosFinal)}
             </div>
           )}
         </>
       ) : (
         <>
-          {activeRuleset === 'OPEN' && openCombinadosActa ? (
-            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 space-y-4">
-              {renderOpenCombinadosTable(lang === 'es' ? 'Clasificatorias' : 'Qualification', openCombinadosActa.openQualification)}
-              {renderOpenCombinadosTable(lang === 'es' ? 'Cuartos de Final' : 'Quarter Finals', openCombinadosActa.openQuarter)}
-              {renderOpenCombinadosTable(lang === 'es' ? 'Semifinal' : 'Semi Finals', openCombinadosActa.openSemi)}
-              {renderOpenCombinadosTable(lang === 'es' ? 'Final' : 'Final', openCombinadosActa.openFinal)}
-            </div>
-          ) : activeRuleset === 'COMBINADOS' && openCombinadosActa ? (
-            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 space-y-4">
-              {renderOpenCombinadosTable(lang === 'es' ? 'Clasificatorias' : 'Qualification', openCombinadosActa.combinadosQualification)}
-              {renderOpenCombinadosTable(lang === 'es' ? 'Semifinal' : 'Semi Finals', openCombinadosActa.combinadosSemi)}
-              {renderOpenCombinadosTable(lang === 'es' ? 'Final' : 'Final', openCombinadosActa.combinadosFinal)}
-            </div>
-          ) : (
+          {activeRuleset === 'OPEN' && openCombinadosActa ? (() => {
+            const titles = [
+              { t: lang === 'es' ? 'Clasificatorias' : 'Qualification', rows: openCombinadosActa.openQualification },
+              { t: lang === 'es' ? 'Cuartos de Final' : 'Quarter Finals', rows: openCombinadosActa.openQuarter },
+              { t: lang === 'es' ? 'Semifinal' : 'Semi Finals', rows: openCombinadosActa.openSemi },
+              { t: lang === 'es' ? 'Final' : 'Final', rows: openCombinadosActa.openFinal },
+            ].filter(x => x.rows?.length)
+            const allCollapsed = titles.every(x => collapsedBracketSections.has(x.t))
+            return (
+              <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+                <div className="flex justify-end gap-2 print:hidden">
+                  <button type="button" onClick={() => setCollapsedBracketSections(new Set())}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors">
+                    {lang === 'es' ? 'Expandir todo' : 'Expand all'}
+                  </button>
+                  <button type="button" onClick={() => setCollapsedBracketSections(new Set(titles.map(x => x.t)))}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
+                    disabled={allCollapsed}>
+                    {lang === 'es' ? 'Contraer todo' : 'Collapse all'}
+                  </button>
+                </div>
+                {(() => {
+                  const cfg = openCombinadosActa.bracketConfig
+                  const qualCutoff = cfg ? (cfg.openQuarterCount > 0 ? cfg.openQuarterCount : cfg.openSemiCount) : undefined
+                  return renderOpenCombinadosTable(lang === 'es' ? 'Clasificatorias' : 'Qualification', openCombinadosActa.openQualification, qualCutoff)
+                })()}
+                {renderOpenCombinadosTable(lang === 'es' ? 'Cuartos de Final' : 'Quarter Finals', openCombinadosActa.openQuarter, openCombinadosActa.bracketConfig?.openSemiCount)}
+                {renderOpenCombinadosTable(lang === 'es' ? 'Semifinal' : 'Semi Finals', openCombinadosActa.openSemi, openCombinadosActa.bracketConfig?.openFinalCount)}
+                {renderOpenCombinadosTable(lang === 'es' ? 'Final' : 'Final', openCombinadosActa.openFinal)}
+              </div>
+            )
+          })() : activeRuleset === 'COMBINADOS' && openCombinadosActa ? (() => {
+            const titles = [
+              { t: lang === 'es' ? 'Clasificatorias' : 'Qualification', rows: openCombinadosActa.combinadosQualification },
+              { t: lang === 'es' ? 'Semifinal' : 'Semi Finals', rows: openCombinadosActa.combinadosSemi },
+              { t: lang === 'es' ? 'Final' : 'Final', rows: openCombinadosActa.combinadosFinal },
+            ].filter(x => x.rows?.length)
+            const allCollapsed = titles.every(x => collapsedBracketSections.has(x.t))
+            return (
+              <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+                <div className="flex justify-end gap-2 print:hidden">
+                  <button type="button" onClick={() => setCollapsedBracketSections(new Set())}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors">
+                    {lang === 'es' ? 'Expandir todo' : 'Expand all'}
+                  </button>
+                  <button type="button" onClick={() => setCollapsedBracketSections(new Set(titles.map(x => x.t)))}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
+                    disabled={allCollapsed}>
+                    {lang === 'es' ? 'Contraer todo' : 'Collapse all'}
+                  </button>
+                </div>
+                {renderOpenCombinadosTable(lang === 'es' ? 'Clasificatorias' : 'Qualification', openCombinadosActa.combinadosQualification, openCombinadosActa.bracketConfig?.combinadosSemiCount)}
+                {renderOpenCombinadosTable(lang === 'es' ? 'Semifinal' : 'Semi Finals', openCombinadosActa.combinadosSemi, openCombinadosActa.bracketConfig?.combinadosFinalCount)}
+                {renderOpenCombinadosTable(lang === 'es' ? 'Final' : 'Final', openCombinadosActa.combinadosFinal)}
+              </div>
+            )
+          })() : (
             <>
               <div className="divide-y divide-slate-200">{renderSections(categoryKeys)}</div>
               {showTrofeoGondomarClubRanking && (resolvedRuleset === 'Escolar' || resolvedRuleset === 'Base') && (

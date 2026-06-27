@@ -224,13 +224,26 @@ export async function loadResultsPageBundle(
       }))
 
     const sessionRoutineTypeMap = Object.fromEntries(sessions.map((s) => [s.id, s.routine_type]))
-    openCombinadosActa = computeOpenCombinadosActaFromRows(
-      advMappings,
-      (rawRes ?? []) as Array<{ session_id: string; team_id: string; final_score: number | null }>,
-      openTeamIds,
-      combinadosTeamIds,
-      sessionRoutineTypeMap,
-    )
+    const [bracketCfgRes] = await Promise.all([
+      supabase.from('open_combinados_bracket_config').select('*').eq('competition_id', competitionId).maybeSingle(),
+    ])
+    const cfg = bracketCfgRes.data
+    openCombinadosActa = {
+      ...computeOpenCombinadosActaFromRows(
+        advMappings,
+        (rawRes ?? []) as Array<{ session_id: string; team_id: string; final_score: number | null }>,
+        openTeamIds,
+        combinadosTeamIds,
+        sessionRoutineTypeMap,
+      ),
+      bracketConfig: cfg ? {
+        combinadosSemiCount:  cfg.combinados_semi_count  ?? 0,
+        combinadosFinalCount: cfg.combinados_final_count ?? 0,
+        openQuarterCount:     cfg.open_quarter_count     ?? 0,
+        openSemiCount:        cfg.open_semi_count        ?? 0,
+        openFinalCount:       cfg.open_final_count       ?? 0,
+      } : null,
+    }
   }
 
   return {

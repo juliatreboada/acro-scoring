@@ -34,6 +34,7 @@ export type OpenCombinadosActaData = {
   openFinal?: RankedTeam[]
   combinadosSemi?: RankedTeam[]
   combinadosFinal?: RankedTeam[]
+  bracketConfig?: BracketConfig | null
 }
 
 export type SessionMapRow = {
