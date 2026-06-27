@@ -214,6 +214,35 @@ export const CompetitionDayTab = {
     inputConfig: 'Scoring input',
     keyboard: 'Keyboard',
     elements: 'Elements',
+    editScores: 'Scores',
+  }
+
+// components/admin/competition-detail/ManualScoresModal.tsx
+export const ManualScoresModal = {
+    title: 'Manual scores',
+    close: 'Close',
+    cancel: 'Cancel',
+    save: 'Save scores',
+    saving: 'Saving…',
+    saved: 'Scores saved.',
+    savedPublished: 'Scores saved and published to scoreboard.',
+    saveFailed: 'Could not save scores.',
+    publishResult: 'Publish result to scoreboard',
+    publishHint: 'Queues this team on the TV and publishes the final score. Use Definitive for the scoreboard; Provisional hides the score until you confirm it in the TV tab.',
+    provisional: 'Provisional',
+    approved: 'Approved',
+    noJudges: 'No judges assigned to this panel.',
+    unassigned: 'Unassigned',
+    ej: 'EJ',
+    aj: 'AJ',
+    djDiff: 'Difficulty',
+    djPen: 'DJ pen.',
+    cjpPen: 'CJP pen.',
+    eScore: 'E',
+    aScore: 'A',
+    da: 'DA',
+    db: 'DB',
+    rjPen: 'RJ pen.',
   }
 
 // components/admin/competition-detail/CompetitionDetail.tsx

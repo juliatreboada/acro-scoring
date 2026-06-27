@@ -6,6 +6,8 @@ import type { Lang } from '@/components/scoring/types'
 import type { Competition, Section, Panel, Session, SessionOrder, Team, Club, CompetitionEntry, ScoringMethod, AgeGroupRule } from '@/components/admin/types'
 import { resolveRoutineTypeForTeamInSession, type SessionMapRow } from '@/lib/openCombinadosBracket'
 import { useT } from '@/lib/useT'
+import ManualScoresModal from './ManualScoresModal'
+import type { Judge, SectionPanelJudge } from '@/components/admin/types'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -25,6 +27,7 @@ const sharedSessionPlaying = new Map<string, boolean>()
 function SessionCard({
   lang, session, sessionOrders, globalTeams, clubs, entries,
   canControl, showStart, cjpCurrentTeamId, musicPaths, onStart, onFinish, onRevert, onConfigChange,
+  onOpenScores,
 }: {
   lang: Lang
   session: Session
@@ -40,6 +43,7 @@ function SessionCard({
   onFinish: () => void
   onRevert: () => void
   onConfigChange: (patch: Partial<Pick<Session, 'dj_method' | 'ej_method'>>) => void
+  onOpenScores?: (teamId: string) => void
 }) {
   const t = useT('CompetitionDayTab', lang)
 
@@ -246,8 +250,8 @@ function SessionCard({
         </div>
       )}
 
-      {/* team list */}
-      {(isActive || isFinished) && (
+      {/* team list — visible once order exists (scores can be entered manually anytime) */}
+      {hasOrder && (
         <div className="border-t border-slate-100">
           {!hasOrder ? (
             <p className="px-4 py-3 text-xs text-slate-400 italic">{t.noOrder}</p>
@@ -308,6 +312,16 @@ function SessionCard({
                       </span>
                     )}
 
+                    {onOpenScores && !isDropout && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenScores(teamId)}
+                        className="shrink-0 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                      >
+                        {t.editScores}
+                      </button>
+                    )}
+
                     {/* music controls or warning — only on the active music row */}
                     {isMusicActive && (
                       musicUrl ? (
@@ -362,7 +376,7 @@ function SessionCard({
 export default function CompetitionDayTab({
   lang, competition, sections, panels, sessions,
   sessionOrders, globalTeams, clubs, entries,
-  ageGroupRules, openCombinadosEnabled,
+  ageGroupRules, openCombinadosEnabled, judges, assignments,
   onStartSession, onFinishSession, onRevertSession,
 }: {
   lang: Lang
@@ -376,6 +390,8 @@ export default function CompetitionDayTab({
   entries: CompetitionEntry[]
   ageGroupRules: AgeGroupRule[]
   openCombinadosEnabled: boolean
+  judges: Judge[]
+  assignments: SectionPanelJudge[]
   onStartSession: (sessionId: string) => void
   onFinishSession: (sessionId: string) => void
   onRevertSession: (sessionId: string) => void
@@ -383,6 +399,7 @@ export default function CompetitionDayTab({
   const t = useT('CompetitionDayTab', lang)
   const supabase = createClient()
   const [activeSection, setActiveSection] = useState<string>(sections[0]?.id ?? '')
+  const [scoresTarget, setScoresTarget] = useState<{ session: Session; teamId: string } | null>(null)
 
   // sessionId → current_team_id (CJP indicator)
   const [cjpCurrentTeamIds, setCjpCurrentTeamIds] = useState<Record<string, string | null>>({})
@@ -396,6 +413,12 @@ export default function CompetitionDayTab({
   const canControl       = competition.status === 'active'
   const activeSessions   = sessions.filter(s => s.status === 'active')
   const activeSessionKey = activeSessions.map(s => s.id).join(',')
+
+  function openScoresFor(session: Session) {
+    return (teamId: string) => setScoresTarget({ session, teamId })
+  }
+
+  const scoresTeam = scoresTarget ? globalTeams.find((tm) => tm.id === scoresTarget.teamId) : null
 
   // ── fetch music + subscribe to CJP indicator ──────────────────────────────────
   useEffect(() => {
@@ -601,7 +624,8 @@ export default function CompetitionDayTab({
                         cjpCurrentTeamId={cjpCurrentTeamIds[session.id] ?? null}
                         musicPaths={getMusicPaths(session)}
                         onStart={() => {}} onFinish={() => {}} onRevert={() => {}}
-                        onConfigChange={(patch) => handleConfigChange(session.id, patch)} />
+                        onConfigChange={(patch) => handleConfigChange(session.id, patch)}
+                        onOpenScores={openScoresFor(s)} />
                     )})}
                   </div>
                 </div>
@@ -622,7 +646,8 @@ export default function CompetitionDayTab({
                     onStart={() => onStartSession(session.id)}
                     onFinish={() => onFinishSession(session.id)}
                     onRevert={() => onRevertSession(session.id)}
-                    onConfigChange={(patch) => handleConfigChange(session.id, patch)} />
+                    onConfigChange={(patch) => handleConfigChange(session.id, patch)}
+                    onOpenScores={openScoresFor(s)} />
                 )})}
               </>
             )
@@ -640,7 +665,8 @@ export default function CompetitionDayTab({
                   onStart={() => onStartSession(session.id)}
                   onFinish={() => onFinishSession(session.id)}
                   onRevert={() => onRevertSession(session.id)}
-                  onConfigChange={(patch) => handleConfigChange(session.id, patch)} />
+                          onConfigChange={(patch) => handleConfigChange(session.id, patch)}
+                          onOpenScores={openScoresFor(s)} />
               )})
           )}
         </div>
@@ -691,7 +717,8 @@ export default function CompetitionDayTab({
                           onStart={() => {}}
                           onFinish={() => {}}
                           onRevert={() => {}}
-                          onConfigChange={(patch) => handleConfigChange(session.id, patch)} />
+                          onConfigChange={(patch) => handleConfigChange(session.id, patch)}
+                          onOpenScores={openScoresFor(s)} />
                       ) })}
                     </div>
                   </div>
@@ -700,6 +727,18 @@ export default function CompetitionDayTab({
             </div>
           )
         })()
+      )}
+      {scoresTarget && scoresTeam && (
+        <ManualScoresModal
+          lang={lang}
+          competitionId={competition.id}
+          sportType={competition.sport_type}
+          session={scoresTarget.session}
+          team={scoresTeam}
+          assignments={assignments}
+          judges={judges}
+          onClose={() => setScoresTarget(null)}
+        />
       )}
     </div>
   )

@@ -1145,6 +1145,8 @@ export default function CompetitionDetail({
           entries={entries}
           ageGroupRules={ageGroupRules}
           openCombinadosEnabled={openCombinadosEnabled}
+          judges={globalJudges}
+          assignments={assignments}
           onStartSession={onStartSession}
           onFinishSession={onFinishSession}
           onRevertSession={onRevertSession}
