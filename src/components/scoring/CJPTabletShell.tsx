@@ -630,8 +630,6 @@ export default function CJPTabletShell({
 
   const routineLabel = (rt: string) => ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
 
-  const localPerfIds = new Set(performances.map((p) => p.id))
-
   const currentPerf = performances.find((p) => p.id === currentPerfId) ?? null
   const currentScores = currentPerfId ? (judgeScores[currentPerfId] ?? []) : []
   const currentResult = currentPerfId ? results[currentPerfId] ?? null : null
@@ -691,18 +689,16 @@ export default function CJPTabletShell({
           </button>
         </div>
         <div className={['flex-1 overflow-y-auto', leftOpen ? '' : 'hidden'].join(' ')}>
-          {rankPerfs.map((perf) => {
+          {performances.map((perf) => {
             const result = results[perf.id]
             const isCurrent = perf.id === currentPerfId
-            const isLocal = localPerfIds.has(perf.id)
-            const canOpen = isLocal && !perf.skipped && !result && !isCurrent
-            const canSkip = isLocal && !perf.skipped && !result
+            const canOpen = !perf.skipped && !result && !isCurrent
+            const canSkip = !perf.skipped && !result
             return (
               <div key={perf.id}
                 className={['group px-3 py-2.5 border-b border-slate-100 transition-colors',
                   isCurrent ? 'bg-blue-50 border-l-2 border-l-blue-500'
-                  : isLocal ? 'hover:bg-slate-50'
-                  : 'bg-slate-50/60'].join(' ')}>
+                  : 'hover:bg-slate-50'].join(' ')}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 mb-0.5">
