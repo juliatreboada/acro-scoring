@@ -390,20 +390,20 @@ export default function CJPView({
     setPenaltyStates((prev) => ({ ...prev, [perfId]: p }))
   }
 
-  const currentPerf = performances.find((p) => p.id === currentPerfId) ?? null
+  const currentPerf = currentPerfId ? (performances.find((p) => p.id === currentPerfId) ?? rankPerfs.find((p) => p.id === currentPerfId) ?? null) : null
   const currentScores = currentPerfId ? (judgeScores[currentPerfId] ?? []) : []
   const currentResult = currentPerfId ? results[currentPerfId] ?? null : null
   const currentPenalty = currentPerfId ? getPenalty(currentPerfId) : DEFAULT_PENALTY
   const cjpPenalty = calcCjpPenalty(currentPenalty)
 
   // review mode
-  const reviewPerf = reviewPerfId ? performances.find((p) => p.id === reviewPerfId) ?? null : null
+  const reviewPerf = reviewPerfId ? (performances.find((p) => p.id === reviewPerfId) ?? rankPerfs.find((p) => p.id === reviewPerfId) ?? null) : null
   const reviewScores = reviewPerfId ? (judgeScores[reviewPerfId] ?? []) : []
   const reviewResult = reviewPerfId ? results[reviewPerfId] ?? null : null
   const reviewPenalty = reviewPerfId ? getPenalty(reviewPerfId) : DEFAULT_PENALTY
   const reviewCjpPenalty = calcCjpPenalty(reviewPenalty)
 
-  const nextPending = performances.find(
+  const nextPending = rankPerfs.find(
     (p) => !p.skipped && !results[p.id] && p.id !== currentPerfId
   )
 
@@ -452,56 +452,66 @@ export default function CJPView({
             </button>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {performances.map((perf) => {
-              const result = results[perf.id]
-              const isCurrent = perf.id === currentPerfId
-              const canOpen = isCJP && !perf.skipped && !result && !isCurrent
-              const canSkip = isCJP && !perf.skipped && !result
-              return (
-                <div key={perf.id}
-                  className={['group px-4 py-3 border-b border-slate-100 transition-colors', isCurrent ? 'bg-blue-50 border-l-4 border-l-blue-500' : 'hover:bg-slate-50'].join(' ')}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        {isCurrent && (
-                          <span className="relative flex h-2 w-2 shrink-0">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-                            <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
-                          </span>
-                        )}
-                        <span className="text-xs text-slate-400 font-mono">{perf.position}</span>
-                        <span className="text-sm font-medium text-slate-800 truncate">{perf.gymnasts}</span>
+            {(() => {
+              const hasGroups = new Set(rankPerfs.map(p => p.routineType)).size > 1
+              return rankPerfs.map((perf, idx, arr) => {
+                const showHeader = hasGroups && (idx === 0 || arr[idx - 1].routineType !== perf.routineType)
+                const result = results[perf.id]
+                const isCurrent = perf.id === currentPerfId
+                const canOpen = isCJP && !perf.skipped && !result && !isCurrent
+                const canSkip = isCJP && !perf.skipped && !result
+                return (
+                  <React.Fragment key={perf.id}>
+                    {showHeader && (
+                      <div className="px-4 py-1.5 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wide">
+                        {routineLabel(perf.routineType)}
                       </div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs text-slate-400">{routineLabel(perf.routineType)}</span>
-                        {perf.skipped && <span className="text-xs bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded-full">{t.skipped}</span>}
-                        {result && (
-                          <span className={['text-xs px-1.5 py-0.5 rounded-full font-medium', result.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'border border-slate-300 text-slate-500'].join(' ')}>
-                            {result.status === 'approved' ? t.final : t.prov} {result.finalScore.toFixed(3)}
-                          </span>
+                    )}
+                    <div className={['group px-4 py-3 border-b border-slate-100 transition-colors', isCurrent ? 'bg-blue-50 border-l-4 border-l-blue-500' : 'hover:bg-slate-50'].join(' ')}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            {isCurrent && (
+                              <span className="relative flex h-2 w-2 shrink-0">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                                <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                              </span>
+                            )}
+                            <span className="text-xs text-slate-400 font-mono">{perf.position}</span>
+                            <span className="text-sm font-medium text-slate-800 truncate">{perf.gymnasts}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {!hasGroups && <span className="text-xs text-slate-400">{routineLabel(perf.routineType)}</span>}
+                            {perf.skipped && <span className="text-xs bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded-full">{t.skipped}</span>}
+                            {result && (
+                              <span className={['text-xs px-1.5 py-0.5 rounded-full font-medium', result.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'border border-slate-300 text-slate-500'].join(' ')}>
+                                {result.status === 'approved' ? t.final : t.prov} {result.finalScore.toFixed(3)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {isCJP && (
+                          <div className="flex gap-2 shrink-0">
+                            {canOpen && (
+                              <button onClick={() => { onOpen(perf.id); setShowMobilePerfs(false) }}
+                                className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center transition-colors">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                              </button>
+                            )}
+                            {canSkip && (
+                              <button onClick={() => { onSkip(perf.id); setShowMobilePerfs(false) }}
+                                className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
-                    {isCJP && (
-                      <div className="flex gap-2 shrink-0">
-                        {canOpen && (
-                          <button onClick={() => { onOpen(perf.id); setShowMobilePerfs(false) }}
-                            className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center transition-colors">
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                          </button>
-                        )}
-                        {canSkip && (
-                          <button onClick={() => { onSkip(perf.id); setShowMobilePerfs(false) }}
-                            className="w-10 h-10 rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors">
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
+                  </React.Fragment>
+                )
+              })
+            })()}
           </div>
         </div>
       )}
@@ -523,66 +533,75 @@ export default function CJPView({
           </button>
         </div>
         <div className={['flex-1 overflow-y-auto', leftOpen ? '' : 'hidden'].join(' ')}>
-          {performances.map((perf) => {
-            const result = results[perf.id]
-            const isCurrent = perf.id === currentPerfId
-            const canOpen = isCJP && !perf.skipped && !result && !isCurrent
-            const canSkip = isCJP && !perf.skipped && !result
-
-            return (
-              <div
-                key={perf.id}
-                className={[
-                  'group px-3 py-2.5 border-b border-slate-100 transition-colors',
-                  isCurrent ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-slate-50',
-                ].join(' ')}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      {isCurrent && (
-                        <span className="relative flex h-2 w-2 shrink-0">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-                          <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
-                        </span>
-                      )}
-                      <span className="text-xs text-slate-400 font-mono shrink-0">{perf.position}</span>
-                      <span className="text-xs font-medium text-slate-700 truncate">{perf.gymnasts}</span>
+          {(() => {
+            const hasGroups = new Set(rankPerfs.map(p => p.routineType)).size > 1
+            return rankPerfs.map((perf, idx, arr) => {
+              const showHeader = hasGroups && (idx === 0 || arr[idx - 1].routineType !== perf.routineType)
+              const result = results[perf.id]
+              const isCurrent = perf.id === currentPerfId
+              const canOpen = isCJP && !perf.skipped && !result && !isCurrent
+              const canSkip = isCJP && !perf.skipped && !result
+              return (
+                <React.Fragment key={perf.id}>
+                  {showHeader && (
+                    <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wide">
+                      {routineLabel(perf.routineType)}
                     </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs text-slate-400">{routineLabel(perf.routineType)}</span>
-                      {perf.skipped && (
-                        <span className="text-xs bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded-full">{t.skipped}</span>
-                      )}
-                      {result && (
-                        <span className={['text-xs px-1.5 py-0.5 rounded-full font-medium', result.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'border border-slate-300 text-slate-500'].join(' ')}>
-                          {result.status === 'approved' ? t.final : t.prov} {result.finalScore.toFixed(3)}
-                        </span>
+                  )}
+                  <div
+                    className={[
+                      'group px-3 py-2.5 border-b border-slate-100 transition-colors',
+                      isCurrent ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-slate-50',
+                    ].join(' ')}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          {isCurrent && (
+                            <span className="relative flex h-2 w-2 shrink-0">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                              <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                            </span>
+                          )}
+                          <span className="text-xs text-slate-400 font-mono shrink-0">{perf.position}</span>
+                          <span className="text-xs font-medium text-slate-700 truncate">{perf.gymnasts}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {!hasGroups && <span className="text-xs text-slate-400">{routineLabel(perf.routineType)}</span>}
+                          {perf.skipped && (
+                            <span className="text-xs bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded-full">{t.skipped}</span>
+                          )}
+                          {result && (
+                            <span className={['text-xs px-1.5 py-0.5 rounded-full font-medium', result.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'border border-slate-300 text-slate-500'].join(' ')}>
+                              {result.status === 'approved' ? t.final : t.prov} {result.finalScore.toFixed(3)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {isCJP && (
+                        <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {canOpen && (
+                            <button onClick={() => onOpen(perf.id)}
+                              title={t.open}
+                              className="w-6 h-6 rounded bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center transition-colors">
+                              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                            </button>
+                          )}
+                          {canSkip && (
+                            <button onClick={() => onSkip(perf.id)}
+                              title={t.skip}
+                              className="w-6 h-6 rounded bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
-                  {isCJP && (
-                    <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {canOpen && (
-                        <button onClick={() => onOpen(perf.id)}
-                          title={t.open}
-                          className="w-6 h-6 rounded bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center transition-colors">
-                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                        </button>
-                      )}
-                      {canSkip && (
-                        <button onClick={() => onSkip(perf.id)}
-                          title={t.skip}
-                          className="w-6 h-6 rounded bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors">
-                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          })}
+                </React.Fragment>
+              )
+            })
+          })()}
         </div>
       </div>
 
