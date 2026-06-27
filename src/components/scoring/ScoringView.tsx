@@ -549,7 +549,9 @@ function CJPLayout({
   const hasEJ = roles.includes('EJ')
   const hasAJ = roles.includes('AJ')
 
-  const currentPerf = performances.find((p) => p.id === currentPerfId) ?? null
+  const currentPerf = currentPerfId
+    ? (performances.find((p) => p.id === currentPerfId) ?? (rankingPerformances ?? []).find((p) => p.id === currentPerfId) ?? null)
+    : null
   const currentPenaltyState = currentPerfId ? getPenaltyState(currentPerfId) : DEFAULT_PENALTY
 
   return (
@@ -583,7 +585,9 @@ function CJPLayout({
           onUnpublishResult={onUnpublishResult} onEditScore={onEditScore}
           renderRightPanel={(activePerfId) => {
             const penaltyState = activePerfId ? (penaltyStates[activePerfId] ?? DEFAULT_PENALTY) : DEFAULT_PENALTY
-            const activePerf = performances.find(p => p.id === activePerfId)
+            const activePerf = activePerfId
+              ? (performances.find(p => p.id === activePerfId) ?? (rankingPerformances ?? []).find(p => p.id === activePerfId))
+              : undefined
             return (
               <CJPTabletRightPanel
                 lang={lang} activePerfId={activePerfId}

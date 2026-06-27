@@ -188,11 +188,13 @@ export async function POST(req: NextRequest) {
     sessionId?: string
     teamId?: string
     scores?: ScoreRow[]
+    /** @deprecated use queueOnTv — kept for older clients */
     publishResult?: boolean
+    queueOnTv?: boolean
     resultStatus?: 'provisional' | 'approved'
   }
 
-  const { competitionId, sessionId, teamId, scores, publishResult, resultStatus } = body
+  const { competitionId, sessionId, teamId, scores, publishResult, queueOnTv, resultStatus } = body
   if (!competitionId || !sessionId || !teamId || !scores?.length) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
@@ -242,16 +244,24 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  if (publishResult) {
-    try {
-      const status = resultStatus ?? 'approved'
-      await publishRoutineResult(sessionId, teamId, competitionId, status)
+  // Always compute + upsert routine_results so public results, rankings, and judge CJP see finals.
+  const status = resultStatus ?? 'approved'
+  const shouldQueueTv = queueOnTv ?? publishResult ?? false
+  try {
+    await publishRoutineResult(sessionId, teamId, competitionId, status)
+    if (shouldQueueTv) {
       await syncTvStateForPublishedResult(competitionId, sessionId, teamId, status)
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to publish result'
-      return NextResponse.json({ error: msg, saved: rows.length }, { status: 500 })
     }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Failed to publish result'
+    return NextResponse.json({ error: msg, saved: rows.length }, { status: 500 })
   }
 
-  return NextResponse.json({ ok: true, saved: rows.length, published: !!publishResult })
+  return NextResponse.json({
+    ok: true,
+    saved: rows.length,
+    published: true,
+    queuedOnTv: shouldQueueTv,
+    resultStatus: status,
+  })
 }
