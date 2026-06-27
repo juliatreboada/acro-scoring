@@ -220,7 +220,6 @@ export default function OpenCombinadosTab({ competitionId, sessions, sessionOrde
           sourceRanking: freshActa.openQualification,
           targetPhaseKey: 'open_quarter',
           count: cfg.open_quarter_count || Math.floor(freshActa.openQualification.length / 2),
-          openChoicesByTeam: openQuarterChoices,
         })
       } else if (from === 'qualification_combinados') {
         result = await advancePhaseSessionOrders(supabase, {
@@ -235,8 +234,6 @@ export default function OpenCombinadosTab({ competitionId, sessions, sessionOrde
           sourceRanking: freshActa.openQuarter ?? [],
           targetPhaseKey: 'open_semi',
           count: cfg.open_semi_count,
-          openChoicesByTeam: openSemiChoices,
-          forbidRoutineFromPhase: openQuarterChoices,
         })
       } else if (from === 'open_semi') {
         result = await advancePhaseSessionOrders(supabase, {
@@ -244,7 +241,6 @@ export default function OpenCombinadosTab({ competitionId, sessions, sessionOrde
           sourceRanking: freshActa.openSemi ?? [],
           targetPhaseKey: 'open_final',
           count: cfg.open_final_count,
-          openChoicesByTeam: openFinalChoices,
         })
       } else {
         result = await advancePhaseSessionOrders(supabase, {

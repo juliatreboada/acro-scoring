@@ -147,30 +147,31 @@ function SessionOrderCard({
 }) {
   const t = useT('StartingOrderView', lang)
 
-  // teams entered in this session's age_group + category
-  const matchingTeams = globalTeams.filter(
-    (team) => team.age_group === session.age_group && team.category === session.category,
-  )
-  const enteredTeamIds = new Set(
-    entries.filter((e) => !e.dropped_out).map((e) => e.team_id).filter((id) =>
-      matchingTeams.some((t) => t.id === id),
-    ),
-  )
-  const droppedOutIds = new Set(
-    entries.filter((e) => e.dropped_out).map((e) => e.team_id).filter((id) =>
-      matchingTeams.some((t) => t.id === id),
-    ),
-  )
-  const allTeamIds = new Set([...enteredTeamIds, ...droppedOutIds])
-
+  const isBracket = !!(session as any).bracket_phase
   const orders = sessionOrders.filter((o) => o.session_id === session.id)
   const orderedIds = orders.sort((a, b) => a.position - b.position).map((o) => o.team_id)
+
+  // Bracket sessions own their team list via session_orders; regular sessions match by age_group/category
+  const matchingTeamIds = isBracket
+    ? new Set(orderedIds)
+    : new Set(globalTeams.filter(t => t.age_group === session.age_group && t.category === session.category).map(t => t.id))
+  const droppedOutIds = new Set(
+    entries.filter((e) => e.dropped_out).map((e) => e.team_id).filter((id) => matchingTeamIds.has(id)),
+  )
+  const enteredTeamIds = isBracket
+    ? new Set(orderedIds.filter(id => !droppedOutIds.has(id)))
+    : new Set(entries.filter((e) => !e.dropped_out).map((e) => e.team_id).filter((id) => matchingTeamIds.has(id)))
+  const allTeamIds = new Set([...enteredTeamIds, ...droppedOutIds])
 
   // build display list
   const activeIds = orderedIds.filter((id) => !droppedOutIds.has(id))
   const unorderedActive = [...enteredTeamIds].filter((id) => !orderedIds.includes(id))
   const displayActive = [...activeIds, ...unorderedActive]
   const displayDropouts = [...droppedOutIds]
+
+  const sessionTitle = isBracket
+    ? session.name
+    : `${(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · ${categoryLabel(session.category, lang)} · ${session.routine_type}`
 
   function teamLabel(teamId: string) {
     const team = globalTeams.find((t) => t.id === teamId)
@@ -184,7 +185,7 @@ function SessionOrderCard({
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100">
           <p className="text-sm font-semibold text-slate-700">
-            {highlightText(`${(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · ${categoryLabel(session.category, lang)} · ${session.routine_type}`, highlightQuery)}
+            {highlightText(sessionTitle, highlightQuery)}
           </p>
         </div>
         <div className="px-4 py-8 flex flex-col items-center text-center gap-1.5">
@@ -208,7 +209,7 @@ function SessionOrderCard({
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100">
           <p className="text-sm font-semibold text-slate-700">
-            {highlightText(`${(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · ${categoryLabel(session.category, lang)} · ${session.routine_type}`, highlightQuery)}
+            {highlightText(sessionTitle, highlightQuery)}
           </p>
         </div>
         <p className="px-4 py-6 text-sm text-slate-300 text-center">{t.noSessions}</p>
@@ -220,7 +221,7 @@ function SessionOrderCard({
     <div className="bg-white rounded-2xl border-2 border-blue-200 overflow-hidden">
       <div className="px-4 py-3 bg-blue-50 border-b border-blue-100">
         <p className="text-sm font-semibold text-slate-700">
-          {highlightText(`${(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · ${categoryLabel(session.category, lang)} · ${session.routine_type}`, highlightQuery)}
+          {highlightText(sessionTitle, highlightQuery)}
         </p>
       </div>
       <ol className="divide-y divide-slate-50">
@@ -329,12 +330,16 @@ function buildPanelSlots(
       .filter((o) => o.session_id === session.id)
       .sort((a, b) => a.position - b.position)
 
-    // include teams that appear in orders (preserves dropout positions)
-    const matchingTeamIds = new Set(
-      globalTeams
-        .filter((t) => t.age_group === session.age_group && t.category === session.category)
-        .map((t) => t.id),
-    )
+    // Bracket sessions own their team list via session_orders; regular sessions
+    // filter by age_group/category to guard against cross-session order leakage.
+    const isBracket = !!(session as any).bracket_phase
+    const matchingTeamIds = isBracket
+      ? new Set(orders.map((o) => o.team_id))
+      : new Set(
+          globalTeams
+            .filter((t) => t.age_group === session.age_group && t.category === session.category)
+            .map((t) => t.id),
+        )
     for (const o of orders) {
       if (!matchingTeamIds.has(o.team_id)) continue
       slots.push({
@@ -424,8 +429,10 @@ function InterleavedTimeline({
           pendingAdded.add(te.session_id)
         }
       } else {
+        const isBracketSess = !!(sess as any).bracket_phase
         const team = globalTeams.find(t => t.id === te.team_id)
-        if (!team || team.age_group !== sess.age_group || team.category !== sess.category) continue
+        if (!team) continue
+        if (!isBracketSess && (team.age_group !== sess.age_group || team.category !== sess.category)) continue
         merged.push({
           kind: 'team',
           panelNumber: panelNum,
@@ -610,23 +617,20 @@ export default function StartingOrderView({
     let globalPos = 1
     for (const session of panelSessions) {
       if (!lockedSessions.includes(session.id)) continue
-      const matchingTeams = globalTeams.filter(
-        (team) => team.age_group === session.age_group && team.category === session.category,
-      )
-      const enteredTeamIds = new Set(
-        entries.filter((e) => !e.dropped_out).map((e) => e.team_id).filter((id) =>
-          matchingTeams.some((t) => t.id === id),
-        ),
-      )
-      const droppedOutIds = new Set(
-        entries.filter((e) => e.dropped_out).map((e) => e.team_id).filter((id) =>
-          matchingTeams.some((t) => t.id === id),
-        ),
-      )
+      const isBracketSession = !!(session as any).bracket_phase
       const orders = sessionOrders.filter((o) => o.session_id === session.id)
       const orderedIds = orders.sort((a, b) => a.position - b.position).map((o) => o.team_id)
+      const droppedOutIds = isBracketSession
+        ? new Set(entries.filter((e) => e.dropped_out).map((e) => e.team_id).filter((id) => orderedIds.includes(id)))
+        : new Set(entries.filter((e) => e.dropped_out).map((e) => e.team_id).filter((id) =>
+            globalTeams.some((t) => t.id === id && t.age_group === session.age_group && t.category === session.category),
+          ))
+      const enteredTeamIds = isBracketSession
+        ? new Set(orderedIds.filter(id => !droppedOutIds.has(id)))
+        : new Set(entries.filter((e) => !e.dropped_out).map((e) => e.team_id).filter((id) =>
+            globalTeams.some((t) => t.id === id && t.age_group === session.age_group && t.category === session.category),
+          ))
       const activeIds = orderedIds.filter((id) => !droppedOutIds.has(id))
-      const unorderedActive = [...enteredTeamIds].filter((id) => !orderedIds.includes(id))
       const fullOrder = orderedIds.length > 0 ? orderedIds : [...activeIds, ...[...droppedOutIds]]
       for (const teamId of fullOrder) {
         onePanelGlobalOrderMap[`${session.id}:${teamId}`] = globalPos

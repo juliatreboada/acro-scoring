@@ -147,8 +147,6 @@ export async function advancePhaseSessionOrders(
     sourceRanking: RankedTeam[]
     targetPhaseKey: OpenCombinadosPhaseKey
     count: number
-    openChoicesByTeam?: Record<string, 'Balance' | 'Dynamic' | 'Combined'> // validation only
-    forbidRoutineFromPhase?: Record<string, 'Balance' | 'Dynamic' | 'Combined'> // validation only
   },
 ): Promise<{ error: string | null; assignedTeams: string[] }> {
   // Top N qualified, then reversed so rank 1 performs last (standard gymnastics order)
@@ -162,9 +160,6 @@ export async function advancePhaseSessionOrders(
   const inserts: Array<{ session_id: string; team_id: string; position: number }> = []
   for (let i = 0; i < qualified.length; i++) {
     const q = qualified[i]
-    const routine: 'Balance' | 'Dynamic' | 'Combined' = params.openChoicesByTeam?.[q.teamId] ?? 'Combined'
-    const forbidden = params.forbidRoutineFromPhase?.[q.teamId]
-    if (forbidden && routine === forbidden) return { error: `Invalid OPEN semi routine for team ${q.teamId}`, assignedTeams: [] }
     inserts.push({ session_id: targetSessionId, team_id: q.teamId, position: i + 1 })
   }
 

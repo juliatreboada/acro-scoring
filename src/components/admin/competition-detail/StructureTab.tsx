@@ -377,8 +377,9 @@ function SessionRow({
   onDragEnd?: () => void
 }) {
   const t = useT('StructureTab', lang)
+  const isBracket = !!session.bracket_phase
   const rowGroups = mergeGroupsForSessionRow(session, allSessions, rankingMergeGroups)
-  const showSmallFieldHint = eligibleTeamCount < 3
+  const showSmallFieldHint = !isBracket && eligibleTeamCount < 3
   const [creating, setCreating] = useState(false)
   const [newEs, setNewEs] = useState('')
   const [newEn, setNewEn] = useState('')
@@ -425,51 +426,61 @@ function SessionRow({
               {t.smallFieldHint(eligibleTeamCount)}
             </p>
           )}
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <label className="text-[10px] text-slate-500 shrink-0">{t.mergeRanking}</label>
-            <select
-              className={selectCls}
-              value={session.ranking_merge_group_id ?? ''}
-              onChange={(e) => onAssignMergeGroup(session.id, e.target.value || null)}
-            >
-              <option value="">{t.mergeNone}</option>
-              {rowGroups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {groupOptionLabel(g, lang)}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              title={t.newMergeGroup}
-              onClick={() => setCreating((c) => !c)}
-              className="text-[10px] font-medium text-blue-600 hover:text-blue-800 px-1 py-0.5 rounded"
-            >
-              {t.newMergeGroupShort}
-            </button>
-          </div>
-          {creating && (
-            <div className="flex flex-col gap-1 p-2 bg-slate-50 rounded-lg border border-slate-100 text-[10px] mt-1">
-              <input
-                value={newEs}
-                onChange={(e) => setNewEs(e.target.value)}
-                placeholder={t.labelEs}
-                className="w-full border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 bg-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-              />
-              <input
-                value={newEn}
-                onChange={(e) => setNewEn(e.target.value)}
-                placeholder={t.labelEn}
-                className="w-full border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 bg-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-              />
-              <button
-                type="button"
-                onClick={() => void submitNewGroup()}
-                className="self-start mt-0.5 px-2 py-1 rounded bg-blue-600 text-white text-[10px] font-semibold hover:bg-blue-700"
-              >
-                {t.createGroup}
-              </button>
-            </div>
+          {isBracket ? (
+            <p className="text-[10px] text-violet-700 bg-violet-50 border border-violet-100 rounded px-2 py-1 leading-snug">
+              {eligibleTeamCount > 0
+                ? `${eligibleTeamCount} ${lang === 'es' ? 'equipos asignados (bracket)' : 'teams assigned (bracket)'}`
+                : (lang === 'es' ? 'Sin equipos asignados aún — usa la pestaña Bracket' : 'No teams assigned yet — use the Bracket tab')}
+            </p>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <label className="text-[10px] text-slate-500 shrink-0">{t.mergeRanking}</label>
+                <select
+                  className={selectCls}
+                  value={session.ranking_merge_group_id ?? ''}
+                  onChange={(e) => onAssignMergeGroup(session.id, e.target.value || null)}
+                >
+                  <option value="">{t.mergeNone}</option>
+                  {rowGroups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {groupOptionLabel(g, lang)}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  title={t.newMergeGroup}
+                  onClick={() => setCreating((c) => !c)}
+                  className="text-[10px] font-medium text-blue-600 hover:text-blue-800 px-1 py-0.5 rounded"
+                >
+                  {t.newMergeGroupShort}
+                </button>
+              </div>
+              {creating && (
+                <div className="flex flex-col gap-1 p-2 bg-slate-50 rounded-lg border border-slate-100 text-[10px] mt-1">
+                  <input
+                    value={newEs}
+                    onChange={(e) => setNewEs(e.target.value)}
+                    placeholder={t.labelEs}
+                    className="w-full border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 bg-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  />
+                  <input
+                    value={newEn}
+                    onChange={(e) => setNewEn(e.target.value)}
+                    placeholder={t.labelEn}
+                    className="w-full border border-slate-300 rounded px-2 py-1 text-xs text-slate-900 bg-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void submitNewGroup()}
+                    className="self-start mt-0.5 px-2 py-1 rounded bg-blue-600 text-white text-[10px] font-semibold hover:bg-blue-700"
+                  >
+                    {t.createGroup}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
         <button

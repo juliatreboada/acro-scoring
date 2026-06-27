@@ -205,15 +205,20 @@ export function useCompetitionPage(slug: string) {
   const sessionEligibleTeamCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     for (const session of sessions) {
-      counts[session.id] = entries
-        .filter(e => !e.dropped_out)
-        .filter(e => {
-          const team = globalTeams.find(t => t.id === e.team_id)
-          return team?.age_group === session.age_group && team?.category === session.category
-        }).length
+      if (session.bracket_phase) {
+        // Bracket sessions get their teams from session_orders, not competition_entries
+        counts[session.id] = sessionOrders.filter(o => o.session_id === session.id).length
+      } else {
+        counts[session.id] = entries
+          .filter(e => !e.dropped_out)
+          .filter(e => {
+            const team = globalTeams.find(t => t.id === e.team_id)
+            return team?.age_group === session.age_group && team?.category === session.category
+          }).length
+      }
     }
     return counts
-  }, [sessions, entries, globalTeams])
+  }, [sessions, entries, globalTeams, sessionOrders])
 
   // ── status ────────────────────────────────────────────────────────────────────
   async function handleAdvanceStatus() {
