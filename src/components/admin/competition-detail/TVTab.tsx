@@ -480,28 +480,47 @@ export default function TVTab({
 
   // ── auto-generate slots from sessions ────────────────────────────────────────
 
+  const BRACKET_PHASE_LABELS: Record<string, string> = {
+    open_quarter:       'Cuartos de Final OPEN',
+    open_semi:          'Semifinal OPEN',
+    open_final:         'Final OPEN',
+    combinados_semi:    'Semifinal COMBINADOS',
+    combinados_final:   'Final COMBINADOS',
+  }
+
   const autoSlots = useMemo((): TvRankingSlot[] => {
-    const groups = new Map<string, { label: string; session_ids: string[] }>()
+    const qualGroups  = new Map<string, { label: string; session_ids: string[] }>()
+    const bracketSlots: TvRankingSlot[] = []
+
     for (const s of sessions) {
+      const routineL = (({ Balance: 'Balance', Dynamic: 'Dinámica', Combined: 'Combinada' } as Record<string, string>)[s.routine_type]) ?? s.routine_type
+      const agLabel  = agLabels[s.age_group] ?? s.age_group
+
+      if (s.bracket_phase) {
+        const phaseLabel = BRACKET_PHASE_LABELS[s.bracket_phase] ?? s.bracket_phase
+        bracketSlots.push({
+          id:          `bracket_${s.id}`,
+          label:       `${phaseLabel} · ${agLabel} ${categoryLabel(s.category, lang)} · ${routineL}`,
+          session_ids: [s.id],
+          enabled:     true,
+        })
+        continue
+      }
+
       const key = s.ranking_merge_group_id
         ? `merge_${s.ranking_merge_group_id}_${s.routine_type}`
         : `${s.age_group}_${s.category}_${s.routine_type}`
-
-      const routineL = (({ Balance: 'Balance', Dynamic: 'Dinámica', Combined: 'Combinada' } as Record<string, string>)[s.routine_type]) ?? s.routine_type
-      const agLabel = agLabels[s.age_group] ?? s.age_group
       const label = `${agLabel} ${categoryLabel(s.category, lang)} · ${routineL}`
-
-      if (!groups.has(key)) groups.set(key, { label, session_ids: [] })
-      groups.get(key)!.session_ids.push(s.id)
+      if (!qualGroups.has(key)) qualGroups.set(key, { label, session_ids: [] })
+      qualGroups.get(key)!.session_ids.push(s.id)
     }
 
-    return Array.from(groups.entries()).map(([key, { label, session_ids }]) => ({
-      id: key,
-      label,
-      session_ids,
-      enabled: true,
+    const qualSlots: TvRankingSlot[] = Array.from(qualGroups.entries()).map(([key, { label, session_ids }]) => ({
+      id: key, label, session_ids, enabled: true,
     }))
-  }, [sessions, agLabels, lang])
+
+    return [...qualSlots, ...bracketSlots]
+  }, [sessions, agLabels, lang]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── derived state ─────────────────────────────────────────────────────────────
 
