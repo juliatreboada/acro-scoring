@@ -875,9 +875,49 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
           .subscribe(),
       )
 
+      // Subscribe to peer session scores so CJP sees EJ/AJ/DJ scores for OPEN/COMBINADOS peer sessions
+      const peerScoreIds = resultSessionIds.filter(sid => sid !== sessionId)
+      const peerScoresChannels = peerScoreIds.map((sid) =>
+        supabase
+          .channel(`js-peer-scores-${sessionId}-${sid}`)
+          .on('postgres_changes', {
+            event: '*', schema: 'public', table: 'scores',
+            filter: `session_id=eq.${sid}`,
+          }, (payload) => {
+            if (payload.eventType === 'DELETE') {
+              const old = payload.old as { session_id: string; team_id: string; section_panel_judge_id: string }
+              if (!old.session_id) return
+              const perfId = `${old.session_id}_${old.team_id}`
+              setJudgeScores(prev => ({
+                ...prev,
+                [perfId]: (prev[perfId] ?? []).filter(s => s.panelJudgeId !== old.section_panel_judge_id),
+              }))
+              return
+            }
+            const row = payload.new as {
+              session_id: string; team_id: string; section_panel_judge_id: string
+              ej_score: number | null; aj_score: number | null
+              dj_difficulty: number | null; dj_penalty: number | null; cjp_penalty: number | null
+            }
+            const perfId = `${row.session_id}_${row.team_id}`
+            const incoming: JudgeScore = {
+              panelJudgeId: row.section_panel_judge_id,
+              ejScore: row.ej_score, ajScore: row.aj_score,
+              djDifficulty: row.dj_difficulty, djPenalty: row.dj_penalty, cjpPenalty: row.cjp_penalty,
+              dbScore: null,
+            }
+            setJudgeScores(prev => ({
+              ...prev,
+              [perfId]: [...(prev[perfId] ?? []).filter(s => s.panelJudgeId !== incoming.panelJudgeId), incoming],
+            }))
+          })
+          .subscribe()
+      )
+
       return () => {
         supabase.removeChannel(sessionCh)
         supabase.removeChannel(scoresCh)
+        for (const ch of peerScoresChannels) supabase.removeChannel(ch)
         for (const ch of resultsChannels) supabase.removeChannel(ch)
       }
     } else {
@@ -944,8 +984,8 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
       }
       return
     }
-    const teamId = perfId.replace(`${sessionId}_`, '')
-    await supabase.from('sessions').update({ current_team_id: teamId }).eq('id', sessionId)
+    const [targetSid, teamId] = splitPerfId(perfId)
+    await supabase.from('sessions').update({ current_team_id: teamId }).eq('id', targetSid)
     setCurrentPerfId(perfId)
     setJudgeScores(prev => prev[perfId] ? prev : { ...prev, [perfId]: [] })
   }
@@ -968,15 +1008,15 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
       }
       return
     }
-    const teamId = perfId.replace(`${sessionId}_`, '')
+    const [targetSid, teamId] = splitPerfId(perfId)
     if (panelJudgeId === 'all') {
-      await supabase.from('scores').delete().eq('session_id', sessionId).eq('team_id', teamId)
-      await supabase.from('routine_results').delete().eq('session_id', sessionId).eq('team_id', teamId)
+      await supabase.from('scores').delete().eq('session_id', targetSid).eq('team_id', teamId)
+      await supabase.from('routine_results').delete().eq('session_id', targetSid).eq('team_id', teamId)
       setJudgeScores(prev => ({ ...prev, [perfId]: [] }))
     } else {
       await supabase.from('scores').delete()
-        .eq('session_id', sessionId).eq('team_id', teamId).eq('section_panel_judge_id', panelJudgeId)
-      await supabase.from('routine_results').delete().eq('session_id', sessionId).eq('team_id', teamId)
+        .eq('session_id', targetSid).eq('team_id', teamId).eq('section_panel_judge_id', panelJudgeId)
+      await supabase.from('routine_results').delete().eq('session_id', targetSid).eq('team_id', teamId)
       setJudgeScores(prev => ({
         ...prev,
         [perfId]: (prev[perfId] ?? []).filter(s => s.panelJudgeId !== panelJudgeId),
@@ -988,6 +1028,14 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
   function clearSubmitError() { setSubmitError(null) }
 
   // ── acro handlers ─────────────────────────────────────────────────────────────
+
+  // Extract [targetSessionId, teamId] from a perfId, supporting peer sessions in OPEN/COMBINADOS.
+  function splitPerfId(perfId: string): [string, string] {
+    for (const sid of rankingPeerIdsRef.current) {
+      if (perfId.startsWith(sid + '_')) return [sid, perfId.slice(sid.length + 1)]
+    }
+    return [sessionId ?? '', perfId.replace(`${sessionId ?? ''}_`, '')]
+  }
 
   async function handleCJPSubmit(status: 'provisional' | 'approved', result: RoutineResult, penaltyDetail?: PenaltyState | null) {
     if (sport !== 'acro' || !sessionId) return
@@ -1004,7 +1052,7 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
       return
     }
     try {
-      const teamId = result.performanceId.replace(`${sessionId}_`, '')
+      const [targetSid, teamId] = splitPerfId(result.performanceId)
 
       const djJudgeIds = panelJudges.filter(j => j.role === 'DJ').map(j => j.id)
       let djPenaltyDetail: import('@/lib/database.types').Json | null = null
@@ -1013,14 +1061,14 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
           .from('scores')
           .select('dj_flags')
           .in('section_panel_judge_id', djJudgeIds)
-          .eq('session_id', sessionId)
+          .eq('session_id', targetSid)
           .eq('team_id', teamId)
           .not('dj_flags', 'is', null)
         djPenaltyDetail = djScores?.[0]?.dj_flags ?? null
       }
 
       const { error } = await supabase.from('routine_results').upsert({
-        session_id: sessionId, team_id: teamId,
+        session_id: targetSid, team_id: teamId,
         e_score: result.eScore, a_score: result.aScore,
         dif_score: result.difScore, dif_penalty: result.difPenalty,
         cjp_penalty: result.cjpPenalty, final_score: result.finalScore, status,
@@ -1037,10 +1085,10 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
 
   async function handleUnpublishResult(perfId: string) {
     if (sport !== 'acro' || !sessionId || practiceMode) return
-    const teamId = perfId.replace(`${sessionId}_`, '')
+    const [targetSid, teamId] = splitPerfId(perfId)
     await supabase.from('routine_results')
       .update({ status: 'provisional' })
-      .eq('session_id', sessionId)
+      .eq('session_id', targetSid)
       .eq('team_id', teamId)
     setResults(prev => prev[perfId] ? { ...prev, [perfId]: { ...prev[perfId]!, status: 'provisional' } } : prev)
   }
@@ -1062,9 +1110,9 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
       return
     }
     try {
-      const teamId = currentPerfId.replace(`${sessionId}_`, '')
+      const [targetSid, teamId] = splitPerfId(currentPerfId)
       const { error } = await supabase.from('scores').upsert({
-        session_id: sessionId, team_id: teamId,
+        session_id: targetSid, team_id: teamId,
         section_panel_judge_id: score.panelJudgeId,
         ej_score: score.ejScore, aj_score: score.ajScore,
         dj_difficulty: score.djDifficulty, dj_penalty: score.djPenalty, cjp_penalty: score.cjpPenalty,
@@ -1077,7 +1125,7 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
       if (error) throw error
       const { data: latest } = await supabase.from('scores')
         .select('section_panel_judge_id,ej_score,aj_score,dj_difficulty,dj_penalty,cjp_penalty')
-        .eq('session_id', sessionId)
+        .eq('session_id', targetSid)
         .eq('team_id', teamId)
       if (latest) {
         const perfId = currentPerfId
