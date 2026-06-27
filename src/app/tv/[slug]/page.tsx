@@ -653,12 +653,12 @@ export default function TVPage() {
 
     // Responsive sizes so exactly `teamsPerPage` rows fill the available height
     const sz = teamsPerPage <= 4
-      ? { logo: 'h-20 w-20', rankW: 'w-14', rankT: 'text-3xl', name: 'text-4xl', colW: 'w-28', scoreT: 'text-3xl', totalW: 'w-36', totalT: 'text-5xl', gap: 'gap-4' }
+      ? { logo: 'h-20 w-20', rankW: 'w-14', rankT: 'text-3xl', name: 'text-4xl', colW: 'w-28', scoreT: 'text-3xl', totalW: 'w-36', totalT: 'text-5xl', gap: 'gap-4', multiColW: 'w-40', multiScoreT: 'text-4xl' }
       : teamsPerPage <= 7
-      ? { logo: 'h-14 w-14', rankW: 'w-12', rankT: 'text-2xl', name: 'text-3xl', colW: 'w-24', scoreT: 'text-2xl', totalW: 'w-28', totalT: 'text-4xl', gap: 'gap-3' }
+      ? { logo: 'h-14 w-14', rankW: 'w-12', rankT: 'text-2xl', name: 'text-3xl', colW: 'w-24', scoreT: 'text-2xl', totalW: 'w-28', totalT: 'text-4xl', gap: 'gap-3', multiColW: 'w-36', multiScoreT: 'text-3xl' }
       : teamsPerPage <= 10
-      ? { logo: 'h-10 w-10', rankW: 'w-10', rankT: 'text-xl',  name: 'text-2xl', colW: 'w-20', scoreT: 'text-xl',  totalW: 'w-24', totalT: 'text-3xl', gap: 'gap-3' }
-      : { logo: 'h-8 w-8',   rankW: 'w-8',  rankT: 'text-sm',  name: 'text-base',colW: 'w-16', scoreT: 'text-sm',  totalW: 'w-20', totalT: 'text-2xl', gap: 'gap-2' }
+      ? { logo: 'h-10 w-10', rankW: 'w-10', rankT: 'text-xl',  name: 'text-2xl', colW: 'w-20', scoreT: 'text-xl',  totalW: 'w-24', totalT: 'text-3xl', gap: 'gap-3', multiColW: 'w-28', multiScoreT: 'text-2xl' }
+      : { logo: 'h-8 w-8',   rankW: 'w-8',  rankT: 'text-sm',  name: 'text-base',colW: 'w-16', scoreT: 'text-sm',  totalW: 'w-20', totalT: 'text-2xl', gap: 'gap-2', multiColW: 'w-24', multiScoreT: 'text-xl'  }
 
     return (
       <div ref={containerRef} style={{ backgroundColor: bgColor }} className="w-screen h-screen flex flex-col overflow-hidden text-white relative">
@@ -688,7 +688,7 @@ export default function TVPage() {
           {isMultiRoutine ? (
             <>
               {routineTypes.map(rt => (
-                <span key={rt} className={`${sz.colW} text-right`}>{routineLabel(rt)}</span>
+                <span key={rt} className={`${sz.multiColW} text-right`}>{routineLabel(rt)}</span>
               ))}
               <span className={`${sz.totalW} text-right text-white/60`}>Total</span>
             </>
@@ -732,7 +732,7 @@ export default function TVPage() {
                     {routineTypes.map(rt => {
                       const rScore = entry.routine_scores.find(x => x.routine_type === rt)
                       return (
-                        <span key={rt} className={`${sz.colW} text-right tabular-nums ${sz.scoreT} font-bold text-white/70`}>
+                        <span key={rt} className={`${sz.multiColW} text-right tabular-nums ${sz.multiScoreT} font-bold text-white/70`}>
                           {rScore?.score != null ? rScore.score.toFixed(3) : '—'}
                         </span>
                       )
