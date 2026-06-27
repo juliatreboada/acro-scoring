@@ -89,19 +89,27 @@ function appendSectionDropoutSlots(
       .filter(s => s.panel_id === panel.id)
       .sort((a, b) => a.order_index - b.order_index)
     for (const session of panelSessions) {
-      const matchingTeams = globalTeams.filter(
-        t => t.age_group === session.age_group && t.category === session.category,
-      )
       const orders = sessionOrders
         .filter(o => o.session_id === session.id)
         .sort((a, b) => a.position - b.position)
+      const isBracket = !!(session as any).bracket_phase
       const orderedTeams: Team[] = []
-      for (const o of orders) {
-        const team = matchingTeams.find(tm => tm.id === o.team_id)
-        if (team && !orderedTeams.some(tm => tm.id === team.id)) orderedTeams.push(team)
-      }
-      for (const team of matchingTeams) {
-        if (!orderedTeams.some(tm => tm.id === team.id)) orderedTeams.push(team)
+      if (isBracket) {
+        for (const o of orders) {
+          const team = globalTeams.find(tm => tm.id === o.team_id)
+          if (team && !orderedTeams.some(tm => tm.id === team.id)) orderedTeams.push(team)
+        }
+      } else {
+        const matchingTeams = globalTeams.filter(
+          t => t.age_group === session.age_group && t.category === session.category,
+        )
+        for (const o of orders) {
+          const team = matchingTeams.find(tm => tm.id === o.team_id)
+          if (team && !orderedTeams.some(tm => tm.id === team.id)) orderedTeams.push(team)
+        }
+        for (const team of matchingTeams) {
+          if (!orderedTeams.some(tm => tm.id === team.id)) orderedTeams.push(team)
+        }
       }
       for (const team of orderedTeams) {
         if (!droppedTeamIds.has(team.id)) continue

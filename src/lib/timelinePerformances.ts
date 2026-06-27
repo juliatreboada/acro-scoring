@@ -46,12 +46,20 @@ export function orderedTimelinePerformances(
       const orders = sessionOrders
         .filter((o) => o.session_id === session.id)
         .sort((a, b) => a.position - b.position)
-      const matchingTeams = globalTeams.filter(
-        (t) => t.age_group === session.age_group && t.category === session.category,
-      )
-      const matchingIds = new Set(matchingTeams.map((t) => t.id))
-      const orderedIds = orders.filter((o) => matchingIds.has(o.team_id)).map((o) => o.team_id)
-      const unorderedIds = matchingTeams.filter((t) => !orderedIds.includes(t.id)).map((t) => t.id)
+      const isBracket = !!(session as any).bracket_phase
+      let orderedIds: string[]
+      let unorderedIds: string[]
+      if (isBracket) {
+        orderedIds = orders.map((o) => o.team_id)
+        unorderedIds = []
+      } else {
+        const matchingTeams = globalTeams.filter(
+          (t) => t.age_group === session.age_group && t.category === session.category,
+        )
+        const matchingIds = new Set(matchingTeams.map((t) => t.id))
+        orderedIds = orders.filter((o) => matchingIds.has(o.team_id)).map((o) => o.team_id)
+        unorderedIds = matchingTeams.filter((t) => !orderedIds.includes(t.id)).map((t) => t.id)
+      }
       for (const teamId of [...orderedIds, ...unorderedIds]) {
         slots.push({
           sessionId: session.id,

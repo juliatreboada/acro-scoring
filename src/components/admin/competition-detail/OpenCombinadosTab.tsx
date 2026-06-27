@@ -190,6 +190,16 @@ export default function OpenCombinadosTab({ competitionId, sessions, sessionOrde
     await supabase.from('competition_entries').update({ dropped_out: nowDropped }).eq('id', entry.id)
   }
 
+  async function addSubstitute(targetPhaseKey: keyof typeof advMap, substituteTeamId: string) {
+    const sessionId = advMap[targetPhaseKey]
+    if (!sessionId) return
+    const currentOrders = sessionOrders.filter(o => o.session_id === sessionId)
+    // Substitute is the lowest-ranked entrant → performs first (position before all current slots)
+    const minPos = currentOrders.length > 0 ? Math.min(...currentOrders.map(o => o.position)) : 1
+    await supabase.from('session_orders').insert({ session_id: sessionId, team_id: substituteTeamId, position: minPos - 1 })
+    await onReloadSessionOrders?.()
+  }
+
   async function saveChoice(phase: 'open_quarter' | 'open_semi' | 'open_final', teamId: string, routine: 'Balance' | 'Dynamic' | 'Combined') {
     await supabase.from('open_combinados_open_team_choices').upsert(
       { competition_id: competitionId, phase_key: phase, team_id: teamId, selected_routine_type: routine },
@@ -661,10 +671,118 @@ export default function OpenCombinadosTab({ competitionId, sessions, sessionOrde
         </div>
       </div>
 
-      {/* ── Step 4: Generate advancement rounds ───────────────────────────── */}
+      {/* ── Step 4: Dropout management in bracket phases ─────────────────── */}
+      {(() => {
+        const bracketPhases: Array<{
+          phaseKey: keyof typeof advMap
+          sourcePhaseKey: keyof typeof advMap | null
+          sourceRanking: typeof acta.combinadosSemi
+          label: string
+          color: 'blue' | 'violet' | 'slate'
+        }> = [
+          { phaseKey: 'open_quarter',    sourcePhaseKey: null,               sourceRanking: acta.openQualification,      label: 'Cuartos OPEN',       color: 'blue'   },
+          { phaseKey: 'open_semi',       sourcePhaseKey: 'open_quarter',     sourceRanking: acta.openQuarter,            label: 'Semifinal OPEN',     color: 'blue'   },
+          { phaseKey: 'open_final',      sourcePhaseKey: 'open_semi',        sourceRanking: acta.openSemi,               label: 'Final OPEN',         color: 'slate'  },
+          { phaseKey: 'combinados_semi', sourcePhaseKey: null,               sourceRanking: acta.combinadosQualification,label: 'Semifinal COMBINADOS',color: 'violet' },
+          { phaseKey: 'combinados_final',sourcePhaseKey: 'combinados_semi',  sourceRanking: acta.combinadosSemi,         label: 'Final COMBINADOS',   color: 'violet' },
+        ]
+
+        const activePhases = bracketPhases.filter(p => {
+          if (!advMap[p.phaseKey]) return false
+          const assigned = sessionOrders.filter(o => o.session_id === advMap[p.phaseKey])
+          return assigned.length > 0
+        })
+
+        if (activePhases.length === 0) return null
+
+        return (
+          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+              <p className="text-sm font-semibold text-slate-800">Paso 4 · Bajas en rondas bracket</p>
+              <p className="text-xs text-slate-500 mt-0.5">Declara bajas en cada fase. Si hay una baja, el siguiente equipo disponible puede incorporarse.</p>
+            </div>
+            <div className="p-4 space-y-4">
+              {activePhases.map(({ phaseKey, sourcePhaseKey, sourceRanking, label, color }) => {
+                const sessionId = advMap[phaseKey]!
+                const assigned = sessionOrders.filter(o => o.session_id === sessionId).sort((a, b) => a.position - b.position)
+                const assignedIds = new Set(assigned.map(o => o.team_id))
+                const hasDropout = assigned.some(o => droppedOutIds.has(o.team_id))
+
+                // Find next substitute: prefer scored ranking, fall back to source session_orders
+                let nextSubId: string | null = null
+                if (hasDropout) {
+                  if (sourceRanking && sourceRanking.length > 0) {
+                    const cand = (sourceRanking as Array<{ teamId: string }>).find(r => !assignedIds.has(r.teamId) && !droppedOutIds.has(r.teamId))
+                    nextSubId = cand?.teamId ?? null
+                  }
+                  if (!nextSubId && sourcePhaseKey && advMap[sourcePhaseKey]) {
+                    const sourceOrders = sessionOrders
+                      .filter(o => o.session_id === advMap[sourcePhaseKey!])
+                      .sort((a, b) => b.position - a.position)
+                    nextSubId = sourceOrders.find(o => !assignedIds.has(o.team_id) && !droppedOutIds.has(o.team_id))?.team_id ?? null
+                  }
+                }
+
+                const headerCls = color === 'blue' ? 'bg-blue-50 text-blue-800' : color === 'violet' ? 'bg-violet-50 text-violet-800' : 'bg-slate-50 text-slate-800'
+                const rankCls   = color === 'blue' ? 'text-blue-600' : color === 'violet' ? 'text-violet-600' : 'text-slate-500'
+
+                return (
+                  <div key={phaseKey} className="rounded-xl border border-slate-200 overflow-hidden">
+                    <div className={`px-3 py-2 border-b border-slate-100 text-xs font-semibold ${headerCls}`}>{label}</div>
+                    <table className="w-full text-xs">
+                      <tbody>
+                        {assigned.map((o, idx) => {
+                          const team = teamById[o.team_id]
+                          const isDropped = droppedOutIds.has(o.team_id)
+                          return (
+                            <tr key={o.team_id} className={['border-b border-slate-50 last:border-0', isDropped ? 'bg-red-50 opacity-60' : idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'].join(' ')}>
+                              <td className={`px-3 py-2 font-bold w-8 text-center ${rankCls}`}>{assigned.length - idx}</td>
+                              <td className="px-3 py-2 font-medium text-slate-800">
+                                {team?.gymnast_display ?? o.team_id}
+                                {isDropped && <span className="ml-1.5 text-[10px] font-normal text-red-500 uppercase tracking-wide">baja</span>}
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <button
+                                  onClick={() => void toggleDropout(o.team_id)}
+                                  title={isDropped ? 'Reactivar equipo' : 'Declarar baja'}
+                                  className={['w-6 h-6 rounded flex items-center justify-center ml-auto transition-colors', isDropped ? 'bg-red-100 text-red-600 hover:bg-red-200' : 'text-slate-300 hover:bg-red-50 hover:text-red-500'].join(' ')}
+                                >
+                                  {isDropped
+                                    ? <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" /></svg>
+                                    : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                  }
+                                </button>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                    {nextSubId && (
+                      <div className="flex items-center justify-between gap-3 px-3 py-2 bg-amber-50 border-t border-amber-100">
+                        <p className="text-xs text-amber-800">
+                          Suplente disponible: <span className="font-semibold">{teamById[nextSubId]?.gymnast_display ?? nextSubId}</span>
+                        </p>
+                        <button
+                          onClick={() => void addSubstitute(phaseKey, nextSubId!)}
+                          className="shrink-0 px-2.5 py-1 rounded-lg bg-amber-600 text-white text-xs font-semibold hover:bg-amber-700 transition-colors"
+                        >
+                          Añadir suplente
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ── Step 5: Generate advancement rounds ───────────────────────────── */}
       <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
-          <p className="text-sm font-semibold text-slate-800">Paso 4 · Generar rondas de avance</p>
+          <p className="text-sm font-semibold text-slate-800">Paso 5 · Generar rondas de avance</p>
           <p className="text-xs text-slate-500 mt-0.5">
             Ejecuta después de que estén los resultados de cada ronda. Las sesiones deben existir previamente (créalas en Estructura como &quot;Fase bracket&quot;).
           </p>
