@@ -1298,7 +1298,9 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
   const resolvedPerfId = (sport === 'acro' && practiceMode && practiceRoutinePerfId)
     ? practiceRoutinePerfId
     : currentPerfId
-  const currentPerf = resolvedPerfId ? (performances.find(p => p.id === resolvedPerfId) ?? null) : null
+  const currentPerf = resolvedPerfId
+    ? (performances.find(p => p.id === resolvedPerfId) ?? rankingPerformances.find(p => p.id === resolvedPerfId) ?? null)
+    : null
 
   return {
     loading, sessionId, sessionStatus, currentPerfId: resolvedPerfId, currentPerf,
