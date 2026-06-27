@@ -59,22 +59,25 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
   onToggleLock: (sessionId: string) => void
 }) {
   const t = useT('StartingOrderTab', lang)
-
-  // Split entries into active and dropout for this session's category + age group
-  const sessionEntries = entries.filter((e) => {
-    const team = globalTeams.find((tm) => tm.id === e.team_id)
-    return team && team.age_group === session.age_group && team.category === session.category
-  })
-  const activeEntries = sessionEntries.filter((e) => !e.dropped_out)
-  const dropoutEntries = sessionEntries.filter((e) => e.dropped_out)
-
-  const activeTeams = globalTeams.filter((tm) => activeEntries.some((e) => e.team_id === tm.id))
-  const dropoutTeams = globalTeams.filter((tm) => dropoutEntries.some((e) => e.team_id === tm.id))
+  const isBracket = !!(session as any).bracket_phase
 
   // Saved order for this session (includes both active and dropout team IDs)
   const orders = sessionOrders
     .filter((o) => o.session_id === session.id)
     .sort((a, b) => a.position - b.position)
+
+  // For bracket sessions teams come from session_orders, not from age_group/category matching
+  const sessionEntries = isBracket
+    ? orders.map((o) => entries.find((e) => e.team_id === o.team_id)).filter((e): e is CompetitionEntry => e !== undefined)
+    : entries.filter((e) => {
+        const team = globalTeams.find((tm) => tm.id === e.team_id)
+        return team && team.age_group === session.age_group && team.category === session.category
+      })
+  const activeEntries  = sessionEntries.filter((e) => !e.dropped_out)
+  const dropoutEntries = sessionEntries.filter((e) => e.dropped_out)
+
+  const activeTeams  = globalTeams.filter((tm) => activeEntries.some((e) => e.team_id === tm.id))
+  const dropoutTeams = globalTeams.filter((tm) => dropoutEntries.some((e) => e.team_id === tm.id))
 
   // Ordered active teams (for unlocked view and arrows)
   const orderedActive: Team[] = orders.length === 0
@@ -130,8 +133,14 @@ function SessionOrderCard({ session, globalTeams, clubs, entries, sessionOrders,
       {/* header */}
       <div className={['px-3 py-2 border-b flex items-start justify-between gap-2', isLocked ? 'bg-blue-50 border-blue-200' : 'bg-slate-50 border-slate-200'].join(' ')}>
         <div>
-          <p className="text-xs font-semibold text-slate-700">{(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · {categoryLabel(session.category, lang)}</p>
-          <p className="text-xs text-slate-400">{session.routine_type}</p>
+          {isBracket ? (
+            <p className="text-xs font-semibold text-slate-700">{session.name}</p>
+          ) : (
+            <>
+              <p className="text-xs font-semibold text-slate-700">{(agLabels[session.age_group] ?? session.age_group).replace(/\s*\(.*?\)$/, '')} · {categoryLabel(session.category, lang)}</p>
+              <p className="text-xs text-slate-400">{session.routine_type}</p>
+            </>
+          )}
         </div>
         {hasTeams && (
           <div className="flex items-center gap-1.5 shrink-0">
@@ -366,10 +375,18 @@ function OrderTimelineView({ lang, panels, section, sessions, sessionOrders, ent
     const slots: AdminSlot[] = []
     for (const session of panelSessions) {
       const orders = sessionOrders.filter(o => o.session_id === session.id).sort((a, b) => a.position - b.position)
-      const matchingTeams = globalTeams.filter(t => t.age_group === session.age_group && t.category === session.category)
-      const matchingIds = new Set(matchingTeams.map(t => t.id))
-      const orderedIds = orders.filter(o => matchingIds.has(o.team_id)).map(o => o.team_id)
-      const unorderedIds = matchingTeams.filter(t => !orderedIds.includes(t.id)).map(t => t.id)
+      let orderedIds: string[]
+      let unorderedIds: string[]
+      if ((session as any).bracket_phase) {
+        // Bracket sessions: teams come exclusively from session_orders
+        orderedIds = orders.map(o => o.team_id)
+        unorderedIds = []
+      } else {
+        const matchingTeams = globalTeams.filter(t => t.age_group === session.age_group && t.category === session.category)
+        const matchingIds = new Set(matchingTeams.map(t => t.id))
+        orderedIds = orders.filter(o => matchingIds.has(o.team_id)).map(o => o.team_id)
+        unorderedIds = matchingTeams.filter(t => !orderedIds.includes(t.id)).map(t => t.id)
+      }
       for (const teamId of [...orderedIds, ...unorderedIds]) {
         slots.push({ sessionId: session.id, sessionName: session.name, panelNumber: panel.panel_number, teamId, isDropout: droppedIds.has(teamId) })
       }
