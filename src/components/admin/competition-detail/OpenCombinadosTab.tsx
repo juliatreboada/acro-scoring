@@ -22,6 +22,7 @@ type Props = {
   ageGroupRules: AgeGroupRule[]
   panels: Panel[]
   sections: Section[]
+  onReloadSessionOrders?: () => Promise<void>
 }
 
 // phase key → { group, source round label for the advance button }
@@ -33,7 +34,7 @@ const ADVANCE_TARGETS: Record<string, { target: OpenCombinadosPhaseKey; group: '
   combinados_semi:         { target: 'combinados_final', group: 'COMBINADOS', round: 'Final'         },
 }
 
-export default function OpenCombinadosTab({ competitionId, sessions, sessionOrders, teams, entries, ageGroupRules, panels, sections, lang }: Props) {
+export default function OpenCombinadosTab({ competitionId, sessions, sessionOrders, teams, entries, ageGroupRules, panels, sections, lang, onReloadSessionOrders }: Props) {
   const supabase = createClient()
 
   const [loading, setLoading]       = useState(true)
@@ -52,6 +53,9 @@ export default function OpenCombinadosTab({ competitionId, sessions, sessionOrde
   const [openQuarterChoices, setOpenQuarterChoices] = useState<Record<string, 'Balance' | 'Dynamic' | 'Combined'>>({})
   const [openSemiChoices,    setOpenSemiChoices]    = useState<Record<string, 'Balance' | 'Dynamic' | 'Combined'>>({})
   const [openFinalChoices,   setOpenFinalChoices]   = useState<Record<string, 'Balance' | 'Dynamic' | 'Combined'>>({})
+  const [droppedOutIds, setDroppedOutIds] = useState<Set<string>>(
+    () => new Set(entries.filter(e => e.dropped_out).map(e => e.team_id))
+  )
 
   // advMap is derived directly from sessions.bracket_phase — no DB fetch needed.
   const advMap = useMemo(() => {
@@ -110,7 +114,8 @@ export default function OpenCombinadosTab({ competitionId, sessions, sessionOrde
   // ── Derived state ─────────────────────────────────────────────────────────
 
   const teamById      = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t])), [teams])
-  const activeTeamIds = useMemo(() => new Set(entries.filter((e) => !e.dropped_out).map((e) => e.team_id)), [entries])
+  const entryByTeam   = useMemo(() => Object.fromEntries(entries.map((e) => [e.team_id, e])), [entries])
+  const activeTeamIds = useMemo(() => new Set(entries.filter((e) => !droppedOutIds.has(e.team_id)).map((e) => e.team_id)), [entries, droppedOutIds])
   const agRuleMap     = useMemo(() => Object.fromEntries(ageGroupRules.map((r) => [r.id, r])), [ageGroupRules])
   const agLabelMap    = useMemo(() => Object.fromEntries(ageGroupRules.map((r) => [r.id, ageGroupLabel(r)])), [ageGroupRules])
 
@@ -170,6 +175,19 @@ export default function OpenCombinadosTab({ competitionId, sessions, sessionOrde
 
   async function saveConfig() {
     await supabase.from('open_combinados_bracket_config').upsert({ competition_id: competitionId, ...cfg })
+  }
+
+  async function toggleDropout(teamId: string) {
+    const entry = entryByTeam[teamId]
+    if (!entry) return
+    const nowDropped = !droppedOutIds.has(teamId)
+    setDroppedOutIds(prev => {
+      const next = new Set(prev)
+      if (nowDropped) next.add(teamId)
+      else next.delete(teamId)
+      return next
+    })
+    await supabase.from('competition_entries').update({ dropped_out: nowDropped }).eq('id', entry.id)
   }
 
   async function saveChoice(phase: 'open_quarter' | 'open_semi' | 'open_final', teamId: string, routine: 'Balance' | 'Dynamic' | 'Combined') {
@@ -238,6 +256,7 @@ export default function OpenCombinadosTab({ competitionId, sessions, sessionOrde
       }
 
       if (result.error) setAdvError(result.error)
+      else await onReloadSessionOrders?.()
     } finally {
       setAdvancing(null)
     }
@@ -372,6 +391,7 @@ export default function OpenCombinadosTab({ competitionId, sessions, sessionOrde
                       <th className="px-2 py-1.5 text-right">B</th>
                       <th className="px-2 py-1.5 text-right">D</th>
                       <th className="px-2 py-1.5 text-right font-bold">Total</th>
+                      <th className="px-2 py-1.5 w-8"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -379,22 +399,38 @@ export default function OpenCombinadosTab({ competitionId, sessions, sessionOrde
                       const team = teamById[r.teamId]
                       const bd = openBreakdown[r.teamId]
                       const advances = idx < openQualCutoff
+                      const isDropped = droppedOutIds.has(r.teamId)
                       return (
                         <Fragment key={r.teamId}>
                           {idx === openQualCutoff && (
                             <tr>
-                              <td colSpan={6} className="bg-red-50 border-y border-dashed border-red-300 text-center text-red-400 text-[10px] py-0.5">
+                              <td colSpan={7} className="bg-red-50 border-y border-dashed border-red-300 text-center text-red-400 text-[10px] py-0.5">
                                 ── no avanza ({acta.openQualification.length - openQualCutoff} equipo{acta.openQualification.length - openQualCutoff !== 1 ? 's' : ''}) ──
                               </td>
                             </tr>
                           )}
-                          <tr className={advances ? 'bg-blue-50/40' : 'opacity-40'}>
+                          <tr className={isDropped ? 'bg-red-50 opacity-60' : advances ? 'bg-blue-50/40' : 'opacity-60'}>
                             <td className="px-2 py-1.5 text-center font-bold text-blue-700">{r.rank}</td>
-                            <td className="px-2 py-1.5 font-medium">{team?.gymnast_display ?? r.teamId}</td>
-                            <td className="px-2 py-1.5 text-slate-500 hidden sm:table-cell">{agLabelMap[team?.age_group ?? ''] ?? '—'}</td>
-                            <td className="px-2 py-1.5 text-right tabular-nums">{bd ? bd.balance.toFixed(3) : '—'}</td>
-                            <td className="px-2 py-1.5 text-right tabular-nums">{bd ? bd.dynamic.toFixed(3) : '—'}</td>
-                            <td className="px-2 py-1.5 text-right font-bold tabular-nums">{r.score.toFixed(3)}</td>
+                            <td className="px-2 py-1.5 font-semibold text-slate-800">
+                              {team?.gymnast_display ?? r.teamId}
+                              {isDropped && <span className="ml-1.5 text-[10px] font-normal text-red-500 uppercase tracking-wide">baja</span>}
+                            </td>
+                            <td className="px-2 py-1.5 text-slate-600 hidden sm:table-cell">{agLabelMap[team?.age_group ?? ''] ?? '—'}</td>
+                            <td className="px-2 py-1.5 text-right tabular-nums text-slate-700">{bd ? bd.balance.toFixed(3) : '—'}</td>
+                            <td className="px-2 py-1.5 text-right tabular-nums text-slate-700">{bd ? bd.dynamic.toFixed(3) : '—'}</td>
+                            <td className="px-2 py-1.5 text-right font-bold tabular-nums text-slate-800">{r.score.toFixed(3)}</td>
+                            <td className="px-2 py-1.5 text-center">
+                              <button
+                                onClick={() => void toggleDropout(r.teamId)}
+                                title={isDropped ? 'Reactivar equipo' : 'Declarar baja'}
+                                className={['w-6 h-6 rounded flex items-center justify-center transition-colors', isDropped ? 'bg-red-100 text-red-600 hover:bg-red-200' : 'text-slate-300 hover:bg-red-50 hover:text-red-500'].join(' ')}
+                              >
+                                {isDropped
+                                  ? <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" /></svg>
+                                  : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                }
+                              </button>
+                            </td>
                           </tr>
                         </Fragment>
                       )
@@ -403,26 +439,49 @@ export default function OpenCombinadosTab({ competitionId, sessions, sessionOrde
                 </table>
               </div>
             )}
-            <div className="mt-3 flex items-center gap-2 flex-wrap">
-              <label className="flex items-center gap-1.5 text-xs text-slate-600">
-                Top
-                <input
-                  type="number" min={1}
-                  className="w-14 rounded border border-slate-300 px-1.5 py-1 text-sm tabular-nums"
-                  value={cfg.open_quarter_count || ''}
-                  placeholder="auto"
-                  onChange={(e) => setCfg((p) => ({ ...p, open_quarter_count: Number(e.target.value) }))}
-                />
-                equipos
-              </label>
-              <button
-                onClick={() => void runAdvance('qualification_open')}
-                disabled={advancing === 'qualification_open' || acta.openQualification.length === 0 || !advMap.open_quarter}
-                className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                title={!advMap.open_quarter ? 'Crea la sesión "OPEN Cuartos de Final" en Estructura primero' : undefined}
-              >
-                {advancing === 'qualification_open' ? 'Generando…' : advMap.open_quarter ? '↺ Regenerar Cuartos OPEN' : '→ Generar Cuartos OPEN'}
-              </button>
+            {/* Advance card — OPEN Quarter Finals */}
+            <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <p className="text-xs font-bold text-blue-800">Cuartos de Final OPEN</p>
+                  <p className="text-xs text-blue-600">
+                    Top{' '}
+                    <input
+                      type="number" min={1}
+                      className="w-10 rounded border border-blue-300 bg-white px-1 py-0.5 text-xs tabular-nums text-blue-800 font-semibold mx-0.5"
+                      value={cfg.open_quarter_count || ''}
+                      placeholder="½"
+                      onChange={(e) => setCfg((p) => ({ ...p, open_quarter_count: Number(e.target.value) }))}
+                    />{' '}
+                    de {acta.openQualification.length} equipos clasificados
+                  </p>
+                </div>
+                {!advMap.open_quarter ? (
+                  <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">
+                    Crea primero la sesión <strong>OPEN Cuartos</strong> en la pestaña Estructura
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => void runAdvance('qualification_open')}
+                    disabled={advancing === 'qualification_open' || acta.openQualification.length === 0}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm"
+                  >
+                    {advancing === 'qualification_open'
+                      ? 'Generando…'
+                      : <><span>↗</span> Asignar a Cuartos OPEN</>}
+                  </button>
+                )}
+              </div>
+              {acta.openQualification.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {acta.openQualification.slice(0, openQualCutoff).map((r) => (
+                    <span key={r.teamId} className="inline-flex items-center gap-1 text-xs bg-white border border-blue-200 rounded-full px-2 py-0.5 text-blue-900 font-medium">
+                      <span className="text-blue-400 font-mono text-[10px]">{r.rank}</span>
+                      {teamById[r.teamId]?.gymnast_display ?? r.teamId}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -445,26 +504,43 @@ export default function OpenCombinadosTab({ competitionId, sessions, sessionOrde
                       <th className="px-2 py-1.5 text-left">Equipo</th>
                       <th className="px-2 py-1.5 text-left hidden sm:table-cell">Categoría</th>
                       <th className="px-2 py-1.5 text-right font-bold">Puntos</th>
+                      <th className="px-2 py-1.5 w-8"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {acta.combinadosQualification.map((r, idx) => {
                       const team = teamById[r.teamId]
                       const advances = idx < combSemiCutoff
+                      const isDropped = droppedOutIds.has(r.teamId)
                       return (
                         <Fragment key={r.teamId}>
                           {idx === combSemiCutoff && (
                             <tr>
-                              <td colSpan={4} className="bg-red-50 border-y border-dashed border-red-300 text-center text-red-400 text-[10px] py-0.5">
+                              <td colSpan={5} className="bg-red-50 border-y border-dashed border-red-300 text-center text-red-400 text-[10px] py-0.5">
                                 ── no avanza ({acta.combinadosQualification.length - combSemiCutoff} equipo{acta.combinadosQualification.length - combSemiCutoff !== 1 ? 's' : ''}) ──
                               </td>
                             </tr>
                           )}
-                          <tr className={advances ? 'bg-violet-50/40' : 'opacity-40'}>
+                          <tr className={isDropped ? 'bg-red-50 opacity-60' : advances ? 'bg-violet-50/40' : 'opacity-60'}>
                             <td className="px-2 py-1.5 text-center font-bold text-violet-700">{r.rank}</td>
-                            <td className="px-2 py-1.5 font-medium">{team?.gymnast_display ?? r.teamId}</td>
-                            <td className="px-2 py-1.5 text-slate-500 hidden sm:table-cell">{agLabelMap[team?.age_group ?? ''] ?? '—'}</td>
-                            <td className="px-2 py-1.5 text-right font-bold tabular-nums">{r.score.toFixed(3)}</td>
+                            <td className="px-2 py-1.5 font-semibold text-slate-800">
+                              {team?.gymnast_display ?? r.teamId}
+                              {isDropped && <span className="ml-1.5 text-[10px] font-normal text-red-500 uppercase tracking-wide">baja</span>}
+                            </td>
+                            <td className="px-2 py-1.5 text-slate-600 hidden sm:table-cell">{agLabelMap[team?.age_group ?? ''] ?? '—'}</td>
+                            <td className="px-2 py-1.5 text-right font-bold tabular-nums text-slate-800">{r.score.toFixed(3)}</td>
+                            <td className="px-2 py-1.5 text-center">
+                              <button
+                                onClick={() => void toggleDropout(r.teamId)}
+                                title={isDropped ? 'Reactivar equipo' : 'Declarar baja'}
+                                className={['w-6 h-6 rounded flex items-center justify-center transition-colors', isDropped ? 'bg-red-100 text-red-600 hover:bg-red-200' : 'text-slate-300 hover:bg-red-50 hover:text-red-500'].join(' ')}
+                              >
+                                {isDropped
+                                  ? <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" /></svg>
+                                  : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                }
+                              </button>
+                            </td>
                           </tr>
                         </Fragment>
                       )
@@ -473,26 +549,49 @@ export default function OpenCombinadosTab({ competitionId, sessions, sessionOrde
                 </table>
               </div>
             )}
-            <div className="mt-3 flex items-center gap-2 flex-wrap">
-              <label className="flex items-center gap-1.5 text-xs text-slate-600">
-                Top
-                <input
-                  type="number" min={1}
-                  className="w-14 rounded border border-slate-300 px-1.5 py-1 text-sm tabular-nums"
-                  value={cfg.combinados_semi_count || ''}
-                  placeholder="auto"
-                  onChange={(e) => setCfg((p) => ({ ...p, combinados_semi_count: Number(e.target.value) }))}
-                />
-                equipos
-              </label>
-              <button
-                onClick={() => void runAdvance('qualification_combinados')}
-                disabled={advancing === 'qualification_combinados' || acta.combinadosQualification.length === 0 || !advMap.combinados_semi}
-                className="px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 disabled:opacity-50 transition-colors"
-                title={!advMap.combinados_semi ? 'Crea la sesión "COMBINADOS Semifinal" en Estructura primero' : undefined}
-              >
-                {advancing === 'qualification_combinados' ? 'Generando…' : advMap.combinados_semi ? '↺ Regenerar Semis COMBINADOS' : '→ Generar Semis COMBINADOS'}
-              </button>
+            {/* Advance card — COMBINADOS Semi-Finals */}
+            <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50 p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <p className="text-xs font-bold text-violet-800">Semifinal COMBINADOS</p>
+                  <p className="text-xs text-violet-600">
+                    Top{' '}
+                    <input
+                      type="number" min={1}
+                      className="w-10 rounded border border-violet-300 bg-white px-1 py-0.5 text-xs tabular-nums text-violet-800 font-semibold mx-0.5"
+                      value={cfg.combinados_semi_count || ''}
+                      placeholder="½"
+                      onChange={(e) => setCfg((p) => ({ ...p, combinados_semi_count: Number(e.target.value) }))}
+                    />{' '}
+                    de {acta.combinadosQualification.length} equipos clasificados
+                  </p>
+                </div>
+                {!advMap.combinados_semi ? (
+                  <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">
+                    Crea primero la sesión <strong>COMBINADOS Semis</strong> en la pestaña Estructura
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => void runAdvance('qualification_combinados')}
+                    disabled={advancing === 'qualification_combinados' || acta.combinadosQualification.length === 0}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-bold hover:bg-violet-700 disabled:opacity-50 transition-colors shadow-sm"
+                  >
+                    {advancing === 'qualification_combinados'
+                      ? 'Generando…'
+                      : <><span>↗</span> Asignar a Semis COMBINADOS</>}
+                  </button>
+                )}
+              </div>
+              {acta.combinadosQualification.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {acta.combinadosQualification.slice(0, combSemiCutoff).map((r) => (
+                    <span key={r.teamId} className="inline-flex items-center gap-1 text-xs bg-white border border-violet-200 rounded-full px-2 py-0.5 text-violet-900 font-medium">
+                      <span className="text-violet-400 font-mono text-[10px]">{r.rank}</span>
+                      {teamById[r.teamId]?.gymnast_display ?? r.teamId}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -540,7 +639,7 @@ export default function OpenCombinadosTab({ competitionId, sessions, sessionOrde
                           <td className="px-3 py-2 text-slate-500 hidden sm:table-cell">{agLabelMap[team?.age_group ?? ''] ?? '—'}</td>
                           <td className="px-3 py-2 text-right">
                             <select
-                              className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs"
+                              className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs text-slate-800 font-medium"
                               value={choices[teamId] ?? ''}
                               onChange={async (e) => {
                                 const r = e.target.value as 'Balance' | 'Dynamic' | 'Combined'

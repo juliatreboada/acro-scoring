@@ -150,7 +150,8 @@ export async function advancePhaseSessionOrders(
     forbidRoutineFromPhase?: Record<string, 'Balance' | 'Dynamic' | 'Combined'> // validation only
   },
 ): Promise<{ error: string | null; assignedTeams: string[] }> {
-  const qualified = params.sourceRanking.slice(0, Math.max(0, params.count))
+  // Top N qualified, then reversed so rank 1 performs last (standard gymnastics order)
+  const qualified = params.sourceRanking.slice(0, Math.max(0, params.count)).reverse()
   const targetSessionId = getSessionForPhase(params.phaseMappings, params.targetPhaseKey)
   if (!targetSessionId) return { error: 'Missing target phase session mapping', assignedTeams: [] }
 

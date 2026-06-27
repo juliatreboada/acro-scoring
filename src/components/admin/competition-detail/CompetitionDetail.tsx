@@ -832,6 +832,8 @@ export type CompetitionDetailProps = {
   onStartSession: (sessionId: string) => void
   onFinishSession: (sessionId: string) => void
   onRevertSession: (sessionId: string) => void
+  // bracket
+  onReloadSessionOrders?: () => Promise<void>
   // licencias
   competitionGymnasts: Gymnast[]
   competitionCoaches: Coach[]
@@ -851,6 +853,7 @@ export default function CompetitionDetail({
   onSetDJReviewDeadline, onStartSession, onFinishSession, onRevertSession,
   competitionGymnasts, competitionCoaches, globalCoaches,
   onUpdateTshirtConfig, onToggleMealsEnabled, onToggleMealsLocked, onToggleShowOfficialTrainings, onUpdateAccreditationConfig,
+  onReloadSessionOrders,
 }: CompetitionDetailProps) {
   const t = useT('CompetitionDetail', lang)
   const [activeTab, setActiveTab] = useState<Tab>('structure')
@@ -1177,6 +1180,7 @@ export default function CompetitionDetail({
           ageGroupRules={ageGroupRules}
           panels={panels}
           sections={sections}
+          onReloadSessionOrders={onReloadSessionOrders}
         />
       )}
       {activeTab === 'tshirt' && (

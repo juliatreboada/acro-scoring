@@ -33,6 +33,7 @@ export default function Page() {
     handleUpdateCompetition, handleUpdateFees, handleUploadPoster, handleUploadLogo, handleSetDJReviewDeadline,
     handleStartSession, handleFinishSession, handleRevertSession,
     handleAssignSessionMergeGroup, handleCreateRankingMergeGroup,
+    reloadSessionOrders,
     handleUpdateTshirtConfig, handleToggleMealsEnabled, handleToggleMealsLocked, handleToggleShowOfficialTrainings, handleUpdateAccreditationConfig,
     clearActionError,
   } = useCompetitionPage(slug)
@@ -216,6 +217,7 @@ export default function Page() {
         onToggleMealsLocked={handleToggleMealsLocked}
         onToggleShowOfficialTrainings={handleToggleShowOfficialTrainings}
         onUpdateAccreditationConfig={handleUpdateAccreditationConfig}
+        onReloadSessionOrders={reloadSessionOrders}
       />
     </div>
   )

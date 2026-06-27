@@ -77,7 +77,7 @@ export function useCompetitionPage(slug: string) {
         type TeamRow = { id: string; club_id: string; category: string; age_group: string; gymnast_display: string; photo_url: string | null; gymnast_ids: string[] | null }
         const entryTeamIds  = (entriesRes.data ?? []).map(e => e.team_id)
         const rawSessions   = sessionsRes.data ?? []
-        const locked        = rawSessions.filter(s => s.order_locked).map(s => s.id)
+        const locked        = rawSessions.filter(s => s.order_locked || s.bracket_phase).map(s => s.id)
         const adminProfiles = adminsRes.data ?? []
         const rawJudges     = judgesRes.data ?? []
         const judgeIds      = rawJudges.map(j => j.id)
@@ -613,6 +613,16 @@ export function useCompetitionPage(slug: string) {
     return row.id
   }
 
+  async function reloadSessionOrders() {
+    const ids = [...new Set([
+      ...lockedSessions,
+      ...sessions.filter(s => s.bracket_phase).map(s => s.id),
+    ])]
+    if (!ids.length) return
+    const { data } = await supabase.from('session_orders').select('session_id,team_id,position').in('session_id', ids)
+    if (data) setSessionOrders(data as SessionOrder[])
+  }
+
   return {
     // state
     loading, competition, panels, sections, sessions,
@@ -634,6 +644,7 @@ export function useCompetitionPage(slug: string) {
     handleUpdateCompetition, handleUpdateFees, handleUploadPoster, handleUploadLogo, handleSetDJReviewDeadline, handleUpdateTshirtConfig, handleToggleMealsEnabled, handleToggleMealsLocked, handleToggleShowOfficialTrainings, handleUpdateAccreditationConfig,
     handleStartSession, handleFinishSession, handleRevertSession,
     handleAssignSessionMergeGroup, handleCreateRankingMergeGroup,
+    reloadSessionOrders,
     clearActionError: () => setActionError(null),
   }
 }
