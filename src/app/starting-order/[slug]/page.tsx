@@ -45,7 +45,7 @@ export default function Page() {
       const [panelsRes, sectionsRes, sessionsRes, entriesRes, rulesRes, tvStateRes] = await Promise.all([
         supabase.from('panels').select('id, competition_id, panel_number').eq('competition_id', id).order('panel_number'),
         supabase.from('sections').select('id, competition_id, section_number, label, starting_time, waiting_time_seconds, warmup_duration_minutes, timeline_order').eq('competition_id', id).order('section_number'),
-        supabase.from('sessions').select('id, competition_id, panel_id, section_id, name, age_group, category, routine_type, status, order_index, order_locked').eq('competition_id', id).order('order_index'),
+        supabase.from('sessions').select('id, competition_id, panel_id, section_id, name, age_group, category, routine_type, status, order_index, order_locked, bracket_phase').eq('competition_id', id).order('order_index'),
         supabase.from('competition_entries').select('id, competition_id, team_id, dorsal, dropped_out, gymnast_display, gymnast_ids').eq('competition_id', id),
         supabase.from('age_group_rules').select('id, age_group, level, ruleset, min_age, max_age, routine_count, sport_type').order('sort_order'),
         supabase.from('tv_state').select('session_id, team_id').eq('competition_id', id).maybeSingle(),
@@ -56,7 +56,7 @@ export default function Page() {
       const rawEntries  = entriesRes.data  ?? []
       const entryDisplayMap = Object.fromEntries(rawEntries.map(e => [e.team_id, (e as any).gymnast_display as string | null]))
 
-      const locked    = rawSessions.filter((s) => s.order_locked).map((s) => s.id)
+      const locked    = rawSessions.filter((s) => s.order_locked || (s as any).bracket_phase).map((s) => s.id)
       const teamIds   = rawEntries.map((e) => e.team_id)
       const allSessionIds = rawSessions.map((s) => s.id)
       sessionIdsRef.current = allSessionIds
