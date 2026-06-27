@@ -1452,7 +1452,7 @@ export const StartingOrderView = {
     notPublished: 'No publicado aún',
     notPublishedSub: 'El orden de salida para esta sesión aún no ha sido publicado.',
     dropout: 'Baja',
-    noSessions: 'No hay sesiones en esta jornada.',
+    noSessions: 'Próximamente...',
     panel: 'Panel',
     section: 'Jornada',
     location: 'Sede',
