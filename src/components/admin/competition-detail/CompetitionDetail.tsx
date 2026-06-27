@@ -1143,6 +1143,8 @@ export default function CompetitionDetail({
           globalTeams={globalTeams}
           clubs={clubs}
           entries={entries}
+          ageGroupRules={ageGroupRules}
+          openCombinadosEnabled={openCombinadosEnabled}
           onStartSession={onStartSession}
           onFinishSession={onFinishSession}
           onRevertSession={onRevertSession}

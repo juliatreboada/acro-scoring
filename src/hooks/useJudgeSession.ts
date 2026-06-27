@@ -132,7 +132,7 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
       const [{ data: allSessions }, { data: sectionRows }] = await Promise.all([
         supabase
           .from('sessions')
-          .select('id, name, status, section_id, panel_id, competition_id, current_team_id, age_group, category, routine_type, dj_method, ej_method, order_index, ranking_merge_group_id')
+          .select('id, name, status, section_id, panel_id, competition_id, current_team_id, age_group, category, routine_type, dj_method, ej_method, order_index, ranking_merge_group_id, bracket_phase')
           .in('section_id', sectionIds)
           .in('panel_id', panelIds),
         supabase
@@ -184,7 +184,7 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
         supabase.from('session_orders').select('position, team_id').eq('session_id', session.id).order('position'),
         supabase.from('scores').select('*').eq('session_id', session.id),
         supabase.from('routine_results').select('*').eq('session_id', session.id),
-        supabase.from('age_group_rules').select('id, age_group, level, ruleset, sport_type'),
+        supabase.from('age_group_rules').select('id, age_group, level, ruleset, sport_type, routine_count'),
       ])
 
       const agLabels: Record<string, string> = Object.fromEntries(
@@ -474,6 +474,86 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
         }
       }
 
+      // ── OPEN/COMBINADOS peer ranking (qualification sessions only) ─────────────
+      // If this is a qualification session in an OPEN/COMBINADOS competition, load
+      // all other sessions in the same group so the CJP sees the full ranking.
+      if (!mergeId && !(session as any).bracket_phase && sport === 'acro') {
+        const sessionRoutineCount =
+          ((rulesRes.data ?? []) as unknown as { id: string; routine_count: number }[])
+            .find(r => r.id === session.age_group)?.routine_count ?? 0
+
+        const { data: bracketCfg } = await supabase
+          .from('open_combinados_bracket_config')
+          .select('competition_id')
+          .eq('competition_id', session.competition_id)
+          .maybeSingle()
+
+        if (bracketCfg) {
+          const { data: allCompSessions } = await supabase
+            .from('sessions')
+            .select('id, age_group, bracket_phase')
+            .eq('competition_id', session.competition_id)
+
+          const agRuleCountById = Object.fromEntries(
+            ((rulesRes.data ?? []) as unknown as { id: string; routine_count: number }[]).map(r => [r.id, r.routine_count])
+          )
+          const isOpenGroup = sessionRoutineCount >= 2
+          const qualPeerIds = (allCompSessions ?? [])
+            .filter(s => !s.bracket_phase)
+            .filter(s => {
+              const rc = agRuleCountById[(s as any).age_group] ?? 0
+              return isOpenGroup ? rc >= 2 : rc === 1
+            })
+            .map(s => s.id)
+
+          if (qualPeerIds.length > 1) {
+            rankingPeerIdsRef.current = qualPeerIds
+            const otherPeerIds = qualPeerIds.filter(sid => sid !== session.id)
+
+            const { data: peerRoutineResults } = await supabase
+              .from('routine_results').select('*').in('session_id', otherPeerIds)
+            for (const r of peerRoutineResults ?? []) {
+              const perfId = `${r.session_id}_${r.team_id}`
+              mergedResults[perfId] = {
+                performanceId: perfId,
+                eScore: r.e_score ?? 0, aScore: r.a_score ?? 0,
+                difScore: r.dif_score ?? 0, difPenalty: r.dif_penalty ?? 0,
+                cjpPenalty: r.cjp_penalty ?? 0, finalScore: r.final_score ?? 0,
+                status: r.status as 'provisional' | 'approved',
+              }
+            }
+
+            const { data: peerOrdersAll } = await supabase
+              .from('session_orders').select('session_id, team_id, position').in('session_id', otherPeerIds)
+            const { data: peerSessionRows } = await supabase
+              .from('sessions').select('id, age_group, category, routine_type').in('id', otherPeerIds)
+
+            const peerMeta = Object.fromEntries((peerSessionRows ?? []).map(s => [s.id, s]))
+            const peerTeamIds = [...new Set((peerOrdersAll ?? []).map(o => o.team_id))]
+            const { data: peerTeamsData } = peerTeamIds.length > 0
+              ? await supabase.from('teams').select('id, gymnast_display, age_group, category').in('id', peerTeamIds)
+              : { data: [] as { id: string; gymnast_display: string; age_group: string; category: string }[] }
+            const peerTeamMap = Object.fromEntries((peerTeamsData ?? []).map(t => [t.id, t]))
+
+            const extraPerfs: ScoringPerformance[] = []
+            for (const o of peerOrdersAll ?? []) {
+              const sm = peerMeta[o.session_id]
+              if (!sm) continue
+              const tm = peerTeamMap[o.team_id]
+              extraPerfs.push({
+                id: `${o.session_id}_${o.team_id}`,
+                teamId: o.team_id, position: o.position,
+                gymnasts: tm?.gymnast_display ?? '',
+                ageGroup: agLabels[tm?.age_group ?? sm.age_group] ?? sm.age_group,
+                category: tm?.category ?? sm.category,
+                routineType: sm.routine_type, skipped: false, tsUrl: null, elements: [],
+              })
+            }
+            rankingPerformancesForCjp = [...rankingPerformancesForCjp, ...extraPerfs]
+          }
+        }
+      }
+
       const currentPerfIdVal = session.current_team_id
         ? `${session.id}_${session.current_team_id}`
         : null
@@ -719,6 +799,16 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
         event: '*', schema: 'public', table: 'scores',
         filter: `session_id=eq.${sessionId}`,
       }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          const old = payload.old as { session_id: string; team_id: string; section_panel_judge_id: string }
+          if (!old.session_id) return
+          const perfId = `${old.session_id}_${old.team_id}`
+          setJudgeScores(prev => ({
+            ...prev,
+            [perfId]: (prev[perfId] ?? []).filter(s => s.panelJudgeId !== old.section_panel_judge_id),
+          }))
+          return
+        }
         const row = payload.new as {
           session_id: string; team_id: string; section_panel_judge_id: string
           ej_score: number | null; aj_score: number | null
@@ -754,6 +844,13 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
             event: '*', schema: 'public', table: 'routine_results',
             filter: `session_id=eq.${sid}`,
           }, (payload) => {
+            if (payload.eventType === 'DELETE') {
+              const old = payload.old as { session_id: string; team_id: string }
+              if (!old.session_id) return
+              const perfId = `${old.session_id}_${old.team_id}`
+              setResults(prev => { const next = { ...prev }; delete next[perfId]; return next })
+              return
+            }
             const row = payload.new as {
               session_id: string; team_id: string
               e_score: number | null; a_score: number | null
@@ -790,6 +887,13 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
           event: '*', schema: 'public', table: 'routine_results',
           filter: `session_id=eq.${sessionId}`,
         }, (payload) => {
+          if (payload.eventType === 'DELETE') {
+            const old = payload.old as { session_id: string; team_id: string }
+            if (!old.session_id) return
+            const perfId = `${old.session_id}_${old.team_id}`
+            setResults(prev => { const next = { ...prev }; delete next[perfId]; return next })
+            return
+          }
           const row = payload.new as {
             session_id: string; team_id: string
             e_score: number | null; a_score: number | null
@@ -872,6 +976,7 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
     } else {
       await supabase.from('scores').delete()
         .eq('session_id', sessionId).eq('team_id', teamId).eq('section_panel_judge_id', panelJudgeId)
+      await supabase.from('routine_results').delete().eq('session_id', sessionId).eq('team_id', teamId)
       setJudgeScores(prev => ({
         ...prev,
         [perfId]: (prev[perfId] ?? []).filter(s => s.panelJudgeId !== panelJudgeId),

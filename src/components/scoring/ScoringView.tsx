@@ -7,7 +7,7 @@ import type { PanelJudge, ScoringPerformance, JudgeScore, RoutineResult, Penalty
 import { calcCjpPenalty, DEFAULT_PENALTY } from './types'
 import CJPTabletShell, { ScoreGrid } from './CJPTabletShell'
 import { PenaltyPanel } from '../shared/CJPPenaltyPanel'
-import { calcDJTotals, srPenaltyForAgeGroup, DualKeypad as DJDualKeypad, PhoneDJElementsList } from './DJElementsShared'
+import { calcDJTotals, srPenaltyForAgeGroup, DualKeypad as DJDualKeypad, PhoneDJElementsList, DJElementRow } from './DJElementsShared'
 import { calcEJScore, DJEJTabContent, DJTabContent, EJKeypad, EJElementRow, CombinedElementRow } from './DJEJElementsShared'
 import AJScoringPanel from './AJScoringPanel'
 import { ScoringPerformanceHeader } from '../shared/ScoringPerformanceHeader'
@@ -294,6 +294,7 @@ type CJPTabletTab = 'cjp' | 'dj' | 'ej' | 'aj' | 'djej'
 
 function CJPTabletRightPanel({
   lang, activePerfId, hasDJ, hasEJ, hasAJ,
+  djMode, ejMode,
   penaltyState, onPenaltyChange,
   elements, extraElements, flags, deductions, incorrectTs,
   onFlagChange, onLock, onOpenRetry, onAddElement, onLabelChange, onTypeChange, onToggleIncorrectTs,
@@ -303,6 +304,7 @@ function CJPTabletRightPanel({
 }: {
   lang: Lang; activePerfId: string | null
   hasDJ: boolean; hasEJ: boolean; hasAJ: boolean
+  djMode: 'elements' | 'keyboard'; ejMode: 'elements' | 'keyboard'
   penaltyState: PenaltyState; onPenaltyChange: (p: PenaltyState) => void
   elements: TsElement[]; extraElements: TsElement[]
   flags: ElementFlags; deductions: Deductions; incorrectTs: boolean
@@ -320,7 +322,7 @@ function CJPTabletRightPanel({
   onAJSubmit?: (perfId: string, score: number) => void
 }) {
   const t = useT('ScoringView', lang)
-  const combineDJEJ = hasDJ && hasEJ
+  const combineDJEJ = hasDJ && hasEJ && djMode === 'elements' && ejMode === 'elements'
 
   const tabs: CJPTabletTab[] = ['cjp', ...(combineDJEJ ? ['djej' as CJPTabletTab] : [
     ...(hasDJ ? ['dj' as CJPTabletTab] : []),
@@ -401,7 +403,21 @@ function CJPTabletRightPanel({
         )}
 
         {activeTab === 'dj' && (
-          !activePerfId ? noPerf : (
+          !activePerfId ? noPerf : isDJSubmitted ? (
+            <div className="flex flex-col items-center gap-3 py-10 px-4">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                <svg className="w-6 h-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p className="text-2xl font-bold text-emerald-600 tabular-nums">D {djDiff.toFixed(2)}</p>
+            </div>
+          ) : djMode === 'keyboard' ? (
+            <DJDualKeypad lang={lang} onSubmit={(d, p) => {
+              setDjSubmitted((prev) => ({ ...prev, [activePerfId]: true }))
+              onDJSubmit?.(activePerfId, d, p, { djFlags: flags, djExtraElements: extraElements, djIncorrectTs: incorrectTs })
+            }} />
+          ) : (
             <DJTabContent
               lang={lang} elements={elements} extraElements={extraElements}
               flags={flags} incorrectTs={incorrectTs}
@@ -429,6 +445,11 @@ function CJPTabletRightPanel({
               <p className="text-xs text-slate-400 mb-1">{t.ejScore}</p>
               <p className="text-2xl font-bold text-sky-600 tabular-nums">{ejScore.toFixed(1)}</p>
             </div>
+          ) : ejMode === 'keyboard' ? (
+            <EJKeypad lang={lang} onSubmit={(score) => {
+              setEjSubmitted((p) => ({ ...p, [activePerfId]: true }))
+              onEJSubmit?.(activePerfId, score)
+            }} />
           ) : (
             <div className="p-3 space-y-2">
               {[...elements, ...extraElements].map((el) => (
@@ -549,6 +570,7 @@ function CJPLayout({
               <CJPTabletRightPanel
                 lang={lang} activePerfId={activePerfId}
                 hasDJ={hasDJ} hasEJ={hasEJ} hasAJ={hasAJ}
+                djMode={djMode} ejMode={ejMode}
                 penaltyState={penaltyState}
                 ageGroup={activePerf?.ageGroup ?? ''}
                 missingIndividualSR={activePerf?.missingIndividualSR ?? false}
@@ -609,7 +631,9 @@ function NonCJPMultiView({
   const hasDJ = roles.includes('DJ')
   const hasEJ = roles.includes('EJ')
   const hasAJ = roles.includes('AJ')
-  const combineDJEJ = hasDJ && hasEJ
+  // Only combine DJ+EJ into a single tab when both are in elements mode.
+  // If either is keyboard mode, keep them as separate tabs so keyboard renders correctly.
+  const combineDJEJ = hasDJ && hasEJ && djMode === 'elements' && ejMode === 'elements'
 
   const [djSubmitted, setDjSubmitted] = useState<{ difficulty: number; penalty: number } | null>(null)
   const [ejSubmitted, setEjSubmitted] = useState<number | null>(null)
@@ -724,33 +748,6 @@ function NonCJPMultiView({
   const allElemsInOrder = [...elements, ...extraElements]
   const noElementsNote = t.submitted
 
-  const djEJCombinedContent = (
-    djSubmitted !== null && ejSubmitted !== null ? (
-      <SubmittedDJCard dj={djSubmitted} lang={lang} />
-    ) : (
-      <div className="px-4 space-y-2 pb-4">
-        <div className="flex items-start gap-3 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300 mb-2">
-          <button onClick={toggleIncorrectTs} className="flex items-start gap-3 w-full text-left">
-            <div className={['w-4 h-4 rounded border mt-0.5 shrink-0 flex items-center justify-center', incorrectTs ? 'bg-red-500 border-red-500' : 'border-slate-300'].join(' ')}>
-              {incorrectTs && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-            </div>
-            <span className={['text-sm font-medium', incorrectTs ? 'text-red-700' : 'text-slate-600'].join(' ')}>TS incorrecta <span className="font-normal text-xs ml-1">−0.3</span></span>
-          </button>
-        </div>
-        {allElemsInOrder.map((el) => (
-          <CombinedElementRow key={el.id} element={el} flags={flags} deductions={deductions} lang={lang}
-            onFlagChange={handleFlagChange} onLock={handleLock} onOpenRetry={handleOpenRetry}
-            isExtra={el.id.startsWith('extra-')} onLabelChange={handleLabelChange} onTypeChange={handleTypeChange as never} />
-        ))}
-        <button onClick={handleAddElement} className="w-full py-2.5 rounded-xl text-sm text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 hover:border-slate-300 transition-all">
-          + {lang === 'es' ? 'Añadir elemento no listado' : 'Add unlisted element'}
-        </button>
-        <button onClick={handleDJEJSubmit} className="w-full py-4 rounded-2xl font-bold text-lg bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white transition-all">
-          {t.submit} · D {djDiff.toFixed(2)} −{djPen.toFixed(1)} E {ejScoreVal.toFixed(1)}
-        </button>
-      </div>
-    )
-  )
 
   const pdfPanel = currentPerf.tsUrl ? (
     <iframe src={currentPerf.tsUrl} className="flex-1 rounded-2xl border border-slate-200 bg-white min-h-0" title="TS" />
@@ -764,7 +761,33 @@ function NonCJPMultiView({
   )
 
   function renderTabContent(tabId: string, forTablet = false) {
-    if (tabId === 'djej') return combineDJEJ ? djEJCombinedContent : null
+    if (tabId === 'djej') {
+      if (!combineDJEJ) return null
+      if (djSubmitted !== null && ejSubmitted !== null) return <SubmittedDJCard dj={djSubmitted} lang={lang} />
+      return (
+        <div className={forTablet ? 'flex-1 overflow-y-auto space-y-2 px-4 pb-4 min-h-0' : 'px-4 space-y-2 pb-4'}>
+          <div className="flex items-start gap-3 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-slate-300">
+            <button onClick={toggleIncorrectTs} className="flex items-start gap-3 w-full text-left">
+              <div className={['w-4 h-4 rounded border mt-0.5 shrink-0 flex items-center justify-center', incorrectTs ? 'bg-red-500 border-red-500' : 'border-slate-300'].join(' ')}>
+                {incorrectTs && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+              </div>
+              <span className={['text-sm font-medium', incorrectTs ? 'text-red-700' : 'text-slate-600'].join(' ')}>TS incorrecta <span className="font-normal text-xs ml-1">−0.3</span></span>
+            </button>
+          </div>
+          {allElemsInOrder.map((el) => (
+            <CombinedElementRow key={el.id} element={el} flags={flags} deductions={deductions} lang={lang}
+              onFlagChange={handleFlagChange} onLock={handleLock} onOpenRetry={handleOpenRetry}
+              isExtra={el.id.startsWith('extra-')} onLabelChange={handleLabelChange} onTypeChange={handleTypeChange as never} />
+          ))}
+          <button onClick={handleAddElement} className="w-full py-2.5 rounded-xl text-sm text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 hover:border-slate-300 transition-all">
+            + {lang === 'es' ? 'Añadir elemento no listado' : 'Add unlisted element'}
+          </button>
+          <button onClick={handleDJEJSubmit} className="w-full py-4 rounded-2xl font-bold text-lg bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white transition-all">
+            {t.submit} · D {djDiff.toFixed(2)} −{djPen.toFixed(1)} E {ejScoreVal.toFixed(1)}
+          </button>
+        </div>
+      )
+    }
 
     if (tabId === 'dj') {
       if (djSubmitted) return forTablet ? (
@@ -790,8 +813,15 @@ function NonCJPMultiView({
               </button>
               <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-0">
                 {allElemsInOrder.map((el) => (
-                  <div key={el.id}>EL</div>
+                  <DJElementRow key={el.id} element={el} flags={flags} lang={lang}
+                    onChange={handleFlagChange} onOpenRetry={handleOpenRetry}
+                    isExtra={el.id.startsWith('extra-')}
+                    onLabelChange={el.id.startsWith('extra-') ? handleLabelChange : undefined}
+                    onTypeChange={el.id.startsWith('extra-') ? handleTypeChange as never : undefined} />
                 ))}
+                <button onClick={handleAddElement} className="w-full py-2.5 rounded-xl text-sm text-slate-400 hover:text-slate-600 border border-dashed border-slate-200 hover:border-slate-300 transition-all">
+                  {lang === 'es' ? '+ Añadir elemento no listado' : '+ Add unlisted element'}
+                </button>
               </div>
               <button onClick={() => handleDJSubmit(djDiff, djPen)} className="w-full py-4 rounded-2xl font-bold text-lg bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white transition-all">
                 {t.submit} · D {djDiff.toFixed(2)} −{djPen.toFixed(1)}

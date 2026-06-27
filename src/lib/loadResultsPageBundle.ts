@@ -24,6 +24,7 @@ export type ResultsPageBundle = {
   clubAvatarByTeam: Record<string, string | null>
   /** Per team: club id/name/avatar for club-level rankings (e.g. Trofeo Gondomar). */
   teamClubInfo: Record<string, TeamClubInfo>
+  teamPhotoByTeam: Record<string, string | null>
   agSortOrder: Record<string, number>
   openCombinadosActa: OpenCombinadosActaData | null
 }
@@ -41,6 +42,7 @@ export async function loadResultsPageBundle(
     results: {},
     clubAvatarByTeam: {},
     teamClubInfo: {},
+    teamPhotoByTeam: {},
     agSortOrder: {},
     openCombinadosActa: null,
   }
@@ -82,7 +84,7 @@ export async function loadResultsPageBundle(
   const agSortOrder = Object.fromEntries(agRules.map((r) => [ageGroupLabel(r as unknown as AgeGroupRule), r.sort_order ?? 0]))
 
   if (!sessions?.length) {
-    return { competition, performances: [], results: {}, clubAvatarByTeam: {}, teamClubInfo: {}, agSortOrder, openCombinadosActa: null }
+    return { competition, performances: [], results: {}, clubAvatarByTeam: {}, teamClubInfo: {}, teamPhotoByTeam: {}, agSortOrder, openCombinadosActa: null }
   }
 
   const sessionIds = sessions.map((s) => s.id)
@@ -110,7 +112,7 @@ export async function loadResultsPageBundle(
   const teamIds = [...new Set([...orders.map((o) => o.team_id), ...rawRes.map((r) => r.team_id)])]
   const { data: teams } =
     teamIds.length > 0
-      ? await supabase.from('teams').select('id, gymnast_display, club_id, age_group').in('id', teamIds)
+      ? await supabase.from('teams').select('id, gymnast_display, club_id, age_group, photo_url').in('id', teamIds)
       : { data: [] }
 
   const entryDisplayMap = Object.fromEntries(entries.map(e => [e.team_id, (e as any).gymnast_display as string | null]))
@@ -138,8 +140,10 @@ export async function loadResultsPageBundle(
   )
   const teamClubAvatars: Record<string, string | null> = {}
   const teamClubInfo: Record<string, TeamClubInfo> = {}
+  const teamPhotoByTeam: Record<string, string | null> = {}
   for (const t of teams ?? []) {
     const clubId = (t as { club_id?: string }).club_id
+    teamPhotoByTeam[t.id] = (t as { photo_url?: string | null }).photo_url ?? null
     if (clubId) {
       const meta = clubMeta[clubId]
       teamClubAvatars[t.id] = meta?.avatar ?? null
@@ -215,11 +219,13 @@ export async function loadResultsPageBundle(
     const advMappings = (mappings ?? []).filter(
       (m) => m.phase_key !== 'qualification_open' && m.phase_key !== 'qualification_combinados',
     )
+    const sessionRoutineTypeMap = Object.fromEntries(sessions.map((s) => [s.id, s.routine_type]))
     openCombinadosActa = computeOpenCombinadosActaFromRows(
       advMappings as Array<{ phase_key: any; session_id: string }>,
       (rawRes ?? []) as Array<{ session_id: string; team_id: string; final_score: number | null }>,
       openTeamIds,
       combinadosTeamIds,
+      sessionRoutineTypeMap,
     )
   }
 
@@ -229,6 +235,7 @@ export async function loadResultsPageBundle(
     results,
     clubAvatarByTeam: teamClubAvatars,
     teamClubInfo,
+    teamPhotoByTeam,
     agSortOrder,
     openCombinadosActa,
   }

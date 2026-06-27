@@ -402,7 +402,7 @@ function GroupRanking({ rows, results, t, clubAvatarByTeam, teamClubInfo }: {
                 isProvisional && !medal ? 'bg-amber-50/40' : '',
               ].join(' ')}>
                 <td className="px-3 py-3"><RankCircle rank={rank + 1} /></td>
-                <td className="px-3 py-3">
+                <td className="py-3 pl-5 pr-3">
                   <div className="flex items-start gap-2 min-w-0">
                     <ClubAvatar url={clubAvatarByTeam[perf.teamId]} className="print:hidden" />
                     <div className="min-w-0">
@@ -546,7 +546,7 @@ function AllRoundRanking({ entries, t, clubAvatarByTeam, teamClubInfo }: {
                 entry.isProvisional && !medal ? 'bg-amber-50/40' : '',
               ].join(' ')}>
                 <td className="px-3 py-3"><RankCircle rank={rank + 1} /></td>
-                <td className="px-3 py-3">
+                <td className="py-3 pl-5 pr-3">
                   <div className="flex items-start gap-2 min-w-0">
                     <ClubAvatar url={clubAvatarByTeam[entry.teamId]} className="print:hidden" />
                     <div className="min-w-0">
@@ -950,6 +950,7 @@ export type ResultsViewProps = {
   clubAvatarByTeam?: Record<string, string | null>
   /** Team → club (for Trofeo Gondomar–style club rankings). */
   teamClubInfo?: Record<string, TeamClubInfo>
+  teamPhotoByTeam?: Record<string, string | null>
   agSortOrder?: Record<string, number>  // ageGroup label → sort_order
   /** Full competition document: all rulesets stacked, sections expanded, routine tabs all visible. */
   officialDocument?: boolean
@@ -965,6 +966,7 @@ export default function ResultsView({
   lang,
   clubAvatarByTeam = {},
   teamClubInfo = {},
+  teamPhotoByTeam = {},
   agSortOrder = {},
   officialDocument = false,
   showTrofeoGondomarClubRanking = false,
@@ -1002,7 +1004,7 @@ export default function ResultsView({
 
   // When activeRulesets changes (data loads), pick the first one
   useEffect(() => {
-    if (activeRulesets.length > 0 && !activeRulesets.includes(activeRuleset)) {
+    if (activeRulesets.length > 0 && !activeRulesets.includes(activeRuleset) && activeRuleset !== 'OPEN' && activeRuleset !== 'COMBINADOS') {
       setActiveRuleset(activeRulesets[0])
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1079,40 +1081,75 @@ export default function ResultsView({
     })
 
   const teamNameById = Object.fromEntries(performances.map((p) => [p.teamId, p.gymnasts]))
-  const renderOpenCombinadosTable = (title: string, rows?: Array<{ rank: number; teamId: string; score: number }>) => {
+  const renderOpenCombinadosTable = (
+    title: string,
+    rows?: Array<{ rank: number; teamId: string; score: number; balanceScore?: number; dynamicScore?: number }>,
+  ) => {
     if (!rows?.length) return null
+    const hasBreakdown = rows.some((r) => r.balanceScore !== undefined || r.dynamicScore !== undefined)
     return (
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <div className="px-4 py-2 border-b border-slate-200 font-semibold text-slate-800">{title}</div>
-        <table className="w-full max-w-full text-sm print:table-auto">
+        <table className="w-full max-w-full text-sm">
           <thead className="bg-slate-50 text-slate-500">
             <tr>
-              <th className="text-left px-4 py-2">#</th>
-              <th className="text-left px-4 py-2">{lang === 'en' ? 'Team' : 'Equipo'}</th>
-              <th className="text-right px-4 py-2">
-                <span className="print:hidden">{lang === 'en' ? 'Score' : 'Puntuación'}</span>
-              </th>
+              <th className="text-left px-3 py-2 w-14">#</th>
+              <th className="text-left px-3 py-2">{lang === 'en' ? 'Team' : 'Equipo'}</th>
+              {hasBreakdown && (
+                <>
+                  <th className="text-right px-3 py-2 print:hidden whitespace-nowrap">BAL</th>
+                  <th className="text-right px-3 py-2 print:hidden whitespace-nowrap">DIN</th>
+                </>
+              )}
+              <th className="text-right px-3 py-2">Total</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => {
               const teamLabel = teamNameById[r.teamId] ?? r.teamId
-              const clubLine = teamClubInfo[r.teamId]?.clubName?.trim()
+              const clubInfo = teamClubInfo[r.teamId]
+              const clubLine = clubInfo?.clubName?.trim()
+              const clubAvatar = clubInfo?.clubAvatar
+              const teamPhoto = teamPhotoByTeam[r.teamId]
+              const medal = r.rank <= 3 ? MEDALS[r.rank - 1] : null
               return (
-                <tr key={r.teamId} className="border-t border-slate-100">
-                  <td className="px-4 py-2">{r.rank}</td>
-                  <td className="px-4 py-2">
-                    <div className="min-w-0">
-                      <div>{teamLabel}</div>
-                      {clubLine ? (
-                        <div className="text-xs text-slate-500 mt-0.5 break-words print:hidden">{clubLine}</div>
-                      ) : null}
-                      {clubLine ? (
-                        <div className="hidden print:block text-[11px] text-slate-500 mt-1 break-words leading-relaxed">{clubLine}</div>
-                      ) : null}
+                <tr key={r.teamId} className={['border-t border-slate-100', medal ? medal.row : ''].filter(Boolean).join(' ')}>
+                  <td className="px-3 py-2.5">
+                    <RankCircle rank={r.rank} />
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {teamPhoto ? (
+                        <img src={teamPhoto} alt="" className="w-8 h-8 rounded-full object-cover shrink-0 print:hidden" />
+                      ) : (
+                        <ClubAvatar url={clubAvatar} className="print:hidden" />
+                      )}
+                      <div className="min-w-0">
+                        <div className="font-medium text-slate-800 break-words">{teamLabel}</div>
+                        {clubLine ? (
+                          <div className="text-xs text-slate-500 mt-0.5 break-words print:hidden">{clubLine}</div>
+                        ) : null}
+                        {clubLine ? (
+                          <div className="hidden print:block text-[11px] text-slate-500 mt-0.5 break-words">{clubLine}</div>
+                        ) : null}
+                      </div>
                     </div>
                   </td>
-                  <td className="px-4 py-2 text-right font-semibold tabular-nums">{r.score.toFixed(3)}</td>
+                  {hasBreakdown && (
+                    <>
+                      <td className="px-3 py-2.5 text-right tabular-nums font-mono text-slate-600 print:hidden">
+                        {r.balanceScore !== undefined ? r.balanceScore.toFixed(3) : '—'}
+                      </td>
+                      <td className="px-3 py-2.5 text-right tabular-nums font-mono text-slate-600 print:hidden">
+                        {r.dynamicScore !== undefined ? r.dynamicScore.toFixed(3) : '—'}
+                      </td>
+                    </>
+                  )}
+                  <td className="px-3 py-2.5 text-right">
+                    <span className={['font-bold tabular-nums leading-none text-lg', medal ? 'text-slate-800' : 'text-slate-800'].join(' ')}>
+                      {r.score.toFixed(3)}
+                    </span>
+                  </td>
                 </tr>
               )
             })}
@@ -1138,23 +1175,51 @@ export default function ResultsView({
 
   return (
     <div className="min-h-screen bg-slate-50 print:w-full print:max-w-none">
-      {!officialDocument && activeRulesets.length > 1 && (
+      {!officialDocument && (activeRulesets.length > 1 || openCombinadosActa) && (
         <div className="bg-white border-b border-slate-200 sticky top-[49px] z-10 print:hidden">
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-6 flex">
-            {activeRulesets.map((rs) => (
-              <button
-                key={rs}
-                onClick={() => setActiveRuleset(rs)}
-                className={[
-                  'px-5 py-3 text-sm font-semibold border-b-2 transition-all',
-                  resolvedRuleset === rs
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-slate-400 hover:text-slate-600',
-                ].join(' ')}
-              >
-                {rs}
-              </button>
-            ))}
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-6">
+            <div className="flex w-full sm:w-[70%]">
+              {activeRulesets.map((rs) => (
+                <button
+                  key={rs}
+                  onClick={() => setActiveRuleset(rs)}
+                  className={[
+                    'flex-1 py-3 text-base font-bold border-b-2 transition-all text-center',
+                    activeRuleset === rs
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-slate-400 hover:text-slate-600',
+                  ].join(' ')}
+                >
+                  {rs}
+                </button>
+              ))}
+              {openCombinadosActa?.openQualification.length ? (
+                <button
+                  onClick={() => setActiveRuleset('OPEN')}
+                  className={[
+                    'flex-1 py-3 text-base font-bold border-b-2 transition-all text-center',
+                    activeRuleset === 'OPEN'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-slate-400 hover:text-slate-600',
+                  ].join(' ')}
+                >
+                  OPEN
+                </button>
+              ) : null}
+              {openCombinadosActa?.combinadosQualification.length ? (
+                <button
+                  onClick={() => setActiveRuleset('COMBINADOS')}
+                  className={[
+                    'flex-1 py-3 text-base font-bold border-b-2 transition-all text-center',
+                    activeRuleset === 'COMBINADOS'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-slate-400 hover:text-slate-600',
+                  ].join(' ')}
+                >
+                  COMBINADOS
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
       )}
@@ -1202,27 +1267,32 @@ export default function ResultsView({
         </>
       ) : (
         <>
-          <div className="divide-y divide-slate-200">{renderSections(categoryKeys)}</div>
-          {showTrofeoGondomarClubRanking && (resolvedRuleset === 'Escolar' || resolvedRuleset === 'Base') && (
-            <ClubTrophyBlock
-              ruleset={resolvedRuleset}
-              performances={performances}
-              results={results}
-              teamClubInfo={teamClubInfo}
-              t={t}
-            />
-          )}
-          {openCombinadosActa && (
-            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 space-y-3">
-              <h2 className="text-lg font-bold text-slate-800">OPEN / COMBINADOS</h2>
-              {renderOpenCombinadosTable('OPEN Qualification', openCombinadosActa.openQualification)}
-              {renderOpenCombinadosTable('COMBINADOS Qualification', openCombinadosActa.combinadosQualification)}
-              {renderOpenCombinadosTable('OPEN Quarter', openCombinadosActa.openQuarter)}
-              {renderOpenCombinadosTable('OPEN Semi', openCombinadosActa.openSemi)}
-              {renderOpenCombinadosTable('OPEN Final', openCombinadosActa.openFinal)}
-              {renderOpenCombinadosTable('COMBINADOS Semi', openCombinadosActa.combinadosSemi)}
-              {renderOpenCombinadosTable('COMBINADOS Final', openCombinadosActa.combinadosFinal)}
+          {activeRuleset === 'OPEN' && openCombinadosActa ? (
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+              {renderOpenCombinadosTable(lang === 'es' ? 'Clasificatorias' : 'Qualification', openCombinadosActa.openQualification)}
+              {renderOpenCombinadosTable(lang === 'es' ? 'Cuartos de Final' : 'Quarter Finals', openCombinadosActa.openQuarter)}
+              {renderOpenCombinadosTable(lang === 'es' ? 'Semifinal' : 'Semi Finals', openCombinadosActa.openSemi)}
+              {renderOpenCombinadosTable(lang === 'es' ? 'Final' : 'Final', openCombinadosActa.openFinal)}
             </div>
+          ) : activeRuleset === 'COMBINADOS' && openCombinadosActa ? (
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 space-y-4">
+              {renderOpenCombinadosTable(lang === 'es' ? 'Clasificatorias' : 'Qualification', openCombinadosActa.combinadosQualification)}
+              {renderOpenCombinadosTable(lang === 'es' ? 'Semifinal' : 'Semi Finals', openCombinadosActa.combinadosSemi)}
+              {renderOpenCombinadosTable(lang === 'es' ? 'Final' : 'Final', openCombinadosActa.combinadosFinal)}
+            </div>
+          ) : (
+            <>
+              <div className="divide-y divide-slate-200">{renderSections(categoryKeys)}</div>
+              {showTrofeoGondomarClubRanking && (resolvedRuleset === 'Escolar' || resolvedRuleset === 'Base') && (
+                <ClubTrophyBlock
+                  ruleset={resolvedRuleset}
+                  performances={performances}
+                  results={results}
+                  teamClubInfo={teamClubInfo}
+                  t={t}
+                />
+              )}
+            </>
           )}
         </>
       )}

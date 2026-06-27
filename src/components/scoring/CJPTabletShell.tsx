@@ -623,12 +623,14 @@ export default function CJPTabletShell({
   const rankPerfs = rankingPerformances ?? performances
   const [reviewPerfId,    setReviewPerfId]    = useState<string | null>(null)
   const [leftOpen,        setLeftOpen]        = useState(true)
-  const [bottomTab,       setBottomTab]       = useState<'ts' | 'ranking'>('ranking')
+  const [bottomTab,       setBottomTab]       = useState<'ts' | 'ranking'>('ts')
   const [rightPanelWidth, setRightPanelWidth] = useState(320)
   const resizeStartX     = useRef(0)
   const resizeStartWidth = useRef(0)
 
   const routineLabel = (rt: string) => ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
+
+  const localPerfIds = new Set(performances.map((p) => p.id))
 
   const currentPerf = performances.find((p) => p.id === currentPerfId) ?? null
   const currentScores = currentPerfId ? (judgeScores[currentPerfId] ?? []) : []
@@ -689,14 +691,18 @@ export default function CJPTabletShell({
           </button>
         </div>
         <div className={['flex-1 overflow-y-auto', leftOpen ? '' : 'hidden'].join(' ')}>
-          {performances.map((perf) => {
+          {rankPerfs.map((perf) => {
             const result = results[perf.id]
             const isCurrent = perf.id === currentPerfId
-            const canOpen = !perf.skipped && !result && !isCurrent
-            const canSkip = !perf.skipped && !result
+            const isLocal = localPerfIds.has(perf.id)
+            const canOpen = isLocal && !perf.skipped && !result && !isCurrent
+            const canSkip = isLocal && !perf.skipped && !result
             return (
               <div key={perf.id}
-                className={['group px-3 py-2.5 border-b border-slate-100 transition-colors', isCurrent ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-slate-50'].join(' ')}>
+                className={['group px-3 py-2.5 border-b border-slate-100 transition-colors',
+                  isCurrent ? 'bg-blue-50 border-l-2 border-l-blue-500'
+                  : isLocal ? 'hover:bg-slate-50'
+                  : 'bg-slate-50/60'].join(' ')}>
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 mb-0.5">
@@ -742,6 +748,41 @@ export default function CJPTabletShell({
 
       {/* ── center: single scroll area ── */}
       <div className="flex-1 overflow-y-auto">
+
+        {/* ── sticky tab bar: TS / Ranking ── */}
+        <div className="sticky top-0 z-10 flex border-b border-slate-200 bg-white">
+          {(['ts', 'ranking'] as const).map((tab) => (
+            <button key={tab} onClick={() => setBottomTab(tab)}
+              className={['flex-1 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors',
+                bottomTab === tab
+                  ? 'border-b-2 border-blue-500 text-blue-600'
+                  : 'text-slate-400 hover:text-slate-600'].join(' ')}>
+              {tab === 'ts' ? 'TS' : t.ranking}
+            </button>
+          ))}
+        </div>
+
+        {/* ── tab content ── */}
+        {bottomTab === 'ts' && (() => {
+          const activePerf = isReviewMode ? reviewPerf : currentPerf
+          return activePerf?.tsUrl ? (
+            <iframe src={activePerf.tsUrl} className="w-full border-0" style={{ height: '65vh' }} title={t.tsPdfTitle} />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-48 gap-2 text-slate-300">
+              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <p className="text-sm">{t.pdfNote}</p>
+            </div>
+          )
+        })()}
+        {bottomTab === 'ranking' && (
+          <div className="px-4 py-3">
+            <RankingTable performances={rankPerfs} results={results} lang={lang}
+              selectedPerfId={activePerfId}
+              onSelectPerf={handleRankingRowClick} />
+          </div>
+        )}
 
         {/* ── scores section ── */}
         <div className="px-4 py-3 space-y-2">
@@ -872,40 +913,6 @@ export default function CJPTabletShell({
           )}
         </div>
 
-        {/* ── sticky tab bar: TS / Ranking ── */}
-        <div className="sticky top-0 z-10 flex border-y border-slate-200 bg-white">
-          {(['ranking', 'ts'] as const).map((tab) => (
-            <button key={tab} onClick={() => setBottomTab(tab)}
-              className={['flex-1 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors',
-                bottomTab === tab
-                  ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-slate-400 hover:text-slate-600'].join(' ')}>
-              {tab === 'ts' ? 'TS' : t.ranking}
-            </button>
-          ))}
-        </div>
-
-        {/* ── tab content ── */}
-        {bottomTab === 'ts' && (() => {
-          const activePerf = isReviewMode ? reviewPerf : currentPerf
-          return activePerf?.tsUrl ? (
-            <iframe src={activePerf.tsUrl} className="w-full border-0" style={{ height: '65vh' }} title={t.tsPdfTitle} />
-          ) : (
-            <div className="flex flex-col items-center justify-center h-48 gap-2 text-slate-300">
-              <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <p className="text-sm">{t.pdfNote}</p>
-            </div>
-          )
-        })()}
-        {bottomTab === 'ranking' && (
-          <div className="px-4 py-3">
-            <RankingTable performances={rankPerfs} results={results} lang={lang}
-              selectedPerfId={activePerfId}
-              onSelectPerf={handleRankingRowClick} />
-          </div>
-        )}
       </div>
 
       {/* ── resize handle ── */}

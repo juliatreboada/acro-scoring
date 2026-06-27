@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
-import type { Competition, Section, Panel, Session, SessionOrder, Team, Club, CompetitionEntry, ScoringMethod } from '@/components/admin/types'
+import type { Competition, Section, Panel, Session, SessionOrder, Team, Club, CompetitionEntry, ScoringMethod, AgeGroupRule } from '@/components/admin/types'
 import { resolveRoutineTypeForTeamInSession, type SessionMapRow } from '@/lib/openCombinadosBracket'
 import { useT } from '@/lib/useT'
 
@@ -362,6 +362,7 @@ function SessionCard({
 export default function CompetitionDayTab({
   lang, competition, sections, panels, sessions,
   sessionOrders, globalTeams, clubs, entries,
+  ageGroupRules, openCombinadosEnabled,
   onStartSession, onFinishSession, onRevertSession,
 }: {
   lang: Lang
@@ -373,6 +374,8 @@ export default function CompetitionDayTab({
   globalTeams: Team[]
   clubs: Club[]
   entries: CompetitionEntry[]
+  ageGroupRules: AgeGroupRule[]
+  openCombinadosEnabled: boolean
   onStartSession: (sessionId: string) => void
   onFinishSession: (sessionId: string) => void
   onRevertSession: (sessionId: string) => void
@@ -485,6 +488,19 @@ export default function CompetitionDayTab({
   const sectionSessions = sessions.filter((s) => s.section_id === activeSection)
   const multiPanel      = panels.length > 1
 
+  // OPEN/COMBINADOS grouping helpers
+  const agRuleById = Object.fromEntries(ageGroupRules.map(r => [r.id, r]))
+  function sessionGroup(s: Session): 'open' | 'combinados' | 'bracket' {
+    if (s.bracket_phase) return 'bracket'
+    const rc = (agRuleById[s.age_group ?? ''] as { routine_count?: number } | undefined)?.routine_count ?? 0
+    return rc >= 2 ? 'open' : 'combinados'
+  }
+  function groupOverallStatus(ss: Session[]): 'waiting' | 'active' | 'finished' {
+    if (ss.every(s => s.status === 'finished')) return 'finished'
+    if (ss.some(s => s.status === 'active')) return 'active'
+    return 'waiting'
+  }
+
   function getMusicPaths(session: Session): Record<string, string | null> {
     const byTeamAndRoutine = new Map<string, string | null>()
     for (const row of allMusicPaths) byTeamAndRoutine.set(`${row.team_id}:${row.routine_type}`, row.music_path)
@@ -520,21 +536,113 @@ export default function CompetitionDayTab({
 
       {!multiPanel ? (
         <div className="space-y-3">
-          {sectionSessions
-            .filter((s) => s.panel_id === panels[0].id)
-            .sort((a, b) => a.order_index - b.order_index)
-            .map((session) => { const s = { ...session, ...(localConfig[session.id] ?? {}) }; return (
-              <SessionCard key={session.id} lang={lang} session={s}
-                sessionOrders={sessionOrders} globalTeams={globalTeams}
-                clubs={clubs} entries={entries} canControl={canControl}
-                showStart={true}
-                cjpCurrentTeamId={cjpCurrentTeamIds[session.id] ?? null}
-                musicPaths={getMusicPaths(session)}
-                onStart={() => onStartSession(session.id)}
-                onFinish={() => onFinishSession(session.id)}
-                onRevert={() => onRevertSession(session.id)}
-                onConfigChange={(patch) => handleConfigChange(session.id, patch)} />
-            ) })}
+          {openCombinadosEnabled ? (() => {
+            const panelSessions = sectionSessions.filter((s) => s.panel_id === panels[0].id).sort((a, b) => a.order_index - b.order_index)
+            const openQual      = panelSessions.filter(s => sessionGroup(s) === 'open')
+            const combinadosQual = panelSessions.filter(s => sessionGroup(s) === 'combinados')
+            const bracketSess   = panelSessions.filter(s => sessionGroup(s) === 'bracket')
+
+            const renderQualGroup = (groupSessions: Session[], label: string, accentBg: string, accentText: string) => {
+              if (!groupSessions.length) return null
+              const overallStatus = groupOverallStatus(groupSessions)
+              const allWaiting  = overallStatus === 'waiting'
+              const allActive   = overallStatus === 'active'
+              const allFinished = overallStatus === 'finished'
+              return (
+                <div className={['rounded-2xl border overflow-hidden', allActive ? 'border-blue-300 shadow-sm shadow-blue-100' : 'border-slate-200'].join(' ')}>
+                  <div className={['px-4 py-3 flex items-center justify-between gap-3', allActive ? 'bg-blue-50' : 'bg-white'].join(' ')}>
+                    <div className="flex items-center gap-2">
+                      <span className={['px-2 py-0.5 rounded-md text-xs font-semibold', SESSION_BADGE[overallStatus]].join(' ')}>
+                        {allActive && <span className="inline-block w-1.5 h-1.5 rounded-full bg-white animate-pulse mr-1 shrink-0" />}
+                        {t[overallStatus]}
+                      </span>
+                      <p className="text-sm font-semibold text-slate-800">{label}</p>
+                      <span className="text-xs text-slate-400">({groupSessions.length} {lang === 'es' ? 'sesiones' : 'sessions'})</span>
+                    </div>
+                    {canControl && !allFinished && (
+                      <div className="shrink-0 flex gap-2">
+                        {allWaiting && (
+                          <button
+                            onClick={() => { if (confirm(t.confirmStart)) groupSessions.forEach(s => onStartSession(s.id)) }}
+                            className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all">
+                            {t.start}
+                          </button>
+                        )}
+                        {allActive && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => { if (confirm(t.confirmBackToWaiting)) groupSessions.forEach(s => onRevertSession(s.id)) }}
+                              className="px-3 py-1.5 text-xs font-semibold border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-all">
+                              {t.back}
+                            </button>
+                            <button
+                              onClick={() => { if (confirm(t.confirmFinish)) groupSessions.forEach(s => onFinishSession(s.id)) }}
+                              className="px-3 py-1.5 text-xs font-semibold border border-green-200 text-green-700 rounded-xl hover:bg-green-50 transition-all">
+                              {t.finish}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {allFinished && canControl && (
+                      <button
+                        onClick={() => { if (confirm(t.confirmBackToActive)) groupSessions.forEach(s => onRevertSession(s.id)) }}
+                        className="shrink-0 px-3 py-1.5 text-xs font-semibold border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition-all">
+                        {t.back}
+                      </button>
+                    )}
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {groupSessions.map(session => { const s = { ...session, ...(localConfig[session.id] ?? {}) }; return (
+                      <SessionCard key={session.id} lang={lang} session={s}
+                        sessionOrders={sessionOrders} globalTeams={globalTeams}
+                        clubs={clubs} entries={entries} canControl={false}
+                        showStart={false}
+                        cjpCurrentTeamId={cjpCurrentTeamIds[session.id] ?? null}
+                        musicPaths={getMusicPaths(session)}
+                        onStart={() => {}} onFinish={() => {}} onRevert={() => {}}
+                        onConfigChange={(patch) => handleConfigChange(session.id, patch)} />
+                    )})}
+                  </div>
+                </div>
+              )
+            }
+
+            return (
+              <>
+                {renderQualGroup(openQual, lang === 'es' ? 'OPEN — Clasificatorias' : 'OPEN — Qualification', 'bg-blue-50', 'text-blue-800')}
+                {renderQualGroup(combinadosQual, lang === 'es' ? 'COMBINADOS — Clasificatorias' : 'COMBINADOS — Qualification', 'bg-violet-50', 'text-violet-800')}
+                {bracketSess.map((session) => { const s = { ...session, ...(localConfig[session.id] ?? {}) }; return (
+                  <SessionCard key={session.id} lang={lang} session={s}
+                    sessionOrders={sessionOrders} globalTeams={globalTeams}
+                    clubs={clubs} entries={entries} canControl={canControl}
+                    showStart={true}
+                    cjpCurrentTeamId={cjpCurrentTeamIds[session.id] ?? null}
+                    musicPaths={getMusicPaths(session)}
+                    onStart={() => onStartSession(session.id)}
+                    onFinish={() => onFinishSession(session.id)}
+                    onRevert={() => onRevertSession(session.id)}
+                    onConfigChange={(patch) => handleConfigChange(session.id, patch)} />
+                )})}
+              </>
+            )
+          })() : (
+            sectionSessions
+              .filter((s) => s.panel_id === panels[0].id)
+              .sort((a, b) => a.order_index - b.order_index)
+              .map((session) => { const s = { ...session, ...(localConfig[session.id] ?? {}) }; return (
+                <SessionCard key={session.id} lang={lang} session={s}
+                  sessionOrders={sessionOrders} globalTeams={globalTeams}
+                  clubs={clubs} entries={entries} canControl={canControl}
+                  showStart={true}
+                  cjpCurrentTeamId={cjpCurrentTeamIds[session.id] ?? null}
+                  musicPaths={getMusicPaths(session)}
+                  onStart={() => onStartSession(session.id)}
+                  onFinish={() => onFinishSession(session.id)}
+                  onRevert={() => onRevertSession(session.id)}
+                  onConfigChange={(patch) => handleConfigChange(session.id, patch)} />
+              )})
+          )}
         </div>
       ) : (
         (() => {
