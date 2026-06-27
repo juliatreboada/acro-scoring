@@ -627,6 +627,7 @@ export default function CJPTabletShell({
   const [rightPanelWidth, setRightPanelWidth] = useState(320)
   const resizeStartX     = useRef(0)
   const resizeStartWidth = useRef(0)
+  const centerRef        = useRef<HTMLDivElement>(null)
 
   const routineLabel = (rt: string) => ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
 
@@ -669,6 +670,14 @@ export default function CJPTabletShell({
     setReviewPerfId((prev) => prev === perfId ? null : perfId)
   }
 
+  // scroll to show Next Perf button when result is approved (it may be hidden below the PDF)
+  useEffect(() => {
+    const el = centerRef.current
+    if (!el || currentResult?.status !== 'approved') return
+    setTimeout(() => el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }), 100)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPerfId, currentResult?.status])
+
   return (
     <div className="flex gap-0 h-[calc(100vh-60px)]">
 
@@ -689,61 +698,80 @@ export default function CJPTabletShell({
           </button>
         </div>
         <div className={['flex-1 overflow-y-auto', leftOpen ? '' : 'hidden'].join(' ')}>
-          {performances.map((perf) => {
-            const result = results[perf.id]
-            const isCurrent = perf.id === currentPerfId
-            const canOpen = !perf.skipped && !result && !isCurrent
-            const canSkip = !perf.skipped && !result
-            return (
-              <div key={perf.id}
-                className={['group px-3 py-2.5 border-b border-slate-100 transition-colors',
-                  isCurrent ? 'bg-blue-50 border-l-2 border-l-blue-500'
-                  : 'hover:bg-slate-50'].join(' ')}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      {isCurrent && (
-                        <span className="relative flex h-2 w-2 shrink-0">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-                          <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
-                        </span>
-                      )}
-                      <span className="text-xs text-slate-400 font-mono shrink-0">{perf.position}</span>
-                      <span className="text-xs font-medium text-slate-700 truncate">{perf.gymnasts}</span>
+          {(() => {
+            // Group by routineType when multiple sessions are present (OPEN/COMBINADOS)
+            const currentSessionPerfIds = new Set(performances.map(p => p.id))
+            const routineTypes = [...new Set(rankPerfs.map(p => p.routineType))]
+            const hasGroups = routineTypes.length > 1
+
+            function renderPerfRow(perf: typeof rankPerfs[0]) {
+              const result = results[perf.id]
+              const isCurrent = perf.id === currentPerfId
+              const canOpen = !perf.skipped && !result && !isCurrent
+              const canSkip = currentSessionPerfIds.has(perf.id) && !perf.skipped && !result
+              return (
+                <div key={perf.id}
+                  className={['group px-3 py-2.5 border-b border-slate-100 transition-colors',
+                    isCurrent ? 'bg-blue-50 border-l-2 border-l-blue-500'
+                    : 'hover:bg-slate-50'].join(' ')}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        {isCurrent && (
+                          <span className="relative flex h-2 w-2 shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                            <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                          </span>
+                        )}
+                        <span className="text-xs text-slate-400 font-mono shrink-0">{perf.position}</span>
+                        <span className="text-xs font-medium text-slate-700 truncate">{perf.gymnasts}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {!hasGroups && <span className="text-xs text-slate-400">{routineLabel(perf.routineType)}</span>}
+                        {perf.skipped && <span className="text-xs bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded-full">{t.skipped}</span>}
+                        {result && (
+                          <span className={['text-xs px-1.5 py-0.5 rounded-full font-medium', result.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'border border-slate-300 text-slate-500'].join(' ')}>
+                            {result.status === 'approved' ? t.final : t.prov} {result.finalScore.toFixed(3)}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-xs text-slate-400">{routineLabel(perf.routineType)}</span>
-                      {perf.skipped && <span className="text-xs bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded-full">{t.skipped}</span>}
-                      {result && (
-                        <span className={['text-xs px-1.5 py-0.5 rounded-full font-medium', result.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'border border-slate-300 text-slate-500'].join(' ')}>
-                          {result.status === 'approved' ? t.final : t.prov} {result.finalScore.toFixed(3)}
-                        </span>
+                    <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {canOpen && (
+                        <button onClick={() => onOpen(perf.id)} title={t.open}
+                          className="w-6 h-6 rounded bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center transition-colors">
+                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                        </button>
+                      )}
+                      {canSkip && onSkip && (
+                        <button onClick={() => onSkip(perf.id)} title={t.skip}
+                          className="w-6 h-6 rounded bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors">
+                          <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
+                        </button>
                       )}
                     </div>
-                  </div>
-                  <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {canOpen && (
-                      <button onClick={() => onOpen(perf.id)} title={t.open}
-                        className="w-6 h-6 rounded bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center transition-colors">
-                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-                      </button>
-                    )}
-                    {canSkip && onSkip && (
-                      <button onClick={() => onSkip(perf.id)} title={t.skip}
-                        className="w-6 h-6 rounded bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-colors">
-                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" /></svg>
-                      </button>
-                    )}
                   </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            }
+
+            if (hasGroups) {
+              return routineTypes.map(rt => (
+                <div key={rt}>
+                  <div className="px-3 py-1.5 bg-slate-100 border-b border-slate-200 sticky top-0 z-10">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">{routineLabel(rt)}</span>
+                  </div>
+                  {rankPerfs.filter(p => p.routineType === rt).map(renderPerfRow)}
+                </div>
+              ))
+            }
+            return rankPerfs.map(renderPerfRow)
+          })()}
         </div>
       </div>
 
       {/* ── center: single scroll area ── */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={centerRef} className="flex-1 overflow-y-auto">
 
         {/* ── sticky tab bar: TS / Ranking ── */}
         <div className="sticky top-0 z-10 flex border-b border-slate-200 bg-white">
