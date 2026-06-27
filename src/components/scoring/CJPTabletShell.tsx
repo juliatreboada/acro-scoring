@@ -631,6 +631,12 @@ export default function CJPTabletShell({
   const routineLabel = (rt: string) => ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
 
   const localPerfIds = new Set(performances.map((p) => p.id))
+  const localTeamIds = new Set(performances.map((p) => p.teamId))
+  // Show each team once: keep local entry if the team is already in this session,
+  // otherwise keep the peer entry (covers merged-category groups).
+  const leftPanelPerfs = rankPerfs.filter(
+    (p) => localPerfIds.has(p.id) || !localTeamIds.has(p.teamId),
+  )
 
   const currentPerf = performances.find((p) => p.id === currentPerfId) ?? null
   const currentScores = currentPerfId ? (judgeScores[currentPerfId] ?? []) : []
@@ -691,7 +697,7 @@ export default function CJPTabletShell({
           </button>
         </div>
         <div className={['flex-1 overflow-y-auto', leftOpen ? '' : 'hidden'].join(' ')}>
-          {rankPerfs.map((perf) => {
+          {leftPanelPerfs.map((perf) => {
             const result = results[perf.id]
             const isCurrent = perf.id === currentPerfId
             const isLocal = localPerfIds.has(perf.id)
