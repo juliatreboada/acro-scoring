@@ -631,13 +631,13 @@ export default function CJPTabletShell({
 
   const routineLabel = (rt: string) => ({ Balance: t.balance, Dynamic: t.dynamic, Combined: t.combined }[rt] ?? rt)
 
-  const currentPerf = performances.find((p) => p.id === currentPerfId) ?? null
+  const currentPerf = rankPerfs.find((p) => p.id === currentPerfId) ?? null
   const currentScores = currentPerfId ? (judgeScores[currentPerfId] ?? []) : []
   const currentResult = currentPerfId ? results[currentPerfId] ?? null : null
   const currentPenalty = currentPerfId ? (penaltyStates[currentPerfId] ?? DEFAULT_PENALTY) : DEFAULT_PENALTY
   const cjpPenalty = calcCjpPenalty(currentPenalty)
 
-  const reviewPerf = reviewPerfId ? performances.find((p) => p.id === reviewPerfId) ?? null : null
+  const reviewPerf = reviewPerfId ? rankPerfs.find((p) => p.id === reviewPerfId) ?? null : null
   const reviewScores = reviewPerfId ? (judgeScores[reviewPerfId] ?? []) : []
   const reviewResult = reviewPerfId ? results[reviewPerfId] ?? null : null
   const reviewPenalty = reviewPerfId ? (penaltyStates[reviewPerfId] ?? DEFAULT_PENALTY) : DEFAULT_PENALTY
@@ -645,7 +645,7 @@ export default function CJPTabletShell({
 
   const isReviewMode = reviewPerfId !== null && reviewPerfId !== currentPerfId
   const activePerfId = isReviewMode ? reviewPerfId : currentPerfId
-  const nextPending = performances.find((p) => !p.skipped && !results[p.id] && p.id !== currentPerfId)
+  const nextPending = rankPerfs.find((p) => !p.skipped && !results[p.id] && p.id !== currentPerfId)
 
   function handleCJPSubmit(status: 'provisional' | 'approved') {
     if (!currentPerfId) return
