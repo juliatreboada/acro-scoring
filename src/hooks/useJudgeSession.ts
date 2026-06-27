@@ -530,10 +530,23 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
 
             const peerMeta = Object.fromEntries((peerSessionRows ?? []).map(s => [s.id, s]))
             const peerTeamIds = [...new Set((peerOrdersAll ?? []).map(o => o.team_id))]
-            const { data: peerTeamsData } = peerTeamIds.length > 0
-              ? await supabase.from('teams').select('id, gymnast_display, age_group, category').in('id', peerTeamIds)
-              : { data: [] as { id: string; gymnast_display: string; age_group: string; category: string }[] }
-            const peerTeamMap = Object.fromEntries((peerTeamsData ?? []).map(t => [t.id, t]))
+            const [peerTeamsRes, peerMusicRes] = await Promise.all([
+              peerTeamIds.length > 0
+                ? supabase.from('teams').select('id, gymnast_display, age_group, category').in('id', peerTeamIds)
+                : Promise.resolve({ data: [] as { id: string; gymnast_display: string; age_group: string; category: string }[] }),
+              peerTeamIds.length > 0
+                ? supabase.from('routine_music').select('team_id, routine_type, ts_path')
+                    .eq('competition_id', (session as any).competition_id).in('team_id', peerTeamIds)
+                : Promise.resolve({ data: [] as { team_id: string; routine_type: string; ts_path: string | null }[] }),
+            ])
+            const peerTeamMap = Object.fromEntries((peerTeamsRes.data ?? []).map(t => [t.id, t]))
+
+            const peerTsUrlByKey: Record<string, string | null> = {}
+            for (const m of (peerMusicRes.data ?? [])) {
+              if (!m.ts_path) { peerTsUrlByKey[`${m.team_id}:${m.routine_type}`] = null; continue }
+              const { data: urlData } = await supabase.storage.from('routine-music').createSignedUrl(m.ts_path, 3600)
+              peerTsUrlByKey[`${m.team_id}:${m.routine_type}`] = urlData?.signedUrl ?? null
+            }
 
             const extraPerfs: ScoringPerformance[] = []
             for (const o of peerOrdersAll ?? []) {
@@ -546,7 +559,7 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
                 gymnasts: tm?.gymnast_display ?? '',
                 ageGroup: agLabels[tm?.age_group ?? sm.age_group] ?? sm.age_group,
                 category: tm?.category ?? sm.category,
-                routineType: sm.routine_type, skipped: false, tsUrl: null, elements: [],
+                routineType: sm.routine_type, skipped: false, tsUrl: peerTsUrlByKey[`${o.team_id}:${sm.routine_type}`] ?? null, elements: [],
               })
             }
             rankingPerformancesForCjp = [...rankingPerformancesForCjp, ...extraPerfs]
@@ -914,10 +927,29 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
           .subscribe()
       )
 
+      // Subscribe to peer sessions current_team_id so ALL judges follow the CJP across sessions
+      const peerSessionChannels = peerScoreIds.map((sid) =>
+        supabase
+          .channel(`js-peer-session-${sessionId}-${sid}`)
+          .on('postgres_changes', {
+            event: 'UPDATE', schema: 'public', table: 'sessions',
+            filter: `id=eq.${sid}`,
+          }, (payload) => {
+            const row = payload.new as { current_team_id: string | null }
+            if (row.current_team_id) {
+              const newPerfId = `${sid}_${row.current_team_id}`
+              setCurrentPerfId(newPerfId)
+              setJudgeScores(prev => prev[newPerfId] ? prev : { ...prev, [newPerfId]: [] })
+            }
+          })
+          .subscribe()
+      )
+
       return () => {
         supabase.removeChannel(sessionCh)
         supabase.removeChannel(scoresCh)
         for (const ch of peerScoresChannels) supabase.removeChannel(ch)
+        for (const ch of peerSessionChannels) supabase.removeChannel(ch)
         for (const ch of resultsChannels) supabase.removeChannel(ch)
       }
     } else {
