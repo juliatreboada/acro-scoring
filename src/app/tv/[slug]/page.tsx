@@ -218,25 +218,25 @@ export default function TVPage() {
         event: '*', schema: 'public', table: 'tv_state',
         filter: `competition_id=eq.${compUuid}`,
       }, (payload) => {
-        const row = payload.new as {
-          session_id: string | null
-          team_id: string | null
-          revealed: boolean
-          sponsor_reel_enabled?: boolean
-          sponsor_playlist_index?: number
-          mode?: string
-          ranking_config?: unknown
-        }
-        const next: TVState = {
-          session_id: row.session_id ?? null,
-          team_id:    row.team_id    ?? null,
-          revealed:   row.revealed   ?? false,
-          sponsor_reel_enabled: row.sponsor_reel_enabled ?? false,
-          sponsor_playlist_index: typeof row.sponsor_playlist_index === 'number' ? row.sponsor_playlist_index : 0,
-          mode: (row.mode as 'score' | 'ranking') ?? 'score',
-          ranking_config: (row.ranking_config as TvRankingConfig | null) ?? null,
-        }
-        setTvState(next)
+        const row = payload.new as Record<string, unknown>
+        // Supabase sends only changed columns in UPDATE payloads (REPLICA IDENTITY DEFAULT).
+        // Merge with previous state so unchanged fields (e.g. ranking_config) are preserved.
+        setTvState(prev => {
+          const base: TVState = prev ?? {
+            session_id: null, team_id: null, revealed: false,
+            sponsor_reel_enabled: false, sponsor_playlist_index: 0,
+            mode: 'score', ranking_config: null,
+          }
+          return {
+            session_id:             'session_id'             in row ? (row.session_id as string | null ?? null) : base.session_id,
+            team_id:                'team_id'                in row ? (row.team_id    as string | null ?? null) : base.team_id,
+            revealed:               'revealed'               in row ? (row.revealed   as boolean      ?? false) : base.revealed,
+            sponsor_reel_enabled:   'sponsor_reel_enabled'   in row ? (row.sponsor_reel_enabled   as boolean ?? false) : base.sponsor_reel_enabled,
+            sponsor_playlist_index: 'sponsor_playlist_index' in row ? (typeof row.sponsor_playlist_index === 'number' ? row.sponsor_playlist_index : 0) : base.sponsor_playlist_index,
+            mode:                   'mode'                   in row ? ((row.mode as 'score' | 'ranking') ?? 'score') : base.mode,
+            ranking_config:         'ranking_config'         in row ? (row.ranking_config as TvRankingConfig | null ?? null) : base.ranking_config,
+          }
+        })
       })
       .subscribe()
 

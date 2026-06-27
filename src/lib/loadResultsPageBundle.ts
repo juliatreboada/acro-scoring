@@ -72,7 +72,7 @@ export async function loadResultsPageBundle(
   const [sessionsRes, ageGroupRulesRes, mergeGroupsRes] = await Promise.all([
     supabase
       .from('sessions')
-      .select('id, age_group, category, routine_type, ranking_merge_group_id')
+      .select('id, age_group, category, routine_type, ranking_merge_group_id, bracket_phase')
       .eq('competition_id', competitionId),
     supabase.from('age_group_rules').select('id, age_group, level, sort_order, ruleset, sport_type, routine_count'),
     supabase.from('ranking_merge_groups').select('id, label_es, label_en').eq('competition_id', competitionId),
@@ -197,11 +197,6 @@ export async function loadResultsPageBundle(
 
   let openCombinadosActa: OpenCombinadosActaData | null = null
   if (openCombinadosEnabled) {
-    const { data: mappings } = await supabase
-      .from('open_combinados_phase_sessions')
-      .select('phase_key,session_id')
-      .eq('competition_id', competitionId)
-
     // Classify active teams into OPEN (routine_count >= 2) vs COMBINADOS (routine_count === 1)
     const agRuleById = Object.fromEntries(agRules.map((r) => [r.id, r as unknown as { routine_count: number }]))
     const activeEntryIds = new Set(entries.filter((e) => !e.dropped_out).map((e) => e.team_id))
@@ -215,13 +210,22 @@ export async function loadResultsPageBundle(
       else combinadosTeamIds.add(t.id)
     }
 
-    // Only pass advancement phases; qualification is automatic from all other results
-    const advMappings = (mappings ?? []).filter(
-      (m) => m.phase_key !== 'qualification_open' && m.phase_key !== 'qualification_combinados',
-    )
+    // Derive advancement phase mappings from sessions.bracket_phase (source of truth).
+    // open_combinados_phase_sessions is a legacy table that may not have bracket sessions.
+    const QUAL_KEYS = new Set(['qualification_open', 'qualification_combinados'])
+    const advMappings = (sessions ?? [])
+      .filter((s) => {
+        const bp = (s as unknown as { bracket_phase?: string | null }).bracket_phase
+        return bp && !QUAL_KEYS.has(bp)
+      })
+      .map((s) => ({
+        phase_key: (s as unknown as { bracket_phase: string }).bracket_phase as any,
+        session_id: s.id,
+      }))
+
     const sessionRoutineTypeMap = Object.fromEntries(sessions.map((s) => [s.id, s.routine_type]))
     openCombinadosActa = computeOpenCombinadosActaFromRows(
-      advMappings as Array<{ phase_key: any; session_id: string }>,
+      advMappings,
       (rawRes ?? []) as Array<{ session_id: string; team_id: string; final_score: number | null }>,
       openTeamIds,
       combinadosTeamIds,
