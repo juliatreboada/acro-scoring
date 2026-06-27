@@ -22,6 +22,8 @@ export type RankedTeam = {
   teamId: string
   score: number
   rank: number
+  balanceScore?: number
+  dynamicScore?: number
 }
 
 export type OpenCombinadosActaData = {
@@ -87,20 +89,37 @@ export function computeOpenCombinadosActaFromRows(
   results: ResultRow[],
   openTeamIds: Set<string>,
   combinadosTeamIds: Set<string>,
+  sessionRoutineTypes?: Record<string, string>,
 ): OpenCombinadosActaData {
   const advSessionIds = new Set(mappings.map((m) => m.session_id))
 
   // Qualification results = everything not in an advancement session
   const openQual = new Map<string, number>()
   const combQual = new Map<string, number>()
+  const openBalance = new Map<string, number>()
+  const openDynamic = new Map<string, number>()
   for (const r of results) {
     if (advSessionIds.has(r.session_id)) continue
     const score = r.final_score ?? 0
-    if (openTeamIds.has(r.team_id)) openQual.set(r.team_id, (openQual.get(r.team_id) ?? 0) + score)
-    else if (combinadosTeamIds.has(r.team_id)) combQual.set(r.team_id, (combQual.get(r.team_id) ?? 0) + score)
+    if (openTeamIds.has(r.team_id)) {
+      openQual.set(r.team_id, (openQual.get(r.team_id) ?? 0) + score)
+      if (sessionRoutineTypes) {
+        const rt = sessionRoutineTypes[r.session_id]
+        if (rt === 'Balance') openBalance.set(r.team_id, score)
+        else if (rt === 'Dynamic') openDynamic.set(r.team_id, score)
+      }
+    } else if (combinadosTeamIds.has(r.team_id)) {
+      combQual.set(r.team_id, (combQual.get(r.team_id) ?? 0) + score)
+    }
   }
 
-  const openQualification = rankTeams([...openQual.entries()].map(([teamId, score]) => ({ teamId, score })))
+  const openQualification = rankTeams([...openQual.entries()].map(([teamId, score]) => ({ teamId, score }))).map(
+    (rt) => ({
+      ...rt,
+      ...(openBalance.has(rt.teamId) ? { balanceScore: openBalance.get(rt.teamId) } : {}),
+      ...(openDynamic.has(rt.teamId) ? { dynamicScore: openDynamic.get(rt.teamId) } : {}),
+    }),
+  )
   const combinadosQualification = rankTeams([...combQual.entries()].map(([teamId, score]) => ({ teamId, score })))
 
   const openQuarter = rankTeams([...scoreBySession(results, getSessionForPhase(mappings, 'open_quarter')).entries()].map(([teamId, score]) => ({ teamId, score })))

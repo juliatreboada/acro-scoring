@@ -25,6 +25,7 @@ function ResultsPageInner() {
   const [teamClubInfo, setTeamClubInfo] = useState<Record<string, TeamClubInfo>>({})
   const [agSortOrder, setAgSortOrder] = useState<Record<string, number>>({})
   const [openCombinadosActa, setOpenCombinadosActa] = useState<OpenCombinadosActaData | null>(null)
+  const [teamPhotoByTeam, setTeamPhotoByTeam] = useState<Record<string, string | null>>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -41,6 +42,7 @@ function ResultsPageInner() {
       setTeamClubInfo(bundle.teamClubInfo)
       setAgSortOrder(bundle.agSortOrder)
       setOpenCombinadosActa(bundle.openCombinadosActa)
+      setTeamPhotoByTeam(bundle.teamPhotoByTeam)
       setLoading(false)
     }
     load()
@@ -136,6 +138,7 @@ function ResultsPageInner() {
         lang={lang}
         clubAvatarByTeam={clubAvatarByTeam}
         teamClubInfo={teamClubInfo}
+        teamPhotoByTeam={teamPhotoByTeam}
         agSortOrder={agSortOrder}
         officialDocument={isOfficial}
         showTrofeoGondomarClubRanking={trofeoGondomar}

@@ -651,6 +651,15 @@ export default function TVPage() {
     const isMultiRoutine = routineTypes.length > 1
     const bgColor = config?.background_color ?? '#0f172a'
 
+    // Responsive sizes so exactly `teamsPerPage` rows fill the available height
+    const sz = teamsPerPage <= 4
+      ? { logo: 'h-20 w-20', rankW: 'w-14', rankT: 'text-3xl', name: 'text-4xl', colW: 'w-28', scoreT: 'text-3xl', totalW: 'w-36', totalT: 'text-5xl', gap: 'gap-4' }
+      : teamsPerPage <= 7
+      ? { logo: 'h-14 w-14', rankW: 'w-12', rankT: 'text-2xl', name: 'text-3xl', colW: 'w-24', scoreT: 'text-2xl', totalW: 'w-28', totalT: 'text-4xl', gap: 'gap-3' }
+      : teamsPerPage <= 10
+      ? { logo: 'h-10 w-10', rankW: 'w-10', rankT: 'text-xl',  name: 'text-2xl', colW: 'w-20', scoreT: 'text-xl',  totalW: 'w-24', totalT: 'text-3xl', gap: 'gap-3' }
+      : { logo: 'h-8 w-8',   rankW: 'w-8',  rankT: 'text-sm',  name: 'text-base',colW: 'w-16', scoreT: 'text-sm',  totalW: 'w-20', totalT: 'text-2xl', gap: 'gap-2' }
+
     return (
       <div ref={containerRef} style={{ backgroundColor: bgColor }} className="w-screen h-screen flex flex-col overflow-hidden text-white relative">
 
@@ -673,93 +682,96 @@ export default function TVPage() {
 
         {/* Column headers */}
         <div className="shrink-0 flex items-center gap-4 px-10 py-2 border-b border-white/10 text-xl font-semibold text-white/40 uppercase tracking-wider">
-          <span className="w-14" />
+          <span className={sz.rankW} />
           <span className="w-16 shrink-0" />
           <span className="flex-1" />
           {isMultiRoutine ? (
             <>
               {routineTypes.map(rt => (
-                <span key={rt} className="w-32 text-right">{routineLabel(rt)}</span>
+                <span key={rt} className={`${sz.colW} text-right`}>{routineLabel(rt)}</span>
               ))}
-              <span className="w-36 text-right text-white/60">Total</span>
+              <span className={`${sz.totalW} text-right text-white/60`}>Total</span>
             </>
           ) : (
             <>
-              <span className="w-28 text-right">{isRG ? t.eRg : t.e}</span>
-              <span className="w-28 text-right">{t.a}</span>
+              <span className={`${sz.colW} text-right`}>{isRG ? t.eRg : t.e}</span>
+              <span className={`${sz.colW} text-right`}>{t.a}</span>
               {isRG ? (
                 <>
-                  <span className="w-28 text-right">{t.da}</span>
-                  <span className="w-28 text-right">{t.db}</span>
+                  <span className={`${sz.colW} text-right`}>{t.da}</span>
+                  <span className={`${sz.colW} text-right`}>{t.db}</span>
                 </>
               ) : (
-                <span className="w-28 text-right">{t.d}</span>
+                <span className={`${sz.colW} text-right`}>{t.d}</span>
               )}
               <span className="w-24 text-right text-red-400/50">{isRG ? t.penRj : t.pen}</span>
-              <span className="w-36 text-right text-white/60">Total</span>
+              <span className={`${sz.totalW} text-right text-white/60`}>Total</span>
             </>
           )}
         </div>
 
-        {/* Rankings list */}
-        <div className="flex-1 overflow-hidden px-10 py-2 space-y-0">
-          {currentSlotEntries.map((entry, i) => (
-            <div key={entry.team_id} className="flex items-center gap-4 py-5 border-b border-white/5">
-              <span className="w-14 text-right text-3xl font-black text-white/30 shrink-0">#{i + 1}</span>
-              {(() => {
-                const borderCls = i === 0 ? 'ring-4 ring-yellow-400'
-                  : i === 1 ? 'ring-4 ring-slate-300'
-                  : i === 2 ? 'ring-4 ring-amber-600'
-                  : ''
-                return entry.club_logo
-                  ? <img src={entry.club_logo} className={`h-20 w-20 rounded-full object-contain bg-white/10 shrink-0 ${borderCls}`} alt="" />
-                  : <div className={`h-20 w-20 rounded-full bg-white/10 shrink-0 flex items-center justify-center text-xl font-bold text-white/40 ${borderCls}`}>{entry.club_name[0] ?? '?'}</div>
-              })()}
-              <span className="flex-1 text-4xl font-semibold text-white truncate">{entry.gymnast_display}</span>
-              {isMultiRoutine ? (
-                <>
-                  {routineTypes.map(rt => {
-                    const rs = entry.routine_scores.find(x => x.routine_type === rt)
-                    return (
-                      <span key={rt} className="w-32 text-right tabular-nums text-3xl font-bold text-white/70">
-                        {rs?.score != null ? rs.score.toFixed(3) : '—'}
-                      </span>
-                    )
-                  })}
-                  <span className="w-36 text-right text-5xl font-black tabular-nums text-white">{entry.final_score.toFixed(3)}</span>
-                </>
-              ) : (
-                <>
-                  <span className="w-28 text-right tabular-nums text-3xl font-bold text-white/70">
-                    {entry.e_score != null ? (isRG ? entry.e_score : entry.e_score * 2).toFixed(3) : '—'}
-                  </span>
-                  <span className="w-28 text-right tabular-nums text-3xl font-bold text-white/70">
-                    {entry.a_score != null ? entry.a_score.toFixed(3) : '—'}
-                  </span>
-                  {isRG ? (
-                    <>
-                      <span className="w-28 text-right tabular-nums text-3xl font-bold text-white/70">
-                        {entry.da_score != null ? entry.da_score.toFixed(3) : '—'}
-                      </span>
-                      <span className="w-28 text-right tabular-nums text-3xl font-bold text-white/70">
-                        {entry.db_score != null ? entry.db_score.toFixed(3) : '—'}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="w-28 text-right tabular-nums text-3xl font-bold text-white/70">
-                      {entry.d_score != null ? entry.d_score.toFixed(3) : '—'}
+        {/* Rankings list — grid so rows fill height evenly */}
+        <div className="flex-1 overflow-hidden px-10 py-1"
+          style={{ display: 'grid', gridTemplateRows: `repeat(${teamsPerPage}, 1fr)` }}>
+          {currentSlotEntries.map((entry, i) => {
+            const globalRank = currentPage * teamsPerPage + i
+            const borderCls = globalRank === 0 ? 'ring-4 ring-yellow-400'
+              : globalRank === 1 ? 'ring-4 ring-slate-300'
+              : globalRank === 2 ? 'ring-4 ring-amber-600'
+              : ''
+            return (
+              <div key={entry.team_id} className={`flex items-center ${sz.gap} border-b border-white/5 min-h-0 overflow-hidden`}>
+                <span className={`${sz.rankW} text-right ${sz.rankT} font-black text-white/30 shrink-0`}>#{globalRank + 1}</span>
+                {entry.club_logo
+                  ? <img src={entry.club_logo} className={`${sz.logo} rounded-full object-contain bg-white/10 shrink-0 ${borderCls}`} alt="" />
+                  : <div className={`${sz.logo} rounded-full bg-white/10 shrink-0 flex items-center justify-center font-bold text-white/40 ${borderCls}`}>{entry.club_name[0] ?? '?'}</div>
+                }
+                <span className={`flex-1 ${sz.name} font-semibold text-white truncate`}>{entry.gymnast_display}</span>
+                {isMultiRoutine ? (
+                  <>
+                    {routineTypes.map(rt => {
+                      const rScore = entry.routine_scores.find(x => x.routine_type === rt)
+                      return (
+                        <span key={rt} className={`${sz.colW} text-right tabular-nums ${sz.scoreT} font-bold text-white/70`}>
+                          {rScore?.score != null ? rScore.score.toFixed(3) : '—'}
+                        </span>
+                      )
+                    })}
+                    <span className={`${sz.totalW} text-right ${sz.totalT} font-black tabular-nums text-white`}>{entry.final_score.toFixed(3)}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className={`${sz.colW} text-right tabular-nums ${sz.scoreT} font-bold text-white/70`}>
+                      {entry.e_score != null ? (isRG ? entry.e_score : entry.e_score * 2).toFixed(3) : '—'}
                     </span>
-                  )}
-                  <span className="w-24 text-right tabular-nums text-3xl font-bold text-red-400/70">
-                    {entry.pen != null ? `−${entry.pen.toFixed(1)}` : '—'}
-                  </span>
-                  <span className="w-36 text-right text-5xl font-black tabular-nums text-white">{entry.final_score.toFixed(3)}</span>
-                </>
-              )}
-            </div>
-          ))}
+                    <span className={`${sz.colW} text-right tabular-nums ${sz.scoreT} font-bold text-white/70`}>
+                      {entry.a_score != null ? entry.a_score.toFixed(3) : '—'}
+                    </span>
+                    {isRG ? (
+                      <>
+                        <span className={`${sz.colW} text-right tabular-nums ${sz.scoreT} font-bold text-white/70`}>
+                          {entry.da_score != null ? entry.da_score.toFixed(3) : '—'}
+                        </span>
+                        <span className={`${sz.colW} text-right tabular-nums ${sz.scoreT} font-bold text-white/70`}>
+                          {entry.db_score != null ? entry.db_score.toFixed(3) : '—'}
+                        </span>
+                      </>
+                    ) : (
+                      <span className={`${sz.colW} text-right tabular-nums ${sz.scoreT} font-bold text-white/70`}>
+                        {entry.d_score != null ? entry.d_score.toFixed(3) : '—'}
+                      </span>
+                    )}
+                    <span className="w-24 text-right tabular-nums text-3xl font-bold text-red-400/70">
+                      {entry.pen != null ? `−${entry.pen.toFixed(1)}` : '—'}
+                    </span>
+                    <span className={`${sz.totalW} text-right ${sz.totalT} font-black tabular-nums text-white`}>{entry.final_score.toFixed(3)}</span>
+                  </>
+                )}
+              </div>
+            )
+          })}
           {currentSlotEntries.length === 0 && (
-            <div className="flex items-center justify-center h-full text-white/30 text-xl">Sin resultados todavía</div>
+            <div className="col-span-full flex items-center justify-center text-white/30 text-xl">Sin resultados todavía</div>
           )}
         </div>
 
