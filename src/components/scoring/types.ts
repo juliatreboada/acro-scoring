@@ -181,6 +181,25 @@ export function droppedIndices(values: number[]): Set<number> {
   return new Set([indexed[0].i, indexed[indexed.length - 1].i])
 }
 
+/** True when a scores row has the value expected for that panel role (e.g. admin-entered scores). */
+export function isRoleScoreSubmitted(role: PanelJudge['role'], score: JudgeScore): boolean {
+  switch (role) {
+    case 'EJ':
+    case 'E':
+      return score.ejScore != null
+    case 'AJ':
+    case 'A':
+      return score.ajScore != null
+    case 'DJ':
+    case 'DA':
+      return score.djDifficulty != null
+    case 'DB':
+      return score.dbScore != null
+    default:
+      return false
+  }
+}
+
 export function computeResult(
   performanceId: string,
   scores: JudgeScore[],

@@ -301,6 +301,8 @@ function CJPTabletRightPanel({
   onDJSubmit, onEJSubmit, onAJSubmit,
   ageGroup = '',
   missingIndividualSR = false,
+  panelJudges = [],
+  judgeScoresForPerf = [],
 }: {
   lang: Lang; activePerfId: string | null
   hasDJ: boolean; hasEJ: boolean; hasAJ: boolean
@@ -310,6 +312,8 @@ function CJPTabletRightPanel({
   flags: ElementFlags; deductions: Deductions; incorrectTs: boolean
   ageGroup?: string
   missingIndividualSR?: boolean
+  panelJudges?: PanelJudge[]
+  judgeScoresForPerf?: JudgeScore[]
   onFlagChange: (elementId: string, attemptNumber: number, patch: Partial<ElementFlag>) => void
   onLock: (elementId: string, attemptNumber: number, value: number) => void
   onOpenRetry: (elementId: string, nextAttemptNumber: number) => void
@@ -333,6 +337,20 @@ function CJPTabletRightPanel({
   const [djSubmitted, setDjSubmitted] = useState<Record<string, boolean>>({})
   const [ejSubmitted, setEjSubmitted] = useState<Record<string, boolean>>({})
   const [ajSubmitted, setAjSubmitted] = useState<Record<string, boolean>>({})
+
+  // Restore submitted tabs when scores already exist (e.g. admin manual entry)
+  useEffect(() => {
+    if (!activePerfId) return
+    const djIds = panelJudges.filter((j) => j.role === 'DJ').map((j) => j.id)
+    const ejIds = panelJudges.filter((j) => j.role === 'EJ').map((j) => j.id)
+    const ajIds = panelJudges.filter((j) => j.role === 'AJ').map((j) => j.id)
+    const hasDj = djIds.some((id) => judgeScoresForPerf.some((s) => s.panelJudgeId === id && s.djDifficulty != null))
+    const hasEj = ejIds.some((id) => judgeScoresForPerf.some((s) => s.panelJudgeId === id && s.ejScore != null))
+    const hasAj = ajIds.some((id) => judgeScoresForPerf.some((s) => s.panelJudgeId === id && s.ajScore != null))
+    if (hasDj) setDjSubmitted((p) => ({ ...p, [activePerfId]: true }))
+    if (hasEj) setEjSubmitted((p) => ({ ...p, [activePerfId]: true }))
+    if (hasAj) setAjSubmitted((p) => ({ ...p, [activePerfId]: true }))
+  }, [activePerfId, judgeScoresForPerf, panelJudges])
 
   const noPerf = <div className="flex items-center justify-center h-32 text-slate-300 text-sm">{t.waiting}</div>
 
@@ -574,6 +592,8 @@ function CJPLayout({
                 penaltyState={penaltyState}
                 ageGroup={activePerf?.ageGroup ?? ''}
                 missingIndividualSR={activePerf?.missingIndividualSR ?? false}
+                panelJudges={panelJudges}
+                judgeScoresForPerf={activePerfId ? (judgeScores[activePerfId] ?? []) : []}
                 onPenaltyChange={(p) => activePerfId && setPenaltyState(activePerfId, p)}
                 elements={elements} extraElements={extraElements}
                 flags={flags} deductions={deductions} incorrectTs={incorrectTs}

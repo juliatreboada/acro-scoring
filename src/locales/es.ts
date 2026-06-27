@@ -214,6 +214,35 @@ export const CompetitionDayTab = {
     inputConfig: 'Entrada de puntuación',
     keyboard: 'Teclado',
     elements: 'Elementos',
+    editScores: 'Puntuación',
+  }
+
+// components/admin/competition-detail/ManualScoresModal.tsx
+export const ManualScoresModal = {
+    title: 'Puntuación manual',
+    close: 'Cerrar',
+    cancel: 'Cancelar',
+    save: 'Guardar puntuaciones',
+    saving: 'Guardando…',
+    saved: 'Puntuaciones guardadas.',
+    savedPublished: 'Puntuaciones guardadas y publicadas en el marcador.',
+    saveFailed: 'No se pudieron guardar las puntuaciones.',
+    publishResult: 'Publicar resultado en el marcador',
+    publishHint: 'Pone este equipo en la TV y publica la nota final. Usa Definitiva para el marcador; Provisional oculta la nota hasta confirmarla en la pestaña TV.',
+    provisional: 'Provisional',
+    approved: 'Definitiva',
+    noJudges: 'No hay jueces asignados a este panel.',
+    unassigned: 'Sin asignar',
+    ej: 'EJ',
+    aj: 'AJ',
+    djDiff: 'Dificultad',
+    djPen: 'Pen. DJ',
+    cjpPen: 'Pen. CJP',
+    eScore: 'E',
+    aScore: 'A',
+    da: 'DA',
+    db: 'DB',
+    rjPen: 'Pen. RJ',
   }
 
 // components/admin/competition-detail/CompetitionDetail.tsx

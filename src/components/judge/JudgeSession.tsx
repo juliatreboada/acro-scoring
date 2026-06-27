@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { Lang } from '../scoring/types'
 import type { PanelJudge, ScoringPerformance, JudgeScore, RoutineResult } from '../scoring/types'
+import { isRoleScoreSubmitted } from '../scoring/types'
 import type { TsElement } from '../scoring/types'
 import CJPView from '../scoring/views/CJPView'
 import EJView from '../scoring/views/EJView'
@@ -108,7 +109,9 @@ export default function JudgeSession({
 
   // A role is considered submitted if it's in local state OR already in DB scores (survives refresh)
   function roleHasSubmitted(role: PanelJudge): boolean {
-    return submittedRoleIds.has(role.id) || currentJudgeScores.some(s => s.panelJudgeId === role.id)
+    if (submittedRoleIds.has(role.id)) return true
+    const row = currentJudgeScores.find(s => s.panelJudgeId === role.id)
+    return row != null && isRoleScoreSubmitted(role.role, row)
   }
 
   const allNonCjpSubmittedWithDB = nonCjpRoles.length > 0 && nonCjpRoles.every(roleHasSubmitted)
@@ -199,6 +202,10 @@ export default function JudgeSession({
                   judgeScores={thisRoleSubmitted ? currentJudgeScores : undefined}
                   panelJudges={thisRoleSubmitted ? panelJudges : undefined}
                   result={currentResult}
+                  mySubmittedScore={(() => {
+                    const s = currentJudgeScores.find(sc => sc.panelJudgeId === role.id)
+                    return s?.djDifficulty != null ? { difficulty: s.djDifficulty, penalty: s.djPenalty ?? 0 } : null
+                  })()}
                   onSubmit={(difficulty, penalty) => handleRoleSubmit(role, {
                     panelJudgeId: role.id,
                     ejScore: null,
@@ -239,6 +246,7 @@ export default function JudgeSession({
                   judgeScores={thisRoleSubmitted ? currentJudgeScores : undefined}
                   panelJudges={thisRoleSubmitted ? panelJudges : undefined}
                   result={currentResult}
+                  mySubmittedScore={currentJudgeScores.find(s => s.panelJudgeId === role.id)?.ajScore ?? null}
                   onSubmit={(score) => handleRoleSubmit(role, {
                     panelJudgeId: role.id,
                     ejScore: null,

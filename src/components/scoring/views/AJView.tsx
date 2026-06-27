@@ -174,9 +174,10 @@ type AJViewProps = {
   judgeScores?: JudgeScore[]
   panelJudges?: PanelJudge[]
   result?: RoutineResult | null
+  mySubmittedScore?: number | null
 }
 
-export default function AJView({ currentPerf, lang, onSubmit, waitingForOtherScores, judgeScores, panelJudges, result }: AJViewProps) {
+export default function AJView({ currentPerf, lang, onSubmit, waitingForOtherScores, judgeScores, panelJudges, result, mySubmittedScore }: AJViewProps) {
   const t = useT('AJView', lang)
   const sections = getSections(lang)
 
@@ -211,6 +212,13 @@ export default function AJView({ currentPerf, lang, onSubmit, waitingForOtherSco
       prevPerfId.current = currentPerf?.id ?? null
     }
   }, [currentPerf?.id])
+
+  useEffect(() => {
+    if (mySubmittedScore != null && !submitted) {
+      setSubmitted(true)
+      setSubmittedScore(mySubmittedScore)
+    }
+  }, [mySubmittedScore]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // persist state to localStorage
   useEffect(() => {

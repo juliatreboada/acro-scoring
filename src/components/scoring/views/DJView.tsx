@@ -287,9 +287,10 @@ type DJViewProps = {
   judgeScores?: JudgeScore[]
   panelJudges?: PanelJudge[]
   result?: RoutineResult | null
+  mySubmittedScore?: { difficulty: number; penalty: number } | null
 }
 
-export default function DJView({ currentPerf, lang, elements, mode = 'elements', onSubmit, waitingForOtherScores, judgeScores, panelJudges, result }: DJViewProps) {
+export default function DJView({ currentPerf, lang, elements, mode = 'elements', onSubmit, waitingForOtherScores, judgeScores, panelJudges, result, mySubmittedScore }: DJViewProps) {
   const t = useT('DJView', lang)
   const [flags, setFlags] = useState<ElementFlags>({})
   const [incorrectTs, setIncorrectTs] = useState(false)
@@ -327,6 +328,14 @@ export default function DJView({ currentPerf, lang, elements, mode = 'elements',
       prevPerfId.current = currentPerf?.id ?? null
     }
   }, [currentPerf?.id, elements])
+
+  useEffect(() => {
+    if (mySubmittedScore != null && !submitted) {
+      setSubmitted(true)
+      setSubmittedDifficulty(mySubmittedScore.difficulty)
+      setSubmittedPenalty(mySubmittedScore.penalty)
+    }
+  }, [mySubmittedScore]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!currentPerf?.id || submitted) return
