@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { Lang } from '@/components/scoring/types'
 import type { Competition, Section, Panel, Session, SessionOrder, Team, Club, CompetitionEntry, ScoringMethod, AgeGroupRule } from '@/components/admin/types'
-import { resolveRoutineTypeForTeamInSession, type SessionMapRow } from '@/lib/openCombinadosBracket'
+import { resolveRoutineTypeForTeamInSession, type SessionMapRow, type OpenCombinadosPhaseKey } from '@/lib/openCombinadosBracket'
 import { useT } from '@/lib/useT'
 import ManualScoresModal from './ManualScoresModal'
 import type { Judge, SectionPanelJudge } from '@/components/admin/types'
@@ -322,16 +322,16 @@ function SessionCard({
                       </button>
                     )}
 
-                    {/* music controls or warning — only on the active music row */}
+                    {/* music controls — only on the active music row */}
                     {isMusicActive && (
-                      musicUrl ? (
-                        <div className="flex items-center gap-1 shrink-0 ml-1">
-                          <button onClick={prev} disabled={clampedIdx === 0}
-                            className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 disabled:opacity-30 flex items-center justify-center transition-colors">
-                            <svg className="w-3 h-3 text-blue-700" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
-                            </svg>
-                          </button>
+                      <div className="flex items-center gap-1 shrink-0 ml-1">
+                        <button onClick={prev} disabled={clampedIdx === 0}
+                          className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 disabled:opacity-30 flex items-center justify-center transition-colors">
+                          <svg className="w-3 h-3 text-blue-700" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 6h2v12H6zm3.5 6 8.5 6V6z" />
+                          </svg>
+                        </button>
+                        {musicUrl ? (
                           <button onClick={() => setIsPlaying(p => !p)}
                             className="w-7 h-7 rounded-full bg-blue-600 hover:bg-blue-700 flex items-center justify-center transition-colors shadow-sm active:scale-95">
                             {isPlaying ? (
@@ -344,21 +344,21 @@ function SessionCard({
                               </svg>
                             )}
                           </button>
-                          <button onClick={next} disabled={clampedIdx >= activeTeamIds.length - 1}
-                            className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 disabled:opacity-30 flex items-center justify-center transition-colors">
-                            <svg className="w-3 h-3 text-blue-700" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+                        ) : (
+                          <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 border border-red-200">
+                            <svg className="w-3 h-3 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z" />
                             </svg>
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-50 border border-red-200">
-                          <svg className="w-3 h-3 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 9l10.5-3m0 6.553v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 11-.99-3.467l2.31-.66a2.25 2.25 0 001.632-2.163zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 01-1.632 2.163l-1.32.377a1.803 1.803 0 01-.99-3.467l2.31-.66A2.25 2.25 0 009 15.553z" />
+                            <span className="text-[10px] font-bold text-red-500 uppercase tracking-wide">{t.noMusic}</span>
+                          </span>
+                        )}
+                        <button onClick={next} disabled={clampedIdx >= activeTeamIds.length - 1}
+                          className="w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 disabled:opacity-30 flex items-center justify-center transition-colors">
+                          <svg className="w-3 h-3 text-blue-700" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
                           </svg>
-                          <span className="text-[10px] font-bold text-red-500 uppercase tracking-wide">{t.noMusic}</span>
-                        </span>
-                      )
+                        </button>
+                      </div>
                     )}
                   </li>
                 )
@@ -439,24 +439,23 @@ export default function CompetitionDayTab({
 
     // fetch music URLs
     if (teamIds.length) {
+      // Derive phase mappings from sessions.bracket_phase (legacy table never written)
+      const mappings: SessionMapRow[] = activeSessions
+        .filter(s => (s as any).bracket_phase)
+        .map(s => ({ phase_key: (s as any).bracket_phase as OpenCombinadosPhaseKey, session_id: s.id }))
+
       Promise.all([
         supabase.from('routine_music')
           .select('team_id, routine_type, music_path')
           .eq('competition_id', competition.id)
           .in('team_id', teamIds),
         supabase
-          .from('open_combinados_phase_sessions')
-          .select('phase_key, session_id')
-          .eq('competition_id', competition.id)
-          .in('session_id', ids),
-        supabase
           .from('open_combinados_open_team_choices')
           .select('phase_key, team_id, selected_routine_type')
           .eq('competition_id', competition.id)
           .in('team_id', teamIds),
-      ]).then(([musicRes, phaseRes, choiceRes]) => {
+      ]).then(([musicRes, choiceRes]) => {
         setAllMusicPaths((musicRes.data ?? []) as typeof allMusicPaths)
-        const mappings = (phaseRes.data ?? []) as SessionMapRow[]
         const openChoicesByPhaseAndTeam: Record<string, Record<string, 'Balance' | 'Dynamic' | 'Combined'>> = {}
         for (const row of (choiceRes.data ?? [])) {
           if (!openChoicesByPhaseAndTeam[row.phase_key]) openChoicesByPhaseAndTeam[row.phase_key] = {}
