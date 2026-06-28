@@ -11,7 +11,7 @@ import { fetchPeerSessionIdsForRanking } from '@/lib/rankingPeers'
 import { ageGroupLabel } from '@/components/admin/types'
 import type { AgeGroupRule } from '@/components/admin/types'
 import { useSectionPractice } from '@/hooks/useSectionPractice'
-import { resolveRoutineTypeForTeamInSession, type SessionMapRow } from '@/lib/openCombinadosBracket'
+import { resolveRoutineTypeForTeamInSession, type SessionMapRow, type OpenCombinadosPhaseKey } from '@/lib/openCombinadosBracket'
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -236,21 +236,18 @@ export function useJudgeSession(sport: 'acro' | 'rg' = 'acro'): JudgeSessionData
       )
 
       const teamIds = orderedEntries.map(o => o.team_id)
-      const [phaseMapRes, choiceRes] = await Promise.all([
-        supabase
-          .from('open_combinados_phase_sessions')
-          .select('phase_key, session_id')
-          .eq('competition_id', (session as any).competition_id)
-          .eq('session_id', session.id),
-        teamIds.length > 0
-          ? supabase
-              .from('open_combinados_open_team_choices')
-              .select('phase_key, team_id, selected_routine_type')
-              .eq('competition_id', (session as any).competition_id)
-              .in('team_id', teamIds)
-          : Promise.resolve({ data: [] as { phase_key: string; team_id: string; selected_routine_type: 'Balance' | 'Dynamic' | 'Combined' }[] }),
-      ])
-      const phaseMappings = (phaseMapRes.data ?? []) as SessionMapRow[]
+      // Derive phase mapping from sessions.bracket_phase (source of truth; legacy table never written)
+      const bracketPhase = (session as any).bracket_phase as string | null
+      const phaseMappings: SessionMapRow[] = bracketPhase
+        ? [{ phase_key: bracketPhase as OpenCombinadosPhaseKey, session_id: session.id }]
+        : []
+      const choiceRes = teamIds.length > 0
+        ? await supabase
+            .from('open_combinados_open_team_choices')
+            .select('phase_key, team_id, selected_routine_type')
+            .eq('competition_id', (session as any).competition_id)
+            .in('team_id', teamIds)
+        : { data: [] as { phase_key: string; team_id: string; selected_routine_type: 'Balance' | 'Dynamic' | 'Combined' }[] }
       const openChoicesByPhaseAndTeam: Record<string, Record<string, 'Balance' | 'Dynamic' | 'Combined'>> = {}
       for (const row of (choiceRes.data ?? [])) {
         if (!openChoicesByPhaseAndTeam[row.phase_key]) openChoicesByPhaseAndTeam[row.phase_key] = {}
